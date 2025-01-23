@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,15 +14,34 @@ interface LineupFormProps {
     isBreak?: boolean;
   }) => void;
   onNameChange: (name: string) => Promise<any>;
+  editingItem?: {
+    name: string;
+    title: string;
+    details: string;
+    phone: string;
+    duration: number;
+    isBreak?: boolean;
+  } | null;
 }
 
-const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
+const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
   const [isBreak, setIsBreak] = useState(false);
+
+  useEffect(() => {
+    if (editingItem) {
+      setName(editingItem.name);
+      setTitle(editingItem.title);
+      setDetails(editingItem.details);
+      setPhone(editingItem.phone);
+      setDuration(editingItem.duration);
+      setIsBreak(editingItem.isBreak || false);
+    }
+  }, [editingItem]);
 
   const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
@@ -109,7 +128,7 @@ const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
       </div>
       <div className="flex gap-2">
         <Button type="submit" className="flex-1">
-          <Plus className="ml-2 h-4 w-4" /> הוסף לליינאפ
+          <Plus className="ml-2 h-4 w-4" /> {editingItem ? 'עדכן פריט' : 'הוסף לליינאפ'}
         </Button>
         <Button type="button" onClick={handleBreakAdd} variant="secondary" className="w-auto">
           <Coffee className="ml-2 h-4 w-4" /> הוסף הפסקה

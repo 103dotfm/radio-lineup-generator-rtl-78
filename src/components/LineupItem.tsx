@@ -31,60 +31,72 @@ const LineupItem = ({
   onEdit,
   index,
 }: LineupItemProps) => {
+  if (isBreak) {
+    return (
+      <tr className="bg-gray-100">
+        <td colSpan={5} className="py-2 px-2 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <Coffee className="h-4 w-4 text-gray-500" />
+            {name} - {duration} דקות
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(id);
+              }}
+              className="h-8 w-8 mr-2"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <Draggable draggableId={id} index={index}>
       {(provided) => (
-        <div
+        <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`${isBreak ? 'bg-gray-100' : ''}`}
           onClick={() => onEdit && onEdit(id)}
           style={{ cursor: 'pointer' }}
         >
-          <Card className="lineup-item p-4 mb-4 hover:shadow-lg transition-shadow">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  {isBreak && <Coffee className="h-4 w-4 text-gray-500" />}
-                  <h3 className="text-lg font-bold">{name}</h3>
-                </div>
-                {!isBreak && (
-                  <>
-                    <p className="text-sm text-gray-600">{title}</p>
-                    <p className="text-sm mt-2">{details}</p>
-                    <p className="text-sm text-gray-500 mt-1">{phone}</p>
-                  </>
-                )}
+          <td className="py-2 px-2">{name}</td>
+          <td className="py-2 px-2">{title}</td>
+          <td className="py-2 px-2">{details}</td>
+          <td className="py-2 px-2">{phone}</td>
+          <td className="py-2 px-2">
+            <div className="flex items-center gap-2 justify-end">
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                <input
+                  type="number"
+                  value={duration}
+                  onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
+                  className="w-16 text-center border rounded p-1"
+                  min="1"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span className="text-sm">דקות</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <input
-                    type="number"
-                    value={duration}
-                    onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
-                    className="w-16 text-center border rounded p-1"
-                    min="1"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span className="text-sm">דקות</span>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(id);
-                  }}
-                  className="h-8 w-8"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(id);
+                }}
+                className="h-8 w-8"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-          </Card>
-        </div>
+          </td>
+        </tr>
       )}
     </Draggable>
   );
