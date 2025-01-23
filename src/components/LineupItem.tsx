@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Coffee } from "lucide-react";
+import { Clock, Trash2, Coffee, GripVertical } from "lucide-react";
 import { Draggable } from 'react-beautiful-dnd';
 
 interface LineupItemProps {
@@ -34,15 +34,20 @@ const LineupItem = ({
   if (isBreak) {
     return (
       <Draggable draggableId={id} index={index}>
-        {(provided) => (
+        {(provided, snapshot) => (
           <tr
             ref={provided.innerRef}
             {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className="bg-gray-100"
+            className={`bg-gray-100 transition-colors ${snapshot.isDragging ? 'opacity-70 shadow-lg' : ''}`}
           >
-            <td colSpan={5} className="py-2 px-2 text-center">
+            <td colSpan={5} className="py-2 px-2 text-center relative">
               <div className="flex items-center justify-center gap-2">
+                <div
+                  {...provided.dragHandleProps}
+                  className="absolute right-2 cursor-grab active:cursor-grabbing print:hidden"
+                >
+                  <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
                 <Coffee className="h-4 w-4 text-gray-500 print:hidden" />
                 <span>{name} - {duration} דקות</span>
                 <Button
@@ -66,15 +71,24 @@ const LineupItem = ({
 
   return (
     <Draggable draggableId={id} index={index}>
-      {(provided) => (
+      {(provided, snapshot) => (
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          {...provided.dragHandleProps}
           onClick={() => onEdit && onEdit(id)}
+          className={`transition-colors hover:bg-gray-50 ${snapshot.isDragging ? 'opacity-70 shadow-lg bg-gray-50' : ''}`}
           style={{ cursor: 'pointer' }}
         >
-          <td className="py-2 px-2">{name}</td>
+          <td className="py-2 px-2 relative">
+            <div
+              {...provided.dragHandleProps}
+              className="absolute right-2 cursor-grab active:cursor-grabbing print:hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-4 w-4 text-gray-400" />
+            </div>
+            {name}
+          </td>
           <td className="py-2 px-2">{title}</td>
           <td className="py-2 px-2">{details}</td>
           <td className="py-2 px-2">{phone}</td>
