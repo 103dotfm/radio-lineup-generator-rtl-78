@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Printer, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { format } from 'date-fns';
 
 interface LineupItemType {
   id: string;
@@ -22,7 +25,16 @@ const Index = () => {
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState('');
-  const [credits, setCredits] = useState('');
+
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 border rounded-md',
+      },
+    },
+  });
 
   const handleAdd = (newItem: Omit<LineupItemType, 'id'>) => {
     const item = {
@@ -64,7 +76,7 @@ const Index = () => {
         title: showName,
         text: `${showName}\n${showTime} ${showDate}\n\n${items.map(item => 
           `${item.name} - ${item.title} (${item.duration} דקות)`
-        ).join('\n\n')}\n\n${credits}`
+        ).join('\n\n')}\n\n${editor?.getHTML()}`
       });
     } catch (error) {
       toast.error('לא ניתן לשתף כרגע');
@@ -103,13 +115,14 @@ const Index = () => {
           <Input
             type="date"
             value={showDate}
-            onChange={(e) => setShowDate(e.target.value)}
+            onChange={(e) => {
+              const date = new Date(e.target.value);
+              setShowDate(format(date, 'dd/MM/yyyy'));
+            }}
           />
-          <Input
-            placeholder="קרדיטים"
-            value={credits}
-            onChange={(e) => setCredits(e.target.value)}
-          />
+          <div className="col-span-2">
+            <EditorContent editor={editor} className="min-h-[100px]" />
+          </div>
         </div>
 
         <div className="mb-8">
@@ -146,9 +159,9 @@ const Index = () => {
           <h2 className="text-xl text-gray-600 mt-2">{showTime} {showDate}</h2>
         </div>
 
-        <table className="w-full print:table border-collapse">
+        <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black">
           <thead>
-            <tr className="border-b">
+            <tr>
               <th className="py-2 text-right">שם</th>
               <th className="py-2 text-right">כותרת</th>
               <th className="py-2 text-right">פרטים</th>
@@ -158,60 +171,24 @@ const Index = () => {
           </thead>
           <tbody>
             {filteredItems.map((item) => (
-              <tr key={item.id} className="border-b">
-                <td className="py-2">{item.name}</td>
-                <td className="py-2">{item.title}</td>
-                <td className="py-2">{item.details}</td>
-                <td className="py-2">{item.phone}</td>
-                <td className="py-2">{item.duration}</td>
+              <tr key={item.id}>
+                <td className="py-2 px-2">{item.name}</td>
+                <td className="py-2 px-2">{item.title}</td>
+                <td className="py-2 px-2">{item.details}</td>
+                <td className="py-2 px-2">{item.phone}</td>
+                <td className="py-2 px-2">{item.duration}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {credits && (
-          <div className="print:mt-8 print:text-right">
-            <p className="text-gray-600">{credits}</p>
-          </div>
+        {editor?.getHTML() && (
+          <div className="print:mt-8 print:text-right" dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
         )}
 
         <div className="print:mt-4 print:text-left">
           <p>סה"כ זמן: {totalDuration} דקות</p>
         </div>
-      </div>
-
-      <div className="print:hidden">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="lineup">
-            {(provided) => (
-              <div
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="space-y-4"
-              >
-                {filteredItems.map((item, index) => (
-                  <LineupItem
-                    key={item.id}
-                    {...item}
-                    index={index}
-                    showName={showName}
-                    showTime={showTime}
-                    credits={credits}
-                    onDelete={handleDelete}
-                    onDurationChange={handleDurationChange}
-                  />
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-
-        {items.length > 0 && (
-          <div className="mt-4 text-right text-sm text-gray-600">
-            סה"כ זמן: {totalDuration} דקות
-          </div>
-        )}
       </div>
 
       <style>{`
