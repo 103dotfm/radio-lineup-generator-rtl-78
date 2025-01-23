@@ -33,25 +33,34 @@ const LineupItem = ({
 }: LineupItemProps) => {
   if (isBreak) {
     return (
-      <tr className="bg-gray-100">
-        <td colSpan={5} className="py-2 px-2 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <Coffee className="h-4 w-4 text-gray-500" />
-            {name} - {duration} דקות
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(id);
-              }}
-              className="h-8 w-8 mr-2"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </td>
-      </tr>
+      <Draggable draggableId={id} index={index}>
+        {(provided) => (
+          <tr
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            className="bg-gray-100"
+          >
+            <td colSpan={5} className="py-2 px-2 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Coffee className="h-4 w-4 text-gray-500 print:hidden" />
+                <span>{name} - {duration} דקות</span>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(id);
+                  }}
+                  className="h-8 w-8 mr-2 print:hidden"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </td>
+          </tr>
+        )}
+      </Draggable>
     );
   }
 
@@ -71,7 +80,7 @@ const LineupItem = ({
           <td className="py-2 px-2">{phone}</td>
           <td className="py-2 px-2">
             <div className="flex items-center gap-2 justify-end">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 print:hidden">
                 <Clock className="w-4 h-4" />
                 <input
                   type="number"
@@ -90,10 +99,13 @@ const LineupItem = ({
                   e.stopPropagation();
                   onDelete(id);
                 }}
-                className="h-8 w-8"
+                className="h-8 w-8 print:hidden"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+            </div>
+            <div className="hidden print:block">
+              {duration} דקות
             </div>
           </td>
         </tr>
