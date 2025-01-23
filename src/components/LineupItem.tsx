@@ -14,6 +14,7 @@ interface LineupItemProps {
   isBreak?: boolean;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
+  onEdit?: (id: string) => void;
   index: number;
 }
 
@@ -27,6 +28,7 @@ const LineupItem = ({
   isBreak,
   onDelete,
   onDurationChange,
+  onEdit,
   index,
 }: LineupItemProps) => {
   return (
@@ -37,6 +39,8 @@ const LineupItem = ({
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           className={`${isBreak ? 'bg-gray-100' : ''}`}
+          onClick={() => onEdit && onEdit(id)}
+          style={{ cursor: 'pointer' }}
         >
           <Card className="lineup-item p-4 mb-4 hover:shadow-lg transition-shadow">
             <div className="flex justify-between items-start">
@@ -62,13 +66,17 @@ const LineupItem = ({
                     onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
                     className="w-16 text-center border rounded p-1"
                     min="1"
+                    onClick={(e) => e.stopPropagation()}
                   />
                   <span className="text-sm">דקות</span>
                 </div>
                 <Button
                   variant="destructive"
                   size="icon"
-                  onClick={() => onDelete(id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(id);
+                  }}
                   className="h-8 w-8"
                 >
                   <Trash2 className="h-4 w-4" />
