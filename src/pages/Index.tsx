@@ -17,6 +17,7 @@ interface LineupItemType {
   details: string;
   phone: string;
   duration: number;
+  isBreak?: boolean;
 }
 
 const Index = () => {
@@ -66,27 +67,13 @@ const Index = () => {
     setItems(newItems);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: showName,
-        text: `${showName}\n${showTime} ${showDate}\n\n${items.map(item => 
-          `${item.name} - ${item.title} (${item.duration} דקות)`
-        ).join('\n\n')}\n\n${editor?.getHTML()}`
-      });
-    } catch (error) {
-      toast.error('לא ניתן לשתף כרגע');
+  const handleEdit = (id: string) => {
+    const item = items.find(item => item.id === id);
+    if (item && !item.isBreak) {
+      // Populate form with item data
+      // You'll need to implement this part based on your form structure
+      toast.info('ערוך את הפריט');
     }
-  };
-
-  const handleNameChange = async (name: string) => {
-    // This is a mock function - replace with actual database lookup
-    console.log('Looking up name:', name);
-    return null;
   };
 
   const filteredItems = items.filter(item =>
@@ -159,28 +146,43 @@ const Index = () => {
           <h2 className="text-xl text-gray-600 mt-2">{showTime} {showDate}</h2>
         </div>
 
-        <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black">
-          <thead>
-            <tr>
-              <th className="py-2 text-right">שם</th>
-              <th className="py-2 text-right">כותרת</th>
-              <th className="py-2 text-right">פרטים</th>
-              <th className="py-2 text-right">טלפון</th>
-              <th className="py-2 text-right">דקות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.map((item) => (
-              <tr key={item.id}>
-                <td className="py-2 px-2">{item.name}</td>
-                <td className="py-2 px-2">{item.title}</td>
-                <td className="py-2 px-2">{item.details}</td>
-                <td className="py-2 px-2">{item.phone}</td>
-                <td className="py-2 px-2">{item.duration}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="lineup">
+            {(provided) => (
+              <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black" ref={provided.innerRef} {...provided.droppableProps}>
+                <thead>
+                  <tr>
+                    <th className="py-2 text-right">שם</th>
+                    <th className="py-2 text-right">כותרת</th>
+                    <th className="py-2 text-right">פרטים</th>
+                    <th className="py-2 text-right">טלפון</th>
+                    <th className="py-2 text-right">דקות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((item, index) => (
+                    item.isBreak ? (
+                      <tr key={item.id} className="bg-gray-100">
+                        <td colSpan={5} className="py-2 px-2 text-center">
+                          {item.name} - {item.duration} דקות
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={item.id} onClick={() => handleEdit(item.id)} style={{ cursor: 'pointer' }}>
+                        <td className="py-2 px-2">{item.name}</td>
+                        <td className="py-2 px-2">{item.title}</td>
+                        <td className="py-2 px-2">{item.details}</td>
+                        <td className="py-2 px-2">{item.phone}</td>
+                        <td className="py-2 px-2">{item.duration}</td>
+                      </tr>
+                    )
+                  ))}
+                  {provided.placeholder}
+                </tbody>
+              </table>
+            )}
+          </Droppable>
+        </DragDropContext>
 
         {editor?.getHTML() && (
           <div className="print:mt-8 print:text-right" dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
