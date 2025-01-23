@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Printer, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
@@ -26,6 +26,7 @@ const Index = () => {
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState('');
+  const [editingItem, setEditingItem] = useState<LineupItemType | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -39,12 +40,22 @@ const Index = () => {
   });
 
   const handleAdd = (newItem: Omit<LineupItemType, 'id'>) => {
-    const item = {
-      ...newItem,
-      id: Date.now().toString(),
-    };
-    setItems([...items, item]);
-    toast.success('פריט נוסף בהצלחה');
+    if (editingItem) {
+      setItems(items.map(item => 
+        item.id === editingItem.id 
+          ? { ...newItem, id: editingItem.id }
+          : item
+      ));
+      setEditingItem(null);
+      toast.success('פריט עודכן בהצלחה');
+    } else {
+      const item = {
+        ...newItem,
+        id: Date.now().toString(),
+      };
+      setItems([...items, item]);
+      toast.success('פריט נוסף בהצלחה');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -58,7 +69,7 @@ const Index = () => {
     ));
   };
 
-  const handleDragEnd = (result: any) => {
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const newItems = Array.from(items);
@@ -71,6 +82,7 @@ const Index = () => {
   const handleEdit = (id: string) => {
     const item = items.find(item => item.id === id);
     if (item && !item.isBreak) {
+      setEditingItem(item);
       formRef.current?.scrollIntoView({ behavior: 'smooth' });
       toast.info('ערוך את הפריט');
     }
@@ -127,7 +139,11 @@ const Index = () => {
         </div>
 
         <div className="mb-8">
-          <LineupForm onAdd={handleAdd} onNameChange={handleNameChange} />
+          <LineupForm 
+            onAdd={handleAdd} 
+            onNameChange={handleNameChange}
+            editingItem={editingItem}
+          />
         </div>
 
         <div className="flex justify-between items-center mb-4">
@@ -164,37 +180,32 @@ const Index = () => {
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="lineup">
             {(provided) => (
-              <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black" ref={provided.innerRef} {...provided.droppableProps}>
-                <thead>
-                  <tr>
-                    <th className="py-2 text-right">שם</th>
-                    <th className="py-2 text-right">כותרת</th>
-                    <th className="py-2 text-right">פרטים</th>
-                    <th className="py-2 text-right">טלפון</th>
-                    <th className="py-2 text-right">דקות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map((item, index) => (
-                    item.isBreak ? (
-                      <tr key={item.id} className="bg-gray-100">
-                        <td colSpan={5} className="py-2 px-2 text-center">
-                          {item.name} - {item.duration} דקות
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr key={item.id} onClick={() => handleEdit(item.id)} style={{ cursor: 'pointer' }}>
-                        <td className="py-2 px-2">{item.name}</td>
-                        <td className="py-2 px-2">{item.title}</td>
-                        <td className="py-2 px-2">{item.details}</td>
-                        <td className="py-2 px-2">{item.phone}</td>
-                        <td className="py-2 px-2">{item.duration}</td>
-                      </tr>
-                    )
-                  ))}
-                  {provided.placeholder}
-                </tbody>
-              </table>
+              <div ref={provided.innerRef} {...provided.droppableProps}>
+                <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black">
+                  <thead>
+                    <tr>
+                      <th className="py-2 text-right">שם</th>
+                      <th className="py-2 text-right">כותרת</th>
+                      <th className="py-2 text-right">פרטים</th>
+                      <th className="py-2 text-right">טלפון</th>
+                      <th className="py-2 text-right">דקות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredItems.map((item, index) => (
+                      <LineupItem
+                        key={item.id}
+                        {...item}
+                        index={index}
+                        onDelete={handleDelete}
+                        onDurationChange={handleDurationChange}
+                        onEdit={handleEdit}
+                      />
+                    ))}
+                    {provided.placeholder}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Droppable>
         </DragDropContext>
