@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import LineupForm from '../components/LineupForm';
 import LineupItem from '../components/LineupItem';
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ const Index = () => {
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState('');
+  const formRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -70,10 +71,23 @@ const Index = () => {
   const handleEdit = (id: string) => {
     const item = items.find(item => item.id === id);
     if (item && !item.isBreak) {
-      // Populate form with item data
-      // You'll need to implement this part based on your form structure
+      formRef.current?.scrollIntoView({ behavior: 'smooth' });
       toast.info('ערוך את הפריט');
     }
+  };
+
+  const handleNameChange = async (name: string) => {
+    // This is a placeholder for the actual API call
+    return null;
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleShare = () => {
+    // Implement sharing functionality
+    toast.info('שיתוף בפיתוח');
   };
 
   const filteredItems = items.filter(item =>
@@ -88,7 +102,7 @@ const Index = () => {
       <div className="print:hidden">
         <h1 className="text-3xl font-bold mb-8 text-right">ליינאפ רדיו</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 rtl-grid">
+        <div ref={formRef} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 rtl-grid">
           <Input
             placeholder="שם התוכנית"
             value={showName}
@@ -138,6 +152,7 @@ const Index = () => {
             />
           </div>
         </div>
+
       </div>
 
       <div className="print:block print:mt-0">
