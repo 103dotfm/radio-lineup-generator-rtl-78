@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Printer, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
+import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 
 interface LineupItemType {
   id: string;
@@ -13,6 +14,9 @@ interface LineupItemType {
   details: string;
   phone: string;
   duration: number;
+  showName: string;
+  showTime: string;
+  credits: string;
 }
 
 const Index = () => {
@@ -39,6 +43,16 @@ const Index = () => {
     ));
   };
 
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const newItems = Array.from(items);
+    const [reorderedItem] = newItems.splice(result.source.index, 1);
+    newItems.splice(result.destination.index, 0, reorderedItem);
+
+    setItems(newItems);
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -48,17 +62,24 @@ const Index = () => {
       await navigator.share({
         title: 'ליינאפ רדיו',
         text: items.map(item => 
-          `${item.name} - ${item.title} (${item.duration} דקות)`
-        ).join('\n')
+          `${item.showName} - ${item.showTime}\n${item.name} - ${item.title} (${item.duration} דקות)`
+        ).join('\n\n')
       });
     } catch (error) {
       toast.error('לא ניתן לשתף כרגע');
     }
   };
 
+  const handleNameChange = async (name: string) => {
+    // This is a mock function - replace with actual database lookup
+    console.log('Looking up name:', name);
+    return null;
+  };
+
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.showName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalDuration = items.reduce((sum, item) => sum + item.duration, 0);
@@ -68,7 +89,7 @@ const Index = () => {
       <h1 className="text-3xl font-bold mb-8 text-right">ליינאפ רדיו</h1>
       
       <div className="mb-8">
-        <LineupForm onAdd={handleAdd} />
+        <LineupForm onAdd={handleAdd} onNameChange={handleNameChange} />
       </div>
 
       <div className="flex justify-between items-center mb-4">
@@ -94,22 +115,43 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {filteredItems.map((item) => (
-          <LineupItem
-            key={item.id}
-            {...item}
-            onDelete={handleDelete}
-            onDurationChange={handleDurationChange}
-          />
-        ))}
-      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="lineup">
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="space-y-4"
+            >
+              {filteredItems.map((item, index) => (
+                <LineupItem
+                  key={item.id}
+                  {...item}
+                  index={index}
+                  onDelete={handleDelete}
+                  onDurationChange={handleDurationChange}
+                />
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
 
       {items.length > 0 && (
         <div className="mt-4 text-right text-sm text-gray-600">
           סה"כ זמן: {totalDuration} דקות
         </div>
       )}
+
+      <style>{`
+        @media print {
+          .container { padding: 0; }
+          button, input[type="search"] { display: none; }
+          .lineup-item { break-inside: avoid; }
+          @page { size: auto; margin: 20mm; }
+        }
+      `}</style>
     </div>
   );
 };

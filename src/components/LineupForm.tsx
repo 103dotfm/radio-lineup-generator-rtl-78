@@ -11,33 +11,71 @@ interface LineupFormProps {
     details: string;
     phone: string;
     duration: number;
+    showName: string;
+    showTime: string;
+    credits: string;
   }) => void;
+  onNameChange: (name: string) => Promise<any>;
 }
 
-const LineupForm = ({ onAdd }: LineupFormProps) => {
+const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
+  const [showName, setShowName] = useState('');
+  const [showTime, setShowTime] = useState('');
+  const [credits, setCredits] = useState('');
+
+  const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setName(newName);
+    if (newName.length > 2) {
+      const data = await onNameChange(newName);
+      if (data) {
+        setTitle(data.title || '');
+        setDetails(data.details || '');
+        setPhone(data.phone || '');
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, title, details, phone, duration });
+    onAdd({ name, title, details, phone, duration, showName, showTime, credits });
     setName('');
     setTitle('');
     setDetails('');
     setPhone('');
     setDuration(5);
+    setShowName('');
+    setShowTime('');
+    setCredits('');
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 mb-8">
       <div className="grid grid-cols-2 gap-4">
         <Input
+          placeholder="שם התוכנית"
+          value={showName}
+          onChange={(e) => setShowName(e.target.value)}
+          required
+        />
+        <Input
+          placeholder="שעת שידור"
+          type="time"
+          value={showTime}
+          onChange={(e) => setShowTime(e.target.value)}
+          required
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <Input
           placeholder="שם"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={handleNameChange}
           required
         />
         <Input
@@ -69,6 +107,11 @@ const LineupForm = ({ onAdd }: LineupFormProps) => {
           required
         />
       </div>
+      <Input
+        placeholder="קרדיטים"
+        value={credits}
+        onChange={(e) => setCredits(e.target.value)}
+      />
       <Button type="submit" className="w-full">
         <Plus className="ml-2 h-4 w-4" /> הוסף לליינאפ
       </Button>
