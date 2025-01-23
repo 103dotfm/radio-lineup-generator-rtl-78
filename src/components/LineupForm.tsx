@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus } from "lucide-react";
+import { Plus, Coffee } from "lucide-react";
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -11,6 +11,7 @@ interface LineupFormProps {
     details: string;
     phone: string;
     duration: number;
+    isBreak?: boolean;
   }) => void;
   onNameChange: (name: string) => Promise<any>;
 }
@@ -21,6 +22,7 @@ const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
   const [details, setDetails] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
+  const [isBreak, setIsBreak] = useState(false);
 
   const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
@@ -37,11 +39,24 @@ const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, title, details, phone, duration });
+    onAdd({ name, title, details, phone, duration, isBreak });
     setName('');
     setTitle('');
     setDetails('');
     setPhone('');
+    setDuration(5);
+    setIsBreak(false);
+  };
+
+  const handleBreakAdd = () => {
+    onAdd({ 
+      name: 'הפסקה מסחרית',
+      title: '',
+      details: '',
+      phone: '',
+      duration: duration,
+      isBreak: true 
+    });
     setDuration(5);
   };
 
@@ -53,18 +68,24 @@ const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
           value={name}
           onChange={handleNameChange}
           required
+          autoComplete="name"
+          name="name"
         />
         <Input
           placeholder="כותרת"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
+          autoComplete="organization-title"
+          name="title"
         />
       </div>
       <Textarea
         placeholder="פרטים"
         value={details}
         onChange={(e) => setDetails(e.target.value)}
+        name="details"
+        autoComplete="on"
       />
       <div className="grid grid-cols-2 gap-4">
         <Input
@@ -73,6 +94,8 @@ const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
+          autoComplete="tel"
+          name="phone"
         />
         <Input
           placeholder="משך בדקות"
@@ -81,11 +104,17 @@ const LineupForm = ({ onAdd, onNameChange }: LineupFormProps) => {
           value={duration}
           onChange={(e) => setDuration(parseInt(e.target.value) || 5)}
           required
+          name="duration"
         />
       </div>
-      <Button type="submit" className="w-full">
-        <Plus className="ml-2 h-4 w-4" /> הוסף לליינאפ
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" className="flex-1">
+          <Plus className="ml-2 h-4 w-4" /> הוסף לליינאפ
+        </Button>
+        <Button type="button" onClick={handleBreakAdd} variant="secondary" className="w-auto">
+          <Coffee className="ml-2 h-4 w-4" /> הוסף הפסקה
+        </Button>
+      </div>
     </form>
   );
 };
