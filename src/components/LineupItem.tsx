@@ -38,15 +38,16 @@ const LineupItem = ({
           <tr
             ref={provided.innerRef}
             {...provided.draggableProps}
-            className={`bg-gray-100 transition-colors ${snapshot.isDragging ? 'opacity-70 shadow-lg' : ''}`}
+            className={`bg-gray-100 transition-colors ${snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''}`}
           >
             <td colSpan={5} className="py-2 px-2 text-center relative">
               <div className="flex items-center justify-center gap-2">
                 <div
                   {...provided.dragHandleProps}
-                  className="absolute right-2 cursor-grab active:cursor-grabbing print:hidden"
+                  className="absolute right-2 cursor-grab active:cursor-grabbing hover:bg-gray-200 rounded p-1 transition-colors print:hidden"
+                  title="גרור כדי לשנות מיקום"
                 >
-                  <GripVertical className="h-4 w-4 text-gray-400" />
+                  <GripVertical className="h-5 w-5 text-gray-500" />
                 </div>
                 <Coffee className="h-4 w-4 text-gray-500 print:hidden" />
                 <span>{name} - {duration} דקות</span>
@@ -75,17 +76,23 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          onClick={() => onEdit && onEdit(id)}
-          className={`transition-colors hover:bg-gray-50 ${snapshot.isDragging ? 'opacity-70 shadow-lg bg-gray-50' : ''}`}
-          style={{ cursor: 'pointer' }}
+          onClick={(e) => {
+            if (!snapshot.isDragging && onEdit) {
+              onEdit(id);
+            }
+          }}
+          className={`transition-colors hover:bg-gray-50 ${
+            snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
+          }`}
         >
           <td className="py-2 px-2 relative">
             <div
               {...provided.dragHandleProps}
-              className="absolute right-2 cursor-grab active:cursor-grabbing print:hidden"
+              className="absolute right-2 cursor-grab active:cursor-grabbing hover:bg-gray-200 rounded p-1 transition-colors print:hidden"
               onClick={(e) => e.stopPropagation()}
+              title="גרור כדי לשנות מיקום"
             >
-              <GripVertical className="h-4 w-4 text-gray-400" />
+              <GripVertical className="h-5 w-5 text-gray-500" />
             </div>
             {name}
           </td>
