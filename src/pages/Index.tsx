@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { saveShow } from '@/lib/supabase/shows';
 import html2pdf from 'html2pdf.js';
 import { Calendar } from "@/components/ui/calendar";
@@ -96,7 +96,6 @@ const Index = () => {
   };
 
   const handleNameChange = async (name: string) => {
-    // This is a placeholder for the actual API call
     return null;
   };
 
