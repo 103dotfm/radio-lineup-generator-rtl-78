@@ -3,13 +3,17 @@ import LineupForm from '../components/LineupForm';
 import LineupItem from '../components/LineupItem';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Printer, Share2, Search, Save } from "lucide-react";
+import { Printer, Share2, Search, Save, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { saveShow } from '@/lib/supabase/shows';
+import html2pdf from 'html2pdf.js';
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface LineupItemType {
   id: string;
@@ -26,9 +30,10 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
-  const [showDate, setShowDate] = useState('');
+  const [showDate, setShowDate] = useState<Date>();
   const [editingItem, setEditingItem] = useState<LineupItemType | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -99,9 +104,22 @@ const Index = () => {
     window.print();
   };
 
-  const handleShare = () => {
-    // Implement sharing functionality
-    toast.info('שיתוף בפיתוח');
+  const handleShare = async () => {
+    try {
+      const data = {
+        showName,
+        showTime,
+        showDate: showDate ? format(showDate, 'dd/MM/yyyy') : '',
+        items,
+        notes: editor?.getHTML() || '',
+      };
+
+      await navigator.clipboard.writeText(JSON.stringify(data));
+      toast.success('הנתונים הועתקו ללוח');
+    } catch (error) {
+      console.error('Error sharing:', error);
+      toast.error('שגיאה בשיתוף התוכנית');
+    }
   };
 
   const handleSave = async () => {
@@ -109,7 +127,7 @@ const Index = () => {
       const show = {
         name: showName,
         time: showTime,
-        date: showDate,
+        date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
         notes: editor?.getHTML() || '',
       };
 
@@ -124,6 +142,21 @@ const Index = () => {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת התוכנית');
     }
+  };
+
+  const handleExportPDF = () => {
+    if (!printRef.current) return;
+    
+    const opt = {
+      margin: 1,
+      filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(printRef.current).save();
+    toast.success('PDF נוצר בהצלחה');
   };
 
   const filteredItems = items.filter(item =>
@@ -149,14 +182,27 @@ const Index = () => {
             value={showTime}
             onChange={(e) => setShowTime(e.target.value)}
           />
-          <Input
-            type="date"
-            value={showDate}
-            onChange={(e) => {
-              const date = new Date(e.target.value);
-              setShowDate(format(date, 'dd/MM/yyyy'));
-            }}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-right font-normal",
+                  !showDate && "text-muted-foreground"
+                )}
+              >
+                {showDate ? format(showDate, 'dd/MM/yyyy') : 'בחר תאריך'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={showDate}
+                onSelect={setShowDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           <div className="col-span-2">
             <EditorContent editor={editor} className="min-h-[100px]" />
           </div>
@@ -178,11 +224,15 @@ const Index = () => {
             </Button>
             <Button onClick={handleShare} variant="outline">
               <Share2 className="ml-2 h-4 w-4" />
-              שיתוף
+              העתק ללוח
             </Button>
             <Button onClick={handleSave} variant="outline">
               <Save className="ml-2 h-4 w-4" />
               שמירה
+            </Button>
+            <Button onClick={handleExportPDF} variant="outline">
+              <FileDown className="ml-2 h-4 w-4" />
+              PDF
             </Button>
           </div>
           
@@ -198,10 +248,12 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="print:block print:mt-0">
+      <div ref={printRef} className="print:block print:mt-0">
         <div className="print:text-center print:mb-8">
           <h1 className="text-3xl font-bold">{showName}</h1>
-          <h2 className="text-xl text-gray-600 mt-2">{showTime} {showDate}</h2>
+          <h2 className="text-xl text-gray-600 mt-2">
+            {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
+          </h2>
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
