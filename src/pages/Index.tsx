@@ -3,12 +3,13 @@ import LineupForm from '../components/LineupForm';
 import LineupItem from '../components/LineupItem';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Printer, Share2, Search } from "lucide-react";
+import { Printer, Share2, Search, Save } from "lucide-react";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
+import { saveShow } from '@/lib/supabase/shows';
 
 interface LineupItemType {
   id: string;
@@ -77,6 +78,7 @@ const Index = () => {
     newItems.splice(result.destination.index, 0, reorderedItem);
 
     setItems(newItems);
+    toast.success('סדר הפריטים עודכן');
   };
 
   const handleEdit = (id: string) => {
@@ -102,6 +104,28 @@ const Index = () => {
     toast.info('שיתוף בפיתוח');
   };
 
+  const handleSave = async () => {
+    try {
+      const show = {
+        name: showName,
+        time: showTime,
+        date: showDate,
+        notes: editor?.getHTML() || '',
+      };
+
+      const itemsToSave = items.map(({ id, isBreak, ...item }) => ({
+        ...item,
+        is_break: isBreak || false,
+      }));
+
+      await saveShow(show, itemsToSave);
+      toast.success('התוכנית נשמרה בהצלחה');
+    } catch (error) {
+      console.error('Error saving show:', error);
+      toast.error('שגיאה בשמירת התוכנית');
+    }
+  };
+
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -114,7 +138,7 @@ const Index = () => {
       <div className="print:hidden">
         <h1 className="text-3xl font-bold mb-8 text-right">ליינאפ רדיו</h1>
         
-        <div ref={formRef} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 rtl-grid">
+        <div ref={formRef} className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl-grid">
           <Input
             placeholder="שם התוכנית"
             value={showName}
@@ -156,6 +180,10 @@ const Index = () => {
               <Share2 className="ml-2 h-4 w-4" />
               שיתוף
             </Button>
+            <Button onClick={handleSave} variant="outline">
+              <Save className="ml-2 h-4 w-4" />
+              שמירה
+            </Button>
           </div>
           
           <div className="flex items-center gap-2">
@@ -168,7 +196,6 @@ const Index = () => {
             />
           </div>
         </div>
-
       </div>
 
       <div className="print:block print:mt-0">
@@ -180,7 +207,11 @@ const Index = () => {
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="lineup">
             {(provided) => (
-              <div ref={provided.innerRef} {...provided.droppableProps}>
+              <div 
+                ref={provided.innerRef} 
+                {...provided.droppableProps}
+                className="min-h-[200px] transition-all"
+              >
                 <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black">
                   <thead>
                     <tr>
