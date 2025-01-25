@@ -45,6 +45,13 @@ const Index = () => {
     },
   });
 
+  const handleBreakTextChange = (id: string, text: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, name: text } : item
+    ));
+    toast.success('טקסט ההפסקה עודכן');
+  };
+
   const handleAdd = (newItem: Omit<LineupItemType, 'id'>) => {
     if (editingItem) {
       setItems(items.map(item => 
@@ -180,13 +187,6 @@ const Index = () => {
         document.head.removeChild(style);
         toast.success('PDF נוצר בהצלחה');
       });
-  };
-
-  const handleBreakTextChange = (id: string, text: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, name: text } : item
-    ));
-    toast.success('טקסט ההפסקה עודכן');
   };
 
   return (
