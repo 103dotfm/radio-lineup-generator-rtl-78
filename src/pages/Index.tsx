@@ -182,6 +182,13 @@ const Index = () => {
       });
   };
 
+  const handleBreakTextChange = (id: string, text: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, name: text } : item
+    ));
+    toast.success('טקסט ההפסקה עודכן');
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="print:hidden">
