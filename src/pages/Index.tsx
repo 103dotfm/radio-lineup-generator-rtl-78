@@ -1,19 +1,16 @@
 import React, { useState, useRef } from 'react';
-import LineupForm from '../components/LineupForm';
-import LineupItem from '../components/LineupItem';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Printer, Share2, Search, Save, FileDown } from "lucide-react";
-import { toast } from "sonner";
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
-import { saveShow } from '@/lib/supabase/shows';
 import html2pdf from 'html2pdf.js';
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
+import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import LineupForm from '../components/LineupForm';
+import LineupItem from '../components/LineupItem';
+import ShowHeader from '../components/show/ShowHeader';
+import ShowCredits from '../components/show/ShowCredits';
 
 interface LineupItemType {
   id: string;
@@ -26,6 +23,8 @@ interface LineupItemType {
 }
 
 const Index = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [items, setItems] = useState<LineupItemType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showName, setShowName] = useState('');
@@ -40,7 +39,7 @@ const Index = () => {
     content: '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 border rounded-md',
+        class: 'prose prose-sm focus:outline-none min-h-[100px] p-4',
         placeholder: 'קרדיטים',
       },
     },
@@ -158,11 +157,9 @@ const Index = () => {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Clone the print ref element and prepare it for PDF
     const element = printRef.current.cloneNode(true) as HTMLElement;
     element.style.direction = 'rtl';
     
-    // Add print-specific styles
     const style = document.createElement('style');
     style.innerHTML = `
       @page { size: A4; margin: 20mm; }
@@ -175,7 +172,6 @@ const Index = () => {
     `;
     document.head.appendChild(style);
 
-    // Generate PDF
     html2pdf()
       .set(opt)
       .from(element)
@@ -186,64 +182,26 @@ const Index = () => {
       });
   };
 
-  const handleBreakTextChange = (id: string, newText: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, name: newText } : item
-    ));
-  };
-
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalDuration = items.reduce((sum, item) => sum + item.duration, 0);
-
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="print:hidden">
         <h1 className="text-3xl font-bold mb-8 text-right">ליינאפ רדיו</h1>
         
-        <div ref={formRef} className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl-grid">
-          <Input
-            placeholder="שם התוכנית"
-            value={showName}
-            onChange={(e) => setShowName(e.target.value)}
-            autoComplete="on"
-            name="show-name"
-          />
-          <Input
-            type="time"
-            value={showTime}
-            onChange={(e) => setShowTime(e.target.value)}
-          />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-right font-normal",
-                  !showDate && "text-muted-foreground"
-                )}
-              >
-                {showDate ? format(showDate, 'dd/MM/yyyy') : 'בחר תאריך'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white shadow-lg" align="start">
-              <Calendar
-                mode="single"
-                selected={showDate}
-                onSelect={setShowDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
-              קרדיטים
-            </label>
-            <EditorContent editor={editor} className="min-h-[100px] bg-white" />
-          </div>
+        <ShowHeader
+          showName={showName}
+          showTime={showTime}
+          showDate={showDate}
+          onNameChange={setShowName}
+          onTimeChange={setShowTime}
+          onDateChange={setShowDate}
+          onSave={handleSave}
+          onShare={handleShare}
+          onPrint={handlePrint}
+          onExportPDF={handleExportPDF}
+        />
+
+        <div ref={formRef}>
+          <ShowCredits editor={editor} />
         </div>
 
         <div className="mb-8">
@@ -252,46 +210,6 @@ const Index = () => {
             onNameChange={handleNameChange}
             editingItem={editingItem}
           />
-        </div>
-
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex gap-2">
-            <Button onClick={handlePrint} variant="outline">
-              <Printer className="ml-2 h-4 w-4" />
-              הדפסה
-            </Button>
-            <Button onClick={handleShare} variant="outline">
-              <Share2 className="ml-2 h-4 w-4" />
-              העתק ללוח
-            </Button>
-            <Button onClick={handleSave} variant="outline">
-              <Save className="ml-2 h-4 w-4" />
-              שמירה
-            </Button>
-            <Button onClick={handleExportPDF} variant="outline">
-              <FileDown className="ml-2 h-4 w-4" />
-              PDF
-            </Button>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="חיפוש..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div ref={printRef} className="print:block print:mt-0">
-        <div className="print:text-center print:mb-8">
-          <h1 className="text-3xl font-bold">{showName}</h1>
-          <h2 className="text-xl text-gray-600 mt-2">
-            {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
-          </h2>
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -313,7 +231,7 @@ const Index = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map((item, index) => (
+                    {items.map((item, index) => (
                       <LineupItem
                         key={item.id}
                         {...item}
@@ -331,13 +249,22 @@ const Index = () => {
             )}
           </Droppable>
         </DragDropContext>
+      </div>
+
+      <div ref={printRef} className="print:block print:mt-0">
+        <div className="print:text-center print:mb-8">
+          <h1 className="text-3xl font-bold">{showName}</h1>
+          <h2 className="text-xl text-gray-600 mt-2">
+            {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
+          </h2>
+        </div>
 
         {editor?.getHTML() && (
           <div className="print:mt-8 print:text-right" dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
         )}
 
         <div className="print:mt-4 print:text-left">
-          <p>סה"כ זמן: {totalDuration} דקות</p>
+          <p>סה"כ זמן: {items.reduce((sum, item) => sum + item.duration, 0)} דקות</p>
         </div>
       </div>
 

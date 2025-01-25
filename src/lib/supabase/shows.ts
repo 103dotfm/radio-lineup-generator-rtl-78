@@ -113,17 +113,44 @@ export const getShowWithItems = async (showId: string) => {
 
 export const searchShows = async (query: string) => {
   try {
-    const { data, error } = await supabase
+    // First, search in shows table
+    const { data: showsData, error: showsError } = await supabase
       .from('shows')
       .select('*')
       .or(`name.ilike.%${query}%, notes.ilike.%${query}%`)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Search shows error:', error);
-      throw error;
+    if (showsError) throw showsError;
+
+    // Then, search in show_items table
+    const { data: itemsData, error: itemsError } = await supabase
+      .from('show_items')
+      .select('show_id, name, title, details')
+      .or(`name.ilike.%${query}%, title.ilike.%${query}%, details.ilike.%${query}%`);
+
+    if (itemsError) throw itemsError;
+
+    // Get unique show IDs from items search
+    const showIdsFromItems = [...new Set(itemsData.map(item => item.show_id))];
+
+    // If we found shows through items, fetch those shows
+    let additionalShows: any[] = [];
+    if (showIdsFromItems.length > 0) {
+      const { data: relatedShows, error: relatedError } = await supabase
+        .from('shows')
+        .select('*')
+        .in('id', showIdsFromItems)
+        .order('created_at', { ascending: false });
+
+      if (relatedError) throw relatedError;
+      additionalShows = relatedShows;
     }
-    return data;
+
+    // Combine and deduplicate results
+    const allShows = [...(showsData || []), ...additionalShows];
+    const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
+
+    return uniqueShows;
   } catch (error) {
     console.error('Error searching shows:', error);
     throw error;
