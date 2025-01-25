@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Coffee, GripVertical } from "lucide-react";
+import { Clock, Trash2, Coffee, GripVertical, Edit2, Check } from "lucide-react";
 import { Draggable } from 'react-beautiful-dnd';
+import { Input } from "@/components/ui/input";
 
 interface LineupItemProps {
   id: string;
@@ -15,6 +16,7 @@ interface LineupItemProps {
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
   onEdit?: (id: string) => void;
+  onBreakTextChange?: (id: string, text: string) => void;
   index: number;
 }
 
@@ -29,8 +31,19 @@ const LineupItem = ({
   onDelete,
   onDurationChange,
   onEdit,
+  onBreakTextChange,
   index,
 }: LineupItemProps) => {
+  const [isEditingBreak, setIsEditingBreak] = useState(false);
+  const [breakText, setBreakText] = useState(name);
+
+  const handleBreakTextSave = () => {
+    if (onBreakTextChange) {
+      onBreakTextChange(id, breakText);
+    }
+    setIsEditingBreak(false);
+  };
+
   if (isBreak) {
     return (
       <Draggable draggableId={id} index={index}>
@@ -50,7 +63,36 @@ const LineupItem = ({
                   <GripVertical className="h-5 w-5 text-gray-500" />
                 </div>
                 <Coffee className="h-4 w-4 text-gray-500 print:hidden" />
-                <span>{name} - {duration} דקות</span>
+                {isEditingBreak ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={breakText}
+                      onChange={(e) => setBreakText(e.target.value)}
+                      className="w-48"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleBreakTextSave}
+                      className="h-8 w-8"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <span>{name} - {duration} דקות</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsEditingBreak(true)}
+                      className="h-8 w-8 print:hidden"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="destructive"
                   size="icon"
