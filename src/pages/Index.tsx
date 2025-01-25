@@ -112,7 +112,7 @@ const Index = () => {
         url: window.location.href
       };
 
-      if (navigator.share) {
+      if (navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
         toast.success('התוכנית שותפה בהצלחה');
       } else {
@@ -158,35 +158,32 @@ const Index = () => {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Add print styles before generating PDF
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @media print {
-        body { direction: rtl; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid black; padding: 8px; text-align: right; }
-        .print\\:hidden { display: none !important; }
-        .print\\:block { display: block !important; }
-        .print\\:mt-0 { margin-top: 0 !important; }
-        .print\\:mt-8 { margin-top: 2rem !important; }
-        .print\\:mt-4 { margin-top: 1rem !important; }
-        .print\\:mb-8 { margin-bottom: 2rem !important; }
-        .print\\:text-center { text-align: center !important; }
-        .print\\:text-right { text-align: right !important; }
-        .print\\:text-left { text-align: left !important; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Clone the print ref element to modify it for PDF
+    // Clone the print ref element and prepare it for PDF
     const element = printRef.current.cloneNode(true) as HTMLElement;
     element.style.direction = 'rtl';
     
-    // Generate PDF from the modified clone
-    html2pdf().set(opt).from(element).save().then(() => {
-      document.head.removeChild(style);
-      toast.success('PDF נוצר בהצלחה');
-    });
+    // Add print-specific styles
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @page { size: A4; margin: 20mm; }
+      body { direction: rtl; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid black; padding: 8px; text-align: right; }
+      .print-header { text-align: center; margin-bottom: 2rem; }
+      .print-content { direction: rtl; }
+      .print-footer { margin-top: 1rem; text-align: left; }
+    `;
+    document.head.appendChild(style);
+
+    // Generate PDF
+    html2pdf()
+      .set(opt)
+      .from(element)
+      .save()
+      .then(() => {
+        document.head.removeChild(style);
+        toast.success('PDF נוצר בהצלחה');
+      });
   };
 
   const handleBreakTextChange = (id: string, newText: string) => {
@@ -213,6 +210,7 @@ const Index = () => {
             value={showName}
             onChange={(e) => setShowName(e.target.value)}
             autoComplete="on"
+            name="show-name"
           />
           <Input
             type="time"
@@ -231,7 +229,7 @@ const Index = () => {
                 {showDate ? format(showDate, 'dd/MM/yyyy') : 'בחר תאריך'}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
+            <PopoverContent className="w-auto p-0 bg-white shadow-lg" align="start">
               <Calendar
                 mode="single"
                 selected={showDate}
@@ -244,7 +242,7 @@ const Index = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
               קרדיטים
             </label>
-            <EditorContent editor={editor} className="min-h-[100px]" />
+            <EditorContent editor={editor} className="min-h-[100px] bg-white" />
           </div>
         </div>
 
