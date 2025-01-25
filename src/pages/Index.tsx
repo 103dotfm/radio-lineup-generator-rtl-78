@@ -41,6 +41,7 @@ const Index = () => {
     editorProps: {
       attributes: {
         class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 border rounded-md',
+        placeholder: 'קרדיטים',
       },
     },
   });
@@ -115,14 +116,8 @@ const Index = () => {
         await navigator.share(shareData);
         toast.success('התוכנית שותפה בהצלחה');
       } else {
-        await navigator.clipboard.writeText(JSON.stringify({
-          showName,
-          showTime,
-          showDate: showDate ? format(showDate, 'dd/MM/yyyy') : '',
-          items,
-          notes: editor?.getHTML() || '',
-        }));
-        toast.success('הנתונים הועתקו ללוח');
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success('הקישור הועתק ללוח');
       }
     } catch (error) {
       console.error('Error sharing:', error);
@@ -163,6 +158,7 @@ const Index = () => {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
+    // Add print styles before generating PDF
     const style = document.createElement('style');
     style.innerHTML = `
       @media print {
@@ -171,11 +167,23 @@ const Index = () => {
         th, td { border: 1px solid black; padding: 8px; text-align: right; }
         .print\\:hidden { display: none !important; }
         .print\\:block { display: block !important; }
+        .print\\:mt-0 { margin-top: 0 !important; }
+        .print\\:mt-8 { margin-top: 2rem !important; }
+        .print\\:mt-4 { margin-top: 1rem !important; }
+        .print\\:mb-8 { margin-bottom: 2rem !important; }
+        .print\\:text-center { text-align: center !important; }
+        .print\\:text-right { text-align: right !important; }
+        .print\\:text-left { text-align: left !important; }
       }
     `;
     document.head.appendChild(style);
 
-    html2pdf().set(opt).from(printRef.current).save().then(() => {
+    // Clone the print ref element to modify it for PDF
+    const element = printRef.current.cloneNode(true) as HTMLElement;
+    element.style.direction = 'rtl';
+    
+    // Generate PDF from the modified clone
+    html2pdf().set(opt).from(element).save().then(() => {
       document.head.removeChild(style);
       toast.success('PDF נוצר בהצלחה');
     });
@@ -204,6 +212,7 @@ const Index = () => {
             placeholder="שם התוכנית"
             value={showName}
             onChange={(e) => setShowName(e.target.value)}
+            autoComplete="on"
           />
           <Input
             type="time"
@@ -222,7 +231,7 @@ const Index = () => {
                 {showDate ? format(showDate, 'dd/MM/yyyy') : 'בחר תאריך'}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0 bg-white" align="start">
               <Calendar
                 mode="single"
                 selected={showDate}
@@ -232,6 +241,9 @@ const Index = () => {
             </PopoverContent>
           </Popover>
           <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
+              קרדיטים
+            </label>
             <EditorContent editor={editor} className="min-h-[100px]" />
           </div>
         </div>
