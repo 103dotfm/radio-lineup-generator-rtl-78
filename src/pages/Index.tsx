@@ -105,16 +105,25 @@ const Index = () => {
 
   const handleShare = async () => {
     try {
-      const data = {
-        showName,
-        showTime,
-        showDate: showDate ? format(showDate, 'dd/MM/yyyy') : '',
-        items,
-        notes: editor?.getHTML() || '',
+      const shareData = {
+        title: showName || 'ליינאפ רדיו',
+        text: `${showName} - ${showDate ? format(showDate, 'dd/MM/yyyy') : ''} ${showTime}`,
+        url: window.location.href
       };
 
-      await navigator.clipboard.writeText(JSON.stringify(data));
-      toast.success('הנתונים הועתקו ללוח');
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast.success('התוכנית שותפה בהצלחה');
+      } else {
+        await navigator.clipboard.writeText(JSON.stringify({
+          showName,
+          showTime,
+          showDate: showDate ? format(showDate, 'dd/MM/yyyy') : '',
+          items,
+          notes: editor?.getHTML() || '',
+        }));
+        toast.success('הנתונים הועתקו ללוח');
+      }
     } catch (error) {
       console.error('Error sharing:', error);
       toast.error('שגיאה בשיתוף התוכנית');
@@ -147,15 +156,35 @@ const Index = () => {
     if (!printRef.current) return;
     
     const opt = {
-      margin: 1,
+      margin: 20,
       filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(opt).from(printRef.current).save();
-    toast.success('PDF נוצר בהצלחה');
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        body { direction: rtl; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 8px; text-align: right; }
+        .print\\:hidden { display: none !important; }
+        .print\\:block { display: block !important; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    html2pdf().set(opt).from(printRef.current).save().then(() => {
+      document.head.removeChild(style);
+      toast.success('PDF נוצר בהצלחה');
+    });
+  };
+
+  const handleBreakTextChange = (id: string, newText: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, name: newText } : item
+    ));
   };
 
   const filteredItems = items.filter(item =>
@@ -282,6 +311,7 @@ const Index = () => {
                         onDelete={handleDelete}
                         onDurationChange={handleDurationChange}
                         onEdit={handleEdit}
+                        onBreakTextChange={handleBreakTextChange}
                       />
                     ))}
                     {provided.placeholder}
