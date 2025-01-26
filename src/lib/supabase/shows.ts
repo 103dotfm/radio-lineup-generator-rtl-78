@@ -65,25 +65,25 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Convert items with explicit boolean values
-    const itemsWithShowId = items.map((item, index) => ({
+    // Convert items to the correct format with explicit boolean values
+    const formattedItems = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
       name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
+      title: item.title || '',
+      details: item.details || '',
+      phone: item.phone || '',
       duration: item.duration,
-      is_break: item.isBreak === true,
-      is_note: item.isNote === true
+      is_break: Boolean(item.isBreak),
+      is_note: Boolean(item.isNote)
     }));
     
-    console.log('Prepared items for DB:', itemsWithShowId);
+    console.log('Prepared items for DB:', formattedItems);
 
-    // Use RPC call with a single JSONB parameter
+    // Use RPC call with properly formatted JSONB array
     const { data: insertedItems, error: itemsError } = await supabase
       .rpc('insert_show_items', {
-        items: JSON.stringify(itemsWithShowId)
+        items: JSON.stringify(formattedItems)
       });
 
     if (itemsError) {
