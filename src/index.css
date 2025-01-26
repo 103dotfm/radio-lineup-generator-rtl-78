@@ -34,6 +34,8 @@ body {
     background-color: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    -webkit-filter: none !important;
+    filter: none !important;
   }
   
   .print-content {
@@ -61,6 +63,7 @@ body {
   .print-content tr.bg-gray-100,
   .print-content tr.bg-gray-100 td {
     background-color: #f3f4f6 !important;
+    text-align: center !important;
   }
 
   .print-content .print-hidden {
