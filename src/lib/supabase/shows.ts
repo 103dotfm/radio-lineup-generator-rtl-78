@@ -66,33 +66,24 @@ export const saveShow = async (
     }
 
     // Convert items with explicit boolean values
-    const itemsWithShowId = items.map((item, index) => {
-      const dbItem = {
-        show_id: showData.id,
-        position: index,
-        name: item.name,
-        title: item.title,
-        details: item.details,
-        phone: item.phone,
-        duration: item.duration,
-        is_break: item.isBreak === true,
-        is_note: item.isNote === true
-      };
-      
-      console.log('Processing item for DB:', {
-        original: item,
-        processed: dbItem,
-        isBreak: dbItem.is_break,
-        isNote: dbItem.is_note
-      });
-      
-      return dbItem;
-    });
+    const itemsWithShowId = items.map((item, index) => ({
+      show_id: showData.id,
+      position: index,
+      name: item.name,
+      title: item.title,
+      details: item.details,
+      phone: item.phone,
+      duration: item.duration,
+      is_break: item.isBreak === true,
+      is_note: item.isNote === true
+    }));
+    
+    console.log('Prepared items for DB:', itemsWithShowId);
 
-    // Use RPC call to ensure proper type handling
+    // Use RPC call with a single JSONB parameter
     const { data: insertedItems, error: itemsError } = await supabase
       .rpc('insert_show_items', {
-        items: itemsWithShowId
+        items: JSON.stringify(itemsWithShowId)
       });
 
     if (itemsError) {
