@@ -23,12 +23,13 @@ export const saveShow = async (
   existingId?: string
 ) => {
   try {
-    console.log('Saving show:', show);
-    console.log('Saving items:', items);
+    console.log('Starting save operation...');
+    console.log('Original items:', items);
     
     let showData;
     
     if (existingId) {
+      console.log('Updating existing show:', existingId);
       const { data, error: showError } = await supabase
         .from('shows')
         .update({
@@ -47,6 +48,7 @@ export const saveShow = async (
       }
       showData = data;
 
+      console.log('Deleting existing items for show:', existingId);
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -57,6 +59,7 @@ export const saveShow = async (
         throw deleteError;
       }
     } else {
+      console.log('Creating new show');
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([{
@@ -75,10 +78,8 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Map frontend items to database format, ensuring boolean values are properly set
     const itemsWithShowId = items.map((item, index) => {
-      console.log('Processing item:', item); // Debug log
-      return {
+      const dbItem = {
         show_id: showData.id,
         position: index,
         name: item.name,
@@ -86,22 +87,29 @@ export const saveShow = async (
         details: item.details,
         phone: item.phone,
         duration: item.duration,
-        is_break: item.isBreak === true, // Explicitly convert to boolean
-        is_note: item.isNote === true    // Explicitly convert to boolean
+        is_break: item.isBreak === true,
+        is_note: item.isNote === true
       };
+      console.log(`Processing item ${index}:`, {
+        original: item,
+        transformed: dbItem
+      });
+      return dbItem;
     });
 
-    console.log('Inserting items:', itemsWithShowId);
+    console.log('Inserting items into database:', itemsWithShowId);
 
-    const { error: itemsError } = await supabase
+    const { data: insertedItems, error: itemsError } = await supabase
       .from('show_items')
-      .insert(itemsWithShowId);
+      .insert(itemsWithShowId)
+      .select();
 
     if (itemsError) {
       console.error('Error inserting items:', itemsError);
       throw itemsError;
     }
 
+    console.log('Successfully inserted items:', insertedItems);
     return showData;
   } catch (error) {
     console.error('Error in saveShow:', error);
@@ -116,10 +124,7 @@ export const getShows = async () => {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Get shows error:', error);
-      throw error;
-    }
+    if (error) throw error;
     return data;
   } catch (error) {
     console.error('Error getting shows:', error);
@@ -129,6 +134,8 @@ export const getShows = async () => {
 
 export const getShowWithItems = async (showId: string) => {
   try {
+    console.log('Fetching show:', showId);
+    
     const { data: show, error: showError } = await supabase
       .from('shows')
       .select('*')
@@ -136,6 +143,8 @@ export const getShowWithItems = async (showId: string) => {
       .single();
 
     if (showError) throw showError;
+
+    console.log('Fetched show data:', show);
 
     const { data: items, error: itemsError } = await supabase
       .from('show_items')
@@ -145,20 +154,27 @@ export const getShowWithItems = async (showId: string) => {
 
     if (itemsError) throw itemsError;
 
-    // Map database items back to frontend format, ensuring boolean values are preserved
-    const mappedItems = items.map(item => ({
-      id: item.id,
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-      isBreak: item.is_break === true, // Explicitly convert to boolean
-      isNote: item.is_note === true    // Explicitly convert to boolean
-    }));
+    console.log('Raw items from database:', items);
 
-    console.log('Mapped items:', mappedItems); // Debug log
+    const mappedItems = items.map(item => {
+      const mappedItem = {
+        id: item.id,
+        name: item.name,
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        isBreak: item.is_break === true,
+        isNote: item.is_note === true
+      };
+      console.log('Mapping item:', {
+        original: item,
+        mapped: mappedItem
+      });
+      return mappedItem;
+    });
 
+    console.log('Final mapped items:', mappedItems);
     return { show, items: mappedItems };
   } catch (error) {
     console.error('Error getting show with items:', error);
