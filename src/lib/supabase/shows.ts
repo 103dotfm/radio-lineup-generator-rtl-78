@@ -61,11 +61,9 @@ export const saveShow = async (
 
     if (itemsError) throw itemsError;
 
-    toast.success('התוכנית נשמרה בהצלחה');
     return showData;
   } catch (error) {
     console.error('Error saving show:', error);
-    toast.error('שגיאה בשמירת התוכנית');
     throw error;
   }
 };
