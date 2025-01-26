@@ -1,20 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
+import ShowActions from '../components/lineup/ShowActions';
 
 const Index = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [items, setItems] = useState([]);
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
@@ -104,6 +103,7 @@ const Index = () => {
         navigate(`/show/${savedShow.id}`);
       }
       setHasUnsavedChanges(false);
+      toast.success('התוכנית נשמרה בהצלחה');
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת התוכנית');
@@ -120,14 +120,6 @@ const Index = () => {
     } catch (error) {
       console.error('Error sharing:', error);
       toast.error('שגיאה בשיתוף התוכנית');
-    }
-  };
-
-  const handleBackToDashboard = () => {
-    if (hasUnsavedChanges) {
-      setShowUnsavedDialog(true);
-    } else {
-      navigate('/');
     }
   };
 
@@ -158,6 +150,14 @@ const Index = () => {
         console.error('Error generating PDF:', error);
         toast.error('שגיאה ביצירת ה-PDF');
       });
+  };
+
+  const handleBackToDashboard = () => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedDialog(true);
+    } else {
+      navigate('/');
+    }
   };
 
   return (
@@ -233,29 +233,13 @@ const Index = () => {
         </div>
       </div>
 
-      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
-            <AlertDialogDescription>
-              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => navigate('/')}>
-              התעלם משינויים
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                await handleSave();
-                navigate('/');
-              }}
-            >
-              שמור ועבור ללוח הבקרה
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ShowActions
+        hasUnsavedChanges={hasUnsavedChanges}
+        showUnsavedDialog={showUnsavedDialog}
+        setShowUnsavedDialog={setShowUnsavedDialog}
+        handleSave={handleSave}
+        navigate={navigate}
+      />
     </>
   );
 };
