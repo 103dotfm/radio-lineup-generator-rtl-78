@@ -64,24 +64,6 @@ const Index = () => {
     loadShow();
   }, [id, editor]);
 
-  const handleAdd = (newItem) => {
-    if (editingItem) {
-      setItems(items.map(item => 
-        item.id === editingItem.id 
-          ? { ...newItem, id: editingItem.id }
-          : item
-      ));
-      setEditingItem(null);
-    } else {
-      const item = {
-        ...newItem,
-        id: Date.now().toString(),
-      };
-      setItems([...items, item]);
-    }
-    setHasUnsavedChanges(true);
-  };
-
   const handleSave = async () => {
     if (isSaving) return;
     
@@ -94,9 +76,10 @@ const Index = () => {
         notes: editor?.getHTML() || '',
       };
 
-      const itemsToSave = items.map(({ id, isBreak, ...item }) => ({
+      const itemsToSave = items.map(({ id: itemId, isBreak, isNote, ...item }) => ({
         ...item,
         is_break: isBreak || false,
+        is_note: isNote || false
       }));
 
       const savedShow = await saveShow(show, itemsToSave, id);
@@ -104,6 +87,7 @@ const Index = () => {
         navigate(`/show/${savedShow.id}`);
       }
       setHasUnsavedChanges(false);
+      toast.success('התוכנית נשמרה בהצלחה');
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת התוכנית');
@@ -193,7 +177,14 @@ const Index = () => {
           onShare={handleShare}
           onPrint={() => window.print()}
           onExportPDF={handleExportPDF}
-          onAdd={handleAdd}
+          onAdd={(newItem) => {
+            const item = {
+              ...newItem,
+              id: Date.now().toString(),
+            };
+            setItems([...items, item]);
+            setHasUnsavedChanges(true);
+          }}
           onDelete={(id) => {
             setItems(items.filter(item => item.id !== id));
             setHasUnsavedChanges(true);
