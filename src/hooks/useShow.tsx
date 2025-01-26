@@ -52,7 +52,10 @@ export const useShow = (id?: string) => {
       toast.error('יש לשמור את התוכנית לפני ההדפסה');
       return;
     }
-    window.open(`/print/${id}`, '_blank');
+    const printWindow = window.open(`/print/${id}`, '_blank');
+    printWindow?.addEventListener('load', () => {
+      printWindow.print();
+    });
   };
 
   const handleShare = async (id?: string) => {
