@@ -9,7 +9,15 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const saveShow = async (
   show: Omit<Show, 'id' | 'created_at'>,
-  items: Omit<ShowItem, 'id' | 'show_id' | 'position'>[],
+  items: Array<{
+    name: string;
+    title: string;
+    details: string;
+    phone: string;
+    duration: number;
+    isBreak?: boolean;
+    isNote?: boolean;
+  }>,
   existingId?: string
 ) => {
   try {
@@ -77,8 +85,7 @@ export const saveShow = async (
       details: item.details || '',
       phone: item.phone || '',
       duration: item.duration || 0,
-      is_break: item.isBreak || false,
-      is_note: item.isNote || false
+      is_break: item.isBreak || false
     }));
 
     console.log('Inserting items:', itemsWithShowId);
