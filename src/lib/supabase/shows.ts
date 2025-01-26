@@ -43,6 +43,7 @@ export const saveShow = async (
       if (showError) throw showError;
       showData = data;
 
+      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -65,25 +66,26 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Convert items to the correct format with explicit boolean values
+    // Format items as an array of objects with proper types
     const formattedItems = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
-      name: item.name,
+      name: item.name || '',
       title: item.title || '',
       details: item.details || '',
       phone: item.phone || '',
-      duration: item.duration,
+      duration: item.duration || 0,
       is_break: Boolean(item.isBreak),
       is_note: Boolean(item.isNote)
     }));
     
-    console.log('Prepared items for DB:', formattedItems);
+    console.log('Formatted items array:', formattedItems);
+    console.log('JSON stringified items:', JSON.stringify(formattedItems));
 
-    // Use RPC call with properly formatted JSONB array
+    // Call RPC with the items array
     const { data: insertedItems, error: itemsError } = await supabase
       .rpc('insert_show_items', {
-        items: JSON.stringify(formattedItems)
+        items_array: formattedItems // Send as raw array, Supabase will handle JSON conversion
       });
 
     if (itemsError) {
