@@ -80,12 +80,11 @@ export const saveShow = async (
     }));
     
     console.log('Formatted items array:', formattedItems);
-    console.log('JSON stringified items:', JSON.stringify(formattedItems));
 
-    // Call RPC with the items array
+    // Call RPC with the items array properly formatted as JSONB
     const { data: insertedItems, error: itemsError } = await supabase
       .rpc('insert_show_items', {
-        items_array: formattedItems // Send as raw array, Supabase will handle JSON conversion
+        items_array: JSON.stringify(formattedItems)
       });
 
     if (itemsError) {
