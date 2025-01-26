@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { toast } from "sonner";
 import html2pdf from 'html2pdf.js';
 import { saveShow } from '@/lib/supabase/shows';
+import { Editor } from '@tiptap/react';
 
 export const useShow = (id?: string) => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export const useShow = (id?: string) => {
   const [isModified, setIsModified] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async (editor?: any) => {
+  const handleSave = async (editor?: Editor | null) => {
     if (isSaving) {
       toast.info('שמירה מתבצעת...');
       return;
