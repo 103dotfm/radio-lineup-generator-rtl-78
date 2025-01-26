@@ -13,18 +13,29 @@ export const saveShow = async (
   existingId?: string
 ) => {
   try {
+    console.log('Saving show:', show);
+    console.log('Saving items:', items);
+    
     let showData;
     
     if (existingId) {
       // Update existing show
       const { data, error: showError } = await supabase
         .from('shows')
-        .update(show)
+        .update({
+          name: show.name,
+          time: show.time,
+          date: show.date,
+          notes: show.notes
+        })
         .eq('id', existingId)
         .select()
         .single();
       
-      if (showError) throw showError;
+      if (showError) {
+        console.error('Error updating show:', showError);
+        throw showError;
+      }
       showData = data;
 
       // Delete existing items
@@ -33,16 +44,27 @@ export const saveShow = async (
         .delete()
         .eq('show_id', existingId);
       
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Error deleting existing items:', deleteError);
+        throw deleteError;
+      }
     } else {
       // Insert new show
       const { data, error: showError } = await supabase
         .from('shows')
-        .insert([show])
+        .insert([{
+          name: show.name,
+          time: show.time,
+          date: show.date,
+          notes: show.notes
+        }])
         .select()
         .single();
       
-      if (showError) throw showError;
+      if (showError) {
+        console.error('Error inserting show:', showError);
+        throw showError;
+      }
       showData = data;
     }
 
@@ -50,16 +72,16 @@ export const saveShow = async (
     const itemsWithShowId = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-      is_break: item.is_break,
-      is_note: item.is_note
+      name: item.name || '',
+      title: item.title || '',
+      details: item.details || '',
+      phone: item.phone || '',
+      duration: item.duration || 0,
+      is_break: item.isBreak || false,
+      is_note: item.isNote || false
     }));
 
-    console.log('Saving items:', itemsWithShowId);
+    console.log('Inserting items:', itemsWithShowId);
 
     // Insert items
     const { error: itemsError } = await supabase
@@ -67,13 +89,13 @@ export const saveShow = async (
       .insert(itemsWithShowId);
 
     if (itemsError) {
-      console.error('Error saving items:', itemsError);
+      console.error('Error inserting items:', itemsError);
       throw itemsError;
     }
 
     return showData;
   } catch (error) {
-    console.error('Error saving show:', error);
+    console.error('Error in saveShow:', error);
     throw error;
   }
 };
