@@ -45,13 +45,38 @@ export const saveShow = async (
   items: Omit<ShowItem, 'id' | 'show_id' | 'position'>[]
 ) => {
   try {
-    const { data: showData, error: showError } = await supabase
-      .from('shows')
-      .insert([show])
-      .select()
-      .single();
-
-    if (showError) throw showError;
+    let showData;
+    
+    // If show has an ID, update it instead of creating a new one
+    if ('id' in show) {
+      const { data, error: showError } = await supabase
+        .from('shows')
+        .update(show)
+        .eq('id', show.id)
+        .select()
+        .single();
+      
+      if (showError) throw showError;
+      showData = data;
+      
+      // Delete existing items
+      const { error: deleteError } = await supabase
+        .from('show_items')
+        .delete()
+        .eq('show_id', show.id);
+        
+      if (deleteError) throw deleteError;
+    } else {
+      // Create new show if no ID exists
+      const { data, error: showError } = await supabase
+        .from('shows')
+        .insert([show])
+        .select()
+        .single();
+        
+      if (showError) throw showError;
+      showData = data;
+    }
 
     const itemsWithPosition = items.map((item, index) => ({
       ...item,
@@ -66,11 +91,9 @@ export const saveShow = async (
 
     if (itemsError) throw itemsError;
 
-    toast.success('התוכנית נשמרה בהצלחה');
     return showData;
   } catch (error) {
     console.error('Error saving show:', error);
-    toast.error('שגיאה בשמירת התוכנית');
     throw error;
   }
 };

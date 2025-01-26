@@ -73,18 +73,14 @@ const Index = () => {
     try {
       setIsSaving(true);
       const show = {
+        id, // Include the ID if it exists
         name: showName,
         time: showTime,
-        date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
+        date: showDate ? format(showDate, 'yyyy-MM-dd') : null,
         notes: editor?.getHTML() || '',
       };
 
-      const itemsToSave = items.map(({ id, isBreak, ...item }) => ({
-        ...item,
-        is_break: isBreak || false,
-      }));
-
-      const savedShow = await saveShow(show, itemsToSave);
+      const savedShow = await saveShow(show, items);
       if (savedShow) {
         setIsModified(false);
         navigate(`/show/${savedShow.id}`);
@@ -107,7 +103,7 @@ const Index = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    navigate(`/print/${id}`);
   };
 
   const handleShare = async () => {
