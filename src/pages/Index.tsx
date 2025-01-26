@@ -1,28 +1,39 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { toast } from "sonner";
-import html2pdf from 'html2pdf.js';
-import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
+import { getShowWithItems } from '@/lib/supabase/shows';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { toast } from "sonner";
 import LineupEditor from '../components/lineup/LineupEditor';
-import PrintPreview from '../components/lineup/PrintPreview';
+import PDFPreview from '../components/lineup/PDFPreview';
 import SaveDialog from '../components/lineup/SaveDialog';
 import LineupActions from '../components/lineup/LineupActions';
+import { useShow } from '@/hooks/useShow';
 
 const Index = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [showName, setShowName] = useState('');
-  const [showTime, setShowTime] = useState('');
-  const [showDate, setShowDate] = useState<Date>();
-  const [editingItem, setEditingItem] = useState(null);
-  const [isModified, setIsModified] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
+  const pdfRef = useRef<HTMLDivElement>(null);
+  const {
+    items,
+    setItems,
+    showName,
+    setShowName,
+    showTime,
+    setShowTime,
+    showDate,
+    setShowDate,
+    editingItem,
+    setEditingItem,
+    isModified,
+    setIsModified,
+    handleSave,
+    handlePrint,
+    handleShare,
+    handleExportPDF
+  } = useShow(id);
+
+  const [showSaveDialog, setShowSaveDialog] = React.useState(false);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -60,94 +71,7 @@ const Index = () => {
     };
 
     loadShow();
-  }, [id, editor]);
-
-  const handleSave = async () => {
-    if (isSaving) {
-      toast.info('שמירה מתבצעת...');
-      return;
-    }
-    
-    try {
-      setIsSaving(true);
-      const show = {
-        id,
-        name: showName,
-        time: showTime,
-        date: showDate ? format(showDate, 'yyyy-MM-dd') : null,
-        notes: editor?.getHTML() || '',
-      };
-
-      const savedShow = await saveShow(show, items);
-      if (savedShow) {
-        setIsModified(false);
-        if (!id) {
-          navigate(`/show/${savedShow.id}`);
-        }
-        toast.success('התוכנית נשמרה בהצלחה');
-      }
-    } catch (error) {
-      console.error('Error saving show:', error);
-      toast.error('שגיאה בשמירת התוכנית');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handlePrint = async () => {
-    if (!id) {
-      toast.error('יש לשמור את התוכנית לפני ההדפסה');
-      return;
-    }
-    navigate(`/print/${id}`);
-  };
-
-  const handleShare = async () => {
-    if (!id) {
-      toast.error('יש לשמור את התוכנית לפני השיתוף');
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/show/${id}`);
-      toast.success('הקישור הועתק ללוח');
-    } catch (error) {
-      console.error('Error copying to clipboard:', error);
-      toast.error('שגיאה בהעתקת הקישור');
-    }
-  };
-
-  const handleExportPDF = async () => {
-    if (!id) {
-      toast.error('יש לשמור את התוכנית לפני ייצוא ל-PDF');
-      return;
-    }
-    if (!printRef.current) {
-      toast.error('שגיאה בייצוא ל-PDF');
-      return;
-    }
-
-    const element = printRef.current;
-    const opt = {
-      margin: [10, 10],
-      filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2,
-        useCORS: true,
-        logging: true,
-        letterRendering: true
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    try {
-      await html2pdf().set(opt).from(element).save();
-      toast.success('PDF נוצר בהצלחה');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('שגיאה בייצוא ל-PDF');
-    }
-  };
+  }, [id, editor, setItems, setShowName, setShowTime, setShowDate, setIsModified]);
 
   const handleNavigateBack = () => {
     if (isModified) {
@@ -164,7 +88,7 @@ const Index = () => {
         onSave={handleSave}
         onShare={handleShare}
         onPrint={handlePrint}
-        onExportPDF={handleExportPDF}
+        onExportPDF={() => handleExportPDF(pdfRef)}
       />
 
       <LineupEditor
@@ -174,22 +98,13 @@ const Index = () => {
         items={items}
         editor={editor}
         editingItem={editingItem}
-        onNameChange={(name) => {
-          setShowName(name);
-          setIsModified(true);
-        }}
-        onTimeChange={(time) => {
-          setShowTime(time);
-          setIsModified(true);
-        }}
-        onDateChange={(date) => {
-          setShowDate(date);
-          setIsModified(true);
-        }}
+        onNameChange={setShowName}
+        onTimeChange={setShowTime}
+        onDateChange={setShowDate}
         onSave={handleSave}
         onPrint={handlePrint}
         onShare={handleShare}
-        onExportPDF={handleExportPDF}
+        onExportPDF={() => handleExportPDF(pdfRef)}
         onAdd={(newItem) => {
           if (editingItem) {
             setItems(items.map(item => 
@@ -219,7 +134,7 @@ const Index = () => {
         }}
         onEdit={(id) => {
           const item = items.find(item => item.id === id);
-          if (item && !item.isBreak) {
+          if (item && !item.is_break) {
             setEditingItem(item);
           }
         }}
@@ -240,15 +155,14 @@ const Index = () => {
         handleNameLookup={async () => null}
       />
 
-      <div ref={printRef} className="hidden">
-        <PrintPreview
-          showName={showName}
-          showTime={showTime}
-          showDate={showDate}
-          items={items}
-          editorContent={editor?.getHTML() || ''}
-        />
-      </div>
+      <PDFPreview
+        ref={pdfRef}
+        showName={showName}
+        showTime={showTime}
+        showDate={showDate}
+        items={items}
+        editorContent={editor?.getHTML() || ''}
+      />
 
       <SaveDialog
         open={showSaveDialog}

@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { Show, ShowItem } from '@/types/show';
-import { toast } from 'sonner';
 
 const supabaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0';
@@ -15,7 +14,6 @@ export const saveShow = async (
     let showData;
     
     if (show.id) {
-      // Update existing show
       const { data, error: showError } = await supabase
         .from('shows')
         .update({
@@ -31,7 +29,6 @@ export const saveShow = async (
       if (showError) throw showError;
       showData = data;
 
-      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -39,7 +36,6 @@ export const saveShow = async (
       
       if (deleteError) throw deleteError;
     } else {
-      // Create new show
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([{
@@ -55,7 +51,6 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Insert new items
     const itemsWithPosition = items.map((item, index) => ({
       show_id: showData.id,
       name: item.name,
@@ -63,7 +58,7 @@ export const saveShow = async (
       details: item.details,
       phone: item.phone,
       duration: item.duration,
-      is_break: item.isBreak || false,
+      is_break: item.is_break || false,
       position: index
     }));
 
