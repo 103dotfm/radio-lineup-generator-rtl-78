@@ -12,11 +12,13 @@ interface LineupTableProps {
     phone: string;
     duration: number;
     isBreak?: boolean;
+    isNote?: boolean;
   }>;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string) => void;
   onBreakTextChange: (id: string, text: string) => void;
+  onDetailsChange: (id: string, details: string) => void;
   onDragEnd: (result: DropResult) => void;
 }
 
@@ -26,6 +28,7 @@ const LineupTable = ({
   onDurationChange,
   onEdit,
   onBreakTextChange,
+  onDetailsChange,
   onDragEnd
 }: LineupTableProps) => {
   const { isAuthenticated } = useAuth();
@@ -62,6 +65,7 @@ const LineupTable = ({
                     onDurationChange={onDurationChange}
                     onEdit={onEdit}
                     onBreakTextChange={onBreakTextChange}
+                    onDetailsChange={onDetailsChange}
                   />
                 ))}
                 {provided.placeholder}
