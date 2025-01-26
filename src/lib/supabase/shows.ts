@@ -42,10 +42,7 @@ export const saveShow = async (
         .select()
         .single();
       
-      if (showError) {
-        console.error('Error updating show:', showError);
-        throw showError;
-      }
+      if (showError) throw showError;
       showData = data;
 
       console.log('Deleting existing items for show:', existingId);
@@ -54,10 +51,7 @@ export const saveShow = async (
         .delete()
         .eq('show_id', existingId);
       
-      if (deleteError) {
-        console.error('Error deleting existing items:', deleteError);
-        throw deleteError;
-      }
+      if (deleteError) throw deleteError;
     } else {
       console.log('Creating new show');
       const { data, error: showError } = await supabase
@@ -71,14 +65,15 @@ export const saveShow = async (
         .select()
         .single();
       
-      if (showError) {
-        console.error('Error inserting show:', showError);
-        throw showError;
-      }
+      if (showError) throw showError;
       showData = data;
     }
 
     const itemsWithShowId = items.map((item, index) => {
+      // Convert boolean values to actual booleans, not undefined
+      const isBreak = Boolean(item.isBreak);
+      const isNote = Boolean(item.isNote);
+      
       const dbItem = {
         show_id: showData.id,
         position: index,
@@ -87,27 +82,29 @@ export const saveShow = async (
         details: item.details,
         phone: item.phone,
         duration: item.duration,
-        is_break: item.isBreak === true,
-        is_note: item.isNote === true
+        is_break: isBreak,
+        is_note: isNote
       };
+      
       console.log(`Processing item ${index}:`, {
         original: item,
-        transformed: dbItem
+        transformed: dbItem,
+        isBreak: isBreak,
+        isNote: isNote
       });
+      
       return dbItem;
     });
 
     console.log('Inserting items into database:', itemsWithShowId);
 
+    // Use upsert instead of insert to ensure proper handling of boolean values
     const { data: insertedItems, error: itemsError } = await supabase
       .from('show_items')
-      .insert(itemsWithShowId)
+      .upsert(itemsWithShowId)
       .select();
 
-    if (itemsError) {
-      console.error('Error inserting items:', itemsError);
-      throw itemsError;
-    }
+    if (itemsError) throw itemsError;
 
     console.log('Successfully inserted items:', insertedItems);
     return showData;
@@ -157,6 +154,7 @@ export const getShowWithItems = async (showId: string) => {
     console.log('Raw items from database:', items);
 
     const mappedItems = items.map(item => {
+      // Ensure boolean values are properly converted
       const mappedItem = {
         id: item.id,
         name: item.name,
@@ -164,13 +162,17 @@ export const getShowWithItems = async (showId: string) => {
         details: item.details,
         phone: item.phone,
         duration: item.duration,
-        isBreak: item.is_break === true,
-        isNote: item.is_note === true
+        isBreak: Boolean(item.is_break),
+        isNote: Boolean(item.is_note)
       };
+      
       console.log('Mapping item:', {
         original: item,
-        mapped: mappedItem
+        mapped: mappedItem,
+        is_break: item.is_break,
+        isBreak: mappedItem.isBreak
       });
+      
       return mappedItem;
     });
 
