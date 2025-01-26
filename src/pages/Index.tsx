@@ -96,7 +96,12 @@ const Index = () => {
       const itemsToSave = items.map(({ id: itemId, isBreak, isNote, ...item }) => ({
         ...item,
         is_break: isBreak || false,
-        is_note: isNote || false
+        is_note: isNote || false,
+        name: item.name || '',
+        title: item.title || '',
+        details: item.details || '',
+        phone: item.phone || '',
+        duration: item.duration || 5
       }));
 
       const savedShow = await saveShow(show, itemsToSave, id);
