@@ -15,7 +15,6 @@ body {
 
 .lineup-item {
   transition: all 0.2s ease-in-out;
-  cursor: pointer;
 }
 
 .lineup-item:hover {
@@ -28,56 +27,4 @@ body {
 
 .print-content {
   direction: rtl;
-}
-
-@media print {
-  body {
-    background-color: white !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    -webkit-filter: none !important;
-    filter: none !important;
-  }
-  
-  .print-content {
-    padding: 20px;
-  }
-
-  .print-content table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
-  }
-
-  .print-content th,
-  .print-content td {
-    border: 1px solid #e2e8f0;
-    padding: 8px;
-    text-align: right;
-  }
-
-  .print-content th {
-    background-color: #f8fafc !important;
-    font-weight: 600;
-  }
-
-  .print-content tr.bg-gray-100,
-  .print-content tr.bg-gray-100 td {
-    background-color: #f3f4f6 !important;
-    text-align: center !important;
-  }
-
-  .print-content tr.bg-gray-100 td[colspan="5"] {
-    text-align: center !important;
-    background-color: #f3f4f6 !important;
-  }
-
-  .print-content .print-hidden {
-    display: none !important;
-  }
-
-  @page {
-    size: auto;
-    margin: 20mm;
-  }
 }
