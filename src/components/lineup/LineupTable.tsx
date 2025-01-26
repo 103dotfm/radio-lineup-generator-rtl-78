@@ -24,11 +24,6 @@ const LineupTable = ({
   onDragEnd,
   showActions = true
 }: LineupTableProps) => {
-  const getItemStyle = (isDragging: boolean, draggableStyle: any) => ({
-    userSelect: 'none',
-    ...draggableStyle,
-  });
-
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="droppable">
@@ -54,10 +49,10 @@ const LineupTable = ({
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          style={getItemStyle(
-                            snapshot.isDragging,
-                            provided.draggableProps.style
-                          )}
+                          style={{
+                            ...provided.draggableProps.style,
+                            userSelect: 'none',
+                          }}
                           className="bg-gray-100 print:bg-gray-100"
                         >
                           <td colSpan={showActions ? 6 : 5} className="p-2 border-b text-center">
@@ -95,17 +90,15 @@ const LineupTable = ({
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          style={getItemStyle(
-                            snapshot.isDragging,
-                            provided.draggableProps.style
-                          )}
-                          className={cn(
-                            "hover:bg-muted/50"
-                          )}
+                          style={{
+                            ...provided.draggableProps.style,
+                            userSelect: 'none',
+                          }}
+                          className="hover:bg-gray-50"
                         >
                           <td className="p-2 border-b">{item.name}</td>
                           <td className="p-2 border-b">{item.title}</td>
-                          <td className="p-2 border-b">{item.details}</td>
+                          <td className="p-2 border-b whitespace-pre-line">{item.details}</td>
                           <td className="p-2 border-b">{item.phone}</td>
                           <td className="p-2 border-b">
                             <div className="flex items-center gap-2">

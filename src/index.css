@@ -69,4 +69,9 @@ body {
   .print-content .print-hidden {
     display: none !important;
   }
+
+  @page {
+    size: auto;
+    margin: 20mm;
+  }
 }
