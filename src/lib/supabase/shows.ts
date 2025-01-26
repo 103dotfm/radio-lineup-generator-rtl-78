@@ -78,17 +78,17 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Prepare items with show_id and position, explicitly mapping frontend to database fields
+    // Map frontend items to database format
     const itemsWithShowId = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
-      name: item.name || '',
-      title: item.title || '',
-      details: item.details || '',
-      phone: item.phone || '',
-      duration: item.duration || 0,
-      is_break: item.isBreak || false,
-      is_note: item.isNote || false
+      name: item.name,
+      title: item.title,
+      details: item.details,
+      phone: item.phone,
+      duration: item.duration,
+      is_break: Boolean(item.isBreak),
+      is_note: Boolean(item.isNote)
     }));
 
     console.log('Inserting items:', itemsWithShowId);
@@ -146,13 +146,19 @@ export const getShowWithItems = async (showId: string) => {
 
     if (itemsError) throw itemsError;
 
-    return { 
-      show, 
-      items: items.map(item => ({
-        ...item,
-        isBreak: item.is_break
-      }))
-    };
+    // Map database items back to frontend format
+    const mappedItems = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      title: item.title,
+      details: item.details,
+      phone: item.phone,
+      duration: item.duration,
+      isBreak: item.is_break,
+      isNote: item.is_note
+    }));
+
+    return { show, items: mappedItems };
   } catch (error) {
     console.error('Error getting show with items:', error);
     throw error;
