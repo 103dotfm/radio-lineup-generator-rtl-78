@@ -62,7 +62,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             if (item.isNote) {
               return (
                 <tr key={item.id} className="bg-yellow-50">
-                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-2 text-right border border-gray-200" dangerouslySetInnerHTML={{ __html: item.details }} />
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-2 text-right border border-gray-200">
+                    <div dangerouslySetInnerHTML={{ __html: item.details }} />
+                  </td>
                 </tr>
               );
             }
