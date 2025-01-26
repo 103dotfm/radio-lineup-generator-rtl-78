@@ -29,6 +29,12 @@ body {
   direction: rtl;
 }
 
+.h-16 {
+    max-width: 138px;
+    height: auto;
+    margin: 0px -19px -15px 0px;
+}
+
 @media print {
   @page {
     margin: 15mm;
