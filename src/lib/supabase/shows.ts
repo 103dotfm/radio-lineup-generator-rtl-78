@@ -7,51 +7,44 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const createTablesIfNotExist = async () => {
-  // Create shows table
-  const { error: showsError } = await supabase.from('shows').select('id').limit(1);
-  if (showsError?.code === '42P01') { // Table doesn't exist error code
-    const { error } = await supabase.from('shows').insert({
-      id: 'temp',
-      name: 'temp'
-    }).select();
-    
-    if (error && !error.message.includes('already exists')) {
-      console.error('Error creating shows table:', error);
-    }
-  }
-
-  // Create show_items table
-  const { error: itemsError } = await supabase.from('show_items').select('id').limit(1);
-  if (itemsError?.code === '42P01') { // Table doesn't exist error code
-    const { error } = await supabase.from('show_items').insert({
-      id: 'temp',
-      show_id: 'temp',
-      name: 'temp',
-      position: 0
-    }).select();
-    
-    if (error && !error.message.includes('already exists')) {
-      console.error('Error creating show_items table:', error);
-    }
-  }
-};
-
-// Initialize tables
-createTablesIfNotExist();
-
 export const saveShow = async (
   show: Omit<Show, 'id' | 'created_at'>,
-  items: Omit<ShowItem, 'id' | 'show_id' | 'position'>[]
+  items: Omit<ShowItem, 'id' | 'show_id' | 'position'>[],
+  existingId?: string
 ) => {
   try {
-    const { data: showData, error: showError } = await supabase
-      .from('shows')
-      .insert([show])
-      .select()
-      .single();
+    let showData;
+    
+    if (existingId) {
+      // Update existing show
+      const { data, error: showError } = await supabase
+        .from('shows')
+        .update(show)
+        .eq('id', existingId)
+        .select()
+        .single();
+      
+      if (showError) throw showError;
+      showData = data;
 
-    if (showError) throw showError;
+      // Delete existing items
+      const { error: deleteError } = await supabase
+        .from('show_items')
+        .delete()
+        .eq('show_id', existingId);
+      
+      if (deleteError) throw deleteError;
+    } else {
+      // Create new show
+      const { data, error: showError } = await supabase
+        .from('shows')
+        .insert([show])
+        .select()
+        .single();
+      
+      if (showError) throw showError;
+      showData = data;
+    }
 
     const itemsWithPosition = items.map((item, index) => ({
       ...item,
