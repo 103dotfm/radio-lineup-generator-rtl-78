@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate, Prompt } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
@@ -9,8 +9,8 @@ import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
-import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import SaveDialog from '../components/lineup/SaveDialog';
+import LineupActions from '../components/lineup/LineupActions';
 
 const Index = () => {
   const { id } = useParams();
@@ -63,25 +63,6 @@ const Index = () => {
 
     loadShow();
   }, [id, editor]);
-
-  const handleAdd = (newItem) => {
-    if (editingItem) {
-      setItems(items.map(item => 
-        item.id === editingItem.id 
-          ? { ...newItem, id: editingItem.id }
-          : item
-      ));
-      setEditingItem(null);
-    } else {
-      const item = {
-        ...newItem,
-        id: Date.now().toString(),
-      };
-      setItems([...items, item]);
-    }
-    setIsModified(true);
-    toast.success(editingItem ? 'פריט עודכן בהצלחה' : 'פריט נוסף בהצלחה');
-  };
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -151,6 +132,14 @@ const Index = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
+      <LineupActions
+        onBack={handleNavigateBack}
+        onSave={handleSave}
+        onShare={() => navigate(`/print/${id}`)}
+        onPrint={() => window.print()}
+        onExportPDF={handleExportPDF}
+      />
+
       <LineupEditor
         showName={showName}
         showTime={showTime}
@@ -171,15 +160,26 @@ const Index = () => {
           setIsModified(true);
         }}
         onSave={handleSave}
-        onBack={handleNavigateBack}
-        onShare={() => navigate(`/print/${id}`)}
-        onPrint={() => window.print()}
-        onExportPDF={handleExportPDF}
-        onAdd={handleAdd}
+        onAdd={(newItem) => {
+          if (editingItem) {
+            setItems(items.map(item => 
+              item.id === editingItem.id 
+                ? { ...newItem, id: editingItem.id }
+                : item
+            ));
+            setEditingItem(null);
+          } else {
+            const item = {
+              ...newItem,
+              id: Date.now().toString(),
+            };
+            setItems([...items, item]);
+          }
+          setIsModified(true);
+        }}
         onDelete={(id) => {
           setItems(items.filter(item => item.id !== id));
           setIsModified(true);
-          toast.success('פריט נמחק בהצלחה');
         }}
         onDurationChange={(id, duration) => {
           setItems(items.map(item => 
@@ -206,7 +206,6 @@ const Index = () => {
           newItems.splice(result.destination.index, 0, reorderedItem);
           setItems(newItems);
           setIsModified(true);
-          toast.success('סדר הפריטים עודכן');
         }}
         handleNameLookup={async () => null}
       />
@@ -221,20 +220,12 @@ const Index = () => {
         />
       </div>
 
-      <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
-            <AlertDialogDescription>
-              האם ברצונך לשמור את השינויים לפני היציאה?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => navigate('/')}>התעלם משינויים</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSave}>שמור שינויים</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <SaveDialog
+        open={showSaveDialog}
+        onOpenChange={setShowSaveDialog}
+        onSave={handleSave}
+        onDiscard={() => navigate('/')}
+      />
     </div>
   );
 };
