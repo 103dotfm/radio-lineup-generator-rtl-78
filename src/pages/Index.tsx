@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { toast } from "sonner";
+import html2pdf from 'html2pdf.js';
+import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { format } from 'date-fns';
-import html2pdf from 'html2pdf.js';
-import { toast } from "sonner";
-import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
-import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
 import SaveDialog from '../components/lineup/SaveDialog';
@@ -31,7 +30,6 @@ const Index = () => {
     editorProps: {
       attributes: {
         class: 'prose prose-sm focus:outline-none min-h-[100px] p-4',
-        placeholder: 'קרדיטים',
       },
     },
     onUpdate: () => setIsModified(true),
@@ -96,7 +94,7 @@ const Index = () => {
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!id) {
       toast.error('יש לשמור את התוכנית לפני ההדפסה');
       return;
@@ -118,12 +116,16 @@ const Index = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    if (!printRef.current) {
-      toast.error('שגיאה ביצירת ה-PDF');
+  const handleExportPDF = async () => {
+    if (!id) {
+      toast.error('יש לשמור את התוכנית לפני ייצוא ל-PDF');
       return;
     }
-    
+    if (!printRef.current) {
+      toast.error('שגיאה בייצוא ל-PDF');
+      return;
+    }
+
     const element = printRef.current;
     const opt = {
       margin: [10, 10],
@@ -137,15 +139,14 @@ const Index = () => {
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    
-    html2pdf().set(opt).from(element).save()
-      .then(() => {
-        toast.success('PDF נוצר בהצלחה');
-      })
-      .catch((error) => {
-        console.error('Error generating PDF:', error);
-        toast.error('שגיאה ביצירת ה-PDF');
-      });
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+      toast.success('PDF נוצר בהצלחה');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('שגיאה בייצוא ל-PDF');
+    }
   };
 
   const handleNavigateBack = () => {
@@ -186,6 +187,9 @@ const Index = () => {
           setIsModified(true);
         }}
         onSave={handleSave}
+        onPrint={handlePrint}
+        onShare={handleShare}
+        onExportPDF={handleExportPDF}
         onAdd={(newItem) => {
           if (editingItem) {
             setItems(items.map(item => 
@@ -208,7 +212,7 @@ const Index = () => {
           setIsModified(true);
         }}
         onDurationChange={(id, duration) => {
-          setItems(items.map(item => 
+          setItems(items.map(item =>
             item.id === id ? { ...item, duration } : item
           ));
           setIsModified(true);
@@ -220,12 +224,12 @@ const Index = () => {
           }
         }}
         onBreakTextChange={(id, text) => {
-          setItems(items.map(item => 
+          setItems(items.map(item =>
             item.id === id ? { ...item, name: text } : item
           ));
           setIsModified(true);
         }}
-        onDragEnd={(result: DropResult) => {
+        onDragEnd={(result) => {
           if (!result.destination) return;
           const newItems = Array.from(items);
           const [reorderedItem] = newItems.splice(result.source.index, 1);
