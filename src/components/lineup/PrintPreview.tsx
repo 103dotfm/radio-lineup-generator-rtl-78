@@ -23,6 +23,10 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
 
   return (
     <div className="print-content bg-white">
+      <div className="flex justify-center mb-6">
+        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-16" />
+      </div>
+      
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">{showName}</h1>
         <h2 className="text-lg text-gray-600 mt-1">

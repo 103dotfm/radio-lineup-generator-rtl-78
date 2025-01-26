@@ -27,7 +27,7 @@ interface LineupEditorProps {
   onBreakTextChange: (id: string, text: string) => void;
   onDragEnd: (result: any) => void;
   handleNameLookup: (name: string) => Promise<any>;
-  onBackToDashboard: () => void;  // Added this prop
+  onBackToDashboard: () => void;
 }
 
 const LineupEditor = ({
@@ -51,7 +51,7 @@ const LineupEditor = ({
   onBreakTextChange,
   onDragEnd,
   handleNameLookup,
-  onBackToDashboard,  // Added this prop
+  onBackToDashboard,
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden">
@@ -79,7 +79,7 @@ const LineupEditor = ({
           onAdd={onAdd} 
           onNameChange={handleNameLookup}
           editingItem={editingItem}
-          onBackToDashboard={onBackToDashboard}  // Pass the prop here
+          onBackToDashboard={onBackToDashboard}
         />
       </div>
 
@@ -91,6 +91,10 @@ const LineupEditor = ({
         onBreakTextChange={onBreakTextChange}
         onDragEnd={onDragEnd}
       />
+
+      <div className="flex justify-center mt-12 mb-8">
+        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50" />
+      </div>
     </div>
   );
 };
