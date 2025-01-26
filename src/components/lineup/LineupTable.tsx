@@ -42,7 +42,7 @@ const LineupTable = ({
                   <th className="p-2 border-b">פרטים</th>
                   <th className="p-2 border-b">טלפון</th>
                   <th className="p-2 border-b">משך</th>
-                  {showActions && <th className="p-2 border-b">פעולות</th>}
+                  {showActions && <th className="p-2 border-b print:hidden">פעולות</th>}
                 </tr>
               </thead>
               <tbody>
@@ -58,9 +58,7 @@ const LineupTable = ({
                             snapshot.isDragging,
                             provided.draggableProps.style
                           )}
-                          className={cn(
-                            "hover:bg-muted/50 bg-gray-100 print:bg-gray-100"
-                          )}
+                          className="bg-gray-100 print:bg-gray-100"
                         >
                           <td colSpan={showActions ? 6 : 5} className="p-2 border-b text-center">
                             <div className="flex items-center justify-center gap-2">
@@ -69,17 +67,26 @@ const LineupTable = ({
                                 value={item.name}
                                 onChange={(e) => onBreakTextChange(item.id, e.target.value)}
                                 className="w-48 mx-2 print:hidden"
+                                autoComplete="on"
                               />
                               <span className="hidden print:inline">{item.name}</span>
                               <span>{item.duration} דקות</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onDelete(item.id)}
-                                className="print:hidden"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="print:hidden flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onEdit(item.id)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onDelete(item.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </td>
                         </tr>
