@@ -59,7 +59,7 @@ const LineupTable = ({
                             provided.draggableProps.style
                           )}
                           className={cn(
-                            "hover:bg-muted/50 bg-gray-100"
+                            "hover:bg-muted/50 bg-gray-100 print:bg-gray-100"
                           )}
                         >
                           <td colSpan={showActions ? 6 : 5} className="p-2 border-b text-center">
@@ -68,13 +68,15 @@ const LineupTable = ({
                               <Input
                                 value={item.name}
                                 onChange={(e) => onBreakTextChange(item.id, e.target.value)}
-                                className="w-48 mx-2"
+                                className="w-48 mx-2 print:hidden"
                               />
+                              <span className="hidden print:inline">{item.name}</span>
                               <span>{item.duration} דקות</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => onDelete(item.id)}
+                                className="print:hidden"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -99,15 +101,18 @@ const LineupTable = ({
                           <td className="p-2 border-b">{item.details}</td>
                           <td className="p-2 border-b">{item.phone}</td>
                           <td className="p-2 border-b">
-                            <Input
-                              type="number"
-                              value={item.duration}
-                              onChange={(e) => onDurationChange(item.id, parseInt(e.target.value) || 5)}
-                              className="w-20"
-                            />
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={item.duration}
+                                onChange={(e) => onDurationChange(item.id, parseInt(e.target.value) || 5)}
+                                className="w-20 print:hidden"
+                              />
+                              <span className="hidden print:inline">{item.duration} דקות</span>
+                            </div>
                           </td>
                           {showActions && (
-                            <td className="p-2 border-b">
+                            <td className="p-2 border-b print:hidden">
                               <div className="flex gap-2">
                                 <Button
                                   variant="ghost"
