@@ -16,6 +16,7 @@ export const saveShow = async (
     let showData;
     
     if (existingId) {
+      // Update existing show
       const { data, error: showError } = await supabase
         .from('shows')
         .update(show)
@@ -26,6 +27,7 @@ export const saveShow = async (
       if (showError) throw showError;
       showData = data;
 
+      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -33,6 +35,7 @@ export const saveShow = async (
       
       if (deleteError) throw deleteError;
     } else {
+      // Insert new show
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([show])
@@ -43,23 +46,30 @@ export const saveShow = async (
       showData = data;
     }
 
-    const itemsWithPosition = items.map((item, index) => ({
+    // Prepare items with show_id and position
+    const itemsWithShowId = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
-      name: item.name || '',
-      title: item.title || '',
-      details: item.details || '',
-      phone: item.phone || '',
-      duration: item.duration || 5,
-      is_break: item.is_break || false,
-      is_note: item.is_note || false
+      name: item.name,
+      title: item.title,
+      details: item.details,
+      phone: item.phone,
+      duration: item.duration,
+      is_break: item.is_break,
+      is_note: item.is_note
     }));
 
+    console.log('Saving items:', itemsWithShowId);
+
+    // Insert items
     const { error: itemsError } = await supabase
       .from('show_items')
-      .insert(itemsWithPosition);
+      .insert(itemsWithShowId);
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Error saving items:', itemsError);
+      throw itemsError;
+    }
 
     return showData;
   } catch (error) {
