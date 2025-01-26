@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
+import { Textarea } from "@/components/ui/textarea";
 
 interface LineupItemProps {
   id: string;
@@ -42,30 +41,6 @@ const LineupItem = ({
 }: LineupItemProps) => {
   const { isAuthenticated } = useAuth();
 
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: details,
-    editable: true,
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm focus:outline-none min-h-[50px] p-2',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      if (onDetailsChange) {
-        const content = editor.getHTML();
-        onDetailsChange(id, content);
-      }
-    },
-  });
-
-  // Update editor content when details prop changes
-  useEffect(() => {
-    if (editor && details !== editor.getHTML()) {
-      editor.commands.setContent(details);
-    }
-  }, [details, editor]);
-
   return (
     <Draggable draggableId={id} index={index}>
       {(provided) => (
@@ -77,7 +52,12 @@ const LineupItem = ({
         >
           {isNote ? (
             <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
-              <EditorContent editor={editor} className="note-editor" />
+              <Textarea
+                value={details}
+                onChange={(e) => onDetailsChange?.(id, e.target.value)}
+                className="min-h-[100px] w-full"
+                placeholder="הכנס הערה כאן..."
+              />
             </td>
           ) : (
             <>
