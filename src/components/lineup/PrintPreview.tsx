@@ -1,5 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface PrintPreviewProps {
   showName: string;
@@ -18,6 +19,8 @@ interface PrintPreviewProps {
 }
 
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: PrintPreviewProps) => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="print-content bg-white">
       <div className="text-center mb-4">
@@ -33,7 +36,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             <th className="py-1 px-2 text-right border border-gray-200">שם</th>
             <th className="py-1 px-2 text-right border border-gray-200">כותרת</th>
             <th className="py-1 px-2 text-right border border-gray-200">פרטים</th>
-            <th className="py-1 px-2 text-right border border-gray-200">טלפון</th>
+            {isAuthenticated && (
+              <th className="py-1 px-2 text-right border border-gray-200">טלפון</th>
+            )}
             <th className="py-1 px-2 text-right border border-gray-200">דקות</th>
           </tr>
         </thead>
@@ -41,7 +46,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
           {items.map((item) => (
             item.isBreak ? (
               <tr key={item.id} className="bg-gray-100">
-                <td colSpan={5} className="py-1 px-2 text-center border border-gray-200">
+                <td colSpan={isAuthenticated ? 5 : 4} className="py-1 px-2 text-center border border-gray-200">
                   {item.name} - {item.duration} דקות
                 </td>
               </tr>
@@ -50,7 +55,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                 <td className="py-1 px-2 border border-gray-200">{item.name}</td>
                 <td className="py-1 px-2 border border-gray-200">{item.title}</td>
                 <td className="py-1 px-2 border border-gray-200 whitespace-pre-line">{item.details}</td>
-                <td className="py-1 px-2 border border-gray-200">{item.phone}</td>
+                {isAuthenticated && (
+                  <td className="py-1 px-2 border border-gray-200">{item.phone}</td>
+                )}
                 <td className="py-1 px-2 border border-gray-200">{item.duration} דקות</td>
               </tr>
             )
