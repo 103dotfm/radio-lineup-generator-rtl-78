@@ -122,6 +122,7 @@ const LineupForm = ({ onAdd, onNameChange, onBackToDashboard, editingItem }: Lin
         onChange={(e) => setDetails(e.target.value)}
         name="details"
         autoComplete="on"
+        className="whitespace-pre-wrap"
       />
       <div className="grid grid-cols-2 gap-4">
         <Input
