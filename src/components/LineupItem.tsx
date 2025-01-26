@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Coffee, GripVertical, Edit2, Check } from "lucide-react";
+import { Clock, Trash2, Coffee, GripVertical, Edit2, Check, Pencil } from "lucide-react";
 import { Draggable } from 'react-beautiful-dnd';
 import { Input } from "@/components/ui/input";
 
@@ -43,12 +43,6 @@ const LineupItem = ({
     setIsEditingBreak(false);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (!isBreak && onEdit && !e.defaultPrevented) {
-      onEdit(id);
-    }
-  };
-
   if (isBreak) {
     return (
       <Draggable draggableId={id} index={index}>
@@ -58,7 +52,7 @@ const LineupItem = ({
             {...provided.draggableProps}
             className={`bg-gray-100 transition-colors ${snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''}`}
           >
-            <td className="py-2 px-2 text-center relative" colSpan={5}>
+            <td colSpan={5} className="py-2 px-2 text-center relative">
               <div className="flex items-center justify-center gap-2">
                 <div
                   {...provided.dragHandleProps}
@@ -123,8 +117,7 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          onClick={handleClick}
-          className={`transition-colors hover:bg-gray-50 cursor-pointer ${
+          className={`transition-colors hover:bg-gray-50 ${
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}
         >
@@ -156,6 +149,17 @@ const LineupItem = ({
                 />
                 <span className="text-sm">דקות</span>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onEdit) onEdit(id);
+                }}
+                className="h-8 w-8 print:hidden"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
               <Button
                 variant="destructive"
                 size="icon"
