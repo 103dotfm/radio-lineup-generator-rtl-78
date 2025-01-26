@@ -20,9 +20,9 @@ interface PrintPreviewProps {
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: PrintPreviewProps) => {
   return (
     <div className="print-content text-sm">
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-bold pb-1">{showName}</h1>
-        <h2 className="text-lg text-gray-600 mt-1 pb-1">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold pb-2">{showName}</h1>
+        <h2 className="text-lg text-gray-600 mt-2 pb-2">
           {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
         </h2>
       </div>
@@ -30,40 +30,40 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
-            <th className="py-1 px-2 text-right border border-gray-200 pb-[5px]">שם</th>
-            <th className="py-1 px-2 text-right border border-gray-200 pb-[5px]">כותרת</th>
-            <th className="py-1 px-2 text-right border border-gray-200 pb-[5px]">פרטים</th>
-            <th className="py-1 px-2 text-right border border-gray-200 pb-[5px]">טלפון</th>
-            <th className="py-1 px-2 text-right border border-gray-200 pb-[5px]">דקות</th>
+            <th className="py-2 px-3 text-right border border-gray-200">שם</th>
+            <th className="py-2 px-3 text-right border border-gray-200">כותרת</th>
+            <th className="py-2 px-3 text-right border border-gray-200">פרטים</th>
+            <th className="py-2 px-3 text-right border border-gray-200">טלפון</th>
+            <th className="py-2 px-3 text-right border border-gray-200">דקות</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => (
             item.isBreak ? (
               <tr key={item.id} className="bg-gray-100">
-                <td colSpan={5} className="py-1 px-2 text-center border border-gray-200 pb-[5px]">
+                <td colSpan={5} className="py-2 px-3 text-center border border-gray-200">
                   {item.name} - {item.duration} דקות
                 </td>
               </tr>
             ) : (
               <tr key={item.id}>
-                <td className="py-1 px-2 border border-gray-200 pb-[5px]">{item.name}</td>
-                <td className="py-1 px-2 border border-gray-200 pb-[5px]">{item.title}</td>
-                <td className="py-1 px-2 border border-gray-200 pb-[5px]">{item.details}</td>
-                <td className="py-1 px-2 border border-gray-200 pb-[5px]">{item.phone}</td>
-                <td className="py-1 px-2 border border-gray-200 pb-[5px]">{item.duration} דקות</td>
+                <td className="py-2 px-3 border border-gray-200">{item.name}</td>
+                <td className="py-2 px-3 border border-gray-200">{item.title}</td>
+                <td className="py-2 px-3 border border-gray-200 whitespace-pre-line">{item.details}</td>
+                <td className="py-2 px-3 border border-gray-200">{item.phone}</td>
+                <td className="py-2 px-3 border border-gray-200">{item.duration} דקות</td>
               </tr>
             )
           ))}
         </tbody>
       </table>
 
-      <div className="mt-2 text-left text-sm pb-[5px]">
+      <div className="mt-4 text-left text-sm">
         <p>סה"כ זמן: {items.reduce((sum, item) => sum + item.duration, 0)} דקות</p>
       </div>
 
       {editorContent && (
-        <div className="mt-8 text-right text-xs border-t pt-4 pb-[5px]" dangerouslySetInnerHTML={{ __html: editorContent }} />
+        <div className="mt-8 text-right text-xs border-t pt-4" dangerouslySetInnerHTML={{ __html: editorContent }} />
       )}
     </div>
   );

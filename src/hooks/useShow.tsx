@@ -53,9 +53,13 @@ export const useShow = (id?: string) => {
       return;
     }
     const printWindow = window.open(`/print/${id}`, '_blank');
-    printWindow?.addEventListener('load', () => {
-      printWindow.print();
-    });
+    if (printWindow) {
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      };
+    }
   };
 
   const handleShare = async (id?: string) => {
