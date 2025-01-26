@@ -85,8 +85,8 @@ const Index = () => {
     <div className="container mx-auto py-8 px-4">
       <LineupActions
         onBack={handleNavigateBack}
-        onSave={handleSave}
-        onShare={() => handleShare(id)}
+        onSave={() => handleSave(editor)}
+        onShare={handleShare}
         onPrint={handlePrint}
         onExportPDF={() => handleExportPDF(pdfRef)}
       />
@@ -101,9 +101,9 @@ const Index = () => {
         onNameChange={setShowName}
         onTimeChange={setShowTime}
         onDateChange={setShowDate}
-        onSave={handleSave}
+        onSave={() => handleSave(editor)}
         onPrint={handlePrint}
-        onShare={() => handleShare(id)}
+        onShare={handleShare}
         onExportPDF={() => handleExportPDF(pdfRef)}
         onAdd={(newItem) => {
           if (editingItem) {
@@ -169,7 +169,7 @@ const Index = () => {
       <SaveDialog
         open={showSaveDialog}
         onOpenChange={setShowSaveDialog}
-        onSave={handleSave}
+        onSave={() => handleSave(editor)}
         onDiscard={() => navigate('/')}
       />
     </div>
