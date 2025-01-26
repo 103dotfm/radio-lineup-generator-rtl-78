@@ -44,6 +44,11 @@ const LineupEditor = ({
   onDragEnd,
   handleNameLookup,
 }: LineupEditorProps) => {
+  // Create async wrapper functions for the callbacks that need to return Promises
+  const handleSave = async () => {
+    await onSave();
+  };
+
   return (
     <div className="print:hidden">
       <ShowHeader
@@ -53,7 +58,7 @@ const LineupEditor = ({
         onNameChange={onNameChange}
         onTimeChange={onTimeChange}
         onDateChange={onDateChange}
-        onSave={onSave}
+        onSave={handleSave}
         onShare={() => {}}
         onPrint={() => {}}
         onExportPDF={() => {}}
