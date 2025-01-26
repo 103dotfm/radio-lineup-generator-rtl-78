@@ -29,7 +29,6 @@ export const saveShow = async (
     let showData;
     
     if (existingId) {
-      // Update existing show
       const { data, error: showError } = await supabase
         .from('shows')
         .update({
@@ -48,7 +47,6 @@ export const saveShow = async (
       }
       showData = data;
 
-      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -59,7 +57,6 @@ export const saveShow = async (
         throw deleteError;
       }
     } else {
-      // Insert new show
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([{
@@ -78,22 +75,24 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Map frontend items to database format
-    const itemsWithShowId = items.map((item, index) => ({
-      show_id: showData.id,
-      position: index,
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-      is_break: Boolean(item.isBreak),
-      is_note: Boolean(item.isNote)
-    }));
+    // Map frontend items to database format, ensuring boolean values are properly set
+    const itemsWithShowId = items.map((item, index) => {
+      console.log('Processing item:', item); // Debug log
+      return {
+        show_id: showData.id,
+        position: index,
+        name: item.name,
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        is_break: item.isBreak === true, // Explicitly convert to boolean
+        is_note: item.isNote === true    // Explicitly convert to boolean
+      };
+    });
 
     console.log('Inserting items:', itemsWithShowId);
 
-    // Insert items
     const { error: itemsError } = await supabase
       .from('show_items')
       .insert(itemsWithShowId);
@@ -146,7 +145,7 @@ export const getShowWithItems = async (showId: string) => {
 
     if (itemsError) throw itemsError;
 
-    // Map database items back to frontend format
+    // Map database items back to frontend format, ensuring boolean values are preserved
     const mappedItems = items.map(item => ({
       id: item.id,
       name: item.name,
@@ -154,9 +153,11 @@ export const getShowWithItems = async (showId: string) => {
       details: item.details,
       phone: item.phone,
       duration: item.duration,
-      isBreak: item.is_break,
-      isNote: item.is_note
+      isBreak: item.is_break === true, // Explicitly convert to boolean
+      isNote: item.is_note === true    // Explicitly convert to boolean
     }));
+
+    console.log('Mapped items:', mappedItems); // Debug log
 
     return { show, items: mappedItems };
   } catch (error) {
