@@ -227,14 +227,14 @@ const Index = () => {
                 {...provided.droppableProps}
                 className="min-h-[200px] transition-all"
               >
-                <table className="w-full print:table border-collapse [&_td]:border [&_th]:border [&_td]:border-black [&_th]:border-black">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th className="py-2 text-right">שם</th>
-                      <th className="py-2 text-right">כותרת</th>
-                      <th className="py-2 text-right">פרטים</th>
-                      <th className="py-2 text-right">טלפון</th>
-                      <th className="py-2 text-right">דקות</th>
+                      <th className="py-2 px-4 text-right border border-gray-200">שם</th>
+                      <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
+                      <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
+                      <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
+                      <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,8 +258,8 @@ const Index = () => {
         </DragDropContext>
       </div>
 
-      <div ref={printRef} className="print:block print:mt-0">
-        <div className="print:text-center print:mb-8">
+      <div ref={printRef} className="hidden print:block print:mt-0">
+        <div className="text-center mb-8">
           <h1 className="text-3xl font-bold">{showName}</h1>
           <h2 className="text-xl text-gray-600 mt-2">
             {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
@@ -267,38 +267,36 @@ const Index = () => {
         </div>
 
         {editor?.getHTML() && (
-          <div className="print:mt-8 print:text-right" dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
+          <div className="mt-8 text-right" dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
         )}
 
-        <div className="print:mt-4 print:text-left">
+        <table className="w-full border-collapse mt-8">
+          <thead>
+            <tr>
+              <th className="py-2 px-4 text-right border border-gray-200">שם</th>
+              <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
+              <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
+              <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id} className="border border-gray-200">
+                <td className="py-2 px-4 border border-gray-200">{item.name}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.title}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.details}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.phone}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.duration} דקות</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="mt-4 text-left">
           <p>סה"כ זמן: {items.reduce((sum, item) => sum + item.duration, 0)} דקות</p>
         </div>
       </div>
-
-      <style>{`
-        @media print {
-          @page { 
-            size: auto;
-            margin: 20mm;
-          }
-          .print\\:hidden { display: none !important; }
-          .print\\:block { display: block !important; }
-          .print\\:table { display: table !important; }
-          .print\\:mt-0 { margin-top: 0 !important; }
-          .print\\:mt-8 { margin-top: 2rem !important; }
-          .print\\:mt-4 { margin-top: 1rem !important; }
-          .print\\:mb-8 { margin-bottom: 2rem !important; }
-          .print\\:text-center { text-align: center !important; }
-          .print\\:text-right { text-align: right !important; }
-          .print\\:text-left { text-align: left !important; }
-          table { border-collapse: collapse; }
-          th, td { 
-            padding: 8px;
-            text-align: right;
-            border-bottom: 1px solid #ddd;
-          }
-        }
-      `}</style>
     </div>
   );
 };

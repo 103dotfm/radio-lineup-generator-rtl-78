@@ -11,37 +11,29 @@ const createTablesIfNotExist = async () => {
   // Create shows table
   const { error: showsError } = await supabase.from('shows').select('id').limit(1);
   if (showsError?.code === '42P01') { // Table doesn't exist error code
-    const { error } = await supabase.query(`
-      CREATE TABLE IF NOT EXISTS shows (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name TEXT NOT NULL,
-        time TEXT,
-        date TEXT,
-        notes TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    if (error) console.error('Error creating shows table:', error);
+    const { error } = await supabase.from('shows').insert({
+      id: 'temp',
+      name: 'temp'
+    }).select();
+    
+    if (error && !error.message.includes('already exists')) {
+      console.error('Error creating shows table:', error);
+    }
   }
 
   // Create show_items table
   const { error: itemsError } = await supabase.from('show_items').select('id').limit(1);
   if (itemsError?.code === '42P01') { // Table doesn't exist error code
-    const { error } = await supabase.query(`
-      CREATE TABLE IF NOT EXISTS show_items (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        show_id UUID REFERENCES shows(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        title TEXT,
-        details TEXT,
-        phone TEXT,
-        duration INTEGER,
-        is_break BOOLEAN DEFAULT false,
-        position INTEGER,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    if (error) console.error('Error creating show_items table:', error);
+    const { error } = await supabase.from('show_items').insert({
+      id: 'temp',
+      show_id: 'temp',
+      name: 'temp',
+      position: 0
+    }).select();
+    
+    if (error && !error.message.includes('already exists')) {
+      console.error('Error creating show_items table:', error);
+    }
   }
 };
 
