@@ -75,8 +75,8 @@ export const saveShow = async (
       details: item.details || '',
       phone: item.phone || '',
       duration: item.duration || 0,
-      is_break: item.isBreak || false,
-      is_note: item.isNote || false
+      is_break: item.isBreak === true,
+      is_note: item.isNote === true
     }));
     
     console.log('Formatted items array:', formattedItems);
@@ -84,7 +84,7 @@ export const saveShow = async (
     // Call RPC with the items array properly formatted as JSONB
     const { data: insertedItems, error: itemsError } = await supabase
       .rpc('insert_show_items', {
-        items_array: formattedItems // Changed this line to pass the array directly
+        items_array: formattedItems
       });
 
     if (itemsError) {
