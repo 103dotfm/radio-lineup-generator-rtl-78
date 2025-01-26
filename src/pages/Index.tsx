@@ -160,6 +160,13 @@ const Index = () => {
       });
   };
 
+  const handleDetailsChange = (id: string, details: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, details } : item
+    ));
+    setHasUnsavedChanges(true);
+  };
+
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -220,6 +227,7 @@ const Index = () => {
           }}
           handleNameLookup={async () => null}
           onBackToDashboard={handleBackToDashboard}
+          onDetailsChange={handleDetailsChange}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">
