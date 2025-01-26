@@ -43,6 +43,12 @@ const LineupItem = ({
     setIsEditingBreak(false);
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isBreak && onEdit && !e.defaultPrevented) {
+      onEdit(id);
+    }
+  };
+
   if (isBreak) {
     return (
       <Draggable draggableId={id} index={index}>
@@ -52,7 +58,7 @@ const LineupItem = ({
             {...provided.draggableProps}
             className={`bg-gray-100 transition-colors ${snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''}`}
           >
-            <td colSpan={5} className="py-2 px-2 text-center relative">
+            <td className="py-2 px-2 text-center relative" colSpan={5}>
               <div className="flex items-center justify-center gap-2">
                 <div
                   {...provided.dragHandleProps}
@@ -117,7 +123,7 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          onClick={() => onEdit && onEdit(id)}
+          onClick={handleClick}
           className={`transition-colors hover:bg-gray-50 cursor-pointer ${
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}

@@ -55,8 +55,8 @@ const Index = () => {
             setShowName(show.name);
             setShowTime(show.time);
             setShowDate(show.date ? new Date(show.date) : undefined);
-            if (editor) {
-              editor.commands.setContent(show.notes || '');
+            if (editor && show.notes) {
+              editor.commands.setContent(show.notes);
             }
           }
           if (showItems) {
@@ -134,7 +134,7 @@ const Index = () => {
         }}
         onEdit={(id) => {
           const item = items.find(item => item.id === id);
-          if (item && !item.is_break) {
+          if (item && !item.isBreak) {
             setEditingItem(item);
           }
         }}
