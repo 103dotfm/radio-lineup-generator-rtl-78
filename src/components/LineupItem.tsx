@@ -44,7 +44,8 @@ const LineupItem = ({
 
   const editor = useEditor({
     extensions: [StarterKit],
-    content: details || '',
+    content: details,
+    editable: true,
     editorProps: {
       attributes: {
         class: 'prose prose-sm focus:outline-none min-h-[50px] p-2',
@@ -52,7 +53,8 @@ const LineupItem = ({
     },
     onUpdate: ({ editor }) => {
       if (onDetailsChange) {
-        onDetailsChange(id, editor.getHTML());
+        const content = editor.getHTML();
+        onDetailsChange(id, content);
       }
     },
   });
@@ -60,7 +62,7 @@ const LineupItem = ({
   // Update editor content when details prop changes
   useEffect(() => {
     if (editor && details !== editor.getHTML()) {
-      editor.commands.setContent(details || '');
+      editor.commands.setContent(details);
     }
   }, [details, editor]);
 
