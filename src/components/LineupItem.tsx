@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ const LineupItem = ({
 
   const editor = useEditor({
     extensions: [StarterKit],
-    content: '',
+    content: details || '',
     editorProps: {
       attributes: {
         class: 'prose prose-sm focus:outline-none min-h-[50px] p-2',
@@ -56,12 +56,6 @@ const LineupItem = ({
       }
     },
   });
-
-  useEffect(() => {
-    if (editor && (isNote || details)) {
-      editor.commands.setContent(details);
-    }
-  }, [editor, details, isNote]);
 
   return (
     <Draggable draggableId={id} index={index}>
