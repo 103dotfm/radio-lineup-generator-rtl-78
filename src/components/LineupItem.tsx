@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Coffee, GripVertical, Edit2, Check } from "lucide-react";
+import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Edit2, Trash2 } from "lucide-react";
 
 interface LineupItemProps {
   id: string;
@@ -13,11 +12,11 @@ interface LineupItemProps {
   phone: string;
   duration: number;
   isBreak?: boolean;
+  index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit?: (id: string) => void;
-  onBreakTextChange?: (id: string, text: string) => void;
-  index: number;
+  onEdit: (id: string) => void;
+  onBreakTextChange: (id: string, text: string) => void;
 }
 
 const LineupItem = ({
@@ -28,147 +27,62 @@ const LineupItem = ({
   phone,
   duration,
   isBreak,
+  index,
   onDelete,
   onDurationChange,
   onEdit,
-  onBreakTextChange,
-  index,
+  onBreakTextChange
 }: LineupItemProps) => {
-  const [isEditingBreak, setIsEditingBreak] = useState(false);
-  const [breakText, setBreakText] = useState(name);
-
-  const handleBreakTextSave = () => {
-    if (onBreakTextChange) {
-      onBreakTextChange(id, breakText);
-    }
-    setIsEditingBreak(false);
-  };
-
-  if (isBreak) {
-    return (
-      <Draggable draggableId={id} index={index}>
-        {(provided, snapshot) => (
-          <tr
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            className={`bg-gray-100 transition-colors ${snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''}`}
-          >
-            <td colSpan={5} className="py-2 px-2 text-center relative">
-              <div className="flex items-center justify-center gap-2">
-                <div
-                  {...provided.dragHandleProps}
-                  className="absolute right-2 cursor-grab active:cursor-grabbing hover:bg-gray-200 rounded p-1 transition-colors print:hidden"
-                  title="גרור כדי לשנות מיקום"
-                >
-                  <GripVertical className="h-5 w-5 text-gray-500" />
-                </div>
-                <Coffee className="h-4 w-4 text-gray-500 print:hidden" />
-                {isEditingBreak ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={breakText}
-                      onChange={(e) => setBreakText(e.target.value)}
-                      className="w-48"
-                      autoFocus
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleBreakTextSave}
-                      className="h-8 w-8"
-                    >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <span>{name} - {duration} דקות</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setIsEditingBreak(true)}
-                      className="h-8 w-8 print:hidden"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  </>
-                )}
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(id);
-                  }}
-                  className="h-8 w-8 mr-2 print:hidden"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </td>
-          </tr>
-        )}
-      </Draggable>
-    );
-  }
-
   return (
     <Draggable draggableId={id} index={index}>
-      {(provided, snapshot) => (
+      {(provided) => (
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          onClick={(e) => {
-            if (!snapshot.isDragging && onEdit) {
-              onEdit(id);
-            }
-          }}
-          className={`transition-colors hover:bg-gray-50 ${
-            snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
-          }`}
+          {...provided.dragHandleProps}
+          className={`${isBreak ? 'bg-gray-50' : ''}`}
         >
-          <td className="py-2 px-2 relative">
-            <div
-              {...provided.dragHandleProps}
-              className="absolute right-2 cursor-grab active:cursor-grabbing hover:bg-gray-200 rounded p-1 transition-colors print:hidden"
-              onClick={(e) => e.stopPropagation()}
-              title="גרור כדי לשנות מיקום"
-            >
-              <GripVertical className="h-5 w-5 text-gray-500" />
-            </div>
-            {name}
+          <td className="py-2 px-4 border border-gray-200">
+            {isBreak ? (
+              <Input
+                value={name}
+                onChange={(e) => onBreakTextChange(id, e.target.value)}
+                className="w-full"
+              />
+            ) : (
+              name
+            )}
           </td>
-          <td className="py-2 px-2">{title}</td>
-          <td className="py-2 px-2">{details}</td>
-          <td className="py-2 px-2">{phone}</td>
-          <td className="py-2 px-2">
-            <div className="flex items-center gap-2 justify-end">
-              <div className="flex items-center gap-1 print:hidden">
-                <Clock className="w-4 h-4" />
-                <input
-                  type="number"
-                  value={duration}
-                  onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
-                  className="w-16 text-center border rounded p-1"
-                  min="1"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <span className="text-sm">דקות</span>
-              </div>
+          <td className="py-2 px-4 border border-gray-200">{title}</td>
+          <td className="py-2 px-4 border border-gray-200 whitespace-pre-line">{details}</td>
+          <td className="py-2 px-4 border border-gray-200">{phone}</td>
+          <td className="py-2 px-4 border border-gray-200">
+            <Input
+              type="number"
+              min="1"
+              value={duration}
+              onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
+              className="w-20"
+            />
+          </td>
+          <td className="py-2 px-4 border border-gray-200">
+            <div className="flex gap-2">
+              {!isBreak && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onEdit(id)}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button
-                variant="destructive"
+                variant="ghost"
                 size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(id);
-                }}
-                className="h-8 w-8 print:hidden"
+                onClick={() => onDelete(id)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
-            </div>
-            <div className="hidden print:block">
-              {duration} דקות
             </div>
           </td>
         </tr>
