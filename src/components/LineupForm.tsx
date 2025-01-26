@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Coffee } from "lucide-react";
+import { Plus, Coffee, StickyNote } from "lucide-react";
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -12,6 +12,7 @@ interface LineupFormProps {
     phone: string;
     duration: number;
     isBreak?: boolean;
+    isNote?: boolean;
   }) => void;
   onNameChange: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
@@ -22,6 +23,7 @@ interface LineupFormProps {
     phone: string;
     duration: number;
     isBreak?: boolean;
+    isNote?: boolean;
   } | null;
 }
 
@@ -78,6 +80,17 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       isBreak: true 
     });
     setDuration(5);
+  };
+
+  const handleNoteAdd = () => {
+    onAdd({
+      name: 'הערה',
+      title: '',
+      details: '',
+      phone: '',
+      duration: 0,
+      isNote: true
+    });
   };
 
   return (
@@ -150,6 +163,14 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
           className="w-auto lineup-form-break"
         >
           <Coffee className="ml-2 h-4 w-4" /> הוסף הפסקה
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handleNoteAdd} 
+          variant="secondary" 
+          className="w-auto lineup-form-note"
+        >
+          <StickyNote className="ml-2 h-4 w-4" /> הוספת הערה
         </Button>
       </div>
     </form>

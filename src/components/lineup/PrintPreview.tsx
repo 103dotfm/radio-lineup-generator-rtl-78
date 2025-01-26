@@ -14,6 +14,7 @@ interface PrintPreviewProps {
     phone: string;
     duration: number;
     isBreak?: boolean;
+    isNote?: boolean;
   }>;
   editorContent: string;
 }
@@ -47,14 +48,28 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
-            item.isBreak ? (
-              <tr key={item.id} className="bg-gray-100">
-                <td colSpan={isAuthenticated ? 5 : 4} className="py-1 px-2 text-center border border-gray-200">
-                  {item.name} - {item.duration} דקות
-                </td>
-              </tr>
-            ) : (
+          {items.map((item) => {
+            if (item.isBreak) {
+              return (
+                <tr key={item.id} className="bg-gray-100">
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-1 px-2 text-center border border-gray-200">
+                    {item.name} - {item.duration} דקות
+                  </td>
+                </tr>
+              );
+            }
+            
+            if (item.isNote) {
+              return (
+                <tr key={item.id} className="bg-yellow-50">
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-2 text-right border border-gray-200 note-editor">
+                    {item.details || 'הערה חדשה...'}
+                  </td>
+                </tr>
+              );
+            }
+
+            return (
               <tr key={item.id}>
                 <td className="py-1 px-2 border border-gray-200">{item.name}</td>
                 <td className="py-1 px-2 border border-gray-200">{item.title}</td>
@@ -64,13 +79,13 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                 )}
                 <td className="py-1 px-2 border border-gray-200">{item.duration} דקות</td>
               </tr>
-            )
-          ))}
+            );
+          })}
         </tbody>
       </table>
 
       <div className="mt-2 text-left text-sm">
-        <p>סה"כ זמן: {items.reduce((sum, item) => sum + item.duration, 0)} דקות</p>
+        <p>סה"כ זמן: {items.reduce((sum, item) => sum + (item.duration || 0), 0)} דקות</p>
       </div>
 
       {editorContent && (
