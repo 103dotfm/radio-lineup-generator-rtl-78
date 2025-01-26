@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Coffee, ArrowRight } from "lucide-react";
+import { Plus, Coffee } from "lucide-react";
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -25,7 +25,7 @@ interface LineupFormProps {
   } | null;
 }
 
-const LineupForm = ({ onAdd, onNameChange, onBackToDashboard, editingItem }: LineupFormProps) => {
+const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
@@ -81,74 +81,74 @@ const LineupForm = ({ onAdd, onNameChange, onBackToDashboard, editingItem }: Lin
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-      <div className="flex justify-between items-center mb-4">
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={onBackToDashboard}
-          className="flex items-center gap-2"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה ללוח הבקרה
-        </Button>
+    <form onSubmit={handleSubmit} className="lineup-form space-y-4">      
+      <div className="lineup-form-inputs">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Input
+            placeholder="שם"
+            value={name}
+            onChange={handleNameChange}
+            required
+            autoComplete="name"
+            name="name"
+            list="names-list"
+            className="lineup-form-input-name"
+          />
+          <datalist id="names-list">
+            {/* Add suggested names here if needed */}
+          </datalist>
+          <Input
+            placeholder="כותרת"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            autoComplete="organization-title"
+            name="title"
+            className="lineup-form-input-title"
+          />
+        </div>
+        <Textarea
+          placeholder="פרטים"
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          name="details"
+          autoComplete="on"
+          className="lineup-form-input-details whitespace-pre-wrap mb-4"
+        />
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Input
+            placeholder="טלפון"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+            autoComplete="tel"
+            name="phone"
+            className="lineup-form-input-phone"
+          />
+          <Input
+            placeholder="משך בדקות"
+            type="number"
+            min="1"
+            value={duration}
+            onChange={(e) => setDuration(parseInt(e.target.value) || 5)}
+            required
+            name="duration"
+            className="lineup-form-input-duration"
+          />
+        </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          placeholder="שם"
-          value={name}
-          onChange={handleNameChange}
-          required
-          autoComplete="name"
-          name="name"
-          list="names-list"
-        />
-        <datalist id="names-list">
-          {/* Add suggested names here if needed */}
-        </datalist>
-        <Input
-          placeholder="כותרת"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          autoComplete="organization-title"
-          name="title"
-        />
-      </div>
-      <Textarea
-        placeholder="פרטים"
-        value={details}
-        onChange={(e) => setDetails(e.target.value)}
-        name="details"
-        autoComplete="on"
-        className="whitespace-pre-wrap"
-      />
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          placeholder="טלפון"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          required
-          autoComplete="tel"
-          name="phone"
-        />
-        <Input
-          placeholder="משך בדקות"
-          type="number"
-          min="1"
-          value={duration}
-          onChange={(e) => setDuration(parseInt(e.target.value) || 5)}
-          required
-          name="duration"
-        />
-      </div>
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1">
+      <div className="lineup-form-actions flex gap-2">
+        <Button type="submit" className="flex-1 lineup-form-submit">
           <Plus className="ml-2 h-4 w-4" /> {editingItem ? 'עדכן פריט' : 'הוסף לליינאפ'}
         </Button>
-        <Button type="button" onClick={handleBreakAdd} variant="secondary" className="w-auto">
+        <Button 
+          type="button" 
+          onClick={handleBreakAdd} 
+          variant="secondary" 
+          className="w-auto lineup-form-break"
+        >
           <Coffee className="ml-2 h-4 w-4" /> הוסף הפסקה
         </Button>
       </div>
