@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
@@ -14,7 +14,6 @@ import PrintPreview from '../components/lineup/PrintPreview';
 const Index = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const [items, setItems] = useState([]);
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
@@ -64,6 +63,24 @@ const Index = () => {
     loadShow();
   }, [id, editor]);
 
+  const handleAdd = (newItem) => {
+    if (editingItem) {
+      setItems(items.map(item => 
+        item.id === editingItem.id 
+          ? { ...newItem, id: editingItem.id }
+          : item
+      ));
+      setEditingItem(null);
+    } else {
+      const item = {
+        ...newItem,
+        id: Date.now().toString(),
+      };
+      setItems([...items, item]);
+    }
+    setHasUnsavedChanges(true);
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
     
@@ -94,6 +111,13 @@ const Index = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDetailsChange = (id: string, details: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, details } : item
+    ));
+    setHasUnsavedChanges(true);
   };
 
   const handleShare = async () => {
@@ -144,13 +168,6 @@ const Index = () => {
       });
   };
 
-  const handleDetailsChange = (id: string, details: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, details } : item
-    ));
-    setHasUnsavedChanges(true);
-  };
-
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -177,14 +194,7 @@ const Index = () => {
           onShare={handleShare}
           onPrint={() => window.print()}
           onExportPDF={handleExportPDF}
-          onAdd={(newItem) => {
-            const item = {
-              ...newItem,
-              id: Date.now().toString(),
-            };
-            setItems([...items, item]);
-            setHasUnsavedChanges(true);
-          }}
+          onAdd={handleAdd}
           onDelete={(id) => {
             setItems(items.filter(item => item.id !== id));
             setHasUnsavedChanges(true);
