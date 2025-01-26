@@ -28,7 +28,7 @@ export const useShow = (id?: string) => {
         name: showName,
         time: showTime,
         date: showDate ? format(showDate, 'yyyy-MM-dd') : null,
-        notes: '',  // This will be set by the parent component
+        notes: '',
       };
 
       const savedShow = await saveShow(show, items);
@@ -52,16 +52,16 @@ export const useShow = (id?: string) => {
       toast.error('יש לשמור את התוכנית לפני ההדפסה');
       return;
     }
-    navigate(`/print/${id}`);
+    window.open(`/print/${id}`, '_blank');
   };
 
-  const handleShare = async () => {
+  const handleShare = async (id?: string) => {
     if (!id) {
       toast.error('יש לשמור את התוכנית לפני השיתוף');
       return;
     }
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/show/${id}`);
+      await navigator.clipboard.writeText(`${window.location.origin}/print/${id}`);
       toast.success('הקישור הועתק ללוח');
     } catch (error) {
       console.error('Error copying to clipboard:', error);
@@ -81,7 +81,7 @@ export const useShow = (id?: string) => {
 
     const element = pdfRef.current;
     const opt = {
-      margin: 10,
+      margin: [15, 15],
       filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -90,7 +90,13 @@ export const useShow = (id?: string) => {
         logging: true,
         letterRendering: true
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true,
+        precision: 16
+      }
     };
 
     try {
