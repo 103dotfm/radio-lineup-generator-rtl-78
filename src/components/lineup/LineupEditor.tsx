@@ -105,10 +105,6 @@ const LineupEditor = ({
           onEdit={onEdit}
           onBreakTextChange={onBreakTextChange}
           onDragEnd={onDragEnd}
-          onDetailsChange={(id: string, details: string) => {
-            // This function will be handled by the parent component
-            console.log('Details changed:', id, details);
-          }}
         />
       </div>
 
