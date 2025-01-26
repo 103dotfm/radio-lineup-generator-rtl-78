@@ -4,7 +4,8 @@ import LineupTable from './LineupTable';
 import ShowHeader from '../show/ShowHeader';
 import ShowCredits from '../show/ShowCredits';
 import { Editor } from '@tiptap/react';
-import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 interface LineupEditorProps {
   showName: string;
@@ -17,7 +18,8 @@ interface LineupEditorProps {
   onTimeChange: (time: string) => void;
   onDateChange: (date: Date | undefined) => void;
   onSave: () => Promise<void>;
-  onShare: () => Promise<void>;
+  onBack: () => void;
+  onShare: () => void;
   onPrint: () => void;
   onExportPDF: () => void;
   onAdd: (item: any) => void;
@@ -40,6 +42,7 @@ const LineupEditor = ({
   onTimeChange,
   onDateChange,
   onSave,
+  onBack,
   onShare,
   onPrint,
   onExportPDF,
@@ -53,7 +56,13 @@ const LineupEditor = ({
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden">
-      <h1 className="text-3xl font-bold mb-8 text-right">ליינאפ רדיו</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">ליינאפ רדיו</h1>
+        <Button variant="outline" onClick={onBack}>
+          <ArrowRight className="ml-2 h-4 w-4" />
+          חזרה ללוח הבקרה
+        </Button>
+      </div>
       
       <ShowHeader
         showName={showName}
@@ -87,6 +96,7 @@ const LineupEditor = ({
         onEdit={onEdit}
         onBreakTextChange={onBreakTextChange}
         onDragEnd={onDragEnd}
+        showActions={false}
       />
     </div>
   );
