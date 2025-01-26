@@ -3,6 +3,7 @@ import { Draggable } from 'react-beautiful-dnd';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
+import { useAuth } from '../contexts/AuthContext';
 
 interface LineupItemProps {
   id: string;
@@ -33,6 +34,8 @@ const LineupItem = ({
   onEdit,
   onBreakTextChange
 }: LineupItemProps) => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <Draggable draggableId={id} index={index}>
       {(provided) => (
@@ -55,7 +58,9 @@ const LineupItem = ({
           </td>
           <td className="py-2 px-4 border border-gray-200">{title}</td>
           <td className="py-2 px-4 border border-gray-200 whitespace-pre-line">{details}</td>
-          <td className="py-2 px-4 border border-gray-200">{phone}</td>
+          {isAuthenticated && (
+            <td className="py-2 px-4 border border-gray-200">{phone}</td>
+          )}
           <td className="py-2 px-4 border border-gray-200">
             <Input
               type="number"

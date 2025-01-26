@@ -1,6 +1,7 @@
 import React from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface LineupTableProps {
   items: Array<{
@@ -27,6 +28,8 @@ const LineupTable = ({
   onBreakTextChange,
   onDragEnd
 }: LineupTableProps) => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="lineup">
@@ -42,7 +45,9 @@ const LineupTable = ({
                   <th className="py-2 px-4 text-right border border-gray-200">שם</th>
                   <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
                   <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
+                  {isAuthenticated && (
+                    <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
+                  )}
                   <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
                   <th className="py-2 px-4 text-right border border-gray-200">פעולות</th>
                 </tr>
