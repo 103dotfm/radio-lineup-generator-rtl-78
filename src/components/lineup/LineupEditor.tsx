@@ -16,6 +16,9 @@ interface LineupEditorProps {
   onTimeChange: (time: string) => void;
   onDateChange: (date: Date | undefined) => void;
   onSave: () => Promise<void>;
+  onPrint: () => void;
+  onShare: () => Promise<void>;
+  onExportPDF: () => Promise<void>;
   onAdd: (item: any) => void;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -36,6 +39,9 @@ const LineupEditor = ({
   onTimeChange,
   onDateChange,
   onSave,
+  onPrint,
+  onShare,
+  onExportPDF,
   onAdd,
   onDelete,
   onDurationChange,
@@ -54,9 +60,9 @@ const LineupEditor = ({
         onTimeChange={onTimeChange}
         onDateChange={onDateChange}
         onSave={onSave}
-        onShare={onSave}
-        onPrint={onSave}
-        onExportPDF={onSave}
+        onShare={onShare}
+        onPrint={onPrint}
+        onExportPDF={onExportPDF}
       />
 
       <div>
