@@ -12,7 +12,7 @@ interface PDFPreviewProps {
 const PDFPreview = forwardRef<HTMLDivElement, PDFPreviewProps>(
   ({ showName, showTime, showDate, items, editorContent }, ref) => {
     return (
-      <div ref={ref} className="p-8 bg-white">
+      <div ref={ref} className="p-2 bg-white">
         <PrintPreview
           showName={showName}
           showTime={showTime}

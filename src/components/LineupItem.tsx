@@ -43,12 +43,6 @@ const LineupItem = ({
     setIsEditingBreak(false);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (!isBreak && onEdit && !e.defaultPrevented) {
-      onEdit(id);
-    }
-  };
-
   if (isBreak) {
     return (
       <Draggable draggableId={id} index={index}>
@@ -123,7 +117,7 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          onClick={handleClick}
+          onClick={() => onEdit && onEdit(id)}
           className={`transition-colors hover:bg-gray-50 cursor-pointer ${
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}
