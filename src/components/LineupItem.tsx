@@ -122,6 +122,10 @@ const LineupItem = ({
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}
           onClick={() => onEdit && onEdit(id)}
+          style={{
+            cursor: 'pointer',
+            ...provided.draggableProps.style,
+          }}
         >
           <td className="py-2 px-2 relative">
             <div
