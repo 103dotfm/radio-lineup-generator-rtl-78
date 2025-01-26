@@ -44,10 +44,6 @@ const LineupEditor = ({
   onDragEnd,
   handleNameLookup,
 }: LineupEditorProps) => {
-  const handleSave = async () => {
-    await onSave();
-  };
-
   return (
     <div className="print:hidden">
       <ShowHeader
@@ -57,10 +53,10 @@ const LineupEditor = ({
         onNameChange={onNameChange}
         onTimeChange={onTimeChange}
         onDateChange={onDateChange}
-        onSave={handleSave}
-        onShare={handleSave}
-        onPrint={handleSave}
-        onExportPDF={handleSave}
+        onSave={onSave}
+        onShare={onSave}
+        onPrint={onSave}
+        onExportPDF={onSave}
       />
 
       <div>
