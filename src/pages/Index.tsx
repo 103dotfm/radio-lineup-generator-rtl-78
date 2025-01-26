@@ -6,9 +6,10 @@ import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { toast } from "sonner";
 import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import { DropResult } from 'react-beautiful-dnd';
 import LineupForm from '../components/LineupForm';
-import LineupItem from '../components/LineupItem';
+import LineupTable from '../components/lineup/LineupTable';
+import PrintPreview from '../components/lineup/PrintPreview';
 import ShowHeader from '../components/show/ShowHeader';
 import ShowCredits from '../components/show/ShowCredits';
 
@@ -26,7 +27,6 @@ const Index = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [items, setItems] = useState<LineupItemType[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState<Date>();
@@ -209,84 +209,24 @@ const Index = () => {
           />
         </div>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="lineup">
-            {(provided) => (
-              <div 
-                ref={provided.innerRef} 
-                {...provided.droppableProps}
-                className="min-h-[200px] transition-all"
-              >
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="py-2 px-4 text-right border border-gray-200">שם</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
-                      <th className="py-2 px-4 text-right border border-gray-200">פעולות</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, index) => (
-                      <LineupItem
-                        key={item.id}
-                        {...item}
-                        index={index}
-                        onDelete={handleDelete}
-                        onDurationChange={handleDurationChange}
-                        onEdit={handleEdit}
-                        onBreakTextChange={handleBreakTextChange}
-                      />
-                    ))}
-                    {provided.placeholder}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+        <LineupTable
+          items={items}
+          onDelete={handleDelete}
+          onDurationChange={handleDurationChange}
+          onEdit={handleEdit}
+          onBreakTextChange={handleBreakTextChange}
+          onDragEnd={handleDragEnd}
+        />
       </div>
 
       <div ref={printRef} className="hidden print:block print:mt-0">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">{showName}</h1>
-          <h2 className="text-xl text-gray-600 mt-2">
-            {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
-          </h2>
-        </div>
-
-        {editor?.getHTML() && (
-          <div className="mt-8 text-right" dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
-        )}
-
-        <table className="w-full border-collapse mt-8">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 text-right border border-gray-200">שם</th>
-              <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
-              <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
-              <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
-              <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border border-gray-200">
-                <td className="py-2 px-4 border border-gray-200">{item.name}</td>
-                <td className="py-2 px-4 border border-gray-200">{item.title}</td>
-                <td className="py-2 px-4 border border-gray-200">{item.details}</td>
-                <td className="py-2 px-4 border border-gray-200">{item.phone}</td>
-                <td className="py-2 px-4 border border-gray-200">{item.duration} דקות</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="mt-4 text-left">
-          <p>סה"כ זמן: {items.reduce((sum, item) => sum + item.duration, 0)} דקות</p>
-        </div>
+        <PrintPreview
+          showName={showName}
+          showTime={showTime}
+          showDate={showDate}
+          items={items}
+          editorContent={editor?.getHTML() || ''}
+        />
       </div>
     </div>
   );

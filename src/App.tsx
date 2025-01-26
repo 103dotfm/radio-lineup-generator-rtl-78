@@ -16,8 +16,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/new" element={<Index />} />
-          <Route path="/" element={<Dashboard />} />
           <Route path="/show/:id" element={<Index />} />
+          <Route path="/" element={<Dashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
