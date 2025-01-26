@@ -63,7 +63,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
       </div>
 
       {editorContent && (
-        <div className="mt-8 text-right text-xs border-t pt-4" dangerouslySetInnerHTML={{ __html: editorContent }} />
+        <div className="mt-8 text-right text-xs border-t pt-4 pb-2" dangerouslySetInnerHTML={{ __html: editorContent }} />
       )}
     </div>
   );
