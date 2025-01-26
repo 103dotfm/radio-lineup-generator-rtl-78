@@ -89,9 +89,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
       </div>
 
       {editorContent && (
-        <div className="credits mt-8 pt-4 border-t border-gray-200 text-xs whitespace-pre-wrap">
-          {editorContent}
-        </div>
+        <div className="credits mt-8 pt-4 border-t border-gray-200 text-xs prose prose-sm" dangerouslySetInnerHTML={{ __html: editorContent }} />
       )}
     </div>
   );
