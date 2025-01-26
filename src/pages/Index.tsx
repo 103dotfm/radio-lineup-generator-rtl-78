@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -44,6 +44,35 @@ const Index = () => {
       },
     },
   });
+
+  useEffect(() => {
+    const loadShow = async () => {
+      if (id) {
+        try {
+          const { show, items: showItems } = await getShowWithItems(id);
+          if (show) {
+            setShowName(show.name);
+            setShowTime(show.time);
+            setShowDate(show.date ? new Date(show.date) : undefined);
+            if (editor) {
+              editor.commands.setContent(show.notes);
+            }
+          }
+          if (showItems) {
+            setItems(showItems.map(item => ({
+              ...item,
+              isBreak: item.is_break
+            })));
+          }
+        } catch (error) {
+          console.error('Error loading show:', error);
+          toast.error('שגיאה בטעינת התוכנית');
+        }
+      }
+    };
+
+    loadShow();
+  }, [id, editor]);
 
   const handleBreakTextChange = (id: string, text: string) => {
     setItems(items.map(item => 
@@ -159,23 +188,33 @@ const Index = () => {
   const handleExportPDF = () => {
     if (!printRef.current) return;
     
+    const element = printRef.current;
     const opt = {
       margin: 20,
       filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { 
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        letterRendering: true
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    const element = printRef.current.cloneNode(true) as HTMLElement;
-    element.style.direction = 'rtl';
+    // Force all elements to be visible for PDF generation
+    const originalDisplay = element.style.display;
+    element.style.display = 'block';
     
-    html2pdf()
-      .set(opt)
-      .from(element)
-      .save()
+    html2pdf().set(opt).from(element).save()
       .then(() => {
+        element.style.display = originalDisplay;
         toast.success('PDF נוצר בהצלחה');
+      })
+      .catch((error) => {
+        console.error('Error generating PDF:', error);
+        element.style.display = originalDisplay;
+        toast.error('שגיאה ביצירת ה-PDF');
       });
   };
 
