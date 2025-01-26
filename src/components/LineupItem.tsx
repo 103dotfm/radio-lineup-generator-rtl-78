@@ -53,7 +53,7 @@ const LineupItem = ({
           {isNote ? (
             <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
               <Textarea
-                value={details}
+                value={details || ''}
                 onChange={(e) => onDetailsChange?.(id, e.target.value)}
                 className="min-h-[100px] w-full"
                 placeholder="הכנס הערה כאן..."
