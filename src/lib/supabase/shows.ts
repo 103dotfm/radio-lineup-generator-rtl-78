@@ -16,7 +16,6 @@ export const saveShow = async (
     let showData;
     
     if (existingId) {
-      // Update existing show
       const { data, error: showError } = await supabase
         .from('shows')
         .update(show)
@@ -27,7 +26,6 @@ export const saveShow = async (
       if (showError) throw showError;
       showData = data;
 
-      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -35,7 +33,6 @@ export const saveShow = async (
       
       if (deleteError) throw deleteError;
     } else {
-      // Create new show
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([show])
@@ -46,11 +43,16 @@ export const saveShow = async (
       showData = data;
     }
 
+    // Properly map all item properties
     const itemsWithPosition = items.map((item, index) => ({
-      ...item,
       show_id: showData.id,
       position: index,
-      is_break: item.is_break || false
+      name: item.name || '',
+      title: item.title || '',
+      details: item.details || '',
+      phone: item.phone || '',
+      duration: item.duration || 5,
+      is_break: item.isBreak || false
     }));
 
     const { error: itemsError } = await supabase
