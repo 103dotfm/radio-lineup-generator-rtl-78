@@ -43,7 +43,7 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Properly map all item properties
+    // Properly map all item properties using is_break instead of isBreak
     const itemsWithPosition = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
@@ -52,7 +52,7 @@ export const saveShow = async (
       details: item.details || '',
       phone: item.phone || '',
       duration: item.duration || 5,
-      is_break: item.isBreak || false
+      is_break: item.is_break || false
     }));
 
     const { error: itemsError } = await supabase
