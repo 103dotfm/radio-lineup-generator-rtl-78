@@ -65,7 +65,10 @@ const Index = () => {
   }, [id, editor]);
 
   const handleSave = async () => {
-    if (isSaving) return;
+    if (isSaving) {
+      toast.info('שמירה מתבצעת...');
+      return;
+    }
     
     try {
       setIsSaving(true);
@@ -85,8 +88,8 @@ const Index = () => {
       if (savedShow) {
         setIsModified(false);
         navigate(`/show/${savedShow.id}`);
+        toast.success('התוכנית נשמרה בהצלחה');
       }
-      toast.success('התוכנית נשמרה בהצלחה');
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת התוכנית');
@@ -103,8 +106,29 @@ const Index = () => {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleShare = async () => {
+    if (id) {
+      try {
+        await navigator.clipboard.writeText(`${window.location.origin}/show/${id}`);
+        toast.success('הקישור הועתק ללוח');
+      } catch (error) {
+        console.error('Error copying to clipboard:', error);
+        toast.error('שגיאה בהעתקת הקישור');
+      }
+    } else {
+      toast.info('יש לשמור את התוכנית לפני השיתוף');
+    }
+  };
+
   const handleExportPDF = () => {
-    if (!printRef.current) return;
+    if (!printRef.current) {
+      toast.error('שגיאה ביצירת ה-PDF');
+      return;
+    }
     
     const element = printRef.current;
     const opt = {
@@ -135,8 +159,8 @@ const Index = () => {
       <LineupActions
         onBack={handleNavigateBack}
         onSave={handleSave}
-        onShare={() => navigate(`/print/${id}`)}
-        onPrint={() => window.print()}
+        onShare={handleShare}
+        onPrint={handlePrint}
         onExportPDF={handleExportPDF}
       />
 

@@ -44,21 +44,26 @@ const LineupEditor = ({
   onDragEnd,
   handleNameLookup,
 }: LineupEditorProps) => {
-  // Create async wrapper functions for the callbacks that need to return Promises
   const handleSave = async () => {
     await onSave();
   };
 
   const handleShare = async () => {
-    return Promise.resolve();
+    if (window.print) {
+      window.print();
+    }
   };
 
   const handlePrint = async () => {
-    return Promise.resolve();
+    if (window.print) {
+      window.print();
+    }
   };
 
   const handleExportPDF = async () => {
-    return Promise.resolve();
+    if (window.print) {
+      window.print();
+    }
   };
 
   return (
