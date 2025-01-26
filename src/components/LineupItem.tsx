@@ -44,7 +44,7 @@ const LineupItem = ({
 
   const editor = useEditor({
     extensions: [StarterKit],
-    content: details,
+    content: details || '',
     editorProps: {
       attributes: {
         class: 'prose prose-sm focus:outline-none min-h-[50px] p-2',
