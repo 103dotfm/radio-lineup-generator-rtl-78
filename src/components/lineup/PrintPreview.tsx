@@ -19,7 +19,7 @@ interface PrintPreviewProps {
 
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: PrintPreviewProps) => {
   return (
-    <div className="print-content">
+    <div className="print-content bg-white">
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">{showName}</h1>
         <h2 className="text-lg text-gray-600 mt-1">
@@ -49,7 +49,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               <tr key={item.id}>
                 <td className="py-1 px-2 border border-gray-200">{item.name}</td>
                 <td className="py-1 px-2 border border-gray-200">{item.title}</td>
-                <td className="py-1 px-2 border border-gray-200">{item.details}</td>
+                <td className="py-1 px-2 border border-gray-200 whitespace-pre-line">{item.details}</td>
                 <td className="py-1 px-2 border border-gray-200">{item.phone}</td>
                 <td className="py-1 px-2 border border-gray-200">{item.duration} דקות</td>
               </tr>
@@ -63,7 +63,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
       </div>
 
       {editorContent && (
-        <div className="credits mt-8" dangerouslySetInnerHTML={{ __html: editorContent }} />
+        <div className="credits mt-8 pt-4 border-t border-gray-200 text-xs" dangerouslySetInnerHTML={{ __html: editorContent }} />
       )}
     </div>
   );
