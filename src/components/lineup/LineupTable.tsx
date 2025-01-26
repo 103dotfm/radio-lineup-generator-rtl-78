@@ -1,22 +1,18 @@
 import React from 'react';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
-import LineupItem from '../LineupItem';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pencil, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LineupTableProps {
-  items: Array<{
-    id: string;
-    name: string;
-    title: string;
-    details: string;
-    phone: string;
-    duration: number;
-    isBreak?: boolean;
-  }>;
+  items: any[];
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string) => void;
   onBreakTextChange: (id: string, text: string) => void;
-  onDragEnd: (result: DropResult) => void;
+  onDragEnd: (result: any) => void;
+  showActions?: boolean;
 }
 
 const LineupTable = ({
@@ -25,39 +21,94 @@ const LineupTable = ({
   onDurationChange,
   onEdit,
   onBreakTextChange,
-  onDragEnd
+  onDragEnd,
+  showActions = true
 }: LineupTableProps) => {
+  const getItemStyle = (isDragging: boolean, draggableStyle: any) => ({
+    userSelect: 'none',
+    ...draggableStyle,
+  });
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="lineup">
+      <Droppable droppableId="droppable">
         {(provided) => (
-          <div 
-            ref={provided.innerRef} 
-            {...provided.droppableProps}
-            className="min-h-[200px] transition-all"
-          >
+          <div {...provided.droppableProps} ref={provided.innerRef}>
             <table className="w-full border-collapse">
               <thead>
-                <tr>
-                  <th className="py-2 px-4 text-right border border-gray-200">שם</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">פעולות</th>
+                <tr className="text-right">
+                  <th className="p-2 border-b">שם</th>
+                  <th className="p-2 border-b">כותרת</th>
+                  <th className="p-2 border-b">פרטים</th>
+                  <th className="p-2 border-b">טלפון</th>
+                  <th className="p-2 border-b">משך</th>
+                  {showActions && <th className="p-2 border-b">פעולות</th>}
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, index) => (
-                  <LineupItem
-                    key={item.id}
-                    {...item}
-                    index={index}
-                    onDelete={onDelete}
-                    onDurationChange={onDurationChange}
-                    onEdit={onEdit}
-                    onBreakTextChange={onBreakTextChange}
-                  />
+                  <Draggable key={item.id} draggableId={item.id} index={index}>
+                    {(provided, snapshot) => (
+                      <tr
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        style={getItemStyle(
+                          snapshot.isDragging,
+                          provided.draggableProps.style
+                        )}
+                        className={cn(
+                          "hover:bg-muted/50",
+                          item.isBreak && "bg-gray-100"
+                        )}
+                      >
+                        <td className="p-2 border-b">
+                          {item.isBreak ? (
+                            <Input
+                              value={item.name}
+                              onChange={(e) => onBreakTextChange(item.id, e.target.value)}
+                              className="w-full"
+                            />
+                          ) : (
+                            item.name
+                          )}
+                        </td>
+                        <td className="p-2 border-b">{item.title}</td>
+                        <td className="p-2 border-b">{item.details}</td>
+                        <td className="p-2 border-b">{item.phone}</td>
+                        <td className="p-2 border-b">
+                          <Input
+                            type="number"
+                            value={item.duration}
+                            onChange={(e) => onDurationChange(item.id, parseInt(e.target.value) || 5)}
+                            className="w-20"
+                          />
+                        </td>
+                        {showActions && (
+                          <td className="p-2 border-b">
+                            <div className="flex gap-2">
+                              {!item.isBreak && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onEdit(item.id)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onDelete(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    )}
+                  </Draggable>
                 ))}
                 {provided.placeholder}
               </tbody>

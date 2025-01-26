@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Prompt } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
@@ -9,6 +9,8 @@ import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const Index = () => {
   const { id } = useParams();
@@ -18,6 +20,9 @@ const Index = () => {
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState<Date>();
   const [editingItem, setEditingItem] = useState(null);
+  const [isModified, setIsModified] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -29,6 +34,7 @@ const Index = () => {
         placeholder: 'קרדיטים',
       },
     },
+    onUpdate: () => setIsModified(true),
   });
 
   useEffect(() => {
@@ -47,6 +53,7 @@ const Index = () => {
           if (showItems) {
             setItems(showItems);
           }
+          setIsModified(false);
         } catch (error) {
           console.error('Error loading show:', error);
           toast.error('שגיאה בטעינת התוכנית');
@@ -65,19 +72,22 @@ const Index = () => {
           : item
       ));
       setEditingItem(null);
-      toast.success('פריט עודכן בהצלחה');
     } else {
       const item = {
         ...newItem,
         id: Date.now().toString(),
       };
       setItems([...items, item]);
-      toast.success('פריט נוסף בהצלחה');
     }
+    setIsModified(true);
+    toast.success(editingItem ? 'פריט עודכן בהצלחה' : 'פריט נוסף בהצלחה');
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+    
     try {
+      setIsSaving(true);
       const show = {
         name: showName,
         time: showTime,
@@ -92,33 +102,23 @@ const Index = () => {
 
       const savedShow = await saveShow(show, itemsToSave);
       if (savedShow) {
+        setIsModified(false);
         navigate(`/show/${savedShow.id}`);
       }
       toast.success('התוכנית נשמרה בהצלחה');
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת התוכנית');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const shareData = {
-        title: showName || 'ליינאפ רדיו',
-        text: `${showName} - ${showDate ? format(showDate, 'dd/MM/yyyy') : ''} ${showTime}`,
-        url: window.location.origin + '/print/' + id
-      };
-
-      if (navigator.canShare && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        toast.success('התוכנית שותפה בהצלחה');
-      } else {
-        await navigator.clipboard.writeText(shareData.url);
-        toast.success('הקישור הועתק ללוח');
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      toast.error('שגיאה בשיתוף התוכנית');
+  const handleNavigateBack = () => {
+    if (isModified) {
+      setShowSaveDialog(true);
+    } else {
+      navigate('/');
     }
   };
 
@@ -127,7 +127,7 @@ const Index = () => {
     
     const element = printRef.current;
     const opt = {
-      margin: [5, 5],
+      margin: [10, 10],
       filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -138,8 +138,6 @@ const Index = () => {
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    
-    element.style.display = 'block';
     
     html2pdf().set(opt).from(element).save()
       .then(() => {
@@ -160,22 +158,34 @@ const Index = () => {
         items={items}
         editor={editor}
         editingItem={editingItem}
-        onNameChange={setShowName}
-        onTimeChange={setShowTime}
-        onDateChange={setShowDate}
+        onNameChange={(name) => {
+          setShowName(name);
+          setIsModified(true);
+        }}
+        onTimeChange={(time) => {
+          setShowTime(time);
+          setIsModified(true);
+        }}
+        onDateChange={(date) => {
+          setShowDate(date);
+          setIsModified(true);
+        }}
         onSave={handleSave}
-        onShare={handleShare}
+        onBack={handleNavigateBack}
+        onShare={() => navigate(`/print/${id}`)}
         onPrint={() => window.print()}
         onExportPDF={handleExportPDF}
         onAdd={handleAdd}
         onDelete={(id) => {
           setItems(items.filter(item => item.id !== id));
+          setIsModified(true);
           toast.success('פריט נמחק בהצלחה');
         }}
         onDurationChange={(id, duration) => {
           setItems(items.map(item => 
             item.id === id ? { ...item, duration } : item
           ));
+          setIsModified(true);
         }}
         onEdit={(id) => {
           const item = items.find(item => item.id === id);
@@ -187,6 +197,7 @@ const Index = () => {
           setItems(items.map(item => 
             item.id === id ? { ...item, name: text } : item
           ));
+          setIsModified(true);
         }}
         onDragEnd={(result: DropResult) => {
           if (!result.destination) return;
@@ -194,12 +205,13 @@ const Index = () => {
           const [reorderedItem] = newItems.splice(result.source.index, 1);
           newItems.splice(result.destination.index, 0, reorderedItem);
           setItems(newItems);
+          setIsModified(true);
           toast.success('סדר הפריטים עודכן');
         }}
         handleNameLookup={async () => null}
       />
 
-      <div ref={printRef} className="hidden print:block print:mt-0">
+      <div ref={printRef} className="hidden">
         <PrintPreview
           showName={showName}
           showTime={showTime}
@@ -208,6 +220,21 @@ const Index = () => {
           editorContent={editor?.getHTML() || ''}
         />
       </div>
+
+      <AlertDialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם ברצונך לשמור את השינויים לפני היציאה?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => navigate('/')}>התעלם משינויים</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSave}>שמור שינויים</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
