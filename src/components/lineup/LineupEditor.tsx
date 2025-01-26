@@ -49,6 +49,18 @@ const LineupEditor = ({
     await onSave();
   };
 
+  const handleShare = async () => {
+    return Promise.resolve();
+  };
+
+  const handlePrint = async () => {
+    return Promise.resolve();
+  };
+
+  const handleExportPDF = async () => {
+    return Promise.resolve();
+  };
+
   return (
     <div className="print:hidden">
       <ShowHeader
@@ -59,9 +71,9 @@ const LineupEditor = ({
         onTimeChange={onTimeChange}
         onDateChange={onDateChange}
         onSave={handleSave}
-        onShare={() => {}}
-        onPrint={() => {}}
-        onExportPDF={() => {}}
+        onShare={handleShare}
+        onPrint={handlePrint}
+        onExportPDF={handleExportPDF}
       />
 
       <div>
