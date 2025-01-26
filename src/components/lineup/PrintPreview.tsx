@@ -42,7 +42,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             item.isBreak ? (
               <tr key={item.id} className="bg-gray-100">
                 <td colSpan={5} className="py-2 px-3 text-center border border-gray-200">
-                  {item.name} - {item.duration} דקות
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{item.name} - {item.duration} דקות</span>
+                  </div>
                 </td>
               </tr>
             ) : (
