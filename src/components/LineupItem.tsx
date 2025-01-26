@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Trash2, Coffee, GripVertical, Edit2, Check } from "lucide-react";
 import { Draggable } from 'react-beautiful-dnd';
@@ -42,6 +41,12 @@ const LineupItem = ({
       onBreakTextChange(id, breakText);
     }
     setIsEditingBreak(false);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isBreak && onEdit && !e.defaultPrevented) {
+      onEdit(id);
+    }
   };
 
   if (isBreak) {
@@ -118,12 +123,8 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          onClick={(e) => {
-            if (!snapshot.isDragging && onEdit) {
-              onEdit(id);
-            }
-          }}
-          className={`transition-colors hover:bg-gray-50 ${
+          onClick={handleClick}
+          className={`transition-colors hover:bg-gray-50 cursor-pointer ${
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}
         >
@@ -139,7 +140,7 @@ const LineupItem = ({
             {name}
           </td>
           <td className="py-2 px-2">{title}</td>
-          <td className="py-2 px-2">{details}</td>
+          <td className="py-2 px-2 whitespace-pre-line">{details}</td>
           <td className="py-2 px-2">{phone}</td>
           <td className="py-2 px-2">
             <div className="flex items-center gap-2 justify-end">
