@@ -1,65 +1,63 @@
 import { createClient } from '@supabase/supabase-js';
 import { Show, ShowItem } from '@/types/show';
+import { toast } from 'sonner';
 
 const supabaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const createTablesIfNotExist = async () => {
+  // Create shows table
+  const { error: showsError } = await supabase.from('shows').select('id').limit(1);
+  if (showsError?.code === '42P01') { // Table doesn't exist error code
+    const { error } = await supabase.from('shows').insert({
+      id: 'temp',
+      name: 'temp'
+    }).select();
+    
+    if (error && !error.message.includes('already exists')) {
+      console.error('Error creating shows table:', error);
+    }
+  }
+
+  // Create show_items table
+  const { error: itemsError } = await supabase.from('show_items').select('id').limit(1);
+  if (itemsError?.code === '42P01') { // Table doesn't exist error code
+    const { error } = await supabase.from('show_items').insert({
+      id: 'temp',
+      show_id: 'temp',
+      name: 'temp',
+      position: 0
+    }).select();
+    
+    if (error && !error.message.includes('already exists')) {
+      console.error('Error creating show_items table:', error);
+    }
+  }
+};
+
+// Initialize tables
+createTablesIfNotExist();
+
 export const saveShow = async (
-  show: Omit<Show, 'id' | 'created_at'> & { id?: string },
+  show: Omit<Show, 'id' | 'created_at'>,
   items: Omit<ShowItem, 'id' | 'show_id' | 'position'>[]
 ) => {
   try {
-    let showData;
-    
-    if (show.id) {
-      const { data, error: showError } = await supabase
-        .from('shows')
-        .update({
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes
-        })
-        .eq('id', show.id)
-        .select()
-        .single();
-      
-      if (showError) throw showError;
-      showData = data;
+    const { data: showData, error: showError } = await supabase
+      .from('shows')
+      .insert([show])
+      .select()
+      .single();
 
-      const { error: deleteError } = await supabase
-        .from('show_items')
-        .delete()
-        .eq('show_id', show.id);
-      
-      if (deleteError) throw deleteError;
-    } else {
-      const { data, error: showError } = await supabase
-        .from('shows')
-        .insert([{
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes
-        }])
-        .select()
-        .single();
-      
-      if (showError) throw showError;
-      showData = data;
-    }
+    if (showError) throw showError;
 
     const itemsWithPosition = items.map((item, index) => ({
+      ...item,
       show_id: showData.id,
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-      is_break: item.is_break || false,
-      position: index
+      position: index,
+      is_break: item.is_break || false
     }));
 
     const { error: itemsError } = await supabase
@@ -68,9 +66,11 @@ export const saveShow = async (
 
     if (itemsError) throw itemsError;
 
+    toast.success('התוכנית נשמרה בהצלחה');
     return showData;
   } catch (error) {
     console.error('Error saving show:', error);
+    toast.error('שגיאה בשמירת התוכנית');
     throw error;
   }
 };

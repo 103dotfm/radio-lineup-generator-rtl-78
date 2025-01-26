@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Coffee, GripVertical, Edit2, Check, Pencil } from "lucide-react";
+import { Clock, Trash2, Coffee, GripVertical, Edit2, Check } from "lucide-react";
 import { Draggable } from 'react-beautiful-dnd';
 import { Input } from "@/components/ui/input";
 
@@ -69,7 +70,6 @@ const LineupItem = ({
                       onChange={(e) => setBreakText(e.target.value)}
                       className="w-48"
                       autoFocus
-                      autoComplete="on"
                     />
                     <Button
                       variant="ghost"
@@ -118,14 +118,14 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`lineup-item transition-colors hover:bg-gray-50 ${
+          onClick={(e) => {
+            if (!snapshot.isDragging && onEdit) {
+              onEdit(id);
+            }
+          }}
+          className={`transition-colors hover:bg-gray-50 ${
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}
-          onClick={() => onEdit && onEdit(id)}
-          style={{
-            cursor: 'pointer',
-            ...provided.draggableProps.style,
-          }}
         >
           <td className="py-2 px-2 relative">
             <div
@@ -139,7 +139,7 @@ const LineupItem = ({
             {name}
           </td>
           <td className="py-2 px-2">{title}</td>
-          <td className="py-2 px-2 whitespace-pre-line">{details}</td>
+          <td className="py-2 px-2">{details}</td>
           <td className="py-2 px-2">{phone}</td>
           <td className="py-2 px-2">
             <div className="flex items-center gap-2 justify-end">
@@ -155,17 +155,6 @@ const LineupItem = ({
                 />
                 <span className="text-sm">דקות</span>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onEdit) onEdit(id);
-                }}
-                className="h-8 w-8 print:hidden"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
               <Button
                 variant="destructive"
                 size="icon"

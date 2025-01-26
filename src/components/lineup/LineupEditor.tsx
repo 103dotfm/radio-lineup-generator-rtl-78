@@ -4,6 +4,7 @@ import LineupTable from './LineupTable';
 import ShowHeader from '../show/ShowHeader';
 import ShowCredits from '../show/ShowCredits';
 import { Editor } from '@tiptap/react';
+import { format } from 'date-fns';
 
 interface LineupEditorProps {
   showName: string;
@@ -16,9 +17,9 @@ interface LineupEditorProps {
   onTimeChange: (time: string) => void;
   onDateChange: (date: Date | undefined) => void;
   onSave: () => Promise<void>;
-  onPrint: () => void;
   onShare: () => Promise<void>;
-  onExportPDF: () => Promise<void>;
+  onPrint: () => void;
+  onExportPDF: () => void;
   onAdd: (item: any) => void;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -39,8 +40,8 @@ const LineupEditor = ({
   onTimeChange,
   onDateChange,
   onSave,
-  onPrint,
   onShare,
+  onPrint,
   onExportPDF,
   onAdd,
   onDelete,
@@ -52,6 +53,8 @@ const LineupEditor = ({
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden">
+      <h1 className="text-3xl font-bold mb-8 text-right">ליינאפ רדיו</h1>
+      
       <ShowHeader
         showName={showName}
         showTime={showTime}
@@ -84,7 +87,6 @@ const LineupEditor = ({
         onEdit={onEdit}
         onBreakTextChange={onBreakTextChange}
         onDragEnd={onDragEnd}
-        showActions={false}
       />
     </div>
   );
