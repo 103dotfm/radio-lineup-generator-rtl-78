@@ -16,6 +16,5 @@ export interface ShowItem {
   phone: string;
   duration: number;
   is_break: boolean;
-  is_note: boolean;
   position: number;
 }
