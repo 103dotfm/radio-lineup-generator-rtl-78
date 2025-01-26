@@ -145,7 +145,10 @@ const Index = () => {
         is_break: isBreak || false,
       }));
 
-      await saveShow(show, itemsToSave);
+      const savedShow = await saveShow(show, itemsToSave);
+      if (savedShow) {
+        navigate(`/show/${savedShow.id}`);
+      }
       toast.success('התוכנית נשמרה בהצלחה');
     } catch (error) {
       console.error('Error saving show:', error);
@@ -167,24 +170,11 @@ const Index = () => {
     const element = printRef.current.cloneNode(true) as HTMLElement;
     element.style.direction = 'rtl';
     
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @page { size: A4; margin: 20mm; }
-      body { direction: rtl; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid black; padding: 8px; text-align: right; }
-      .print-header { text-align: center; margin-bottom: 2rem; }
-      .print-content { direction: rtl; }
-      .print-footer { margin-top: 1rem; text-align: left; }
-    `;
-    document.head.appendChild(style);
-
     html2pdf()
       .set(opt)
       .from(element)
       .save()
       .then(() => {
-        document.head.removeChild(style);
         toast.success('PDF נוצר בהצלחה');
       });
   };
@@ -235,6 +225,7 @@ const Index = () => {
                       <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
                       <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
                       <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
+                      <th className="py-2 px-4 text-right border border-gray-200">פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
