@@ -69,6 +69,7 @@ const LineupItem = ({
                       onChange={(e) => setBreakText(e.target.value)}
                       className="w-48"
                       autoFocus
+                      autoComplete="on"
                     />
                     <Button
                       variant="ghost"

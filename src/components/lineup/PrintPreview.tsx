@@ -40,9 +40,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
         <tbody>
           {items.map((item) => (
             item.isBreak ? (
-              <tr key={item.id} className="bg-gray-100">
+              <tr key={item.id} className="bg-gray-100 print:bg-gray-100">
                 <td colSpan={5} className="py-2 px-3 text-center border border-gray-200 bg-gray-100 print:bg-gray-100">
-                  {item.name} - {item.duration} דקות
+                  <div className="flex items-center justify-center">
+                    {item.name} - {item.duration} דקות
+                  </div>
                 </td>
               </tr>
             ) : (
