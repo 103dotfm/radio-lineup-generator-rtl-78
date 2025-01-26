@@ -28,3 +28,33 @@ body {
 .print-content {
   direction: rtl;
 }
+
+@media print {
+  @page {
+    margin: 10mm;
+    size: A4;
+  }
+  
+  .print-content {
+    font-size: 11px;
+  }
+  
+  .print-content h1 {
+    font-size: 18px;
+  }
+  
+  .print-content h2 {
+    font-size: 14px;
+  }
+  
+  .print-content table {
+    font-size: 10px;
+  }
+  
+  .print-content .credits {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    font-size: 9px;
+  }
+}

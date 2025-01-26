@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Coffee } from "lucide-react";
+import { Plus, Coffee, ArrowRight } from "lucide-react";
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -14,6 +14,7 @@ interface LineupFormProps {
     isBreak?: boolean;
   }) => void;
   onNameChange: (name: string) => Promise<any>;
+  onBackToDashboard: () => void;
   editingItem?: {
     name: string;
     title: string;
@@ -24,7 +25,7 @@ interface LineupFormProps {
   } | null;
 }
 
-const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
+const LineupForm = ({ onAdd, onNameChange, onBackToDashboard, editingItem }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
@@ -81,6 +82,18 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+      <div className="flex justify-between items-center mb-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={onBackToDashboard}
+          className="flex items-center gap-2"
+        >
+          <ArrowRight className="h-4 w-4" />
+          חזרה ללוח הבקרה
+        </Button>
+      </div>
+      
       <div className="grid grid-cols-2 gap-4">
         <Input
           placeholder="שם"
@@ -89,7 +102,11 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
           required
           autoComplete="name"
           name="name"
+          list="names-list"
         />
+        <datalist id="names-list">
+          {/* Add suggested names here if needed */}
+        </datalist>
         <Input
           placeholder="כותרת"
           value={title}
