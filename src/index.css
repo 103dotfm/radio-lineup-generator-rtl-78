@@ -35,6 +35,12 @@ body {
     margin: 0px -19px -15px 0px;
 }
 
+.text-xs {
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.6rem;
+}
+
 @media print {
   @page {
     margin: 15mm;
