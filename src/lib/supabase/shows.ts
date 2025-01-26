@@ -23,13 +23,11 @@ export const saveShow = async (
   existingId?: string
 ) => {
   try {
-    console.log('Starting save operation...');
-    console.log('Original items:', items);
+    console.log('Starting save operation with items:', items);
     
     let showData;
     
     if (existingId) {
-      console.log('Updating existing show:', existingId);
       const { data, error: showError } = await supabase
         .from('shows')
         .update({
@@ -45,7 +43,6 @@ export const saveShow = async (
       if (showError) throw showError;
       showData = data;
 
-      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -53,7 +50,6 @@ export const saveShow = async (
       
       if (deleteError) throw deleteError;
     } else {
-      console.log('Creating new show');
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([{
@@ -69,28 +65,40 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Prepare items with explicit boolean values
-    const itemsWithShowId = items.map((item, index) => ({
-      show_id: showData.id,
-      position: index,
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-      is_break: item.isBreak ? true : false,  // Explicitly set boolean
-      is_note: item.isNote ? true : false     // Explicitly set boolean
-    }));
+    // Convert items with explicit boolean values
+    const itemsWithShowId = items.map((item, index) => {
+      const dbItem = {
+        show_id: showData.id,
+        position: index,
+        name: item.name,
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        is_break: item.isBreak === true,
+        is_note: item.isNote === true
+      };
+      
+      console.log('Processing item for DB:', {
+        original: item,
+        processed: dbItem,
+        isBreak: dbItem.is_break,
+        isNote: dbItem.is_note
+      });
+      
+      return dbItem;
+    });
 
-    console.log('Items to be inserted:', itemsWithShowId);
-
-    // Insert items with explicit insert operation
+    // Use RPC call to ensure proper type handling
     const { data: insertedItems, error: itemsError } = await supabase
-      .from('show_items')
-      .insert(itemsWithShowId)
-      .select();
+      .rpc('insert_show_items', {
+        items: itemsWithShowId
+      });
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('Error inserting items:', itemsError);
+      throw itemsError;
+    }
 
     console.log('Successfully inserted items:', insertedItems);
     return showData;
@@ -137,18 +145,28 @@ export const getShowWithItems = async (showId: string) => {
 
     console.log('Raw items from database:', items);
 
-    const mappedItems = items.map(item => ({
-      id: item.id,
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-      isBreak: item.is_break === true,  // Strict boolean comparison
-      isNote: item.is_note === true     // Strict boolean comparison
-    }));
+    const mappedItems = items.map(item => {
+      const mappedItem = {
+        id: item.id,
+        name: item.name,
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        isBreak: item.is_break === true,
+        isNote: item.is_note === true
+      };
+      
+      console.log('Mapping DB item:', {
+        original: item,
+        mapped: mappedItem,
+        is_break_original: item.is_break,
+        isBreak_mapped: mappedItem.isBreak
+      });
+      
+      return mappedItem;
+    });
 
-    console.log('Mapped items:', mappedItems);
     return { show, items: mappedItems };
   } catch (error) {
     console.error('Error getting show with items:', error);
