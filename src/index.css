@@ -66,6 +66,11 @@ body {
     text-align: center !important;
   }
 
+  .print-content tr.bg-gray-100 td[colspan="5"] {
+    text-align: center !important;
+    background-color: #f3f4f6 !important;
+  }
+
   .print-content .print-hidden {
     display: none !important;
   }

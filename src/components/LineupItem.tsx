@@ -118,9 +118,10 @@ const LineupItem = ({
         <tr
           ref={provided.innerRef}
           {...provided.draggableProps}
-          className={`transition-colors hover:bg-gray-50 ${
+          className={`lineup-item transition-colors hover:bg-gray-50 ${
             snapshot.isDragging ? 'bg-blue-50 shadow-lg ring-2 ring-blue-200' : ''
           }`}
+          onClick={() => onEdit && onEdit(id)}
         >
           <td className="py-2 px-2 relative">
             <div
