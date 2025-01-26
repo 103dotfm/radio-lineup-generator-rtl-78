@@ -7,17 +7,19 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+interface FrontendItem {
+  name: string;
+  title: string;
+  details: string;
+  phone: string;
+  duration: number;
+  isBreak?: boolean;
+  isNote?: boolean;
+}
+
 export const saveShow = async (
   show: Omit<Show, 'id' | 'created_at'>,
-  items: Array<{
-    name: string;
-    title: string;
-    details: string;
-    phone: string;
-    duration: number;
-    isBreak?: boolean;
-    isNote?: boolean;
-  }>,
+  items: FrontendItem[],
   existingId?: string
 ) => {
   try {
@@ -76,7 +78,7 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Prepare items with show_id and position
+    // Prepare items with show_id and position, explicitly mapping frontend to database fields
     const itemsWithShowId = items.map((item, index) => ({
       show_id: showData.id,
       position: index,
