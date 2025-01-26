@@ -15,7 +15,7 @@ export const useShow = (id?: string) => {
   const [isModified, setIsModified] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
+  const handleSave = async (editor?: any) => {
     if (isSaving) {
       toast.info('שמירה מתבצעת...');
       return;
@@ -28,7 +28,7 @@ export const useShow = (id?: string) => {
         name: showName,
         time: showTime,
         date: showDate ? format(showDate, 'yyyy-MM-dd') : null,
-        notes: '',
+        notes: editor?.getHTML() || '',
       };
 
       const savedShow = await saveShow(show, items);
@@ -62,7 +62,7 @@ export const useShow = (id?: string) => {
     }
   };
 
-  const handleShare = async (id?: string) => {
+  const handleShare = async () => {
     if (!id) {
       toast.error('יש לשמור את התוכנית לפני השיתוף');
       return;
