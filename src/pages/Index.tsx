@@ -73,7 +73,7 @@ const Index = () => {
     try {
       setIsSaving(true);
       const show = {
-        id, // Include the ID if it exists
+        id,
         name: showName,
         time: showTime,
         date: showDate ? format(showDate, 'yyyy-MM-dd') : null,
@@ -83,7 +83,9 @@ const Index = () => {
       const savedShow = await saveShow(show, items);
       if (savedShow) {
         setIsModified(false);
-        navigate(`/show/${savedShow.id}`);
+        if (!id) {
+          navigate(`/show/${savedShow.id}`);
+        }
         toast.success('התוכנית נשמרה בהצלחה');
       }
     } catch (error) {
@@ -94,29 +96,25 @@ const Index = () => {
     }
   };
 
-  const handleNavigateBack = () => {
-    if (isModified) {
-      setShowSaveDialog(true);
-    } else {
-      navigate('/');
-    }
-  };
-
   const handlePrint = () => {
+    if (!id) {
+      toast.error('יש לשמור את התוכנית לפני ההדפסה');
+      return;
+    }
     navigate(`/print/${id}`);
   };
 
   const handleShare = async () => {
-    if (id) {
-      try {
-        await navigator.clipboard.writeText(`${window.location.origin}/show/${id}`);
-        toast.success('הקישור הועתק ללוח');
-      } catch (error) {
-        console.error('Error copying to clipboard:', error);
-        toast.error('שגיאה בהעתקת הקישור');
-      }
-    } else {
-      toast.info('יש לשמור את התוכנית לפני השיתוף');
+    if (!id) {
+      toast.error('יש לשמור את התוכנית לפני השיתוף');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/show/${id}`);
+      toast.success('הקישור הועתק ללוח');
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast.error('שגיאה בהעתקת הקישור');
     }
   };
 
@@ -148,6 +146,14 @@ const Index = () => {
         console.error('Error generating PDF:', error);
         toast.error('שגיאה ביצירת ה-PDF');
       });
+  };
+
+  const handleNavigateBack = () => {
+    if (isModified) {
+      setShowSaveDialog(true);
+    } else {
+      navigate('/');
+    }
   };
 
   return (
