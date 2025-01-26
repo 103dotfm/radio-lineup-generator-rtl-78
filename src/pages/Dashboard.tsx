@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Calendar, List } from "lucide-react";
 import { getShows, searchShows } from '@/lib/supabase/shows';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -26,7 +25,7 @@ const Dashboard = () => {
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">ליינאפ רדיו</h1>
-        <Button onClick={() => navigate('/')} className="flex items-center gap-2">
+        <Button onClick={() => navigate('/new')} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           ליינאפ חדש
         </Button>
@@ -53,8 +52,11 @@ const Dashboard = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {shows?.map((show) => (
-            <Card key={show.id} className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/show/${show.id}`)}>
+            <Card 
+              key={show.id} 
+              className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/show/${show.id}`)}
+            >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-lg">{show.name}</h3>
                 <div className="flex items-center gap-2 text-sm text-gray-500">

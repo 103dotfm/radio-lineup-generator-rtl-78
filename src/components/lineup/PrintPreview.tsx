@@ -12,6 +12,7 @@ interface PrintPreviewProps {
     details: string;
     phone: string;
     duration: number;
+    isBreak?: boolean;
   }>;
   editorContent: string;
 }
@@ -42,13 +43,21 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={item.id} className="border border-gray-200">
-              <td className="py-2 px-4 border border-gray-200">{item.name}</td>
-              <td className="py-2 px-4 border border-gray-200">{item.title}</td>
-              <td className="py-2 px-4 border border-gray-200">{item.details}</td>
-              <td className="py-2 px-4 border border-gray-200">{item.phone}</td>
-              <td className="py-2 px-4 border border-gray-200">{item.duration} דקות</td>
-            </tr>
+            item.isBreak ? (
+              <tr key={item.id} className="bg-gray-100">
+                <td colSpan={5} className="py-2 px-4 text-center border border-gray-200">
+                  {item.name} - {item.duration} דקות
+                </td>
+              </tr>
+            ) : (
+              <tr key={item.id} className="border border-gray-200">
+                <td className="py-2 px-4 border border-gray-200">{item.name}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.title}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.details}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.phone}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.duration} דקות</td>
+              </tr>
+            )
           ))}
         </tbody>
       </table>

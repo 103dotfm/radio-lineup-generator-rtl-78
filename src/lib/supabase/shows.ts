@@ -51,25 +51,20 @@ export const saveShow = async (
       .select()
       .single();
 
-    if (showError) {
-      console.error('Show save error:', showError);
-      throw showError;
-    }
+    if (showError) throw showError;
 
     const itemsWithPosition = items.map((item, index) => ({
       ...item,
       show_id: showData.id,
       position: index,
+      is_break: item.is_break || false
     }));
 
     const { error: itemsError } = await supabase
       .from('show_items')
       .insert(itemsWithPosition);
 
-    if (itemsError) {
-      console.error('Items save error:', itemsError);
-      throw itemsError;
-    }
+    if (itemsError) throw itemsError;
 
     toast.success('התוכנית נשמרה בהצלחה');
     return showData;
@@ -106,10 +101,7 @@ export const getShowWithItems = async (showId: string) => {
       .eq('id', showId)
       .single();
 
-    if (showError) {
-      console.error('Get show error:', showError);
-      throw showError;
-    }
+    if (showError) throw showError;
 
     const { data: items, error: itemsError } = await supabase
       .from('show_items')
@@ -117,12 +109,15 @@ export const getShowWithItems = async (showId: string) => {
       .eq('show_id', showId)
       .order('position');
 
-    if (itemsError) {
-      console.error('Get items error:', itemsError);
-      throw itemsError;
-    }
+    if (itemsError) throw itemsError;
 
-    return { show, items };
+    return { 
+      show, 
+      items: items.map(item => ({
+        ...item,
+        isBreak: item.is_break
+      }))
+    };
   } catch (error) {
     console.error('Error getting show with items:', error);
     throw error;
