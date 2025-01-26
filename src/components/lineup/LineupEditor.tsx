@@ -27,6 +27,7 @@ interface LineupEditorProps {
   onBreakTextChange: (id: string, text: string) => void;
   onDragEnd: (result: any) => void;
   handleNameLookup: (name: string) => Promise<any>;
+  onBackToDashboard: () => void;  // Added this prop
 }
 
 const LineupEditor = ({
@@ -50,6 +51,7 @@ const LineupEditor = ({
   onBreakTextChange,
   onDragEnd,
   handleNameLookup,
+  onBackToDashboard,  // Added this prop
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden">
@@ -77,6 +79,7 @@ const LineupEditor = ({
           onAdd={onAdd} 
           onNameChange={handleNameLookup}
           editingItem={editingItem}
+          onBackToDashboard={onBackToDashboard}  // Pass the prop here
         />
       </div>
 
