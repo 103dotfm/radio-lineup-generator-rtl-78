@@ -28,3 +28,33 @@ body {
 .print-content {
   direction: rtl;
 }
+
+@media print {
+  body {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .print-content {
+    padding: 20px;
+  }
+
+  .print-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+
+  .print-content th,
+  .print-content td {
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    text-align: right;
+  }
+
+  .print-content th {
+    background-color: #f8fafc !important;
+    font-weight: 600;
+  }
+}

@@ -86,7 +86,7 @@ const Index = () => {
       <LineupActions
         onBack={handleNavigateBack}
         onSave={handleSave}
-        onShare={handleShare}
+        onShare={() => handleShare(id)}
         onPrint={handlePrint}
         onExportPDF={() => handleExportPDF(pdfRef)}
       />
@@ -103,7 +103,7 @@ const Index = () => {
         onDateChange={setShowDate}
         onSave={handleSave}
         onPrint={handlePrint}
-        onShare={handleShare}
+        onShare={() => handleShare(id)}
         onExportPDF={() => handleExportPDF(pdfRef)}
         onAdd={(newItem) => {
           if (editingItem) {
@@ -155,14 +155,16 @@ const Index = () => {
         handleNameLookup={async () => null}
       />
 
-      <PDFPreview
-        ref={pdfRef}
-        showName={showName}
-        showTime={showTime}
-        showDate={showDate}
-        items={items}
-        editorContent={editor?.getHTML() || ''}
-      />
+      <div className="hidden">
+        <PDFPreview
+          ref={pdfRef}
+          showName={showName}
+          showTime={showTime}
+          showDate={showDate}
+          items={items}
+          editorContent={editor?.getHTML() || ''}
+        />
+      </div>
 
       <SaveDialog
         open={showSaveDialog}
