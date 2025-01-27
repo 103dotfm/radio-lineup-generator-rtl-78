@@ -152,12 +152,12 @@ const Dashboard = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>שם אורח</TableHead>
-              <TableHead>כותרת</TableHead>
-              <TableHead>טלפון</TableHead>
-              <TableHead>שם תוכנית</TableHead>
-              <TableHead>תאריך</TableHead>
-              <TableHead>פעולות</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-name">שם אורח</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-title">כותרת</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-phone">טלפון</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-show">שם תוכנית</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-date">תאריך</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-actions">פעולות</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -188,7 +188,7 @@ const Dashboard = () => {
       )}
       
       <div className="flex justify-center mt-12">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50" />
+        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo" />
       </div>
     </div>
   );
