@@ -43,7 +43,6 @@ export const saveShow = async (
       if (showError) throw showError;
       showData = data;
 
-      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -66,10 +65,17 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Format items as an array of objects with proper types
+    // Format items and ensure boolean values are properly set
     const formattedItems = items.map((item, index) => {
-      // Explicitly convert boolean values
-      const formattedItem = {
+      console.log('Processing item for DB:', item);
+      
+      // Convert to explicit boolean values
+      const isBreak = item.is_break === true;
+      const isNote = item.is_note === true;
+      
+      console.log(`Item ${item.name} - is_break: ${isBreak}, is_note: ${isNote}`);
+      
+      return {
         show_id: showData.id,
         position: index,
         name: item.name || '',
@@ -77,19 +83,18 @@ export const saveShow = async (
         details: item.details || '',
         phone: item.phone || '',
         duration: item.duration || 0,
-        is_break: item.is_break === true,
-        is_note: item.is_note === true
+        is_break: isBreak,
+        is_note: isNote
       };
-      console.log('Formatting item:', { original: item, formatted: formattedItem });
-      return formattedItem;
     });
     
-    console.log('Formatted items array:', formattedItems);
+    console.log('Formatted items for DB insertion:', formattedItems);
 
+    // Insert items directly using insert instead of rpc
     const { data: insertedItems, error: itemsError } = await supabase
-      .rpc('insert_show_items', {
-        items_array: formattedItems
-      });
+      .from('show_items')
+      .insert(formattedItems)
+      .select();
 
     if (itemsError) {
       console.error('Error inserting items:', itemsError);
