@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 const supabaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0';
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface FrontendItem {
   name: string;
@@ -182,11 +182,17 @@ export const searchShows = async (query: string) => {
 
     if (showsError) throw showsError;
 
-    // Then, search in show_items table
+    // Then, search in show_items table with guest information
     const { data: itemsData, error: itemsError } = await supabase
       .from('show_items')
-      .select('show_id, name, title, details')
-      .or(`name.ilike.%${query}%, title.ilike.%${query}%, details.ilike.%${query}%`);
+      .select(`
+        show_id,
+        name,
+        title,
+        details,
+        phone
+      `)
+      .or(`name.ilike.%${query}%, title.ilike.%${query}%, details.ilike.%${query}%, phone.ilike.%${query}%`);
 
     if (itemsError) throw itemsError;
 
@@ -203,11 +209,22 @@ export const searchShows = async (query: string) => {
         .order('created_at', { ascending: false });
 
       if (relatedError) throw relatedError;
-      additionalShows = relatedShows;
+      
+      // Add guest information to the shows
+      additionalShows = relatedShows.map(show => ({
+        ...show,
+        guests: itemsData.filter(item => item.show_id === show.id)
+      }));
     }
 
+    // Add guest information to shows found directly
+    const showsWithGuests = showsData?.map(show => ({
+      ...show,
+      guests: itemsData.filter(item => item.show_id === show.id)
+    })) || [];
+
     // Combine and deduplicate results
-    const allShows = [...(showsData || []), ...additionalShows];
+    const allShows = [...showsWithGuests, ...additionalShows];
     const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
 
     return uniqueShows;

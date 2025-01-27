@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Coffee, StickyNote } from "lucide-react";
+import { searchGuests, addGuest } from '../lib/supabase/guests';
+import { toast } from "sonner";
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -27,12 +29,13 @@ interface LineupFormProps {
   } | null;
 }
 
-const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
+const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
+  const [suggestions, setSuggestions] = useState<Array<{ name: string; title: string; phone: string }>>([]);
 
   useEffect(() => {
     if (editingItem) {
@@ -47,18 +50,45 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
   const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
     setName(newName);
+    
     if (newName.length > 2) {
-      const data = await onNameChange(newName);
-      if (data) {
-        setTitle(data.title || '');
-        setDetails(data.details || '');
-        setPhone(data.phone || '');
+      try {
+        const guests = await searchGuests(newName);
+        setSuggestions(guests.map(guest => ({
+          name: guest.name,
+          title: guest.title,
+          phone: guest.phone
+        })));
+      } catch (error) {
+        console.error('Error searching guests:', error);
       }
+    } else {
+      setSuggestions([]);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSuggestionSelect = (suggestion: { name: string; title: string; phone: string }) => {
+    setName(suggestion.name);
+    setTitle(suggestion.title);
+    setPhone(suggestion.phone);
+    setSuggestions([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    try {
+      // Add or update guest in the database
+      await addGuest({
+        name,
+        title,
+        phone
+      });
+    } catch (error) {
+      console.error('Error saving guest:', error);
+      // Continue with adding to lineup even if guest save fails
+    }
+
     onAdd({ 
       name, 
       title, 
@@ -68,11 +98,13 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       is_break: false,
       is_note: false
     });
+
     setName('');
     setTitle('');
     setDetails('');
     setPhone('');
     setDuration(5);
+    setSuggestions([]);
   };
 
   const handleBreakAdd = () => {
@@ -82,10 +114,9 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       details: '',
       phone: '',
       duration: duration,
-      is_break: true, // Explicitly set to true
+      is_break: true,
       is_note: false
     };
-    console.log('Adding break item:', breakItem);
     onAdd(breakItem);
     setDuration(5);
   };
@@ -98,9 +129,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       phone: '',
       duration: 0,
       is_break: false,
-      is_note: true // Explicitly set to true
+      is_note: true
     };
-    console.log('Adding note item:', noteItem);
     onAdd(noteItem);
   };
 
@@ -108,19 +138,31 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
     <form onSubmit={handleSubmit} className="lineup-form space-y-4">      
       <div className="lineup-form-inputs">
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Input
-            placeholder="שם"
-            value={name}
-            onChange={handleNameChange}
-            required
-            autoComplete="name"
-            name="name"
-            list="names-list"
-            className="lineup-form-input-name"
-          />
-          <datalist id="names-list">
-            {/* Add suggested names here if needed */}
-          </datalist>
+          <div className="relative">
+            <Input
+              placeholder="שם"
+              value={name}
+              onChange={handleNameChange}
+              required
+              autoComplete="off"
+              name="name"
+              className="lineup-form-input-name"
+            />
+            {suggestions.length > 0 && (
+              <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleSuggestionSelect(suggestion)}
+                  >
+                    <div>{suggestion.name}</div>
+                    <div className="text-sm text-gray-500">{suggestion.title}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <Input
             placeholder="כותרת"
             value={title}
