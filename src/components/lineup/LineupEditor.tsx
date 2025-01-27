@@ -65,7 +65,7 @@ const LineupEditor = ({
           className="flex items-center gap-2 mb-4"
         >
           <ArrowRight className="h-4 w-4" />
-          חזרה ללוח הבקרה
+          חזרה לעמוד הראשי
         </Button>
         
         <h1 className="text-3xl font-bold text-right">ליינאפ רדיו</h1>
