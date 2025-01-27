@@ -1,90 +1,44 @@
-import { supabase } from './shows';
+import { supabase } from './supabase';
 
-export interface Guest {
-  id: string;
-  name: string;
-  title: string;
-  phone: string;
-  created_at: string;
-}
-
-export const searchGuests = async (query: string): Promise<Guest[]> => {
+export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
   try {
-    // First, let's log all guests to see what's in the database
-    const { data: allGuests, error: allGuestsError } = await supabase
-      .from('guests')
-      .select('*')
-      .limit(10);
-      
-    console.log('First 10 guests in database:', allGuests);
-
-    if (allGuestsError) {
-      console.error('Error fetching all guests:', allGuestsError);
-    }
-
-    // Now perform the actual search
+    // Search in show_items table for unique guests
     const { data, error } = await supabase
-      .from('guests')
-      .select('*')
-      .textSearch('name', query, {
-        type: 'plain',
-        config: 'english'
-      })
-      .limit(5)
-      .order('name');
+      .from('show_items')
+      .select('name, title, phone')
+      .ilike('name', `%${query}%`)
+      .not('is_break', 'eq', true)
+      .not('is_note', 'eq', true)
+      .order('name')
+      .limit(5);
 
     if (error) {
       console.error('Error searching guests:', error);
       return [];
     }
     
-    console.log('Search results for query:', query, data);
-    return data || [];
+    // Remove duplicates based on name
+    const uniqueGuests = data?.reduce((acc: any[], current) => {
+      const x = acc.find(item => item.name === current.name);
+      if (!x) {
+        return acc.concat([current]);
+      } else {
+        return acc;
+      }
+    }, []);
+
+    console.log('Search results:', uniqueGuests);
+    return uniqueGuests || [];
   } catch (error) {
     console.error('Error searching guests:', error);
     return [];
   }
 };
 
-export const addGuest = async (guest: Omit<Guest, 'id' | 'created_at'>): Promise<Guest | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('guests')
-      .insert([guest])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding guest:', error);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error adding guest:', error);
-    return null;
-  }
-};
-
-export const updateGuest = async (id: string, guest: Partial<Guest>): Promise<Guest | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('guests')
-      .update(guest)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating guest:', error);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error updating guest:', error);
-    return null;
-  }
+export const addGuest = async (guest: { name: string; title: string; phone: string }) => {
+  // Since we're not using a separate guests table anymore, this function can be empty
+  // or you might want to remove it entirely since guests are added directly to show_items
+  return;
 };
