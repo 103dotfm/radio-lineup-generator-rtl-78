@@ -24,7 +24,7 @@ interface ShowHeaderProps {
 const ShowHeader = ({
   showName,
   showTime,
-  showDate,
+  showDate = new Date(),
   onNameChange,
   onTimeChange,
   onDateChange,
@@ -33,6 +33,13 @@ const ShowHeader = ({
   onPrint,
   onExportPDF
 }: ShowHeaderProps) => {
+  // Set default date to today if no date is provided
+  React.useEffect(() => {
+    if (!showDate) {
+      onDateChange(new Date());
+    }
+  }, []);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rtl-grid mb-8">
       <Input
