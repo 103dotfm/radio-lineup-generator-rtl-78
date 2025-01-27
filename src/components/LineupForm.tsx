@@ -33,7 +33,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
   const [details, setDetails] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
-  const [isBreak, setIsBreak] = useState(false);
 
   useEffect(() => {
     if (editingItem) {
@@ -42,7 +41,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       setDetails(editingItem.details);
       setPhone(editingItem.phone);
       setDuration(editingItem.duration);
-      setIsBreak(editingItem.is_break || false);
     }
   }, [editingItem]);
 
@@ -61,34 +59,37 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, title, details, phone, duration, is_break: isBreak });
+    onAdd({ name, title, details, phone, duration });
     setName('');
     setTitle('');
     setDetails('');
     setPhone('');
     setDuration(5);
-    setIsBreak(false);
   };
 
   const handleBreakAdd = () => {
+    console.log('Adding break with is_break=true');
     onAdd({ 
       name: 'הפסקה מסחרית',
       title: '',
       details: '',
       phone: '',
       duration: duration,
-      is_break: true 
+      is_break: true,
+      is_note: false
     });
     setDuration(5);
   };
 
   const handleNoteAdd = () => {
+    console.log('Adding note with is_note=true');
     onAdd({
       name: 'הערה',
       title: '',
       details: '',
       phone: '',
       duration: 0,
+      is_break: false,
       is_note: true
     });
   };
