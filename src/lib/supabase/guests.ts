@@ -4,15 +4,15 @@ export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
   try {
-    // Search in show_items table for unique guests
+    // Search in show_items table for unique guests, ordered by created_at to get latest info
     const { data, error } = await supabase
       .from('show_items')
-      .select('name, title, phone')
+      .select('name, title, phone, created_at')
       .ilike('name', `%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
-      .order('name')
-      .limit(5);
+      .order('created_at', { ascending: false })
+      .limit(20);
 
     if (error) {
       console.error('Error searching guests:', error);
@@ -21,13 +21,13 @@ export const searchGuests = async (query: string) => {
     
     // Remove duplicates based on name
     const uniqueGuests = data?.reduce((acc: any[], current) => {
-      const x = acc.find(item => item.name === current.name);
-      if (!x) {
-        return acc.concat([current]);
-      } else {
-        return acc;
+      const exists = acc.find(item => item.name === current.name);
+      if (!exists) {
+        return [...acc, current];
       }
-    }, []);
+      return acc;
+    }, [])
+    .slice(0, 5); // Only return top 5 results
 
     console.log('Search results:', uniqueGuests);
     return uniqueGuests || [];
