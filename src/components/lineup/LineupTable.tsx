@@ -11,8 +11,8 @@ interface LineupTableProps {
     details: string;
     phone: string;
     duration: number;
-    isBreak?: boolean;
-    isNote?: boolean;
+    is_break?: boolean;
+    is_note?: boolean;
   }>;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
