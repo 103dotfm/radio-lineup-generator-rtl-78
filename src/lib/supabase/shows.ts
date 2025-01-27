@@ -67,17 +67,22 @@ export const saveShow = async (
     }
 
     // Format items as an array of objects with proper types
-    const formattedItems = items.map((item, index) => ({
-      show_id: showData.id,
-      position: index,
-      name: item.name || '',
-      title: item.title || '',
-      details: item.details || '',
-      phone: item.phone || '',
-      duration: item.duration || 0,
-      is_break: Boolean(item.is_break),
-      is_note: Boolean(item.is_note)
-    }));
+    const formattedItems = items.map((item, index) => {
+      // Explicitly convert boolean values
+      const formattedItem = {
+        show_id: showData.id,
+        position: index,
+        name: item.name || '',
+        title: item.title || '',
+        details: item.details || '',
+        phone: item.phone || '',
+        duration: item.duration || 0,
+        is_break: item.is_break === true,
+        is_note: item.is_note === true
+      };
+      console.log('Formatting item:', { original: item, formatted: formattedItem });
+      return formattedItem;
+    });
     
     console.log('Formatted items array:', formattedItems);
 
@@ -136,27 +141,16 @@ export const getShowWithItems = async (showId: string) => {
 
     console.log('Raw items from database:', items);
 
-    const mappedItems = items.map(item => {
-      const mappedItem = {
-        id: item.id,
-        name: item.name,
-        title: item.title,
-        details: item.details,
-        phone: item.phone,
-        duration: item.duration,
-        isBreak: item.is_break === true,
-        isNote: item.is_note === true
-      };
-      
-      console.log('Mapping DB item:', {
-        original: item,
-        mapped: mappedItem,
-        is_break_original: item.is_break,
-        isBreak_mapped: mappedItem.isBreak
-      });
-      
-      return mappedItem;
-    });
+    const mappedItems = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      title: item.title,
+      details: item.details,
+      phone: item.phone,
+      duration: item.duration,
+      is_break: item.is_break === true,
+      is_note: item.is_note === true
+    }));
 
     return { show, items: mappedItems };
   } catch (error) {
