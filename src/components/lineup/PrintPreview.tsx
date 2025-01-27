@@ -13,8 +13,8 @@ interface PrintPreviewProps {
     details: string;
     phone: string;
     duration: number;
-    isBreak?: boolean;
-    isNote?: boolean;
+    is_break?: boolean;
+    is_note?: boolean;
   }>;
   editorContent: string;
 }
@@ -49,7 +49,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
         </thead>
         <tbody>
           {items.map((item) => {
-            if (item.isBreak) {
+            if (item.is_break) {
               return (
                 <tr key={item.id} className="bg-gray-100">
                   <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-center border border-gray-200 font-medium">
@@ -59,7 +59,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               );
             }
             
-            if (item.isNote) {
+            if (item.is_note) {
               return (
                 <tr key={item.id} className="bg-gray-800">
                   <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-center border border-gray-200 italic text-white">
