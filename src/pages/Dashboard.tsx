@@ -193,7 +193,6 @@ const Dashboard = () => {
       <div className="flex justify-center mt-12">
         <div className="credit">הקמת מערכת: <a href="https://Yaniv.TV" target="_blank">יניב מורוזובסקי</a></div>
       </div>
-
     </div>
   );
 };
