@@ -9,11 +9,14 @@ export interface Guest {
 }
 
 export const searchGuests = async (query: string): Promise<Guest[]> => {
+  console.log('Searching for guests with query:', query);
+  
   try {
     const { data, error } = await supabase
       .from('guests')
       .select('*')
-      .or(`name.ilike.%${query}%, title.ilike.%${query}%, phone.ilike.%${query}%`)
+      .ilike('name', `%${query}%`)
+      .limit(5)
       .order('name');
 
     if (error) {
@@ -21,6 +24,7 @@ export const searchGuests = async (query: string): Promise<Guest[]> => {
       return [];
     }
     
+    console.log('Search results:', data);
     return data || [];
   } catch (error) {
     console.error('Error searching guests:', error);
