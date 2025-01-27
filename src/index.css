@@ -53,6 +53,7 @@ body {
 
 #radix-:r1: {background: white;}
 #radix-:r2:, #radix-:r3: {text-align: right;}
+.loginLogo {margin: 0px -33px -21px 0px;}
 
 /* Responsive table styles */
 @media (max-width: 1024px) {
