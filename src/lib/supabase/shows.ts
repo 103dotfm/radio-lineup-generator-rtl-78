@@ -13,8 +13,8 @@ interface FrontendItem {
   details: string;
   phone: string;
   duration: number;
-  isBreak?: boolean;
-  isNote?: boolean;
+  is_break?: boolean;
+  is_note?: boolean;
 }
 
 export const saveShow = async (
@@ -75,13 +75,12 @@ export const saveShow = async (
       details: item.details || '',
       phone: item.phone || '',
       duration: item.duration || 0,
-      is_break: item.isBreak === true,
-      is_note: item.isNote === true
+      is_break: Boolean(item.is_break),
+      is_note: Boolean(item.is_note)
     }));
     
     console.log('Formatted items array:', formattedItems);
 
-    // Call RPC with the items array properly formatted as JSONB
     const { data: insertedItems, error: itemsError } = await supabase
       .rpc('insert_show_items', {
         items_array: formattedItems

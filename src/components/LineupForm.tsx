@@ -11,8 +11,8 @@ interface LineupFormProps {
     details: string;
     phone: string;
     duration: number;
-    isBreak?: boolean;
-    isNote?: boolean;
+    is_break?: boolean;
+    is_note?: boolean;
   }) => void;
   onNameChange: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
@@ -22,8 +22,8 @@ interface LineupFormProps {
     details: string;
     phone: string;
     duration: number;
-    isBreak?: boolean;
-    isNote?: boolean;
+    is_break?: boolean;
+    is_note?: boolean;
   } | null;
 }
 
@@ -42,7 +42,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       setDetails(editingItem.details);
       setPhone(editingItem.phone);
       setDuration(editingItem.duration);
-      setIsBreak(editingItem.isBreak || false);
+      setIsBreak(editingItem.is_break || false);
     }
   }, [editingItem]);
 
@@ -61,7 +61,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, title, details, phone, duration, isBreak });
+    onAdd({ name, title, details, phone, duration, is_break: isBreak });
     setName('');
     setTitle('');
     setDetails('');
@@ -77,7 +77,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       details: '',
       phone: '',
       duration: duration,
-      isBreak: true 
+      is_break: true 
     });
     setDuration(5);
   };
@@ -89,7 +89,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
       details: '',
       phone: '',
       duration: 0,
-      isNote: true
+      is_note: true
     });
   };
 
