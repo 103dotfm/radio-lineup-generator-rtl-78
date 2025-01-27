@@ -12,10 +12,26 @@ export const searchGuests = async (query: string): Promise<Guest[]> => {
   console.log('Searching for guests with query:', query);
   
   try {
+    // First, let's log all guests to see what's in the database
+    const { data: allGuests, error: allGuestsError } = await supabase
+      .from('guests')
+      .select('*')
+      .limit(10);
+      
+    console.log('First 10 guests in database:', allGuests);
+
+    if (allGuestsError) {
+      console.error('Error fetching all guests:', allGuestsError);
+    }
+
+    // Now perform the actual search
     const { data, error } = await supabase
       .from('guests')
       .select('*')
-      .ilike('name', `%${query}%`)
+      .textSearch('name', query, {
+        type: 'plain',
+        config: 'english'
+      })
       .limit(5)
       .order('name');
 
@@ -24,7 +40,7 @@ export const searchGuests = async (query: string): Promise<Guest[]> => {
       return [];
     }
     
-    console.log('Search results:', data);
+    console.log('Search results for query:', query, data);
     return data || [];
   } catch (error) {
     console.error('Error searching guests:', error);
