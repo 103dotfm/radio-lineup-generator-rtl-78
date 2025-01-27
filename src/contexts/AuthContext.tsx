@@ -51,40 +51,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const checkUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (data) {
-      setUser(data);
-      setIsAdmin(data.is_admin);
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+      }
+
+      if (data) {
+        setUser(data);
+        setIsAdmin(data.is_admin);
+      }
+    } catch (error) {
+      console.error('Error in checkUserRole:', error);
     }
   };
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Login error:', error);
+        return { error };
+      }
+
+      if (data.user) {
+        await checkUserRole(data.user.id);
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Unexpected login error:', error);
       return { error };
     }
-
-    if (data.user) {
-      await checkUserRole(data.user.id);
-    }
-
-    return { error: null };
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
