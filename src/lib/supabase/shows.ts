@@ -23,7 +23,7 @@ export const saveShow = async (
   existingId?: string
 ) => {
   try {
-    console.log('Starting save operation with items:', items);
+    console.log('Starting save operation with raw items:', items);
     
     let showData;
     
@@ -65,20 +65,29 @@ export const saveShow = async (
       showData = data;
     }
 
-    const formattedItems = items.map((item, index) => ({
-      show_id: showData.id,
-      position: index,
-      name: item.name || '',
-      title: item.title || '',
-      details: item.details || '',
-      phone: item.phone || '',
-      duration: item.duration || 0,
-      is_break: Boolean(item.is_break),
-      is_note: Boolean(item.is_note)
-    }));
+    // Format items and ensure boolean values are properly set
+    const formattedItems = items.map((item, index) => {
+      // Determine break and note status both from flags and item names
+      const isBreak = item.is_break === true || item.name === 'פרסומות';
+      const isNote = item.is_note === true || item.name === 'הערה';
 
-    console.log('Formatted items for DB:', formattedItems);
+      const formattedItem = {
+        show_id: showData.id,
+        position: index,
+        name: item.name || '',
+        title: item.title || '',
+        details: item.details || '',
+        phone: item.phone || '',
+        duration: item.duration || 0,
+        is_break: isBreak,
+        is_note: isNote
+      };
+      
+      console.log('Formatted item for DB:', formattedItem);
+      return formattedItem;
+    });
 
+    // Insert items with explicit boolean values
     const { error: itemsError } = await supabase
       .from('show_items')
       .insert(formattedItems);

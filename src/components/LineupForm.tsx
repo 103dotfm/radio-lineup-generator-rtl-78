@@ -94,7 +94,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       console.error('Error saving guest:', error);
     }
 
-    onAdd({ 
+    const newItem = { 
       name, 
       title, 
       details, 
@@ -102,7 +102,10 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       duration,
       is_break: false,
       is_note: false
-    });
+    };
+    
+    console.log('Adding regular item:', newItem);
+    onAdd(newItem);
 
     setName('');
     setTitle('');
@@ -122,7 +125,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       is_break: true,
       is_note: false
     };
-    console.log('Adding break item:', breakItem);
+    console.log('Adding break item with explicit is_break=true:', breakItem);
     onAdd(breakItem);
     setDuration(5);
   };
@@ -137,6 +140,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       is_break: false,
       is_note: true
     };
+    console.log('Adding note item with explicit is_note=true:', noteItem);
     onAdd(noteItem);
   };
 
