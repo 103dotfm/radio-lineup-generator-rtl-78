@@ -54,7 +54,7 @@ const Dashboard = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">ליינאפ רדיו</h1>
+        <h1 className="text-3xl font-bold">מערכת ליינאפים - 103fm</h1>
         <div className="flex gap-4">
           <Button onClick={() => navigate('/new')} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -62,7 +62,7 @@ const Dashboard = () => {
           </Button>
           <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
             <LogOut className="h-4 w-4" />
-            התנתק
+            התנתקות
           </Button>
         </div>
       </div>
@@ -71,7 +71,7 @@ const Dashboard = () => {
         <div className="relative">
           <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="חפש לפי שם תוכנית, תאריך או פריט..."
+            placeholder="חיפוש לפי שם תוכנית, תאריך או פריט..."
             value={searchQuery}
             onChange={handleSearch}
             className="pl-4 pr-10"
@@ -152,7 +152,7 @@ const Dashboard = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-right font-bold dashboard-header-name">שם אורח</TableHead>
+              <TableHead className="text-right font-bold dashboard-header-name">מרואיינ/ת</TableHead>
               <TableHead className="text-right font-bold dashboard-header-title">כותרת</TableHead>
               <TableHead className="text-right font-bold dashboard-header-phone">טלפון</TableHead>
               <TableHead className="text-right font-bold dashboard-header-show">שם תוכנית</TableHead>
@@ -177,7 +177,7 @@ const Dashboard = () => {
                       size="sm"
                       onClick={() => navigate(`/show/${show.id}`)}
                     >
-                      צפה בליינאפ
+                      צפייה בליינאפ
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -189,6 +189,7 @@ const Dashboard = () => {
       
       <div className="flex justify-center mt-12">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo" />
+        <div class="credit">הקמת מערכת: <a href="https://Yaniv.TV" target="_blank">יניב מורוזובסקי</a></div>
       </div>
     </div>
   );
