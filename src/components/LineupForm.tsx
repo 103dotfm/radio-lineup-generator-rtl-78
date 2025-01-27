@@ -85,7 +85,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     e.preventDefault();
     
     try {
-      // Add or update guest in the database
       await addGuest({
         name,
         title,
@@ -93,7 +92,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       });
     } catch (error) {
       console.error('Error saving guest:', error);
-      // Continue with adding to lineup even if guest save fails
     }
 
     onAdd({ 
@@ -124,6 +122,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       is_break: true,
       is_note: false
     };
+    console.log('Adding break item:', breakItem);
     onAdd(breakItem);
     setDuration(5);
   };
