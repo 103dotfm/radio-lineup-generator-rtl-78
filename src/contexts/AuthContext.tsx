@@ -25,8 +25,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    console.log('AuthProvider: Initializing');
+    
     // Check current auth status
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthProvider: Initial session check', session);
       if (session) {
         setIsAuthenticated(true);
         checkUserRole(session.user.id);
@@ -35,6 +38,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('AuthProvider: Auth state changed', event, session?.user?.id);
+      
       if (event === 'SIGNED_IN' && session) {
         setIsAuthenticated(true);
         checkUserRole(session.user.id);
@@ -51,6 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const checkUserRole = async (userId: string) => {
+    console.log('AuthProvider: Checking user role for', userId);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -63,6 +69,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
+      console.log('AuthProvider: User data fetched', data);
       if (data) {
         setUser(data);
         setIsAdmin(data.is_admin);
@@ -73,6 +80,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const login = async (email: string, password: string) => {
+    console.log('AuthProvider: Attempting login for', email);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -84,6 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
+      console.log('AuthProvider: Login successful', data.user?.id);
       if (data.user) {
         await checkUserRole(data.user.id);
       }
@@ -96,6 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
+    console.log('AuthProvider: Logging out');
     try {
       await supabase.auth.signOut();
       setIsAuthenticated(false);
