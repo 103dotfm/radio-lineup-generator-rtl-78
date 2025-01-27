@@ -17,7 +17,7 @@ const Index = () => {
   const [items, setItems] = useState([]);
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
-  const [showDate, setShowDate] = useState<Date>();
+  const [showDate, setShowDate] = useState<Date>(new Date());
   const [editingItem, setEditingItem] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -44,7 +44,7 @@ const Index = () => {
           if (show) {
             setShowName(show.name);
             setShowTime(show.time);
-            setShowDate(show.date ? new Date(show.date) : undefined);
+            setShowDate(show.date ? new Date(show.date) : new Date());
             if (editor) {
               editor.commands.setContent(show.notes || '');
             }
@@ -193,7 +193,7 @@ const Index = () => {
             setHasUnsavedChanges(true);
           }}
           onDateChange={(date) => {
-            setShowDate(date);
+            setShowDate(date || new Date());
             setHasUnsavedChanges(true);
           }}
           onSave={handleSave}
