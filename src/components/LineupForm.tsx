@@ -117,15 +117,15 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
 
   const handleBreakAdd = () => {
     const breakItem = { 
-      name: 'פרסומות',
+      name: 'פרסומות',  // Default name for breaks
       title: '',
       details: '',
       phone: '',
       duration: duration,
-      is_break: true,
+      is_break: true,  // Explicitly set is_break to true
       is_note: false
     };
-    console.log('Adding break item with explicit is_break=true:', breakItem);
+    console.log('Adding break item:', breakItem);
     onAdd(breakItem);
     setDuration(5);
   };
@@ -140,7 +140,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       is_break: false,
       is_note: true
     };
-    console.log('Adding note item with explicit is_note=true:', noteItem);
+    console.log('Adding note item:', noteItem);
     onAdd(noteItem);
   };
 
