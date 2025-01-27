@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from './shows';
 
 export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
