@@ -14,8 +14,8 @@ interface LineupItemProps {
   details: string;
   phone: string;
   duration: number;
-  isBreak?: boolean;
-  isNote?: boolean;
+  is_break?: boolean;
+  is_note?: boolean;
   index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -31,8 +31,8 @@ const LineupItem = ({
   details,
   phone,
   duration,
-  isBreak,
-  isNote,
+  is_break,
+  is_note,
   index,
   onDelete,
   onDurationChange,
@@ -70,16 +70,16 @@ const LineupItem = ({
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`${isBreak ? 'bg-gray-50' : ''} ${isNote ? 'bg-yellow-50' : ''}`}
+          className={`${is_break ? 'bg-gray-50' : ''} ${is_note ? 'bg-yellow-50' : ''}`}
         >
-          {isNote ? (
+          {is_note ? (
             <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
               <EditorContent editor={editor} className="note-editor prose prose-sm" />
             </td>
           ) : (
             <>
               <td className="py-2 px-4 border border-gray-200">
-                {isBreak ? (
+                {is_break ? (
                   <Input
                     value={name}
                     onChange={(e) => onBreakTextChange(id, e.target.value)}
@@ -105,7 +105,7 @@ const LineupItem = ({
               </td>
               <td className="py-2 px-4 border border-gray-200">
                 <div className="flex gap-2">
-                  {!isBreak && (
+                  {!is_break && (
                     <Button
                       variant="ghost"
                       size="icon"
