@@ -44,10 +44,10 @@ const LineupItem = ({
 
   const editor = useEditor({
     extensions: [StarterKit],
-    content: '',
+    content: details || '',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm focus:outline-none min-h-[50px] p-2',
+        class: 'prose prose-sm focus:outline-none min-h-[50px] p-4',
       },
     },
     onUpdate: ({ editor }) => {
@@ -59,7 +59,10 @@ const LineupItem = ({
 
   useEffect(() => {
     if (editor && details) {
-      editor.commands.setContent(details);
+      // Only update content if it's different to avoid cursor jumping
+      if (editor.getHTML() !== details) {
+        editor.commands.setContent(details);
+      }
     }
   }, [editor, details]);
 
@@ -74,7 +77,7 @@ const LineupItem = ({
         >
           {is_note ? (
             <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
-              <EditorContent editor={editor} className="note-editor prose prose-sm" />
+              <EditorContent editor={editor} className="prose prose-sm" />
             </td>
           ) : (
             <>
