@@ -110,10 +110,10 @@ const Index = () => {
         navigate(`/show/${savedShow.id}`);
       }
       setHasUnsavedChanges(false);
-      toast.success('התוכנית נשמרה בהצלחה');
+      toast.success('הליינאפ נשמר בהצלחה');
     } catch (error) {
       console.error('Error saving show:', error);
-      toast.error('שגיאה בשמירת התוכנית');
+      toast.error('שגיאה בשמירת הליינאפ');
     } finally {
       setIsSaving(false);
     }
@@ -130,10 +130,10 @@ const Index = () => {
     try {
       const shareUrl = `${window.location.origin}/print/${id}`;
       await navigator.clipboard.writeText(shareUrl);
-      toast.success('קישור הועתק ללוח');
+      toast.success('קישור לליינאפ הועתק ללוח');
     } catch (error) {
       console.error('Error sharing:', error);
-      toast.error('שגיאה בשיתוף התוכנית');
+      toast.error('שגיאה בשיתוף הליינאפ');
     }
   };
 
@@ -170,7 +170,7 @@ const Index = () => {
       })
       .catch((error) => {
         console.error('Error generating PDF:', error);
-        toast.error('שגיאה ביצירת ה-PDF');
+        toast.error('שגיאה ביצירת ה־PDF');
       });
   };
 
@@ -258,7 +258,7 @@ const Index = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => navigate('/')}>
-              התעלם משינויים
+              התעלמות משינויים
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
@@ -266,7 +266,7 @@ const Index = () => {
                 navigate('/');
               }}
             >
-              שמור ועבור ללוח הבקרה
+              שמירה ומעבר לעמוד הראשי
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
