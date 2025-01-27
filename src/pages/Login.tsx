@@ -1,74 +1,79 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from '../contexts/AuthContext';
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const { login } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const username = formData.get('username') as string;
-    const password = formData.get('password') as string;
-
-    try {
-      const success = login(username, password);
-      if (success) {
-        navigate('/');
-      } else {
-        toast.error('שם משתמש או סיסמה שגויים');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('שגיאה בהתחברות');
+    
+    const { error } = await login(email, password);
+    
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error logging in",
+        description: error.message
+      });
+    } else {
+      toast({
+        title: "Logged in successfully"
+      });
+      navigate("/");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <div className="flex justify-center">
-          <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103fm" className="h-20 mb-6 loginLogo" />
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-8 p-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold">Login to Radio Lineup</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Enter your credentials to continue
+          </p>
         </div>
-        <h2 className="text-3xl font-bold text-center text-gray-900">מערכת ליינאפים</h2>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          <div className="space-y-4">
             <div>
+              <label htmlFor="email" className="block text-sm font-medium">
+                Email
+              </label>
               <Input
-                id="username"
-                name="username"
-                type="text"
-                autoComplete="username"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="שם משתמש"
+                className="mt-1"
+                placeholder="admin@example.com"
               />
             </div>
             <div>
+              <label htmlFor="password" className="block text-sm font-medium">
+                Password
+              </label>
               <Input
                 id="password"
-                name="password"
                 type="password"
-                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="סיסמה"
+                className="mt-1"
+                placeholder="••••••••"
               />
             </div>
           </div>
-
-          <div>
-            <Button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              התחברות
-            </Button>
-          </div>
+          <Button type="submit" className="w-full">
+            Sign in
+          </Button>
         </form>
       </div>
     </div>
