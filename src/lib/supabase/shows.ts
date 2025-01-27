@@ -67,9 +67,19 @@ export const saveShow = async (
 
     // Format items and ensure boolean values are properly set
     const formattedItems = items.map((item, index) => {
-      console.log('Processing item for DB:', item);
+      // Log the incoming item values
+      console.log('Raw item before processing:', {
+        name: item.name,
+        is_break: item.is_break,
+        is_note: item.is_note,
+        type: typeof item.is_break
+      });
       
-      return {
+      // Force boolean conversion based on specific conditions
+      const isBreak = item.name === 'הפסקה מסחרית' ? true : !!item.is_break;
+      const isNote = item.name === 'הערה' ? true : !!item.is_note;
+      
+      const formattedItem = {
         show_id: showData.id,
         position: index,
         name: item.name || '',
@@ -77,14 +87,17 @@ export const saveShow = async (
         details: item.details || '',
         phone: item.phone || '',
         duration: item.duration || 0,
-        is_break: Boolean(item.is_break), // Explicitly convert to boolean
-        is_note: Boolean(item.is_note)    // Explicitly convert to boolean
+        is_break: isBreak,
+        is_note: isNote
       };
+      
+      // Log the formatted item
+      console.log('Formatted item for DB:', formattedItem);
+      
+      return formattedItem;
     });
-    
-    console.log('Formatted items for DB insertion:', formattedItems);
 
-    // Insert items directly using insert instead of rpc
+    // Insert items directly using insert
     const { data: insertedItems, error: itemsError } = await supabase
       .from('show_items')
       .insert(formattedItems)
