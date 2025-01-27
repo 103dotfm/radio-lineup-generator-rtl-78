@@ -36,6 +36,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
   const [suggestions, setSuggestions] = useState<Array<{ name: string; title: string; phone: string }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     if (editingItem) {
@@ -52,15 +53,21 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     setName(newName);
     
     if (newName.length > 2) {
+      setIsSearching(true);
       try {
+        console.log('Searching for:', newName);
         const guests = await searchGuests(newName);
+        console.log('Found guests:', guests);
         setSuggestions(guests.map(guest => ({
           name: guest.name,
           title: guest.title,
-          phone: guest.phone
+          phone: guest.phone || ''
         })));
       } catch (error) {
         console.error('Error searching guests:', error);
+        toast.error('שגיאה בחיפוש אורחים');
+      } finally {
+        setIsSearching(false);
       }
     } else {
       setSuggestions([]);
@@ -160,6 +167,11 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
                     <div className="text-sm text-gray-500">{suggestion.title}</div>
                   </div>
                 ))}
+              </div>
+            )}
+            {isSearching && (
+              <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 p-2 text-center text-gray-500">
+                מחפש...
               </div>
             )}
           </div>
