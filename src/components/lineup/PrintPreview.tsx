@@ -39,12 +39,12 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
         <thead>
           <tr>
             <th className="py-1 px-2 text-right border border-gray-200">שם</th>
-            <th className="py-1 px-2 text-right border border-gray-200">כותרת</th>
+            <th className="py-1 px-2 text-right border border-gray-200">קרדיט</th>
             <th className="py-1 px-2 text-right border border-gray-200">פרטים</th>
             {isAuthenticated && (
               <th className="py-1 px-2 text-right border border-gray-200">טלפון</th>
             )}
-            <th className="py-1 px-2 text-right border border-gray-200">דקות</th>
+            <th className="py-1 px-2 text-right border border-gray-200">דק'</th>
           </tr>
         </thead>
         <tbody>
@@ -53,7 +53,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               return (
                 <tr key={item.id} className="bg-gray-100">
                   <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-center border border-gray-200 font-medium">
-                    {item.name} - {item.duration} דקות
+                    {item.name} - {item.duration}
                   </td>
                 </tr>
               );
@@ -77,7 +77,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                 {isAuthenticated && (
                   <td className="py-2 px-4 border border-gray-200 text-gray-500">{item.phone}</td>
                 )}
-                <td className="py-2 px-4 border border-gray-200 text-right">{item.duration} דקות</td>
+                <td className="py-2 px-4 border border-gray-200 text-right">{item.duration}</td>
               </tr>
             );
           })}
@@ -90,7 +90,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
 
       {editorContent && (
         <div 
-          className="credits mt-8 pt-4 border-t border-gray-200 text-xs text-gray-500"
+          className="credits showCredits mt-8 pt-4 border-t border-gray-200 text-xs text-gray-500"
           dangerouslySetInnerHTML={{ __html: editorContent }}
         />
       )}
