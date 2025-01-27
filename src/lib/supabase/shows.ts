@@ -65,38 +65,29 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Format items and ensure boolean values are properly set
-    const formattedItems = items.map((item, index) => {
-      // Preserve the is_break flag from the item
-      const formattedItem = {
-        show_id: showData.id,
-        position: index,
-        name: item.name || '',
-        title: item.title || '',
-        details: item.details || '',
-        phone: item.phone || '',
-        duration: item.duration || 0,
-        is_break: !!item.is_break, // Ensure boolean conversion
-        is_note: !!item.is_note
-      };
-      
-      console.log('Formatted item for DB:', formattedItem);
-      
-      return formattedItem;
-    });
+    const formattedItems = items.map((item, index) => ({
+      show_id: showData.id,
+      position: index,
+      name: item.name || '',
+      title: item.title || '',
+      details: item.details || '',
+      phone: item.phone || '',
+      duration: item.duration || 0,
+      is_break: Boolean(item.is_break),
+      is_note: Boolean(item.is_note)
+    }));
 
-    // Insert items directly using insert
-    const { data: insertedItems, error: itemsError } = await supabase
+    console.log('Formatted items for DB:', formattedItems);
+
+    const { error: itemsError } = await supabase
       .from('show_items')
-      .insert(formattedItems)
-      .select();
+      .insert(formattedItems);
 
     if (itemsError) {
       console.error('Error inserting items:', itemsError);
       throw itemsError;
     }
 
-    console.log('Successfully inserted items:', insertedItems);
     return showData;
   } catch (error) {
     console.error('Error in saveShow:', error);
