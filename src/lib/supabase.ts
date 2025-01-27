@@ -8,11 +8,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'pkce'
+    flowType: 'pkce',
+    storage: localStorage,
+    storageKey: 'supabase.auth.token'
   },
   global: {
     headers: {
-      'X-Client-Info': 'supabase-js-web'
+      'X-Client-Info': 'supabase-js-web',
+      'Content-Type': 'application/json'
     }
   }
 });
