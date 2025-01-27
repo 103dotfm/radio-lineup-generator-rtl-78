@@ -47,7 +47,7 @@ const LineupTable = ({
                 <thead>
                   <tr>
                     <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-name">שם</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-title">כותרת</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-title">קרדיט</th>
                     <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-details">פרטים</th>
                     {isAuthenticated && (
                       <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-phone">טלפון</th>
