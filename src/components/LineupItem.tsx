@@ -59,7 +59,6 @@ const LineupItem = ({
 
   useEffect(() => {
     if (editor && details) {
-      // Only update content if it's different to avoid cursor jumping
       if (editor.getHTML() !== details) {
         editor.commands.setContent(details);
       }
@@ -83,11 +82,15 @@ const LineupItem = ({
             <>
               <td className="py-2 px-4 border border-gray-200">
                 {is_break ? (
-                  <Input
-                    value={name}
-                    onChange={(e) => onBreakTextChange(id, e.target.value)}
-                    className="w-full"
-                  />
+                  <div className="space-y-2">
+                    <div className="font-semibold text-gray-700">הפסקה מסחרית</div>
+                    <Input
+                      value={name}
+                      onChange={(e) => onBreakTextChange(id, e.target.value)}
+                      className="w-full"
+                      placeholder="פרטי ההפסקה"
+                    />
+                  </div>
                 ) : (
                   name
                 )}
