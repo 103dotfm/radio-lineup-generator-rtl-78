@@ -17,5 +17,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'X-Client-Info': 'supabase-js-web',
       'Content-Type': 'application/json'
     }
+  },
+  db: {
+    schema: 'public'
   }
 });
