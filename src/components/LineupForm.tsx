@@ -145,7 +145,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
               onChange={handleNameChange}
               required
               autoComplete="off"
-              name="name"
+              name="guest-name"
               className="lineup-form-input-name"
             />
             {suggestions.length > 0 && (
@@ -168,8 +168,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            autoComplete="organization-title"
-            name="title"
+            autoComplete="off"
+            name="guest-title"
             className="lineup-form-input-title"
           />
         </div>
@@ -178,7 +178,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
           value={details}
           onChange={(e) => setDetails(e.target.value)}
           name="details"
-          autoComplete="on"
           className="lineup-form-input-details whitespace-pre-wrap mb-4"
         />
         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -188,8 +187,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required
-            autoComplete="tel"
-            name="phone"
+            autoComplete="off"
+            name="guest-phone"
             className="lineup-form-input-phone"
           />
           <Input
