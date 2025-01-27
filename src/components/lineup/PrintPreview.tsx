@@ -51,8 +51,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
           {items.map((item) => {
             if (item.isBreak) {
               return (
-                <tr key={item.id} className="bg-gray-100">
-                  <td colSpan={isAuthenticated ? 5 : 4} className="py-1 px-2 text-center border border-gray-200">
+                <tr key={item.id} className="bg-gray-100 font-medium">
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-center border border-gray-200">
                     {item.name} - {item.duration} דקות
                   </td>
                 </tr>
@@ -62,35 +62,35 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             if (item.isNote) {
               return (
                 <tr key={item.id} className="bg-yellow-50">
-                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-2 text-right border border-gray-200">
-                    <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-right border border-gray-200 italic">
+                    <div dangerouslySetInnerHTML={{ __html: item.details || '' }} className="text-gray-700" />
                   </td>
                 </tr>
               );
             }
 
             return (
-              <tr key={item.id}>
-                <td className="py-1 px-2 border border-gray-200">{item.name}</td>
-                <td className="py-1 px-2 border border-gray-200">{item.title}</td>
-                <td className="py-1 px-2 border border-gray-200 whitespace-pre-line">{item.details}</td>
+              <tr key={item.id} className="hover:bg-gray-50">
+                <td className="py-2 px-4 border border-gray-200 font-medium">{item.name}</td>
+                <td className="py-2 px-4 border border-gray-200">{item.title}</td>
+                <td className="py-2 px-4 border border-gray-200 whitespace-pre-line text-gray-600">{item.details}</td>
                 {isAuthenticated && (
-                  <td className="py-1 px-2 border border-gray-200">{item.phone}</td>
+                  <td className="py-2 px-4 border border-gray-200 text-gray-500">{item.phone}</td>
                 )}
-                <td className="py-1 px-2 border border-gray-200">{item.duration} דקות</td>
+                <td className="py-2 px-4 border border-gray-200 text-right">{item.duration} דקות</td>
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      <div className="mt-2 text-left text-sm">
+      <div className="mt-4 text-left text-sm text-gray-600">
         <p>סה"כ זמן: {items.reduce((sum, item) => sum + (item.duration || 0), 0)} דקות</p>
       </div>
 
       {editorContent && (
         <div 
-          className="credits mt-8 pt-4 border-t border-gray-200 text-xs"
+          className="credits mt-8 pt-4 border-t border-gray-200 text-xs text-gray-500"
           dangerouslySetInnerHTML={{ __html: editorContent }}
         />
       )}
