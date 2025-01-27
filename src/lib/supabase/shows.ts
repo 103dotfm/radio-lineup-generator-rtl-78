@@ -69,12 +69,6 @@ export const saveShow = async (
     const formattedItems = items.map((item, index) => {
       console.log('Processing item for DB:', item);
       
-      // Convert to explicit boolean values
-      const isBreak = item.is_break === true;
-      const isNote = item.is_note === true;
-      
-      console.log(`Item ${item.name} - is_break: ${isBreak}, is_note: ${isNote}`);
-      
       return {
         show_id: showData.id,
         position: index,
@@ -83,8 +77,8 @@ export const saveShow = async (
         details: item.details || '',
         phone: item.phone || '',
         duration: item.duration || 0,
-        is_break: isBreak,
-        is_note: isNote
+        is_break: Boolean(item.is_break), // Explicitly convert to boolean
+        is_note: Boolean(item.is_note)    // Explicitly convert to boolean
       };
     });
     
