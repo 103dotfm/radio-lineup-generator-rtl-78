@@ -59,7 +59,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting regular item with is_break=false, is_note=false');
     onAdd({ 
       name, 
       title, 
@@ -77,30 +76,32 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
   };
 
   const handleBreakAdd = () => {
-    console.log('Adding break with is_break=true');
-    onAdd({ 
+    const breakItem = { 
       name: 'הפסקה מסחרית',
       title: '',
       details: '',
       phone: '',
       duration: duration,
-      is_break: true,
+      is_break: true, // Explicitly set to true
       is_note: false
-    });
+    };
+    console.log('Adding break item:', breakItem);
+    onAdd(breakItem);
     setDuration(5);
   };
 
   const handleNoteAdd = () => {
-    console.log('Adding note with is_note=true');
-    onAdd({
+    const noteItem = {
       name: 'הערה',
       title: '',
       details: '',
       phone: '',
       duration: 0,
       is_break: false,
-      is_note: true
-    });
+      is_note: true // Explicitly set to true
+    };
+    console.log('Adding note item:', noteItem);
+    onAdd(noteItem);
   };
 
   return (
