@@ -179,7 +179,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
             )}
           </div>
           <Input
-            placeholder="כותרת"
+            placeholder="קרדיט"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
