@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Edit2, Trash2 } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import BreakItem from './lineup/BreakItem';
+import NoteItem from './lineup/NoteItem';
+import RegularItem from './lineup/RegularItem';
 
 interface LineupItemProps {
   id: string;
@@ -74,89 +74,39 @@ const LineupItem = ({
           {...provided.dragHandleProps}
           className={`${is_break ? 'bg-gray-50' : ''} ${is_note ? 'bg-yellow-50' : ''}`}
         >
-          {is_break || is_note ? (
-            <>
-              <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200 text-center">
-                {is_break ? (
-                  <div className="space-y-2">
-                    <div className="font-semibold text-gray-700">הפסקה מסחרית</div>
-                    <Input
-                      value={name}
-                      onChange={(e) => onBreakTextChange(id, e.target.value)}
-                      className="w-full text-center"
-                      placeholder="פרטי ההפסקה"
-                    />
-                  </div>
-                ) : (
-                  <EditorContent editor={editor} className="prose prose-sm text-center" />
-                )}
-              </td>
-              <td className="py-2 px-4 border border-gray-200 text-center">
-                <Input
-                  type="number"
-                  min="1"
-                  value={duration}
-                  onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-                  className="w-20 mx-auto text-center"
-                />
-              </td>
-              <td className="py-2 px-4 border border-gray-200">
-                <div className="flex gap-2 justify-center">
-                  {!is_break && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(id)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDelete(id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </td>
-            </>
+          {is_break ? (
+            <BreakItem
+              id={id}
+              name={name}
+              duration={duration}
+              onDelete={onDelete}
+              onDurationChange={onDurationChange}
+              onBreakTextChange={onBreakTextChange}
+              isAuthenticated={isAuthenticated}
+            />
+          ) : is_note ? (
+            <NoteItem
+              id={id}
+              editor={editor}
+              duration={duration}
+              onDelete={onDelete}
+              onDurationChange={onDurationChange}
+              onEdit={onEdit}
+              isAuthenticated={isAuthenticated}
+            />
           ) : (
-            <>
-              <td className="py-2 px-4 border border-gray-200">{name}</td>
-              <td className="py-2 px-4 border border-gray-200">{title}</td>
-              <td className="py-2 px-4 border border-gray-200 whitespace-pre-line">{details}</td>
-              {isAuthenticated && (
-                <td className="py-2 px-4 border border-gray-200">{phone}</td>
-              )}
-              <td className="py-2 px-4 border border-gray-200">
-                <Input
-                  type="number"
-                  min="1"
-                  value={duration}
-                  onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-                  className="w-20"
-                />
-              </td>
-              <td className="py-2 px-4 border border-gray-200">
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEdit(id)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onDelete(id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </td>
-            </>
+            <RegularItem
+              id={id}
+              name={name}
+              title={title}
+              details={details}
+              phone={phone}
+              duration={duration}
+              onDelete={onDelete}
+              onDurationChange={onDurationChange}
+              onEdit={onEdit}
+              isAuthenticated={isAuthenticated}
+            />
           )}
         </tr>
       )}
