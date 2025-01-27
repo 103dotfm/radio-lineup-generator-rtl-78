@@ -6,6 +6,8 @@ import ShowCredits from '../show/ShowCredits';
 import { Editor } from '@tiptap/react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
 
 interface LineupEditorProps {
   showName: string;
@@ -68,7 +70,9 @@ const LineupEditor = ({
           חזרה לעמוד הראשי
         </Button>
         
-        <h1 className="text-3xl font-bold text-right">ליינאפ רדיו</h1>
+        <h1 className="text-3xl font-bold text-right">
+          עריכת ליינאפ - {showName} - {showDate ? format(showDate, 'dd/MM/yyyy', { locale: he }) : 'לא נבחר תאריך'}
+        </h1>
       </div>
       
       <div className="lineup-editor-show-header">

@@ -5,8 +5,8 @@ import { Printer, Share2, Save, FileDown } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 interface ShowHeaderProps {
   showName: string;
@@ -56,7 +56,7 @@ const ShowHeader = ({
               !showDate && "text-muted-foreground"
             )}
           >
-            {showDate ? format(showDate, 'dd/MM/yyyy') : 'בחר תאריך'}
+            {showDate ? format(showDate, 'dd/MM/yyyy', { locale: he }) : 'בחר תאריך'}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0 bg-white shadow-lg" align="start">
@@ -65,10 +65,16 @@ const ShowHeader = ({
             selected={showDate}
             onSelect={onDateChange}
             initialFocus
+            locale={he}
+            defaultMonth={new Date()}
           />
         </PopoverContent>
       </Popover>
       <div className="flex gap-2">
+        <Button onClick={onSave} variant="default" className="px-8 font-bold flex-1">
+          <Save className="ml-2 h-4 w-4" />
+          שמירה
+        </Button>
         <Button onClick={onPrint} variant="outline">
           <Printer className="ml-2 h-4 w-4" />
           הדפסה
@@ -76,10 +82,6 @@ const ShowHeader = ({
         <Button onClick={onShare} variant="outline">
           <Share2 className="ml-2 h-4 w-4" />
           שיתוף
-        </Button>
-        <Button onClick={onSave} variant="outline">
-          <Save className="ml-2 h-4 w-4" />
-          שמירה
         </Button>
         <Button onClick={onExportPDF} variant="outline">
           <FileDown className="ml-2 h-4 w-4" />
