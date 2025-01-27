@@ -59,7 +59,16 @@ const LineupForm = ({ onAdd, onNameChange, editingItem }: LineupFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ name, title, details, phone, duration });
+    console.log('Submitting regular item with is_break=false, is_note=false');
+    onAdd({ 
+      name, 
+      title, 
+      details, 
+      phone, 
+      duration,
+      is_break: false,
+      is_note: false
+    });
     setName('');
     setTitle('');
     setDetails('');
