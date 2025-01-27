@@ -57,6 +57,8 @@ body {
 .credit {margin-top: -3em;font-size: 12px;font-weight: 400;}
 .credit a {color: crimson}
 .footer-logo {margin: 0px -21px 0px 0px;}
+.bg-indigo-600 {background-color: rgb(103 22 31);}
+input:-internal-autofill-selected {background-color: #dc979d !important;}
 
 /* Alert Dialog RTL Alignment */
 [role="alertdialog"] h2,
