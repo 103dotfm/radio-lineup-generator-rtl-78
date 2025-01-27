@@ -51,8 +51,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
           {items.map((item) => {
             if (item.isBreak) {
               return (
-                <tr key={item.id} className="bg-gray-100 font-medium">
-                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-center border border-gray-200">
+                <tr key={item.id} className="bg-gray-100">
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-2 px-4 text-center border border-gray-200 font-medium">
                     {item.name} - {item.duration} דקות
                   </td>
                 </tr>
