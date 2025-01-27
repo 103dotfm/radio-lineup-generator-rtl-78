@@ -67,8 +67,8 @@ export const saveShow = async (
 
     // Format items and ensure boolean values are properly set
     const formattedItems = items.map((item, index) => {
-      // Determine break and note status both from flags and item names
-      const isBreak = item.is_break === true || item.name === 'פרסומות';
+      // For breaks, preserve is_break=true regardless of the name
+      const isBreak = item.is_break === true;
       const isNote = item.is_note === true || item.name === 'הערה';
 
       const formattedItem = {
