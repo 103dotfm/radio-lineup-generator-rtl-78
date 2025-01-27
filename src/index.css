@@ -29,6 +29,8 @@ body {
   direction: rtl;
 }
 
+
+/* Added by Yaniv */
 .h-16 {
     max-width: 138px;
     height: auto;
@@ -48,6 +50,9 @@ body {
   padding: 0.5rem;
   margin: 0.5rem 0;
 }
+
+#radix-:r1: {background: white;}
+#radix-:r2:, #radix-:r3: {text-align: right;}
 
 /* Responsive table styles */
 @media (max-width: 1024px) {
