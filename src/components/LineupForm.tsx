@@ -121,7 +121,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       details: '',
       phone: '',
       duration: duration,
-      is_break: true,
+      is_break: true, // Explicitly set is_break to true
       is_note: false
     };
     onAdd(breakItem);
