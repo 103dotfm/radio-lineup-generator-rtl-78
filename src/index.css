@@ -29,7 +29,6 @@ body {
   direction: rtl;
 }
 
-
 /* Added by Yaniv */
 .h-16 {
     max-width: 138px;
@@ -58,6 +57,12 @@ body {
 .credits {margin-top: -3em;font-size: 12px;font-weight: 400;}
 .credits a {font-color: crimson}
 .footer-logo {margin: 0px -21px 0px 0px;}
+
+/* Alert Dialog RTL Alignment */
+[role="alertdialog"] h2,
+[role="alertdialog"] p {
+  text-align: right;
+}
 
 /* Responsive table styles */
 @media (max-width: 1024px) {
@@ -110,5 +115,12 @@ body {
     padding-top: 1rem;
     border-top: 1px solid #eee;
     font-size: 9px;
+  }
+
+  /* Hide notifications in print layout */
+  [role="status"],
+  .toaster,
+  .sonner-toast-container {
+    display: none !important;
   }
 }
