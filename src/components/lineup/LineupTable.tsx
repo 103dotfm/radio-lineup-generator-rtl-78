@@ -40,37 +40,39 @@ const LineupTable = ({
           <div 
             ref={provided.innerRef} 
             {...provided.droppableProps}
-            className="min-h-[200px] transition-all"
+            className="min-h-[200px] transition-all overflow-x-auto"
           >
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 text-right border border-gray-200">שם</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">כותרת</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">פרטים</th>
-                  {isAuthenticated && (
-                    <th className="py-2 px-4 text-right border border-gray-200">טלפון</th>
-                  )}
-                  <th className="py-2 px-4 text-right border border-gray-200">דקות</th>
-                  <th className="py-2 px-4 text-right border border-gray-200">פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => (
-                  <LineupItem
-                    key={item.id}
-                    {...item}
-                    index={index}
-                    onDelete={onDelete}
-                    onDurationChange={onDurationChange}
-                    onEdit={onEdit}
-                    onBreakTextChange={onBreakTextChange}
-                    onDetailsChange={onDetailsChange}
-                  />
-                ))}
-                {provided.placeholder}
-              </tbody>
-            </table>
+            <div className="w-full min-w-[800px] lg:min-w-0">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-name">שם</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-title">כותרת</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-details">פרטים</th>
+                    {isAuthenticated && (
+                      <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-phone">טלפון</th>
+                    )}
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-duration">דקות</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-actions">פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <LineupItem
+                      key={item.id}
+                      {...item}
+                      index={index}
+                      onDelete={onDelete}
+                      onDurationChange={onDurationChange}
+                      onEdit={onEdit}
+                      onBreakTextChange={onBreakTextChange}
+                      onDetailsChange={onDetailsChange}
+                    />
+                  ))}
+                  {provided.placeholder}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </Droppable>

@@ -49,6 +49,17 @@ body {
   margin: 0.5rem 0;
 }
 
+/* Responsive table styles */
+@media (max-width: 1024px) {
+  .lineup-table-wrapper {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Print styles */
 @media print {
   @page {
     margin: 5mm;
