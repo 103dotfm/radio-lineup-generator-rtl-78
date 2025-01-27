@@ -55,7 +55,7 @@ body {
 .loginLogo {margin: 0px -33px -21px 0px;}
 .bg-background {background-color: #FFF;}
 .credit {margin-top: -3em;font-size: 12px;font-weight: 400;}
-.credit a {font-color: crimson}
+.credit a {color: crimson}
 .footer-logo {margin: 0px -21px 0px 0px;}
 
 /* Alert Dialog RTL Alignment */
