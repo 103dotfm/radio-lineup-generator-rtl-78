@@ -116,7 +116,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
 
   const handleBreakAdd = () => {
     const breakItem = { 
-      name: 'הפסקה מסחרית',
+      name: 'פרסומות',
       title: '',
       details: '',
       phone: '',
