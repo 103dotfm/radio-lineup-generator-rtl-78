@@ -123,6 +123,12 @@ export const getShowWithItems = async (showId: string) => {
   try {
     console.log('Fetching show:', showId);
     
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(showId)) {
+      throw new Error('Invalid show ID format');
+    }
+    
     const { data: show, error: showError } = await supabase
       .from('shows')
       .select('*')
