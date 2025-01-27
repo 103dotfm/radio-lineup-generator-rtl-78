@@ -74,27 +74,56 @@ const LineupItem = ({
           {...provided.dragHandleProps}
           className={`${is_break ? 'bg-gray-50' : ''} ${is_note ? 'bg-yellow-50' : ''}`}
         >
-          {is_note ? (
-            <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
-              <EditorContent editor={editor} className="prose prose-sm" />
-            </td>
-          ) : (
+          {is_break || is_note ? (
             <>
-              <td className="py-2 px-4 border border-gray-200">
+              <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200 text-center">
                 {is_break ? (
                   <div className="space-y-2">
                     <div className="font-semibold text-gray-700">הפסקה מסחרית</div>
                     <Input
                       value={name}
                       onChange={(e) => onBreakTextChange(id, e.target.value)}
-                      className="w-full"
+                      className="w-full text-center"
                       placeholder="פרטי ההפסקה"
                     />
                   </div>
                 ) : (
-                  name
+                  <EditorContent editor={editor} className="prose prose-sm text-center" />
                 )}
               </td>
+              <td className="py-2 px-4 border border-gray-200 text-center">
+                <Input
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
+                  className="w-20 mx-auto text-center"
+                />
+              </td>
+              <td className="py-2 px-4 border border-gray-200">
+                <div className="flex gap-2 justify-center">
+                  {!is_break && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(id)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </td>
+            </>
+          ) : (
+            <>
+              <td className="py-2 px-4 border border-gray-200">{name}</td>
               <td className="py-2 px-4 border border-gray-200">{title}</td>
               <td className="py-2 px-4 border border-gray-200 whitespace-pre-line">{details}</td>
               {isAuthenticated && (
@@ -111,15 +140,13 @@ const LineupItem = ({
               </td>
               <td className="py-2 px-4 border border-gray-200">
                 <div className="flex gap-2">
-                  {!is_break && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(id)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(id)}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
