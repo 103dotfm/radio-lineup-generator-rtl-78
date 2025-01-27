@@ -67,18 +67,7 @@ export const saveShow = async (
 
     // Format items and ensure boolean values are properly set
     const formattedItems = items.map((item, index) => {
-      // Log the incoming item values
-      console.log('Raw item before processing:', {
-        name: item.name,
-        is_break: item.is_break,
-        is_note: item.is_note,
-        type: typeof item.is_break
-      });
-      
-      // Force boolean conversion based on specific conditions
-      const isBreak = item.name === 'הפסקה מסחרית' ? true : !!item.is_break;
-      const isNote = item.name === 'הערה' ? true : !!item.is_note;
-      
+      // Preserve the is_break flag from the item
       const formattedItem = {
         show_id: showData.id,
         position: index,
@@ -87,11 +76,10 @@ export const saveShow = async (
         details: item.details || '',
         phone: item.phone || '',
         duration: item.duration || 0,
-        is_break: isBreak,
-        is_note: isNote
+        is_break: !!item.is_break, // Ensure boolean conversion
+        is_note: !!item.is_note
       };
       
-      // Log the formatted item
       console.log('Formatted item for DB:', formattedItem);
       
       return formattedItem;
