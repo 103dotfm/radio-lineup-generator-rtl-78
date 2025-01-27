@@ -23,7 +23,7 @@ export const saveShow = async (
   existingId?: string
 ) => {
   try {
-    console.log('Starting save operation with items:', items);
+    console.log('Starting save operation with raw items:', items);
     
     let showData;
     
@@ -67,11 +67,9 @@ export const saveShow = async (
 
     // Format items and ensure boolean values are properly set
     const formattedItems = items.map((item, index) => {
-      console.log('Processing item:', item);
-      
-      // Preserve the original is_break value
-      const isBreak = Boolean(item.is_break);
-      const isNote = Boolean(item.is_note);
+      // Determine break and note status both from flags and item names
+      const isBreak = item.is_break === true || item.name === 'פרסומות';
+      const isNote = item.is_note === true || item.name === 'הערה';
 
       const formattedItem = {
         show_id: showData.id,
