@@ -62,6 +62,7 @@ body {
 .bg-yellow-50 {background-color: rgb(78 220 244 / 51%);}
 .bg-gray-50 {background-color: rgb(191 191 191 / 34%);}
 input:-internal-autofill-selected {background-color: #dc979d !important;}
+.bg-primary {background-color: rgb(94 14 28);}
 
 /* Alert Dialog RTL Alignment */
 [role="alertdialog"] h2,
