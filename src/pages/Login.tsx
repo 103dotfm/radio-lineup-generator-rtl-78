@@ -24,12 +24,12 @@ const Login = () => {
         console.error("Login error:", error);
         toast({
           variant: "destructive",
-          title: "Error logging in",
-          description: error.message || "Please check your credentials and try again"
+          title: "שגיאה בהתחברות",
+          description: "אנא בדוק את פרטי ההתחברות ונסה שוב"
         });
       } else {
         toast({
-          title: "Logged in successfully"
+          title: "התחברת בהצלחה"
         });
         navigate("/");
       }
@@ -37,8 +37,8 @@ const Login = () => {
       console.error("Unexpected error:", err);
       toast({
         variant: "destructive",
-        title: "Error logging in",
-        description: "An unexpected error occurred"
+        title: "שגיאה בהתחברות",
+        description: "אירעה שגיאה לא צפויה"
       });
     } finally {
       setIsLoading(false);
@@ -46,19 +46,24 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-8 p-8">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-lg">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Login to Radio Lineup</h2>
+          <img 
+            src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" 
+            alt="103FM" 
+            className="mx-auto h-16 w-auto"
+          />
+          <h2 className="mt-6 text-2xl font-bold">התחברות למערכת</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Enter your email and password to continue
+            הזן את פרטי ההתחברות שלך
           </p>
         </div>
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium">
-                Email
+              <label htmlFor="email" className="block text-sm font-medium text-right">
+                אימייל
               </label>
               <Input
                 id="email"
@@ -66,14 +71,15 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="mt-1"
-                placeholder="admin@example.com"
+                className="mt-1 text-left"
+                placeholder="your@email.com"
                 disabled={isLoading}
+                dir="ltr"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium">
-                Password
+              <label htmlFor="password" className="block text-sm font-medium text-right">
+                סיסמה
               </label>
               <Input
                 id="password"
@@ -84,11 +90,12 @@ const Login = () => {
                 className="mt-1"
                 placeholder="••••••••"
                 disabled={isLoading}
+                dir="ltr"
               />
             </div>
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading ? "מתחבר..." : "התחבר"}
           </Button>
         </form>
       </div>
