@@ -60,11 +60,17 @@ const UserManagement = () => {
     mutationFn: async (userData: typeof newUser) => {
       console.log('Creating user with data:', userData);
       
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // 1. Create auth user using signUp instead of admin.createUser
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
-        email_confirm: true,
+        options: {
+          data: {
+            username: userData.username,
+            full_name: userData.full_name,
+            is_admin: userData.is_admin,
+          }
+        }
       });
 
       if (authError) throw authError;
