@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut } from "lucide-react";
+import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut, Settings } from "lucide-react";
 import { getShows, searchShows } from '@/lib/supabase/shows';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,7 +14,7 @@ type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
 
@@ -56,6 +56,16 @@ const Dashboard = () => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">מערכת ליינאפים - 103fm</h1>
         <div className="flex gap-4">
+          {isAdmin && (
+            <Button 
+              onClick={() => navigate('/admin')} 
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              ניהול מערכת
+            </Button>
+          )}
           <Button onClick={() => navigate('/new')} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             ליינאפ חדש
