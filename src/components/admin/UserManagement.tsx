@@ -56,16 +56,84 @@ const UserManagement = () => {
     },
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: typeof newUser) => {
+      console.log('Creating user with data:', userData);
+      
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        password: userData.password,
+        email_confirm: true,
+      });
+
+      if (authError) throw authError;
+      console.log('Auth user created:', authData);
+
+      if (!authData.user) throw new Error('No user data returned');
+
+      // 2. Insert user data into users table
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: authData.user.id,
+            email: userData.email,
+            username: userData.username,
+            full_name: userData.full_name,
+            is_admin: userData.is_admin,
+          },
+        ]);
+
+      if (profileError) {
+        // If profile creation fails, attempt to clean up the auth user
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw profileError;
+      }
+
+      return authData.user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsAddUserOpen(false);
+      setNewUser({
+        email: '',
+        username: '',
+        full_name: '',
+        password: '',
+        is_admin: false,
+      });
+      toast({ title: "המשתמש נוצר בהצלחה" });
+    },
+    onError: (error: Error) => {
+      console.error('Error creating user:', error);
+      toast({
+        title: "שגיאה",
+        description: "שגיאה ביצירת המשתמש: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
+      // 1. Delete from users table first (due to foreign key constraints)
+      const { error: profileError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+      
+      if (profileError) throw profileError;
+
+      // 2. Delete auth user
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({ title: "המשתמש נמחק בהצלחה" });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "שגיאה",
         description: "שגיאה במחיקת המשתמש: " + error.message,
@@ -137,10 +205,7 @@ const UserManagement = () => {
                 <Label htmlFor="is_admin">מנהל מערכת</Label>
               </div>
               <Button
-                onClick={() => {
-                  // Implementation for creating user
-                  setIsAddUserOpen(false);
-                }}
+                onClick={() => createUserMutation.mutate(newUser)}
                 className="w-full"
               >
                 צור משתמש
