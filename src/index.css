@@ -64,6 +64,7 @@ body {
 input:-internal-autofill-selected {background-color: #dc979d !important;}
 .bg-primary {background-color: rgb(94 14 28);}
 .toaster {background: #FFF;)
+.dashboardTitle h1 {margin: -2.5em 0em 0em 1em;background-color: #3fcac5;padding: 3em 0.5em 1em 0.5em;}
 
 /* Alert Dialog RTL Alignment */
 [role="alertdialog"] h2,
