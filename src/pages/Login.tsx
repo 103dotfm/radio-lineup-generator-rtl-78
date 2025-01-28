@@ -52,11 +52,11 @@ const Login = () => {
           <img 
             src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" 
             alt="103FM" 
-            className="mx-auto h-16 w-auto"
+            className="mx-auto h-16 w-auto loginLogo"
           />
-          <h2 className="mt-6 text-2xl font-bold">התחברות למערכת</h2>
+          <h2 className="mt-6 text-2xl font-bold">מערכת ליינאפים</h2>
           <p className="mt-2 text-sm text-gray-600">
-            הזן את פרטי ההתחברות שלך
+            יש להתחבר עם דואר אלקטרוני וסיסמה
           </p>
         </div>
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
