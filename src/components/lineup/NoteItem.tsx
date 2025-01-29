@@ -19,18 +19,12 @@ const NoteItem = ({
   editor,
   duration,
   onDelete,
-  onDurationChange,
   isAuthenticated,
 }: NoteItemProps) => {
   return (
     <>
       <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <span className="cursor-move">
-            <GripVertical className="h-4 w-4 text-gray-400" />
-          </span>
-          <EditorContent editor={editor} className="prose prose-sm text-center flex-1" />
-        </div>
+        <EditorContent editor={editor} className="prose prose-sm text-center flex-1" />
       </td>
       <td className="py-2 px-4 border border-gray-200 text-center">
         <Input
@@ -42,7 +36,10 @@ const NoteItem = ({
         />
       </td>
       <td className="py-2 px-4 border border-gray-200">
-        <div className="flex gap-2 justify-center">
+        <div className="flex gap-2 justify-center items-center">
+          <span className="cursor-move">
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </span>
           <Button
             variant="ghost"
             size="icon"

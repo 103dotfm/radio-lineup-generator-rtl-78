@@ -72,6 +72,12 @@ input:-internal-autofill-selected {background-color: #dc979d !important;}
   text-align: right;
 }
 
+/* Toast styling */
+[role="status"] {
+  background-color: white !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
 /* Responsive table styles */
 @media (max-width: 1024px) {
   .lineup-table-wrapper {
