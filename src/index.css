@@ -1,69 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
- 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    direction: rtl;
-  }
+
+:root {
+  direction: rtl;
 }
 
-/* Global RTL styles */
-body, 
-.rtl,
+body {
+  font-family: 'Heebo', sans-serif;
+  background-color: #f8fafc;
+}
+
+.lineup-item {
+  transition: all 0.2s ease-in-out;
+}
+
+.lineup-item:hover {
+  transform: translateX(-4px);
+}
+
 .rtl-grid {
   direction: rtl;
+}
+
+.print-content {
+  direction: rtl;
+}
+
+/* Added by Yaniv */
+.h-16 {
+    max-width: 138px;
+    height: auto;
+    margin: 0px -19px -15px 0px;
+}
+
+.text-xs {
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.6rem;
+}
+
+.note-editor {
+  min-height: 100px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+#radix-:r1: {background: white;}
+#radix, #radix h2, #radix p, #radix-:r2:, #radix-:r3: {text-align: right;}
+.loginLogo {margin: 0px auto -10px;position: relative;left: 16px;}
+.bg-background {background-color: #FFF;}
+.credit {margin-top: -3em;font-size: 12px;font-weight: 400;}
+.credit a {color: crimson;}
+.footer-logo {margin: 0px -21px 0px 0px;}
+.bg-indigo-600 {background-color: rgb(103 22 31);}
+.bg-indigo-700:hover {background-color: rgb(68 14 20);}
+.bg-yellow-50 {background-color: rgb(78 220 244 / 51%);}
+.bg-gray-50 {background-color: rgb(191 191 191 / 34%);}
+input:-internal-autofill-selected {background-color: #dc979d !important;}
+.bg-primary {background-color: rgb(94 14 28);}
+.toaster {background: #FFF;}
+.dashboardTitle h1 {margin: -2.5em 0em 0em 1em;background-color: #3fcac5;padding: 3em 0.5em 1em 0.5em;}
+
+/* Alert Dialog RTL Alignment */
+[role="alertdialog"] h2,
+[role="alertdialog"] p {
   text-align: right;
 }
 
@@ -71,82 +76,15 @@ body,
 [role="status"] {
   background-color: white !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  text-align: right;
-}
-
-/* Dialog RTL Alignment */
-[role="dialog"],
-[role="alertdialog"] {
-  direction: rtl;
-}
-
-[role="dialog"] h2,
-[role="dialog"] p,
-[role="alertdialog"] h2,
-[role="alertdialog"] p {
-  text-align: right;
-}
-
-/* Form elements RTL */
-input,
-textarea,
-select {
-  text-align: right;
-}
-
-/* Table styles */
-table {
-  direction: rtl;
-  text-align: right;
-}
-
-/* Logo and branding */
-.loginLogo {
-  margin: 0 auto -10px;
-  position: relative;
-  right: 16px;
-}
-
-.footer-logo {
-  margin: 0 -21px 0 0;
-}
-
-/* Colors and backgrounds */
-.bg-yellow-50 {
-  background-color: rgb(78 220 244 / 51%);
-}
-
-.bg-gray-50 {
-  background-color: rgb(191 191 191 / 34%);
-}
-
-.bg-primary {
-  background-color: rgb(94 14 28);
-}
-
-/* Dashboard specific */
-.dashboardTitle h1 {
-  margin: -2.5em 0 0 1em;
-  background-color: #3fcac5;
-  padding: 3em 0.5em 1em 0.5em;
-}
-
-/* Credits */
-.credit {
-  margin-top: -3em;
-  font-size: 12px;
-  font-weight: 400;
-  text-align: center;
-}
-
-.credit a {
-  color: crimson;
 }
 
 /* Responsive table styles */
 @media (max-width: 1024px) {
   .lineup-table-wrapper {
+    margin: 0 -1rem;
+    padding: 0 1rem;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -155,11 +93,14 @@ table {
   @page {
     margin: 5mm;
     size: A4;
+    padding: 0;
+  }
+  
+  body {
+    background-color: white;
   }
   
   .print-content {
-    direction: rtl;
-    text-align: right;
     font-size: 11px;
     padding: 2mm;
   }
@@ -190,6 +131,7 @@ table {
     font-size: 9px;
   }
 
+  /* Hide notifications in print layout */
   [role="status"],
   .toaster,
   .sonner-toast-container {
