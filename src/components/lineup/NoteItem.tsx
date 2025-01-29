@@ -19,6 +19,7 @@ const NoteItem = ({
   editor,
   duration,
   onDelete,
+  onDurationChange,
   isAuthenticated,
 }: NoteItemProps) => {
   return (
