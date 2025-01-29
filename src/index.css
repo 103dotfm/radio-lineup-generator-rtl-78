@@ -6,60 +6,43 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
- 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
- 
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
- 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
- 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
- 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
- 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
- 
     --radius: 0.5rem;
   }
  
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
- 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
- 
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
- 
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
- 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
- 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
- 
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
- 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
- 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
@@ -72,10 +55,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    direction: rtl;
   }
 }
 
-.rtl {
+/* Global RTL styles */
+body, 
+.rtl,
+.rtl-grid {
   direction: rtl;
   text-align: right;
 }
@@ -84,11 +71,128 @@
 [role="status"] {
   background-color: white !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  text-align: right;
+}
+
+/* Dialog RTL Alignment */
+[role="dialog"],
+[role="alertdialog"] {
+  direction: rtl;
+}
+
+[role="dialog"] h2,
+[role="dialog"] p,
+[role="alertdialog"] h2,
+[role="alertdialog"] p {
+  text-align: right;
+}
+
+/* Form elements RTL */
+input,
+textarea,
+select {
+  text-align: right;
+}
+
+/* Table styles */
+table {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Logo and branding */
+.loginLogo {
+  margin: 0 auto -10px;
+  position: relative;
+  right: 16px;
+}
+
+.footer-logo {
+  margin: 0 -21px 0 0;
+}
+
+/* Colors and backgrounds */
+.bg-yellow-50 {
+  background-color: rgb(78 220 244 / 51%);
+}
+
+.bg-gray-50 {
+  background-color: rgb(191 191 191 / 34%);
+}
+
+.bg-primary {
+  background-color: rgb(94 14 28);
+}
+
+/* Dashboard specific */
+.dashboardTitle h1 {
+  margin: -2.5em 0 0 1em;
+  background-color: #3fcac5;
+  padding: 3em 0.5em 1em 0.5em;
+}
+
+/* Credits */
+.credit {
+  margin-top: -3em;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.credit a {
+  color: crimson;
 }
 
 /* Responsive table styles */
 @media (max-width: 1024px) {
   .lineup-table-wrapper {
     overflow-x: auto;
+  }
+}
+
+/* Print styles */
+@media print {
+  @page {
+    margin: 5mm;
+    size: A4;
+  }
+  
+  .print-content {
+    direction: rtl;
+    text-align: right;
+    font-size: 11px;
+    padding: 2mm;
+  }
+  
+  .print-content h1 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .print-content h2 {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  
+  .print-content table {
+    font-size: 10px;
+  }
+  
+  .print-content table td,
+  .print-content table th {
+    padding: 4px 6px;
+  }
+  
+  .print-content .credits {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    font-size: 9px;
+  }
+
+  [role="status"],
+  .toaster,
+  .sonner-toast-container {
+    display: none !important;
   }
 }
