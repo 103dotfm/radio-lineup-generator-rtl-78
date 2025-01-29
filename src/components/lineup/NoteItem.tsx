@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { Editor, EditorContent } from '@tiptap/react';
 
 interface NoteItemProps {
@@ -20,13 +20,17 @@ const NoteItem = ({
   duration,
   onDelete,
   onDurationChange,
-  onEdit,
   isAuthenticated,
 }: NoteItemProps) => {
   return (
     <>
       <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200 text-center">
-        <EditorContent editor={editor} className="prose prose-sm text-center" />
+        <div className="flex items-center justify-center gap-2">
+          <span className="cursor-move">
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </span>
+          <EditorContent editor={editor} className="prose prose-sm text-center flex-1" />
+        </div>
       </td>
       <td className="py-2 px-4 border border-gray-200 text-center">
         <Input
@@ -39,13 +43,6 @@ const NoteItem = ({
       </td>
       <td className="py-2 px-4 border border-gray-200">
         <div className="flex gap-2 justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(id)}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"
