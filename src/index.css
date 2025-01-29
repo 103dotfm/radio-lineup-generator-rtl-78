@@ -55,7 +55,7 @@ body {
 .loginLogo {margin: 0px auto -10px;position: relative;left: 16px;}
 .bg-background {background-color: #FFF;}
 .credit {margin-top: -3em;font-size: 12px;font-weight: 400;}
-.credit a {color: crimson}
+.credit a {color: crimson;}
 .footer-logo {margin: 0px -21px 0px 0px;}
 .bg-indigo-600 {background-color: rgb(103 22 31);}
 .bg-indigo-700:hover {background-color: rgb(68 14 20);}
@@ -63,7 +63,7 @@ body {
 .bg-gray-50 {background-color: rgb(191 191 191 / 34%);}
 input:-internal-autofill-selected {background-color: #dc979d !important;}
 .bg-primary {background-color: rgb(94 14 28);}
-.toaster {background: #FFF;)
+.toaster {background: #FFF;}
 .dashboardTitle h1 {margin: -2.5em 0em 0em 1em;background-color: #3fcac5;padding: 3em 0.5em 1em 0.5em;}
 
 /* Alert Dialog RTL Alignment */
