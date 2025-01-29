@@ -129,6 +129,12 @@ input:-internal-autofill-selected {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
+.dashboardTitle {
+    margin: -2em 0 0 0;
+    background: #3fc9c5;
+    padding: 2em 1em 1em 1em;
+}
+
 @media (max-width: 1024px) {
   .lineup-table-wrapper {
     margin: 0 -1rem;
