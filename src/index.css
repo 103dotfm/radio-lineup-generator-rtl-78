@@ -29,17 +29,16 @@ body {
   direction: rtl;
 }
 
-/* Added by Yaniv */
 .h-16 {
-    max-width: 138px;
-    height: auto;
-    margin: 0px -19px -15px 0px;
+  max-width: 138px;
+  height: auto;
+  margin: 0px -19px -15px 0px;
 }
 
 .text-xs {
-    text-align: center;
-    font-size: 1rem;
-    line-height: 1.6rem;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.6rem;
 }
 
 .note-editor {
@@ -50,35 +49,86 @@ body {
   margin: 0.5rem 0;
 }
 
-#radix-:r1: {background: white;}
-#radix, #radix h2, #radix p, #radix-:r2:, #radix-:r3: {text-align: right;}
-.loginLogo {margin: 0px auto -10px;position: relative;left: 16px;}
-.bg-background {background-color: #FFF;}
-.credit {margin-top: -3em;font-size: 12px;font-weight: 400;}
-.credit a {color: crimson;}
-.footer-logo {margin: 0px -21px 0px 0px;}
-.bg-indigo-600 {background-color: rgb(103 22 31);}
-.bg-indigo-700:hover {background-color: rgb(68 14 20);}
-.bg-yellow-50 {background-color: rgb(78 220 244 / 51%);}
-.bg-gray-50 {background-color: rgb(191 191 191 / 34%);}
-input:-internal-autofill-selected {background-color: #dc979d !important;}
-.bg-primary {background-color: rgb(94 14 28);}
-.toaster {background: #FFF;}
-.dashboardTitle h1 {margin: -2.5em 0em 0em 1em;background-color: #3fcac5;padding: 3em 0.5em 1em 0.5em;}
+#radix-:r1: {
+  background: white;
+}
 
-/* Alert Dialog RTL Alignment */
+#radix,
+#radix h2,
+#radix p,
+#radix-:r2:,
+#radix-:r3: {
+  text-align: right;
+}
+
+.loginLogo {
+  margin: 0px auto -10px;
+  position: relative;
+  left: 16px;
+}
+
+.bg-background {
+  background-color: #FFF;
+}
+
+.credit {
+  margin-top: -3em;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.credit a {
+  color: crimson;
+}
+
+.footer-logo {
+  margin: 0px -21px 0px 0px;
+}
+
+.bg-indigo-600 {
+  background-color: rgb(103 22 31);
+}
+
+.bg-indigo-700:hover {
+  background-color: rgb(68 14 20);
+}
+
+.bg-yellow-50 {
+  background-color: rgb(78 220 244 / 51%);
+}
+
+.bg-gray-50 {
+  background-color: rgb(191 191 191 / 34%);
+}
+
+input:-internal-autofill-selected {
+  background-color: #dc979d !important;
+}
+
+.bg-primary {
+  background-color: rgb(94 14 28);
+}
+
+.toaster {
+  background: #FFF;
+}
+
+.dashboardTitle h1 {
+  margin: -2.5em 0em 0em 1em;
+  background-color: #3fcac5;
+  padding: 3em 0.5em 1em 0.5em;
+}
+
 [role="alertdialog"] h2,
 [role="alertdialog"] p {
   text-align: right;
 }
 
-/* Toast styling */
 [role="status"] {
   background-color: white !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-/* Responsive table styles */
 @media (max-width: 1024px) {
   .lineup-table-wrapper {
     margin: 0 -1rem;
@@ -88,7 +138,6 @@ input:-internal-autofill-selected {background-color: #dc979d !important;}
   }
 }
 
-/* Print styles */
 @media print {
   @page {
     margin: 5mm;
@@ -131,7 +180,6 @@ input:-internal-autofill-selected {background-color: #dc979d !important;}
     font-size: 9px;
   }
 
-  /* Hide notifications in print layout */
   [role="status"],
   .toaster,
   .sonner-toast-container {
