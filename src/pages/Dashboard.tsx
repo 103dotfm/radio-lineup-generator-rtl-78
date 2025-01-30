@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut, Settings } from "lucide-react";
-import { getShows, searchShows } from '@/lib/supabase/shows';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut, Settings, Trash2 } from "lucide-react";
+import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from "sonner";
 
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
@@ -17,11 +18,30 @@ const Dashboard = () => {
   const { logout, isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const queryClient = useQueryClient();
 
   const { data: shows, isLoading } = useQuery({
     queryKey: ['shows', searchQuery],
     queryFn: () => searchQuery ? searchShows(searchQuery) : getShows(),
   });
+
+  const deleteShowMutation = useMutation({
+    mutationFn: deleteShow,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shows'] });
+      toast.success('הליינאפ נמחק בהצלחה');
+    },
+    onError: (error) => {
+      toast.error('שגיאה במחיקת הליינאפ');
+      console.error('Error deleting show:', error);
+    },
+  });
+
+  const handleDelete = (showId: string) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק ליינאפ זה?')) {
+      deleteShowMutation.mutate(showId);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -137,24 +157,43 @@ const Dashboard = () => {
           {sortedShows.map((show) => (
             <Card 
               key={show.id} 
-              className="p-4 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/show/${show.id}`)}
+              className="p-4 hover:shadow-lg transition-shadow"
             >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-lg">{show.name}</h3>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Calendar className="h-4 w-4" />
-                  {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-gray-500 flex items-center">
+                    <Calendar className="h-4 w-4 ml-1" />
+                    {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
+                  </div>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(show.id);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <List className="h-4 w-4" />
-                <span>{show.time || 'ללא שעה'}</span>
+              <div 
+                className="cursor-pointer"
+                onClick={() => navigate(`/show/${show.id}`)}
+              >
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <List className="h-4 w-4" />
+                  <span>{show.time || 'ללא שעה'}</span>
+                </div>
+                {show.notes && (
+                  <p className="mt-2 text-sm text-gray-600 line-clamp-2"
+                     dangerouslySetInnerHTML={{ __html: show.notes }} />
+                )}
               </div>
-              {show.notes && (
-                <p className="mt-2 text-sm text-gray-600 line-clamp-2"
-                   dangerouslySetInnerHTML={{ __html: show.notes }} />
-              )}
             </Card>
           ))}
         </div>

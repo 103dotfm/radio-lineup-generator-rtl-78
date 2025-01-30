@@ -32,7 +32,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     content: item.details,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 border rounded-md',
+        class: 'prose prose-sm focus:outline-none min-h-[100px] p-4',
       },
     },
   });
@@ -57,7 +57,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[90vw] max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-right">עריכת פריט</DialogTitle>
           <DialogClose className="absolute left-4 top-4">
@@ -77,7 +77,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
           </div>
           <div>
             <label className="text-sm font-medium">פרטים</label>
-            <EditorContent editor={editor} className="mt-1" />
+            <EditorContent editor={editor} className="mt-1 border rounded-md bg-white" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { UserPlus, Trash2 } from 'lucide-react';
+import { UserPlus, Trash2, Pencil } from 'lucide-react';
 
 interface User {
   id: string;
@@ -35,6 +35,8 @@ const UserManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = React.useState(false);
+  const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
   const [newUser, setNewUser] = React.useState({
     email: '',
     username: '',
@@ -58,9 +60,6 @@ const UserManagement = () => {
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
-      console.log('Creating user with data:', userData);
-      
-      // 1. Create auth user using signUp instead of admin.createUser
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
@@ -74,11 +73,8 @@ const UserManagement = () => {
       });
 
       if (authError) throw authError;
-      console.log('Auth user created:', authData);
-
       if (!authData.user) throw new Error('No user data returned');
 
-      // 2. Insert user data into users table
       const { error: profileError } = await supabase
         .from('users')
         .insert([
@@ -92,7 +88,6 @@ const UserManagement = () => {
         ]);
 
       if (profileError) {
-        // If profile creation fails, attempt to clean up the auth user
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw profileError;
       }
@@ -121,9 +116,37 @@ const UserManagement = () => {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: async (userData: Partial<User>) => {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          username: userData.username,
+          full_name: userData.full_name,
+          is_admin: userData.is_admin,
+        })
+        .eq('id', userData.id);
+
+      if (error) throw error;
+      return userData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsEditUserOpen(false);
+      setSelectedUser(null);
+      toast({ title: "המשתמש עודכן בהצלחה" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "שגיאה",
+        description: "שגיאה בעדכון המשתמש: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // 1. Delete from users table first (due to foreign key constraints)
       const { error: profileError } = await supabase
         .from('users')
         .delete()
@@ -131,7 +154,6 @@ const UserManagement = () => {
       
       if (profileError) throw profileError;
 
-      // 2. Delete auth user
       const { error: authError } = await supabase.auth.admin.deleteUser(userId);
       if (authError) throw authError;
     },
@@ -148,6 +170,11 @@ const UserManagement = () => {
     },
   });
 
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setIsEditUserOpen(true);
+  };
+
   if (isLoading) return <div>טוען...</div>;
 
   return (
@@ -163,7 +190,7 @@ const UserManagement = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>הוסף משתמש חדש</DialogTitle>
+              <DialogTitle className="text-right">הוסף משתמש חדש</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -221,6 +248,49 @@ const UserManagement = () => {
         </Dialog>
       </div>
 
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">עריכת משתמש</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-username">שם משתמש</Label>
+                <Input
+                  id="edit-username"
+                  value={selectedUser.username}
+                  onChange={(e) => setSelectedUser({ ...selectedUser, username: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-full_name">שם מלא</Label>
+                <Input
+                  id="edit-full_name"
+                  value={selectedUser.full_name || ''}
+                  onChange={(e) => setSelectedUser({ ...selectedUser, full_name: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit-is_admin"
+                  checked={selectedUser.is_admin}
+                  onChange={(e) => setSelectedUser({ ...selectedUser, is_admin: e.target.checked })}
+                />
+                <Label htmlFor="edit-is_admin">מנהל מערכת</Label>
+              </div>
+              <Button
+                onClick={() => updateUserMutation.mutate(selectedUser)}
+                className="w-full"
+              >
+                עדכן משתמש
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -239,17 +309,26 @@ const UserManagement = () => {
               <TableCell>{user.full_name}</TableCell>
               <TableCell>{user.is_admin ? 'מנהל' : 'משתמש'}</TableCell>
               <TableCell>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => {
-                    if (window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) {
-                      deleteUserMutation.mutate(user.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditUser(user)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => {
+                      if (window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) {
+                        deleteUserMutation.mutate(user.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
