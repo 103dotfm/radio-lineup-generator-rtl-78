@@ -187,9 +187,17 @@ input:-internal-autofill-selected {
   .print-content table th {
     padding: 6px 8px;
   }
+
+  .print-content tr.bg-gray-800 td {
+    color: white !important;
+    background-color: #333333 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   
   .print-content .prose {
-    font-size: 12px;
+    font-size: inherit !important;
+    line-height: inherit !important;
     max-width: none;
   }
   
@@ -197,30 +205,14 @@ input:-internal-autofill-selected {
     margin-top: 2rem;
     padding-top: 1rem;
     border-top: 1px solid #eee;
-    font-size: 10px;
+    font-size: inherit !important;
+    color: black !important;
   }
 
-.prose {
-  font-size: inherit !important;
-  line-height: inherit !important;
-}
-
-.prose p {
-  margin: 0 !important;
-  color: black !important;
-}
-
-.note-editor .ProseMirror {
-  min-height: 100px;
-  font-size: inherit;
-  line-height: inherit;
-  color: black;
-}
-
-.print-content table td {
-  color: black !important;
-  font-size: 1rem !important;
-}
+  .print-content table td {
+    color: black !important;
+    font-size: 1rem !important;
+  }
 
   [role="status"],
   .toaster,
