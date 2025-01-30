@@ -53,7 +53,11 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     if (editor && item.details) {
       editor.commands.setContent(item.details);
     }
-  }, [editor, item.details]);
+    setName(item.name);
+    setTitle(item.title);
+    setPhone(item.phone);
+    setDuration(item.duration);
+  }, [editor, item]);
 
   useEffect(() => {
     const hasEdits = 
@@ -74,14 +78,15 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleSave = () => {
-    onSave({
+    const updatedItem = {
       ...item,
       name,
       title,
       details: editor?.getHTML() || '',
       phone,
       duration,
-    });
+    };
+    onSave(updatedItem);
     setHasChanges(false);
     onOpenChange(false);
   };

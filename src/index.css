@@ -186,6 +186,7 @@ input:-internal-autofill-selected {
   .print-content table td,
   .print-content table th {
     padding: 6px 8px;
+    font-size: 1rem !important;
   }
 
   .print-content tr.bg-gray-800 td {
@@ -196,7 +197,7 @@ input:-internal-autofill-selected {
   }
   
   .print-content .prose {
-    font-size: inherit !important;
+    font-size: 1rem !important;
     line-height: inherit !important;
     max-width: none;
   }
@@ -205,12 +206,16 @@ input:-internal-autofill-selected {
     margin-top: 2rem;
     padding-top: 1rem;
     border-top: 1px solid #eee;
-    font-size: inherit !important;
+    font-size: 1rem !important;
     color: black !important;
   }
 
   .print-content table td {
     color: black !important;
+    font-size: 1rem !important;
+  }
+
+  .print-content table td div {
     font-size: 1rem !important;
   }
 
