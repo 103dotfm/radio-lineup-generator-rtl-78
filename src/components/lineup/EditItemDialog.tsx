@@ -59,7 +59,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>עריכת פריט</DialogTitle>
+          <DialogTitle className="text-right">עריכת פריט</DialogTitle>
           <DialogClose className="absolute left-4 top-4">
             <X className="h-4 w-4" />
           </DialogClose>

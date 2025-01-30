@@ -191,6 +191,28 @@ input:-internal-autofill-selected {
     font-size: 10px;
   }
 
+.prose {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.prose p {
+  margin: 0 !important;
+  color: black !important;
+}
+
+.note-editor .ProseMirror {
+  min-height: 100px;
+  font-size: inherit;
+  line-height: inherit;
+  color: black;
+}
+
+.print-content table td {
+  color: black !important;
+  font-size: 1rem !important;
+}
+
   [role="status"],
   .toaster,
   .sonner-toast-container {
