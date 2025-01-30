@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -21,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { UserPlus, Trash2, Pencil } from 'lucide-react';
+import { UserPlus, Trash2, Pencil, ArrowLeft } from 'lucide-react';
 
 interface User {
   id: string;
@@ -33,6 +34,7 @@ interface User {
 
 const UserManagement = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = React.useState(false);
@@ -121,6 +123,7 @@ const UserManagement = () => {
       const { error } = await supabase
         .from('users')
         .update({
+          email: userData.email,
           username: userData.username,
           full_name: userData.full_name,
           is_admin: userData.is_admin,
@@ -180,6 +183,14 @@ const UserManagement = () => {
   return (
     <Card className="p-6">
       <div className="flex justify-between items-center mb-6">
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          חזרה ללוח הבקרה
+        </Button>
         <h2 className="text-2xl font-bold">ניהול משתמשים</h2>
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
           <DialogTrigger asChild>
@@ -255,6 +266,14 @@ const UserManagement = () => {
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-email">אימייל</Label>
+                <Input
+                  id="edit-email"
+                  value={selectedUser.email}
+                  onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })}
+                />
+              </div>
               <div>
                 <Label htmlFor="edit-username">שם משתמש</Label>
                 <Input
