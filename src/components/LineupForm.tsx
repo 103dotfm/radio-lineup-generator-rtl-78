@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, Coffee, StickyNote } from "lucide-react";
 import { searchGuests, addGuest } from '../lib/supabase/guests';
 import { toast } from "sonner";
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -32,21 +33,32 @@ interface LineupFormProps {
 const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
-  const [details, setDetails] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
   const [suggestions, setSuggestions] = useState<Array<{ name: string; title: string; phone: string }>>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: '',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-base focus:outline-none min-h-[100px] p-4 border rounded-md text-right',
+      },
+    },
+  });
+
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name);
       setTitle(editingItem.title);
-      setDetails(editingItem.details);
+      if (editor) {
+        editor.commands.setContent(editingItem.details || '');
+      }
       setPhone(editingItem.phone);
       setDuration(editingItem.duration);
     }
-  }, [editingItem]);
+  }, [editingItem, editor]);
 
   const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
@@ -55,9 +67,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     if (newName.length > 2) {
       setIsSearching(true);
       try {
-        console.log('Searching for:', newName);
         const guests = await searchGuests(newName);
-        console.log('Found guests:', guests);
         setSuggestions(guests.map(guest => ({
           name: guest.name,
           title: guest.title,
@@ -97,19 +107,20 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     const newItem = { 
       name, 
       title, 
-      details, 
+      details: editor?.getHTML() || '', 
       phone, 
       duration,
       is_break: false,
       is_note: false
     };
     
-    console.log('Adding regular item:', newItem);
     onAdd(newItem);
 
     setName('');
     setTitle('');
-    setDetails('');
+    if (editor) {
+      editor.commands.setContent('');
+    }
     setPhone('');
     setDuration(5);
     setSuggestions([]);
@@ -125,7 +136,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       is_break: true,
       is_note: false
     };
-    console.log('Adding break item with explicit is_break=true:', breakItem);
     onAdd(breakItem);
     setDuration(5);
   };
@@ -140,7 +150,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       is_break: false,
       is_note: true
     };
-    console.log('Adding note item with explicit is_note=true:', noteItem);
     onAdd(noteItem);
   };
 
@@ -188,13 +197,9 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
             className="lineup-form-input-title"
           />
         </div>
-        <Textarea
-          placeholder="פרטים"
-          value={details}
-          onChange={(e) => setDetails(e.target.value)}
-          name="details"
-          className="lineup-form-input-details whitespace-pre-wrap mb-4"
-        />
+        <div className="mb-4">
+          <EditorContent editor={editor} className="note-editor" />
+        </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Input
             placeholder="טלפון"
