@@ -156,34 +156,39 @@ input:-internal-autofill-selected {
   }
   
   .print-content {
-    font-size: 11px;
+    font-size: 12px;
     padding: 2mm;
   }
   
   .print-content h1 {
-    font-size: 18px;
+    font-size: 20px;
     margin-bottom: 8px;
   }
   
   .print-content h2 {
-    font-size: 14px;
+    font-size: 16px;
     margin-bottom: 16px;
   }
   
   .print-content table {
-    font-size: 10px;
+    font-size: 12px;
   }
   
   .print-content table td,
   .print-content table th {
-    padding: 4px 6px;
+    padding: 6px 8px;
+  }
+  
+  .print-content .prose {
+    font-size: 12px;
+    max-width: none;
   }
   
   .print-content .credits {
     margin-top: 2rem;
     padding-top: 1rem;
     border-top: 1px solid #eee;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   [role="status"],
