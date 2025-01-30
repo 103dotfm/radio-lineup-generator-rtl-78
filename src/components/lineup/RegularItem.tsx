@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
+import EditItemDialog from './EditItemDialog';
 
 interface RegularItemProps {
   id: string;
@@ -28,11 +29,17 @@ const RegularItem = ({
   onEdit,
   isAuthenticated,
 }: RegularItemProps) => {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  const handleSave = (updatedItem: any) => {
+    onEdit(updatedItem);
+  };
+
   return (
     <>
       <td className="py-2 px-4 border border-gray-200">{name}</td>
       <td className="py-2 px-4 border border-gray-200">{title}</td>
-      <td className="py-2 px-4 border border-gray-200 whitespace-pre-line">{details}</td>
+      <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: details }} />
       {isAuthenticated && (
         <td className="py-2 px-4 border border-gray-200">{phone}</td>
       )}
@@ -50,7 +57,7 @@ const RegularItem = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onEdit(id)}
+            onClick={() => setShowEditDialog(true)}
           >
             <Edit2 className="h-4 w-4" />
           </Button>
@@ -63,6 +70,13 @@ const RegularItem = ({
           </Button>
         </div>
       </td>
+
+      <EditItemDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        item={{ id, name, title, details, phone, duration }}
+        onSave={handleSave}
+      />
     </>
   );
 };
