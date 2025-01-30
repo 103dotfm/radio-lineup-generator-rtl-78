@@ -26,7 +26,7 @@ const Dashboard = () => {
   });
 
   const deleteShowMutation = useMutation({
-    mutationFn: deleteShow,
+    mutationFn: (showId: string) => deleteShow(showId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shows'] });
       toast.success('הליינאפ נמחק בהצלחה');

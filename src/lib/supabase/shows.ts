@@ -104,6 +104,30 @@ export const saveShow = async (
   }
 };
 
+export const deleteShow = async (showId: string) => {
+  try {
+    // First delete all show items
+    const { error: itemsError } = await supabase
+      .from('show_items')
+      .delete()
+      .eq('show_id', showId);
+
+    if (itemsError) throw itemsError;
+
+    // Then delete the show itself
+    const { error: showError } = await supabase
+      .from('shows')
+      .delete()
+      .eq('id', showId);
+
+    if (showError) throw showError;
+
+  } catch (error) {
+    console.error('Error deleting show:', error);
+    throw error;
+  }
+};
+
 export const getShows = async () => {
   try {
     const { data, error } = await supabase
