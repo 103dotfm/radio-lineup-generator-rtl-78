@@ -188,6 +188,8 @@ input:-internal-autofill-selected {
   .print-content table {
     font-size: 12px;
     page-break-inside: avoid;
+    border-collapse: collapse;
+    width: 100%;
   }
   
   .print-content table td,
@@ -195,6 +197,7 @@ input:-internal-autofill-selected {
     padding: 6px 8px;
     font-size: 1rem !important;
     page-break-inside: avoid;
+    border: 1px solid #e2e8f0;
   }
 
   .print-content tr {
@@ -216,8 +219,8 @@ input:-internal-autofill-selected {
   }
   
   .print-content .credits {
-    margin-top: 2rem;
-    padding: 1rem 0 8rem 0;
+    margin-top: 4rem;
+    padding: 2rem 0 10rem 0;
     border-top: 1px solid #eee;
     font-size: 1rem !important;
     color: black !important;
