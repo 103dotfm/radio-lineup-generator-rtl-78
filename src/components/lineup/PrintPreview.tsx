@@ -22,8 +22,12 @@ interface PrintPreviewProps {
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: PrintPreviewProps) => {
   const { isAuthenticated } = useAuth();
 
+  if (!items || items.length === 0) {
+    console.log('No items to display in PrintPreview');
+  }
+
   return (
-    <div className="print-content bg-white">
+    <div className="print-content bg-white p-4">
       <div className="flex justify-center mb-6">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-16" />
       </div>
@@ -35,7 +39,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
         </h2>
       </div>
 
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse border border-gray-200">
         <thead>
           <tr>
             <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
@@ -53,7 +57,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               return (
                 <tr key={item.id} className="bg-gray-100">
                   <td colSpan={isAuthenticated ? 5 : 4} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
-                    {item.name} - {item.duration}
+                    {item.name} - {item.duration} דקות
                   </td>
                 </tr>
               );
@@ -70,7 +74,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             }
 
             return (
-              <tr key={item.id} className="hover:bg-gray-50">
+              <tr key={item.id}>
                 <td className="py-3 px-4 border border-gray-200 font-medium text-base">{item.name}</td>
                 <td className="py-3 px-4 border border-gray-200 text-base">{item.title}</td>
                 <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: item.details }} />
@@ -90,7 +94,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
 
       {editorContent && (
         <div 
-          className="credits showCredits mt-8 pt-4 border-t border-gray-200 text-sm text-gray-500"
+          className="credits mt-8 pt-4 border-t border-gray-200 text-base text-gray-500"
           dangerouslySetInnerHTML={{ __html: editorContent }}
         />
       )}
