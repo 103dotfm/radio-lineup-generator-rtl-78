@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Editor, EditorContent } from '@tiptap/react';
@@ -57,15 +57,17 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     setTitle(item.title);
     setPhone(item.phone);
     setDuration(item.duration);
+    setHasChanges(false);
   }, [editor, item]);
 
   useEffect(() => {
+    const currentDetails = editor?.getHTML() || '';
     const hasEdits = 
       name !== item.name ||
       title !== item.title ||
       phone !== item.phone ||
       duration !== item.duration ||
-      (editor && editor.getHTML() !== item.details);
+      currentDetails !== item.details;
     setHasChanges(hasEdits);
   }, [name, title, phone, duration, editor, item]);
 
@@ -97,9 +99,13 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         <DialogContent className="w-[90vw] max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-right">עריכת פריט</DialogTitle>
-            <DialogClose className="absolute left-4 top-4">
+            <button 
+              onClick={handleClose}
+              className="absolute left-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            >
               <X className="h-4 w-4" />
-            </DialogClose>
+              <span className="sr-only">Close</span>
+            </button>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
