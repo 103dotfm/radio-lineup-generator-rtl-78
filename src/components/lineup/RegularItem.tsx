@@ -13,7 +13,7 @@ interface RegularItemProps {
   duration: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string) => void;
+  onEdit: (updatedItem: any) => void;
   isAuthenticated: boolean;
 }
 
