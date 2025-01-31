@@ -187,12 +187,19 @@ input:-internal-autofill-selected {
   
   .print-content table {
     font-size: 12px;
+    page-break-inside: avoid;
   }
   
   .print-content table td,
   .print-content table th {
     padding: 6px 8px;
     font-size: 1rem !important;
+    page-break-inside: avoid;
+  }
+
+  .print-content tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
   }
 
   .print-content tr.bg-gray-800 td {
@@ -210,11 +217,13 @@ input:-internal-autofill-selected {
   
   .print-content .credits {
     margin-top: 2rem;
-    padding: 1rem 0 4rem 0;
+    padding: 1rem 0 6rem 0;
     border-top: 1px solid #eee;
     font-size: 1rem !important;
     color: black !important;
     text-align: center;
+    page-break-before: avoid;
+    page-break-inside: avoid;
   }
 
   .print-content table td {
