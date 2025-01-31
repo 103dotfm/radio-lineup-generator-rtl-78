@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Editor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { X } from 'lucide-react';
-import { useEditor } from '@tiptap/react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,7 +57,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     setPhone(item.phone);
     setDuration(item.duration);
     setHasChanges(false);
-  }, [editor, item]);
+  }, [editor, item, open]);
 
   useEffect(() => {
     const currentDetails = editor?.getHTML() || '';
