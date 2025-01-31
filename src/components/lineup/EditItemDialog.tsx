@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { X } from 'lucide-react';
 import { Editor, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,10 +46,11 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 bg-white border border-input rounded-md',
       },
     },
+    onUpdate: () => setHasChanges(true),
   });
 
   useEffect(() => {
-    if (editor && item.details) {
+    if (editor && item.details !== editor.getHTML()) {
       editor.commands.setContent(item.details);
     }
     setName(item.name);
@@ -110,11 +111,23 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">שם</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
+                <Input 
+                  value={name} 
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setHasChanges(true);
+                  }} 
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">קרדיט</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Input 
+                  value={title} 
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setHasChanges(true);
+                  }} 
+                />
               </div>
             </div>
             <div>
@@ -124,7 +137,13 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">טלפון</label>
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Input 
+                  value={phone} 
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setHasChanges(true);
+                  }} 
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">משך בדקות</label>
@@ -132,7 +151,10 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                   type="number"
                   min="1"
                   value={duration}
-                  onChange={(e) => setDuration(parseInt(e.target.value) || 5)}
+                  onChange={(e) => {
+                    setDuration(parseInt(e.target.value) || 5);
+                    setHasChanges(true);
+                  }}
                 />
               </div>
             </div>
