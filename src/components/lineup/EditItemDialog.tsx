@@ -55,6 +55,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   // Reset form when dialog opens with new item
   useEffect(() => {
     if (open) {
+      console.log('EditItemDialog: Opening with item:', item);
       setName(item.name);
       setTitle(item.title);
       setPhone(item.phone);
@@ -75,6 +76,14 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       phone !== item.phone ||
       duration !== item.duration ||
       currentDetails !== item.details;
+    
+    console.log('EditItemDialog: Checking for changes:', {
+      name: { current: name, original: item.name },
+      title: { current: title, original: item.title },
+      phone: { current: phone, original: item.phone },
+      duration: { current: duration, original: item.duration },
+      details: { current: currentDetails, original: item.details }
+    });
     
     setHasChanges(hasEdits);
   }, [name, title, phone, duration, editor?.getHTML(), item]);
@@ -99,6 +108,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     
     console.log('EditItemDialog: Saving item:', updatedItem);
     onSave(updatedItem);
+    setHasChanges(false);
     onOpenChange(false);
   };
 
@@ -148,7 +158,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             </div>
             <div className="flex justify-end gap-2">
               <Button onClick={handleClose} variant="outline">ביטול</Button>
-              <Button onClick={handleSave}>שמור</Button>
+              <Button onClick={handleSave} disabled={!hasChanges}>שמור</Button>
             </div>
           </div>
         </DialogContent>
