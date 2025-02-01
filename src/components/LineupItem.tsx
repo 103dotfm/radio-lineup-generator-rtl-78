@@ -19,7 +19,7 @@ interface LineupItemProps {
   index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, updatedItem: any) => void;
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange?: (id: string, details: string) => void;
 }
@@ -64,6 +64,8 @@ const LineupItem = ({
       }
     }
   }, [editor, details]);
+
+  console.log('LineupItem: Rendering item:', { id, name, title, details, phone, duration });
 
   return (
     <Draggable draggableId={id} index={index}>

@@ -50,12 +50,16 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
 
   // Reset form when dialog opens with new item
   useEffect(() => {
+    console.log('EditItemDialog: Dialog open state changed:', open);
+    console.log('EditItemDialog: Current item:', item);
+    
     if (open) {
       setName(item.name);
       setTitle(item.title);
       setPhone(item.phone);
       setDuration(item.duration);
       if (editor) {
+        console.log('EditItemDialog: Setting editor content:', item.details);
         editor.commands.setContent(item.details || '');
       }
       setHasChanges(false);
@@ -71,6 +75,15 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       phone !== item.phone ||
       duration !== item.duration ||
       currentDetails !== item.details;
+    
+    console.log('EditItemDialog: Change detected:', {
+      name: name !== item.name,
+      title: title !== item.title,
+      phone: phone !== item.phone,
+      duration: duration !== item.duration,
+      details: currentDetails !== item.details
+    });
+    
     setHasChanges(hasEdits);
   }, [name, title, phone, duration, editor?.getHTML(), item]);
 
@@ -91,9 +104,9 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       phone,
       duration,
     };
+    
+    console.log('EditItemDialog: Saving item:', updatedItem);
     onSave(updatedItem);
-    setHasChanges(false);
-    onOpenChange(false);
   };
 
   return (

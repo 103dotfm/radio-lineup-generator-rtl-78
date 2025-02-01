@@ -13,7 +13,7 @@ interface RegularItemProps {
   duration: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, updatedItem: any) => void;
   isAuthenticated: boolean;
 }
 
@@ -32,7 +32,8 @@ const RegularItem = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const handleSave = (updatedItem: any) => {
-    onEdit(updatedItem);
+    console.log('RegularItem: Saving updated item:', updatedItem);
+    onEdit(id, updatedItem);
     setShowEditDialog(false);
   };
 
