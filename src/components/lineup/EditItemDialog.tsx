@@ -55,7 +55,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       setTitle(item.title);
       setPhone(item.phone);
       setDuration(item.duration);
-      if (editor && item.details !== editor.getHTML()) {
+      if (editor) {
         editor.commands.setContent(item.details || '');
       }
       setHasChanges(false);
