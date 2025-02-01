@@ -34,7 +34,6 @@ const RegularItem = ({
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Saving updated item:', updatedItem);
     onEdit(id, updatedItem);
-    setShowEditDialog(false);
   };
 
   return (

@@ -46,10 +46,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 bg-white border border-input rounded-md',
       },
     },
-    onUpdate: ({ editor }) => {
-      console.log('Editor content updated:', editor.getHTML());
-      setHasChanges(true);
-    }
   });
 
   // Reset form when dialog opens with new item
