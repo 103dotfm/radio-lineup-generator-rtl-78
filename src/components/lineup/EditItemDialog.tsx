@@ -46,20 +46,20 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 bg-white border border-input rounded-md',
       },
     },
+    onUpdate: ({ editor }) => {
+      console.log('Editor content updated:', editor.getHTML());
+      setHasChanges(true);
+    }
   });
 
   // Reset form when dialog opens with new item
   useEffect(() => {
-    console.log('EditItemDialog: Dialog open state changed:', open);
-    console.log('EditItemDialog: Current item:', item);
-    
     if (open) {
       setName(item.name);
       setTitle(item.title);
       setPhone(item.phone);
       setDuration(item.duration);
       if (editor) {
-        console.log('EditItemDialog: Setting editor content:', item.details);
         editor.commands.setContent(item.details || '');
       }
       setHasChanges(false);
@@ -75,14 +75,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       phone !== item.phone ||
       duration !== item.duration ||
       currentDetails !== item.details;
-    
-    console.log('EditItemDialog: Change detected:', {
-      name: name !== item.name,
-      title: title !== item.title,
-      phone: phone !== item.phone,
-      duration: duration !== item.duration,
-      details: currentDetails !== item.details
-    });
     
     setHasChanges(hasEdits);
   }, [name, title, phone, duration, editor?.getHTML(), item]);
@@ -107,6 +99,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     
     console.log('EditItemDialog: Saving item:', updatedItem);
     onSave(updatedItem);
+    onOpenChange(false);
   };
 
   return (
