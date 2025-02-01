@@ -1,8 +1,8 @@
 import React from 'react';
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Trash2 } from "lucide-react";
-import { Editor, EditorContent } from '@tiptap/react';
+import { Editor } from '@tiptap/react';
+import { Input } from "@/components/ui/input";
+import { Trash2 } from "lucide-react";
 
 interface NoteItemProps {
   id: string;
@@ -10,7 +10,7 @@ interface NoteItemProps {
   duration: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, updatedItem: any) => void;
   isAuthenticated: boolean;
 }
 
@@ -24,31 +24,32 @@ const NoteItem = ({
 }: NoteItemProps) => {
   return (
     <>
-      <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200 text-center">
-        <EditorContent editor={editor} className="prose prose-sm text-center flex-1" />
+      <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200">
+        {editor?.isEditable ? (
+          <div className="prose prose-sm max-w-none">
+            {editor && <editor.Content />}
+          </div>
+        ) : (
+          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
+        )}
       </td>
-      <td className="py-2 px-4 border border-gray-200 text-center">
+      <td className="py-2 px-4 border border-gray-200">
         <Input
           type="number"
-          min="1"
+          min="0"
           value={duration}
-          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-          className="w-20 mx-auto text-center"
+          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
+          className="w-20"
         />
       </td>
       <td className="py-2 px-4 border border-gray-200">
-        <div className="flex gap-2 justify-center items-center">
-          <span className="cursor-move">
-            <GripVertical className="h-4 w-4 text-gray-400" />
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onDelete(id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </td>
     </>
   );
