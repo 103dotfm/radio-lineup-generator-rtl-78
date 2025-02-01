@@ -16,7 +16,7 @@ interface LineupTableProps {
   }>;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, updatedItem: any) => void;
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange: (id: string, details: string) => void;
   onDragEnd: (result: DropResult) => void;
