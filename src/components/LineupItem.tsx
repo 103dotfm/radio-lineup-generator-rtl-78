@@ -58,14 +58,10 @@ const LineupItem = ({
   });
 
   useEffect(() => {
-    if (editor && details) {
-      if (editor.getHTML() !== details) {
-        editor.commands.setContent(details);
-      }
+    if (editor && details !== editor.getHTML()) {
+      editor.commands.setContent(details);
     }
   }, [editor, details]);
-
-  console.log('LineupItem: Rendering item:', { id, name, title, details, phone, duration });
 
   return (
     <Draggable draggableId={id} index={index}>
