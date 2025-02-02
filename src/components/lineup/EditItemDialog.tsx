@@ -50,28 +50,28 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       },
     },
     onUpdate: ({ editor }) => {
-      setFormState(prev => ({ ...prev, details: editor.getHTML() }));
+      const newDetails = editor.getHTML();
+      setFormState(prev => ({ ...prev, details: newDetails }));
+      console.log('Editor content updated:', newDetails);
     }
   });
 
-  // Reset form when dialog opens with new item
   useEffect(() => {
-    if (open) {
-      console.log('EditItemDialog: Opening with item:', item);
-      setFormState({
-        name: item.name,
-        title: item.title,
-        phone: item.phone,
-        duration: item.duration,
+    if (open && item) {
+      const initialState = {
+        name: item.name || '',
+        title: item.title || '',
+        phone: item.phone || '',
+        duration: item.duration || 0,
         details: item.details || ''
-      });
+      };
+      setFormState(initialState);
       if (editor) {
         editor.commands.setContent(item.details || '');
       }
     }
   }, [item, open, editor]);
 
-  // Track changes
   useEffect(() => {
     const hasEdits = 
       formState.name !== item.name ||
@@ -102,7 +102,8 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   const handleSave = () => {
     const updatedItem = {
       ...item,
-      ...formState
+      ...formState,
+      details: editor?.getHTML() || formState.details
     };
     
     console.log('EditItemDialog: Saving item:', updatedItem);
