@@ -101,8 +101,11 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
 
   const handleSave = () => {
     const updatedItem = {
-      ...item,
-      ...formState,
+      id: item.id,
+      name: formState.name,
+      title: formState.title,
+      phone: formState.phone,
+      duration: formState.duration,
       details: editor?.getHTML() || formState.details
     };
     
