@@ -56,6 +56,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     }
   });
 
+  // Initialize form state when dialog opens
   useEffect(() => {
     if (open && item) {
       const initialState = {
@@ -72,6 +73,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     }
   }, [item, open, editor]);
 
+  // Check for changes
   useEffect(() => {
     const hasEdits = 
       formState.name !== item.name ||
