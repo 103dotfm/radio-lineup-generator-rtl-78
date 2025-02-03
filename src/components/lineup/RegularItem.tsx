@@ -32,7 +32,7 @@ const RegularItem = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const handleSave = (updatedItem: any) => {
-    console.log('RegularItem: Saving updated item:', updatedItem);
+    console.log('RegularItem: Received updated item:', updatedItem);
     onEdit(id, updatedItem);
     setShowEditDialog(false);
   };
@@ -59,7 +59,10 @@ const RegularItem = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowEditDialog(true)}
+            onClick={() => {
+              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration });
+              setShowEditDialog(true);
+            }}
           >
             <Edit2 className="h-4 w-4" />
           </Button>

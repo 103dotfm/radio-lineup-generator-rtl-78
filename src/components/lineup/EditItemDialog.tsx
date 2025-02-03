@@ -51,14 +51,15 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     },
     onUpdate: ({ editor }) => {
       const newDetails = editor.getHTML();
-      setFormState(prev => ({ ...prev, details: newDetails }));
       console.log('Editor content updated:', newDetails);
+      setFormState(prev => ({ ...prev, details: newDetails }));
     }
   });
 
   // Initialize form state when dialog opens
   useEffect(() => {
     if (open && item) {
+      console.log('Initializing form state with item:', item);
       const initialState = {
         name: item.name || '',
         title: item.title || '',
@@ -75,6 +76,8 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
 
   // Check for changes
   useEffect(() => {
+    if (!open) return;
+
     const hasEdits = 
       formState.name !== item.name ||
       formState.title !== item.title ||
@@ -82,16 +85,12 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       formState.duration !== item.duration ||
       formState.details !== item.details;
     
-    console.log('EditItemDialog: Checking for changes:', {
-      name: { current: formState.name, original: item.name },
-      title: { current: formState.title, original: item.title },
-      phone: { current: formState.phone, original: item.phone },
-      duration: { current: formState.duration, original: item.duration },
-      details: { current: formState.details, original: item.details }
-    });
+    console.log('EditItemDialog: Current form state:', formState);
+    console.log('EditItemDialog: Original item:', item);
+    console.log('EditItemDialog: Has changes:', hasEdits);
     
     setHasChanges(hasEdits);
-  }, [formState, item]);
+  }, [formState, item, open]);
 
   const handleClose = () => {
     if (hasChanges) {
@@ -102,22 +101,26 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleSave = () => {
+    const editorContent = editor?.getHTML() || formState.details;
+    console.log('Saving with editor content:', editorContent);
+    
     const updatedItem = {
-      id: item.id,
+      ...item,
       name: formState.name,
       title: formState.title,
       phone: formState.phone,
       duration: formState.duration,
-      details: editor?.getHTML() || formState.details
+      details: editorContent
     };
     
-    console.log('EditItemDialog: Saving item:', updatedItem);
+    console.log('EditItemDialog: Saving updated item:', updatedItem);
     onSave(updatedItem);
     setHasChanges(false);
     onOpenChange(false);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
+    console.log(`Input changed - field: ${field}, value:`, value);
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
