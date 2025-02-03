@@ -26,7 +26,7 @@ interface LineupEditorProps {
   onAdd: (item: any) => void;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string) => void;
+  onEdit: (id: string, updatedItem: any) => Promise<void>;
   onBreakTextChange: (id: string, text: string) => void;
   onDragEnd: (result: any) => void;
   handleNameLookup: (name: string) => Promise<any>;
