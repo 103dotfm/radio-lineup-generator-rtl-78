@@ -17,6 +17,19 @@ interface FrontendItem {
   is_note?: boolean;
 }
 
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export const saveShow = async (
   show: Omit<Show, 'id' | 'created_at'>,
   items: FrontendItem[],
@@ -26,6 +39,7 @@ export const saveShow = async (
     console.log('Starting save operation with raw items:', items);
     
     let showData;
+    const showId = existingId || generateUUID();
     
     if (existingId) {
       const { data, error: showError } = await supabase
@@ -36,7 +50,7 @@ export const saveShow = async (
           date: show.date,
           notes: show.notes
         })
-        .eq('id', existingId)
+        .eq('id', showId)
         .select()
         .single();
       
@@ -46,13 +60,14 @@ export const saveShow = async (
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
-        .eq('show_id', existingId);
+        .eq('show_id', showId);
       
       if (deleteError) throw deleteError;
     } else {
       const { data, error: showError } = await supabase
         .from('shows')
         .insert([{
+          id: showId,
           name: show.name,
           time: show.time,
           date: show.date,
@@ -65,13 +80,12 @@ export const saveShow = async (
       showData = data;
     }
 
-    // Format items and ensure boolean values are properly set
     const formattedItems = items.map((item, index) => {
-      // Determine break and note status both from flags and item names
       const isBreak = item.is_break === true || item.name === 'פרסומות';
       const isNote = item.is_note === true || item.name === 'הערה';
 
-      const formattedItem = {
+      return {
+        id: generateUUID(),
         show_id: showData.id,
         position: index,
         name: item.name || '',
@@ -82,12 +96,8 @@ export const saveShow = async (
         is_break: isBreak,
         is_note: isNote
       };
-      
-      console.log('Formatted item for DB:', formattedItem);
-      return formattedItem;
     });
 
-    // Insert items with explicit boolean values
     const { error: itemsError } = await supabase
       .from('show_items')
       .insert(formattedItems);
@@ -147,16 +157,13 @@ export const getShowWithItems = async (showId: string) => {
   try {
     console.log('Fetching show:', showId);
     
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(showId)) {
-      throw new Error('Invalid show ID format');
-    }
+    // Generate a new UUID if the ID is not in the correct format
+    const validShowId = isValidUUID(showId) ? showId : generateUUID();
     
     const { data: show, error: showError } = await supabase
       .from('shows')
       .select('*')
-      .eq('id', showId)
+      .eq('id', validShowId)
       .single();
 
     if (showError) throw showError;
@@ -164,7 +171,7 @@ export const getShowWithItems = async (showId: string) => {
     const { data: items, error: itemsError } = await supabase
       .from('show_items')
       .select('*')
-      .eq('show_id', showId)
+      .eq('show_id', validShowId)
       .order('position');
 
     if (itemsError) throw itemsError;
