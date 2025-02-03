@@ -84,6 +84,11 @@ const Index = () => {
   const handleEdit = async (id: string, updatedItem: any) => {
     console.log('Index: Handling edit for item:', id, updatedItem);
     
+    if (!id) {
+      toast.error('מזהה פריט לא תקין');
+      return;
+    }
+    
     try {
       // Update local state first for immediate UI feedback
       setItems(prevItems => 
@@ -92,6 +97,11 @@ const Index = () => {
         )
       );
       
+      if (!id) {
+        toast.error('מזהה תוכנית לא תקין');
+        return;
+      }
+
       // Save changes
       const show = {
         name: showName,
@@ -111,8 +121,10 @@ const Index = () => {
       console.error('Error saving item edit:', error);
       toast.error('שגיאה בשמירת השינויים');
       // Revert local state on error
-      const { show, items: originalItems } = await getShowWithItems(id);
-      setItems(originalItems);
+      if (id) {
+        const { items: originalItems } = await getShowWithItems(id);
+        setItems(originalItems);
+      }
     }
   };
 
