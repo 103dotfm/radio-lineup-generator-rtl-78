@@ -32,9 +32,8 @@ const RegularItem = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const handleSave = (updatedItem: any) => {
-    console.log('RegularItem: Received updated item:', updatedItem);
+    console.log('RegularItem: Handling save with updated item:', updatedItem);
     onEdit(id, updatedItem);
-    setShowEditDialog(false);
   };
 
   return (

@@ -81,6 +81,41 @@ const Index = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleEdit = async (id: string, updatedItem: any) => {
+    console.log('Index: Handling edit for item:', id, updatedItem);
+    
+    try {
+      // Update local state first for immediate UI feedback
+      setItems(prevItems => 
+        prevItems.map(item => 
+          item.id === id ? { ...item, ...updatedItem } : item
+        )
+      );
+      
+      // Save changes
+      const show = {
+        name: showName,
+        time: showTime,
+        date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
+        notes: editor?.getHTML() || '',
+      };
+
+      console.log('Index: Saving show with updated items');
+      await saveShow(show, items.map(item => 
+        item.id === id ? updatedItem : item
+      ), id);
+      
+      setHasUnsavedChanges(false);
+      toast.success('השינויים נשמרו בהצלחה');
+    } catch (error) {
+      console.error('Error saving item edit:', error);
+      toast.error('שגיאה בשמירת השינויים');
+      // Revert local state on error
+      const { show, items: originalItems } = await getShowWithItems(id);
+      setItems(originalItems);
+    }
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
     
@@ -212,12 +247,7 @@ const Index = () => {
             ));
             setHasUnsavedChanges(true);
           }}
-          onEdit={(id) => {
-            const item = items.find(item => item.id === id);
-            if (item && !item.isBreak) {
-              setEditingItem(item);
-            }
-          }}
+          onEdit={handleEdit}
           onBreakTextChange={(id, text) => {
             setItems(items.map(item => 
               item.id === id ? { ...item, name: text } : item
