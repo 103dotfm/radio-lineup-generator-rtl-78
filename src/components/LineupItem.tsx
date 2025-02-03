@@ -19,7 +19,7 @@ interface LineupItemProps {
   index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string, updatedItem: any) => void;
+  onEdit: (id: string, updatedItem: any) => Promise<void>;
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange?: (id: string, details: string) => void;
 }
