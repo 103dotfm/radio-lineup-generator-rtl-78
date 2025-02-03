@@ -56,7 +56,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     }
   });
 
-  // Initialize form state when dialog opens
+  // Reset form state when dialog opens with new item
   useEffect(() => {
     if (open && item) {
       console.log('Initializing form state with item:', item);
