@@ -16,7 +16,7 @@ interface LineupTableProps {
   }>;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string, updatedItem: any) => void;  // Updated this line to match the function signature
+  onEdit: (id: string, updatedItem: any) => Promise<void>;  // Updated to match the async function signature
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange: (id: string, details: string) => void;
   onDragEnd: (result: DropResult) => void;
