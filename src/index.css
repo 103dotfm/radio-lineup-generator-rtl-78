@@ -128,7 +128,8 @@ input:-internal-autofill-selected {
   padding: 3em 0.5em 1em 0.5em;
 }
 
-button .right-4 {display: none;}
+.ProseMirror {text-align: center;}
+.z-50 .right-4 {display: none;}
 
 [role="alertdialog"] h2,
 [role="alertdialog"] p {
