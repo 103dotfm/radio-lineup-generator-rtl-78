@@ -50,7 +50,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
           {items.map((item) => {
             if (item.is_break) {
               return (
-                <tr key={item.id} className="bg-black/10">
+                <tr key={item.id} className="breakRow bg-black/10">
                   <td colSpan={isAuthenticated ? 5 : 4} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
                     {item.name} - {item.duration} דקות
                   </td>
@@ -60,8 +60,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             
             if (item.is_note) {
               return (
-                <tr key={item.id} className="bg-black/10">
-                  <td colSpan={isAuthenticated ? 5 : 4} className="py-3 px-4 text-center border border-gray-200 italic text-black text-base">
+                <tr key={item.id} className="noteRow">
+                  <td colSpan={isAuthenticated ? 5 : 4} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
                     <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                   </td>
                 </tr>
