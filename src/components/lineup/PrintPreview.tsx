@@ -43,7 +43,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             {isAuthenticated && (
               <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">דק'</th>
+            <!-- <th className="py-2 px-4 text-right border border-gray-200 text-base">דק'</th> -->
           </tr>
         </thead>
         <tbody>
@@ -52,7 +52,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               return (
                 <tr key={item.id} className="breakRow bg-black/10">
                   <td colSpan={isAuthenticated ? 5 : 4} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
-                    {item.name} - {item.duration} דקות
+                    {item.name}
                   </td>
                 </tr>
               );
@@ -76,16 +76,17 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                 {isAuthenticated && (
                   <td className="py-3 px-4 border border-gray-200 text-base">{item.phone}</td>
                 )}
-                <td className="py-3 px-4 border border-gray-200 text-right text-base">{item.duration}</td>
+                <!-- <td className="py-3 px-4 border border-gray-200 text-right text-base">{item.duration}</td> -->
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      <div className="mt-4 text-left text-base text-gray-600">
+      <!-- <div className="mt-4 text-left text-base text-gray-600">
         <p>סה"כ זמן: {items.reduce((sum, item) => sum + (item.duration || 0), 0)} דקות</p>
-      </div>
+      </div> 
+              -->
 
       {editorContent && (
         <div 
