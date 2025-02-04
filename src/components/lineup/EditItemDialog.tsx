@@ -51,15 +51,12 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     },
     onUpdate: ({ editor }) => {
       const newDetails = editor.getHTML();
-      console.log('Editor content updated:', newDetails);
       setFormState(prev => ({ ...prev, details: newDetails }));
     }
   });
 
-  // Reset form state when dialog opens with new item
   useEffect(() => {
     if (open && item) {
-      console.log('Initializing form state with item:', item);
       const initialState = {
         name: item.name || '',
         title: item.title || '',
@@ -74,7 +71,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     }
   }, [item, open, editor]);
 
-  // Check for changes
   useEffect(() => {
     if (!open) return;
 
@@ -84,10 +80,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       formState.phone !== item.phone ||
       formState.duration !== item.duration ||
       formState.details !== item.details;
-    
-    console.log('EditItemDialog: Current form state:', formState);
-    console.log('EditItemDialog: Original item:', item);
-    console.log('EditItemDialog: Has changes:', hasEdits);
     
     setHasChanges(hasEdits);
   }, [formState, item, open]);
@@ -102,7 +94,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
 
   const handleSave = () => {
     const editorContent = editor?.getHTML() || formState.details;
-    console.log('Saving with editor content:', editorContent);
     
     const updatedItem = {
       ...item,
@@ -113,21 +104,19 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       details: editorContent
     };
     
-    console.log('EditItemDialog: Saving updated item:', updatedItem);
     onSave(updatedItem);
     setHasChanges(false);
     onOpenChange(false);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    console.log(`Input changed - field: ${field}, value:`, value);
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="w-[90vw] max-w-[500px]">
+        <DialogContent className="w-[90vw] max-w-[500px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-right">עריכת פריט</DialogTitle>
             <button 
