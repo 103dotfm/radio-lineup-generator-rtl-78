@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor, EditorContent } from '@tiptap/react';
 import { Input } from "@/components/ui/input";
-import { Trash2 } from "lucide-react";
+import { Trash2, GripVertical } from "lucide-react";
 
 interface NoteItemProps {
   id: string;
@@ -43,13 +43,18 @@ const NoteItem = ({
         />
       </td>
       <td className="py-2 px-4 border border-gray-200">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(id)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <div className="cursor-move">
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
+        </div>
       </td>
     </>
   );
