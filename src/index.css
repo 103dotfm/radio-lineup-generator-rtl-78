@@ -13,6 +13,7 @@ body {
   background-color: #f8fafc;
 }
 
+/* Component styles */
 .lineup-item {
   transition: all 0.2s ease-in-out;
 }
@@ -41,6 +42,7 @@ body {
   line-height: 1.6rem;
 }
 
+/* Editor styles */
 .note-editor {
   min-height: 100px;
   border: 1px solid #e2e8f0;
@@ -90,7 +92,7 @@ body {
     page-break-inside: avoid;
     border-collapse: collapse;
     width: 100%;
-    margin-top: 0;
+    margin-top: 1rem;
   }
   
   .print-content table td,
@@ -109,7 +111,7 @@ body {
 
   .print-content tr.bg-black\/10 td {
     color: black !important;
-    background-color: rgba(0, 0, 0, 0.1) !important;
+    background-color: #f1f1f1 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -126,22 +128,13 @@ body {
   
   .print-content .credits {
     margin-top: 4rem;
-    padding: 2rem 0 10rem 0;
+    padding: 2rem 0;
     border-top: 1px solid #eee;
     font-size: 1rem !important;
     color: black !important;
     text-align: center;
     page-break-before: avoid;
     page-break-inside: avoid;
-  }
-
-  .print-content table td {
-    color: black !important;
-    font-size: 1rem !important;
-  }
-
-  .print-content table td div {
-    font-size: 1rem !important;
   }
 
   [role="status"],
@@ -188,6 +181,7 @@ body {
   margin: 0px -21px 0px 0px;
 }
 
+/* Theme colors */
 .bg-indigo-600 {
   background-color: rgb(103 22 31);
 }
@@ -208,10 +202,12 @@ body {
   background-color: rgb(94 14 28);
 }
 
+/* Toast styles */
 .toaster {
   background: #FFF;
 }
 
+/* Dashboard styles */
 .dashboardTitle {
   margin: -2em 0 0 0;
   background: #3fc9c5;
@@ -226,6 +222,7 @@ body {
   display: none;
 }
 
+/* Dialog styles */
 [role="alertdialog"] h2,
 [role="alertdialog"] p {
   text-align: right;
@@ -236,6 +233,7 @@ body {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
+/* Responsive styles */
 @media (max-width: 1024px) {
   .lineup-table-wrapper {
     margin: 0 -1rem;

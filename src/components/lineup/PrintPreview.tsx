@@ -22,23 +22,19 @@ interface PrintPreviewProps {
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: PrintPreviewProps) => {
   const { isAuthenticated } = useAuth();
 
-  if (!items || items.length === 0) {
-    console.log('No items to display in PrintPreview');
-  }
-
   return (
     <div className="print-content bg-white p-4">
-      <div className="flex flex-col items-center mb-6">
+      <div className="flex flex-col items-center mb-4">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-16" />
-        <div className="text-center mt-4">
+        <div className="text-center mt-2">
           <h1 className="text-2xl font-bold">{showName}</h1>
-          <h2 className="text-lg text-gray-600 mt-1">
+          <h2 className="text-lg text-gray-600">
             {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
           </h2>
         </div>
       </div>
 
-      <table className="w-full border-collapse border border-gray-200 mt-4">
+      <table className="w-full border-collapse border border-gray-200">
         <thead>
           <tr>
             <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
@@ -93,7 +89,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
 
       {editorContent && (
         <div 
-          className="credits mt-8 pt-4 border-t border-gray-200 text-base text-gray-500"
+          className="credits mt-8 pt-4 border-t border-gray-200 text-base text-black text-center"
           dangerouslySetInnerHTML={{ __html: editorContent }}
         />
       )}
