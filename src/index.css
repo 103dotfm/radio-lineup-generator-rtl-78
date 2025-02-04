@@ -89,17 +89,16 @@ body {
   
   .print-content table {
     font-size: 12px;
-    page-break-inside: avoid;
     border-collapse: collapse;
     width: 100%;
     margin-top: 1rem;
+    page-break-before: avoid !important;
   }
   
   .print-content table td,
   .print-content table th {
     padding: 6px 8px;
     font-size: 1rem !important;
-    page-break-inside: avoid;
     border: 1px solid #e2e8f0;
     vertical-align: top !important;
   }
