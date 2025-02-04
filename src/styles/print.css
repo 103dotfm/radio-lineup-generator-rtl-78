@@ -1,0 +1,89 @@
+@media print {
+  @page {
+    margin: 5mm;
+    size: A4;
+    padding: 0;
+  }
+  
+  body {
+    background-color: white;
+  }
+  
+  .print-content {
+    font-size: 12px;
+    padding: 2mm;
+    direction: rtl;
+  }
+  
+  .print-content h1 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  
+  .print-content h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .print-content table {
+    font-size: 12px;
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 1rem;
+    page-break-before: avoid !important;
+  }
+  
+  .print-content table td,
+  .print-content table th {
+    padding: 6px 8px;
+    font-size: 1rem !important;
+    border: 1px solid #e2e8f0;
+    vertical-align: top !important;
+  }
+
+  .print-content tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .print-content tr.bg-black\/10 td {
+    color: black !important;
+    background-color: #f1f1f1 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-content tr.bg-yellow-50 td {
+    color: black !important;
+    background-color: #f8f8f8 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-content .prose {
+    font-size: 1rem !important;
+    line-height: inherit !important;
+    max-width: none;
+  }
+
+  .print-content .prose * {
+    font-size: 1rem !important;
+  }
+  
+  .print-content .credits {
+    margin-top: 4rem;
+    padding: 2rem 0;
+    border-top: 1px solid #eee;
+    font-size: 1rem !important;
+    color: black !important;
+    text-align: center;
+    page-break-before: avoid;
+    page-break-inside: avoid;
+  }
+
+  [role="status"],
+  .toaster,
+  .sonner-toast-container {
+    display: none !important;
+  }
+}
