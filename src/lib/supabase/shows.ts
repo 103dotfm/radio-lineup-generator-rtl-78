@@ -42,21 +42,50 @@ export const saveShow = async (
     const showId = existingId || generateUUID();
     
     if (existingId) {
-      const { data, error: showError } = await supabase
+      // First check if the show exists
+      const { data: existingShow, error: checkError } = await supabase
         .from('shows')
-        .update({
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes
-        })
+        .select('*')
         .eq('id', showId)
-        .select()
-        .single();
-      
-      if (showError) throw showError;
-      showData = data;
+        .maybeSingle();
 
+      if (checkError) throw checkError;
+
+      if (!existingShow) {
+        // If show doesn't exist, create it
+        const { data: newShow, error: createError } = await supabase
+          .from('shows')
+          .insert([{
+            id: showId,
+            name: show.name,
+            time: show.time,
+            date: show.date,
+            notes: show.notes
+          }])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        showData = newShow;
+      } else {
+        // Update existing show
+        const { data: updatedShow, error: updateError } = await supabase
+          .from('shows')
+          .update({
+            name: show.name,
+            time: show.time,
+            date: show.date,
+            notes: show.notes
+          })
+          .eq('id', showId)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        showData = updatedShow;
+      }
+
+      // Delete existing items
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -102,10 +131,7 @@ export const saveShow = async (
       .from('show_items')
       .insert(formattedItems);
 
-    if (itemsError) {
-      console.error('Error inserting items:', itemsError);
-      throw itemsError;
-    }
+    if (itemsError) throw itemsError;
 
     return showData;
   } catch (error) {
@@ -157,16 +183,16 @@ export const getShowWithItems = async (showId: string) => {
   try {
     console.log('Fetching show:', showId);
     
-    // Generate a new UUID if the ID is not in the correct format
     const validShowId = isValidUUID(showId) ? showId : generateUUID();
     
     const { data: show, error: showError } = await supabase
       .from('shows')
       .select('*')
       .eq('id', validShowId)
-      .single();
+      .maybeSingle();
 
     if (showError) throw showError;
+    if (!show) throw new Error('Show not found');
 
     const { data: items, error: itemsError } = await supabase
       .from('show_items')
