@@ -58,6 +58,100 @@ body {
   outline: none;
 }
 
+/* Print styles */
+@media print {
+  @page {
+    margin: 5mm;
+    size: A4;
+    padding: 0;
+  }
+  
+  body {
+    background-color: white;
+  }
+  
+  .print-content {
+    font-size: 12px;
+    padding: 2mm;
+  }
+  
+  .print-content h1 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  
+  .print-content h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .print-content table {
+    font-size: 12px;
+    page-break-inside: avoid;
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 0;
+  }
+  
+  .print-content table td,
+  .print-content table th {
+    padding: 6px 8px;
+    font-size: 1rem !important;
+    page-break-inside: avoid;
+    border: 1px solid #e2e8f0;
+    vertical-align: top !important;
+  }
+
+  .print-content tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .print-content tr.bg-black\/10 td {
+    color: black !important;
+    background-color: rgba(0, 0, 0, 0.1) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-content .prose {
+    font-size: 1rem !important;
+    line-height: inherit !important;
+    max-width: none;
+  }
+
+  .print-content .prose * {
+    font-size: 1rem !important;
+  }
+  
+  .print-content .credits {
+    margin-top: 4rem;
+    padding: 2rem 0 10rem 0;
+    border-top: 1px solid #eee;
+    font-size: 1rem !important;
+    color: black !important;
+    text-align: center;
+    page-break-before: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-content table td {
+    color: black !important;
+    font-size: 1rem !important;
+  }
+
+  .print-content table td div {
+    font-size: 1rem !important;
+  }
+
+  [role="status"],
+  .toaster,
+  .sonner-toast-container {
+    display: none !important;
+  }
+}
+
+/* UI Components */
 #radix-:r1: {
   background: white;
 }
@@ -110,10 +204,6 @@ body {
   background-color: rgb(191 191 191 / 34%);
 }
 
-input:-internal-autofill-selected {
-  background-color: #dc979d !important;
-}
-
 .bg-primary {
   background-color: rgb(94 14 28);
 }
@@ -122,14 +212,19 @@ input:-internal-autofill-selected {
   background: #FFF;
 }
 
-.dashboardTitle h1 {
-  margin: -2.5em 0em 0em 1em;
-  background-color: #3fcac5;
-  padding: 3em 0.5em 1em 0.5em;
+.dashboardTitle {
+  margin: -2em 0 0 0;
+  background: #3fc9c5;
+  padding: 2em 1em 1em 1em;
 }
 
-.ProseMirror {text-align: center;}
-.z-50 .right-4 {display: none;}
+.ProseMirror {
+  text-align: center;
+}
+
+.z-50 .right-4 {
+  display: none;
+}
 
 [role="alertdialog"] h2,
 [role="alertdialog"] p {
@@ -139,12 +234,6 @@ input:-internal-autofill-selected {
 [role="status"] {
   background-color: white !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-
-.dashboardTitle {
-  margin: -2em 0 0 0;
-  background: #3fc9c5;
-  padding: 2em 1em 1em 1em;
 }
 
 @media (max-width: 1024px) {
@@ -160,91 +249,4 @@ input:-internal-autofill-selected {
   text-align: center;
   color: black;
   font-size: inherit;
-}
-
-@media print {
-  @page {
-    margin: 5mm;
-    size: A4;
-    padding: 0;
-  }
-  
-  body {
-    background-color: white;
-  }
-  
-  .print-content {
-    font-size: 12px;
-    padding: 2mm;
-  }
-  
-  .print-content h1 {
-    font-size: 20px;
-    margin-bottom: 8px;
-  }
-  
-  .print-content h2 {
-    font-size: 16px;
-    margin-bottom: 16px;
-  }
-  
-  .print-content table {
-    font-size: 12px;
-    page-break-inside: avoid;
-    border-collapse: collapse;
-    width: 100%;
-  }
-  
-  .print-content table td,
-  .print-content table th {
-    padding: 6px 8px;
-    font-size: 1rem !important;
-    page-break-inside: avoid;
-    border: 1px solid #e2e8f0;
-    vertical-align: top !important;
-  }
-
-  .print-content tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
-  .print-content tr.bg-gray-800 td {
-    color: white !important;
-    background-color: #333333 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  
-  .print-content .prose {
-    font-size: 1rem !important;
-    line-height: inherit !important;
-    max-width: none;
-  }
-  
-  .print-content .credits {
-    margin-top: 4rem;
-    padding: 2rem 0 10rem 0;
-    border-top: 1px solid #eee;
-    font-size: 1rem !important;
-    color: black !important;
-    text-align: center;
-    page-break-before: avoid;
-    page-break-inside: avoid;
-  }
-
-  .print-content table td {
-    color: black !important;
-    font-size: 1rem !important;
-  }
-
-  .print-content table td div {
-    font-size: 1rem !important;
-  }
-
-  [role="status"],
-  .toaster,
-  .sonner-toast-container {
-    display: none !important;
-  }
 }
