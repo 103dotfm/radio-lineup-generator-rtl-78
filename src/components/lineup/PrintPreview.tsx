@@ -27,7 +27,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
       <div className="flex flex-col items-center mb-4">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-16" />
         <div className="text-center mt-2">
-          <h1 className="text-2xl font-bold">{showName}</h1>
+          <h1 className="text-2xl font-bold showName">{showName}</h1>
           <h2 className="text-lg text-gray-600">
             {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
           </h2>
