@@ -103,11 +103,6 @@ body {
     vertical-align: top !important;
   }
 
-  .print-content tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
   .print-content tr.bg-black\/10 td {
     color: black !important;
     background-color: #f1f1f1 !important;
@@ -250,3 +245,4 @@ body {
 
 .showName {margin-top: 10px;}
 .noteRow {background-color: #b7b7b71a;}
+/*  .print-content tr {page-break-inside: avoid;page-break-after: auto;} */
