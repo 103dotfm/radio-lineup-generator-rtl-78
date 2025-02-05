@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { addGuest } from '../lib/supabase/guests';
 import { toast } from "sonner";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import PhoneInput from './lineup/form/PhoneInput';
 import GuestSearch from './lineup/form/GuestSearch';
 import FormActions from './lineup/form/FormActions';
+import BasicEditor from './editor/BasicEditor';
 
 interface LineupFormProps {
   onAdd: (item: {
@@ -36,28 +35,17 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
   const [title, setTitle] = useState('');
   const [phone, setPhone] = useState('');
   const [duration, setDuration] = useState(5);
-
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-base focus:outline-none min-h-[100px] p-4 border rounded-md text-right',
-      },
-    },
-  });
+  const [details, setDetails] = useState('');
 
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name);
       setTitle(editingItem.title);
-      if (editor) {
-        editor.commands.setContent(editingItem.details || '');
-      }
+      setDetails(editingItem.details || '');
       setPhone(editingItem.phone);
       setDuration(editingItem.duration);
     }
-  }, [editingItem, editor]);
+  }, [editingItem]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +63,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     const newItem = { 
       name, 
       title, 
-      details: editor?.getHTML() || '', 
+      details, 
       phone, 
       duration,
       is_break: false,
@@ -86,9 +74,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
 
     setName('');
     setTitle('');
-    if (editor) {
-      editor.commands.setContent('');
-    }
+    setDetails('');
     setPhone('');
     setDuration(5);
   };
@@ -148,7 +134,12 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
           />
         </div>
         <div className="mb-4">
-          <EditorContent editor={editor} className="note-editor" />
+          <BasicEditor
+            content={details}
+            onChange={setDetails}
+            className="min-h-[100px]"
+            placeholder="פרטים"
+          />
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <PhoneInput value={phone} onChange={setPhone} />
