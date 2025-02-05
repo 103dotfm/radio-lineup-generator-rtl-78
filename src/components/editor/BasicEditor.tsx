@@ -23,7 +23,7 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
     content,
     editorProps: {
       attributes: {
-        class: `prose prose-sm focus:outline-none ${className || ''}`,
+        class: `prose prose-sm focus:outline-none text-right ${className || ''}`,
         placeholder,
       },
       handlePaste: () => true, // This prevents pasting
@@ -40,7 +40,7 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
   }
 
   return (
-    <div className="border rounded-md">
+    <div className="border rounded-md bg-white">
       <div className="border-b p-2 flex gap-1 bg-muted/50">
         <Button
           variant="ghost"
@@ -70,7 +70,7 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
           <UnderlineIcon className="h-4 w-4" />
         </Button>
       </div>
-      <EditorContent editor={editor} className="p-4" />
+      <EditorContent editor={editor} className="p-4 text-right" />
     </div>
   );
 };
