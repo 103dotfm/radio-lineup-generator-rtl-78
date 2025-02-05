@@ -1,35 +1,42 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus, Coffee, StickyNote } from "lucide-react";
 
 interface FormActionsProps {
-  onSubmit: () => void;
+  onSubmit: (e: React.FormEvent) => Promise<void>;
   onBreakAdd: () => void;
   onNoteAdd: () => void;
   isEditing: boolean;
 }
 
-const FormActions = ({ onSubmit, onBreakAdd, onNoteAdd, isEditing }: FormActionsProps) => {
+const FormActions: React.FC<FormActionsProps> = ({
+  onSubmit,
+  onBreakAdd,
+  onNoteAdd,
+  isEditing
+}) => {
   return (
-    <div className="lineup-form-actions flex gap-2">
-      <Button onClick={onSubmit} className="flex-1 lineup-form-submit">
-        <Plus className="ml-2 h-4 w-4" /> {isEditing ? 'עדכן פריט' : 'הוסף לליינאפ'}
-      </Button>
+    <div className="flex justify-between gap-4">
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBreakAdd}
+        >
+          הוספת פרסומות
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onNoteAdd}
+        >
+          הוספת הערה
+        </Button>
+      </div>
       <Button 
-        type="button" 
-        onClick={onBreakAdd} 
-        variant="secondary" 
-        className="w-auto lineup-form-break"
+        type="submit" 
+        onClick={(e) => onSubmit(e)}
       >
-        <Coffee className="ml-2 h-4 w-4" /> הוסף הפסקה
-      </Button>
-      <Button 
-        type="button" 
-        onClick={onNoteAdd} 
-        variant="secondary" 
-        className="w-auto lineup-form-note"
-      >
-        <StickyNote className="ml-2 h-4 w-4" /> הוספת הערה
+        {isEditing ? 'עדכון' : 'הוספה'}
       </Button>
     </div>
   );
