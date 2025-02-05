@@ -58,6 +58,11 @@ body {
   line-height: inherit;
   color: black;
   outline: none;
+  text-align: right;
+}
+
+.ProseMirror {
+  text-align: right;
 }
 
 /* Print styles */
@@ -245,4 +250,3 @@ body {
 
 .showName {margin-top: 10px;}
 .noteRow {background-color: #b7b7b71a;}
-/*  .print-content tr {page-break-inside: avoid;page-break-after: auto;} */
