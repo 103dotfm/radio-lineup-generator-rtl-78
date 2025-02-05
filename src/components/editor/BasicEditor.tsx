@@ -26,7 +26,33 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
         class: `prose prose-sm focus:outline-none text-right ${className || ''}`,
         placeholder,
       },
-      handlePaste: () => true, // This prevents pasting
+      // handlePaste: () => true, // This prevents pasting
+          handlePaste: (_view, event) => {
+      // Prevent the default paste behaviour
+      event.preventDefault();
+
+      // Get html text from clipboard
+      const htmlContents = event.clipboardData?.getData("text/html");
+
+      // Let the editor handle things instead
+      if (!htmlContents) return false;
+
+      const cleanedCliboardData = getCleanedHtmlClipboardValue(
+                                     htmlContent,                  
+                                     initalValueOfGlobalStlyeFontFamily,
+                                  );
+
+      // Let the editor handle things instead
+      if (!cleanedCliboardData) return false;
+
+      // Inserting content needs a wrapper component... might as well apply initial global styles
+      const cleanedHtmlWithWrapper = `<span style="font-family: 
+      ${selectedFontFamily};>${cleanedCliboardData}<span>`;
+
+      editor?.commands.insertContent(cleanedHtmlWithWrapper);
+      return true;
+     },
+  },
     },
     onUpdate: ({ editor }) => {
       if (onChange) {
