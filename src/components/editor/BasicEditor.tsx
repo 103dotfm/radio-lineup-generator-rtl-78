@@ -1,7 +1,8 @@
 import React from 'react';
 import { Editor, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Bold, Italic, Underline } from 'lucide-react';
+import Underline from '@tiptap/extension-underline';
+import { Bold, Italic, Underline as UnderlineIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 interface BasicEditorProps {
@@ -13,16 +14,19 @@ interface BasicEditorProps {
 
 const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorProps) => {
   const editor = useEditor({
-    extensions: [StarterKit.configure({
-      heading: false,
-      paste: false,
-    })],
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+      }),
+      Underline,
+    ],
     content,
     editorProps: {
       attributes: {
         class: `prose prose-sm focus:outline-none ${className || ''}`,
         placeholder,
       },
+      handlePaste: () => true, // This prevents pasting
     },
     onUpdate: ({ editor }) => {
       if (onChange) {
@@ -63,7 +67,7 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
           data-active={editor.isActive('underline')}
           className={editor.isActive('underline') ? 'bg-muted' : ''}
         >
-          <Underline className="h-4 w-4" />
+          <UnderlineIcon className="h-4 w-4" />
         </Button>
       </div>
       <EditorContent editor={editor} className="p-4" />
