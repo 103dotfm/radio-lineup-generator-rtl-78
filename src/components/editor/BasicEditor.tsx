@@ -40,7 +40,7 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
   }
 
   return (
-    <div className="border rounded-md bg-white">
+    <div className="border rounded-md bg-white detailsEditor">
       <div className="border-b p-2 flex gap-1 bg-muted/50">
         <Button
           variant="ghost"
