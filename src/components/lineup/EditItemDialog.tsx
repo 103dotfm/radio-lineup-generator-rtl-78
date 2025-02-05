@@ -3,8 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from 'lucide-react';
-import { Editor, EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import BasicEditor from '../editor/BasicEditor';
 
 interface EditItemDialogProps {
   open: boolean;
@@ -41,35 +40,17 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
 
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm focus:outline-none min-h-[100px] p-4 bg-white border border-input rounded-md',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const newDetails = editor.getHTML();
-      setFormState(prev => ({ ...prev, details: newDetails }));
-    }
-  });
-
   useEffect(() => {
     if (open && item) {
-      const initialState = {
+      setFormState({
         name: item.name || '',
         title: item.title || '',
         phone: item.phone || '',
         duration: item.duration || 0,
         details: item.details || ''
-      };
-      setFormState(initialState);
-      if (editor) {
-        editor.commands.setContent(item.details || '');
-      }
+      });
     }
-  }, [item, open, editor]);
+  }, [item, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,15 +74,13 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleSave = () => {
-    const editorContent = editor?.getHTML() || formState.details;
-    
     const updatedItem = {
       ...item,
       name: formState.name,
       title: formState.title,
       phone: formState.phone,
       duration: formState.duration,
-      details: editorContent
+      details: formState.details
     };
     
     onSave(updatedItem);
@@ -121,7 +100,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             <DialogTitle className="text-right">עריכת פריט</DialogTitle>
             <button 
               onClick={handleClose}
-              className="absolute left-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+              className="absolute left-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:text-muted-foreground"
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
@@ -146,7 +125,11 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             </div>
             <div>
               <label className="text-sm font-medium">פרטים</label>
-              <EditorContent editor={editor} className="mt-1" />
+              <BasicEditor
+                content={formState.details}
+                onChange={(html) => handleInputChange('details', html)}
+                className="min-h-[100px]"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
