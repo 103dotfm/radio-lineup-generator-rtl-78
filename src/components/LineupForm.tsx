@@ -60,6 +60,28 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     }
   }, [editingItem, editor]);
 
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digit characters
+    let cleaned = value.replace(/\D/g, '');
+    
+    // Replace +972 with 0
+    if (cleaned.startsWith('972')) {
+      cleaned = '0' + cleaned.slice(3);
+    }
+    
+    // Add dash after third digit if there are more than 3 digits
+    if (cleaned.length > 3) {
+      cleaned = cleaned.slice(0, 3) + '-' + cleaned.slice(3);
+    }
+    
+    return cleaned;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedPhone = formatPhoneNumber(e.target.value);
+    setPhone(formattedPhone);
+  };
+
   const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
     setName(newName);
@@ -87,7 +109,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
   const handleSuggestionSelect = (suggestion: { name: string; title: string; phone: string }) => {
     setName(suggestion.name);
     setTitle(suggestion.title);
-    setPhone(suggestion.phone);
+    setPhone(formatPhoneNumber(suggestion.phone));
     setSuggestions([]);
   };
 
@@ -205,7 +227,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
             placeholder="טלפון"
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={handlePhoneChange}
             required
             autoComplete="off"
             name="guest-phone"
