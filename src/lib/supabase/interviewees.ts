@@ -1,12 +1,12 @@
-import { supabase } from '@/integrations/supabase/client';
-import { Interviewee } from '@/types/show';
-import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
+import { Interviewee } from "@/types/show";
+import { toast } from "sonner";
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>) => {
   try {
     const { data, error } = await supabase
       .from('interviewees')
-      .insert([interviewee])
+      .insert(interviewee)
       .select()
       .single();
 
@@ -14,41 +14,6 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
     return data;
   } catch (error) {
     console.error('Error adding interviewee:', error);
-    toast.error('שגיאה בהוספת מרואיין');
-    throw error;
-  }
-};
-
-export const getIntervieweesByItemId = async (itemId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('interviewees')
-      .select('*')
-      .eq('item_id', itemId);
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error getting interviewees:', error);
-    toast.error('שגיאה בטעינת מרואיינים');
-    throw error;
-  }
-};
-
-export const updateInterviewee = async (id: string, updates: Partial<Interviewee>) => {
-  try {
-    const { data, error } = await supabase
-      .from('interviewees')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating interviewee:', error);
-    toast.error('שגיאה בעדכון מרואיין');
     throw error;
   }
 };
@@ -63,7 +28,21 @@ export const deleteInterviewee = async (id: string) => {
     if (error) throw error;
   } catch (error) {
     console.error('Error deleting interviewee:', error);
-    toast.error('שגיאה במחיקת מרואיין');
+    throw error;
+  }
+};
+
+export const getInterviewees = async (itemId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('interviewees')
+      .select('*')
+      .eq('item_id', itemId);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching interviewees:', error);
     throw error;
   }
 };

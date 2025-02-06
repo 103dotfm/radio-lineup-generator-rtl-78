@@ -56,6 +56,7 @@ const RegularItem = ({
       toast.success('מרואיין נוסף בהצלחה');
     } catch (error) {
       console.error('Error adding interviewee:', error);
+      toast.error('שגיאה בהוספת מרואיין');
     }
   };
 
@@ -65,6 +66,7 @@ const RegularItem = ({
       toast.success('מרואיין נמחק בהצלחה');
     } catch (error) {
       console.error('Error deleting interviewee:', error);
+      toast.error('שגיאה במחיקת מרואיין');
     }
   };
 
