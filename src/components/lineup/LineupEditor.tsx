@@ -1,13 +1,8 @@
 import React from 'react';
-import LineupForm from '../LineupForm';
-import LineupTable from './LineupTable';
-import ShowHeader from '../show/ShowHeader';
-import ShowCredits from '../show/ShowCredits';
 import { Editor } from '@tiptap/react';
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
+import HeaderSection from './editor/HeaderSection';
+import MainContent from './editor/MainContent';
+import FooterSection from './editor/FooterSection';
 
 interface LineupEditorProps {
   showName: string;
@@ -60,65 +55,38 @@ const LineupEditor = ({
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden lineup-editor">
-      <div className="lineup-editor-header mb-8">
-        <Button 
-          variant="outline" 
-          onClick={onBackToDashboard}
-          className="flex items-center gap-2 mb-4"
-        >
-          <ArrowRight className="h-4 w-4" />
-          חזרה לעמוד הראשי
-        </Button>
-        
-        <h1 className="text-3xl font-bold text-right">
-          עריכת ליינאפ - {showName} - {showDate ? format(showDate, 'dd/MM/yyyy', { locale: he }) : 'לא נבחר תאריך'}
-        </h1>
-      </div>
+      <HeaderSection 
+        showName={showName}
+        showDate={showDate}
+        onBackToDashboard={onBackToDashboard}
+      />
       
-      <div className="lineup-editor-show-header">
-        <ShowHeader
-          showName={showName}
-          showTime={showTime}
-          showDate={showDate}
-          onNameChange={onNameChange}
-          onTimeChange={onTimeChange}
-          onDateChange={onDateChange}
-          onSave={onSave}
-          onShare={onShare}
-          onPrint={onPrint}
-          onExportPDF={onExportPDF}
-        />
-      </div>
+      <MainContent
+        showName={showName}
+        showTime={showTime}
+        showDate={showDate}
+        items={items}
+        editor={editor}
+        editingItem={editingItem}
+        onNameChange={onNameChange}
+        onTimeChange={onTimeChange}
+        onDateChange={onDateChange}
+        onSave={onSave}
+        onShare={onShare}
+        onPrint={onPrint}
+        onExportPDF={onExportPDF}
+        onAdd={onAdd}
+        onDelete={onDelete}
+        onDurationChange={onDurationChange}
+        onEdit={onEdit}
+        onBreakTextChange={onBreakTextChange}
+        onDragEnd={onDragEnd}
+        handleNameLookup={handleNameLookup}
+        onBackToDashboard={onBackToDashboard}
+        onDetailsChange={onDetailsChange}
+      />
 
-      <div className="lineup-editor-credits">
-        <ShowCredits editor={editor} />
-      </div>
-
-      <h2 className="additemH2">הוספת אייטם לליינאפ:</h2>
-      <div className="lineup-editor-form mb-8">
-        <LineupForm 
-          onAdd={onAdd} 
-          onNameChange={handleNameLookup}
-          editingItem={editingItem}
-          onBackToDashboard={onBackToDashboard}
-        />
-      </div>
-
-      <div className="lineup-editor-table">
-        <LineupTable
-          items={items}
-          onDelete={onDelete}
-          onDurationChange={onDurationChange}
-          onEdit={onEdit}
-          onBreakTextChange={onBreakTextChange}
-          onDetailsChange={onDetailsChange}
-          onDragEnd={onDragEnd}
-        />
-      </div>
-
-      <div className="lineup-editor-footer flex justify-center mt-12 mb-8">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50" />
-      </div>
+      <FooterSection />
     </div>
   );
 };
