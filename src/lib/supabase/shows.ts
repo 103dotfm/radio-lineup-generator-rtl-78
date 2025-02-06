@@ -202,9 +202,27 @@ export const getShowWithItems = async (showId: string) => {
 
     if (itemsError) throw itemsError;
 
-    console.log('Raw items from database:', items);
+    // Fetch interviewees for each item
+    const itemsWithInterviewees = await Promise.all(
+      items.map(async (item) => {
+        if (!item.is_break && !item.is_note) {
+          const { data: interviewees } = await supabase
+            .from('interviewees')
+            .select('*')
+            .eq('item_id', item.id);
+          
+          return {
+            ...item,
+            interviewees: interviewees || []
+          };
+        }
+        return item;
+      })
+    );
 
-    const mappedItems = items.map(item => ({
+    console.log('Raw items from database:', itemsWithInterviewees);
+
+    const mappedItems = itemsWithInterviewees.map(item => ({
       id: item.id,
       name: item.name,
       title: item.title,
@@ -212,7 +230,8 @@ export const getShowWithItems = async (showId: string) => {
       phone: item.phone,
       duration: item.duration,
       is_break: item.is_break === true,
-      is_note: item.is_note === true
+      is_note: item.is_note === true,
+      interviewees: item.interviewees || []
     }));
 
     return { show, items: mappedItems };
