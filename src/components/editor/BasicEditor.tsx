@@ -10,9 +10,10 @@ interface BasicEditorProps {
   onChange?: (html: string) => void;
   className?: string;
   placeholder?: string;
+  align?: 'right' | 'center';
 }
 
-const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorProps) => {
+const BasicEditor = ({ content, onChange, className, placeholder, align = 'right' }: BasicEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -23,10 +24,10 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
     content,
     editorProps: {
       attributes: {
-        class: `prose prose-sm focus:outline-none text-right ${className || ''}`,
+        class: `prose prose-sm focus:outline-none ${align === 'right' ? 'text-right' : 'text-center'} ${className || ''}`,
         placeholder,
       },
-//Paste options were here
+      handlePaste: () => true,
     },
     onUpdate: ({ editor }) => {
       if (onChange) {
@@ -70,7 +71,7 @@ const BasicEditor = ({ content, onChange, className, placeholder }: BasicEditorP
           <UnderlineIcon className="h-4 w-4" />
         </Button>
       </div>
-      <EditorContent editor={editor} className="p-4 text-right" />
+      <EditorContent editor={editor} className={`p-4 ${align === 'right' ? 'text-right' : 'text-center'}`} />
     </div>
   );
 };

@@ -58,11 +58,13 @@ body {
   line-height: inherit;
   color: black;
   outline: none;
-  text-align: right;
 }
 
-.ProseMirror {
-  text-align: right;
+.ProseMirror[placeholder]:before {
+  content: attr(placeholder);
+  color: #64748b;
+  pointer-events: none;
+  position: absolute;
 }
 
 /* Print styles */

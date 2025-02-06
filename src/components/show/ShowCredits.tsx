@@ -13,7 +13,7 @@ const ShowCredits = ({ editor }: ShowCreditsProps) => {
       <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
         קרדיטים:
       </label>
-      <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md" />
+      <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
     </div>
   );
 };
