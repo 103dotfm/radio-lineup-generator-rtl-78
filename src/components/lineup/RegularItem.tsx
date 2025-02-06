@@ -44,6 +44,13 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
+      // Only proceed if we have a valid UUID
+      if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+        console.error('Invalid UUID format for item_id:', id);
+        toast.error('שגיאה בהוספת מרואיין - מזהה לא תקין');
+        return;
+      }
+
       const newInterviewee = {
         item_id: id,
         name,
