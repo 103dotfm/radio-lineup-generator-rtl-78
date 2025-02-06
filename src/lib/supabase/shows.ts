@@ -44,7 +44,7 @@ export const getShowWithItems = async (id: string) => {
   return { show, items };
 };
 
-export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], id?: string) => {
+export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show>, items: Partial<ShowItem>[], id?: string) => {
   try {
     let showId = id;
 
@@ -81,9 +81,15 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
     // Insert new items
     if (items.length > 0) {
       const itemsWithShowId = items.map((item, index) => ({
-        ...item,
         show_id: showId,
-        position: index
+        position: index,
+        name: item.name || '',
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        is_break: item.is_break,
+        is_note: item.is_note
       }));
 
       const { error: itemsError } = await supabase

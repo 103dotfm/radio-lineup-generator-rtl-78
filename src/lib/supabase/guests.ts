@@ -1,10 +1,9 @@
-import { supabase } from './shows';
+import { supabase } from "@/integrations/supabase/client";
 
 export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
   try {
-    // Search in show_items table for unique guests, ordered by created_at to get latest info
     const { data, error } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
