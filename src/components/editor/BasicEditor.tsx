@@ -13,7 +13,7 @@ interface BasicEditorProps {
   align?: 'right' | 'center';
 }
 
-const BasicEditor = ({ content, onChange, className, placeholder, align = 'right' }: BasicEditorProps) => {
+const BasicEditor = ({ content, onChange, className, placeholder = '', align = 'right' }: BasicEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({

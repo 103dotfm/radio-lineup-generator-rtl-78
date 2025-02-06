@@ -21,7 +21,7 @@ const FormActions: React.FC<FormActionsProps> = ({
         type="button"
         onClick={onBreakAdd}
         variant="secondary"
-        className="flex items-center gap-2 bg-blue-gray-100 hover:bg-blue-gray-200"
+        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200"
       >
         <Coffee className="h-4 w-4" />
         הוספת פרסומות
@@ -30,7 +30,7 @@ const FormActions: React.FC<FormActionsProps> = ({
         type="button"
         onClick={onNoteAdd}
         variant="secondary"
-        className="flex items-center gap-2 bg-blue-gray-100 hover:bg-blue-gray-200"
+        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200"
       >
         <FileText className="h-4 w-4" />
         הוספת הערה
