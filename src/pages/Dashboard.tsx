@@ -211,11 +211,11 @@ const Dashboard = () => {
           </TableHeader>
           <TableBody>
             {sortedShows.flatMap(show => 
-              (show.guests || []).map((guest, index) => (
+              show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => (
                 <TableRow key={`${show.id}-${index}`}>
-                  <TableCell>{guest.name}</TableCell>
-                  <TableCell>{guest.title}</TableCell>
-                  <TableCell>{guest.phone}</TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell>{item.title}</TableCell>
+                  <TableCell>{item.phone}</TableCell>
                   <TableCell>{show.name}</TableCell>
                   <TableCell>
                     {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
