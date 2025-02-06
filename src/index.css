@@ -64,7 +64,6 @@ body {
   content: attr(placeholder);
   color: #64748b;
   pointer-events: none;
-  position: absolute;
 }
 
 /* Print styles */
