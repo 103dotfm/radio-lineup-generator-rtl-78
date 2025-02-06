@@ -18,4 +18,15 @@ export interface ShowItem {
   is_break: boolean;
   is_note: boolean;
   position: number;
+  interviewees?: Interviewee[];
+}
+
+export interface Interviewee {
+  id: string;
+  item_id: string;
+  name: string;
+  title: string;
+  phone: string;
+  duration: number;
+  created_at: string;
 }

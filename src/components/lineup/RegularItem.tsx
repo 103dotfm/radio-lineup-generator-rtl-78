@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, UserPlus, Users } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
+import { Interviewee } from '@/types/show';
+import { addInterviewee, deleteInterviewee } from '@/lib/supabase/interviewees';
+import { toast } from 'sonner';
 
 interface RegularItemProps {
   id: string;
@@ -11,6 +14,7 @@ interface RegularItemProps {
   details: string;
   phone: string;
   duration: number;
+  interviewees?: Interviewee[];
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string, updatedItem: any) => void;
@@ -24,16 +28,44 @@ const RegularItem = ({
   details,
   phone,
   duration,
+  interviewees = [],
   onDelete,
   onDurationChange,
   onEdit,
   isAuthenticated,
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showInterviewees, setShowInterviewees] = useState(false);
 
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Handling save with updated item:', updatedItem);
     onEdit(id, updatedItem);
+  };
+
+  const handleAddInterviewee = async () => {
+    try {
+      const newInterviewee = {
+        item_id: id,
+        name,
+        title,
+        phone,
+        duration
+      };
+      
+      await addInterviewee(newInterviewee);
+      toast.success('מרואיין נוסף בהצלחה');
+    } catch (error) {
+      console.error('Error adding interviewee:', error);
+    }
+  };
+
+  const handleDeleteInterviewee = async (intervieweeId: string) => {
+    try {
+      await deleteInterviewee(intervieweeId);
+      toast.success('מרואיין נמחק בהצלחה');
+    } catch (error) {
+      console.error('Error deleting interviewee:', error);
+    }
   };
 
   return (
@@ -58,6 +90,20 @@ const RegularItem = ({
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setShowInterviewees(!showInterviewees)}
+          >
+            <Users className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleAddInterviewee}
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => {
               console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration });
               setShowEditDialog(true);
@@ -73,6 +119,23 @@ const RegularItem = ({
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        {showInterviewees && interviewees && interviewees.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {interviewees.map((interviewee) => (
+              <div key={interviewee.id} className="flex items-center gap-2 text-sm">
+                <span>{interviewee.name}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteInterviewee(interviewee.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </td>
 
       <EditItemDialog
