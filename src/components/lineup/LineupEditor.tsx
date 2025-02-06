@@ -93,7 +93,8 @@ const LineupEditor = ({
       <div className="lineup-editor-credits">
         <ShowCredits editor={editor} />
       </div>
-<h2 class="additemH2">הוספת אייטם לליינאפ:</h2>
+
+      <h2 className="additemH2">הוספת אייטם לליינאפ:</h2>
       <div className="lineup-editor-form mb-8">
         <LineupForm 
           onAdd={onAdd} 
