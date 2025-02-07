@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         duration: item.duration || 0,
         details: item.details || ''
       });
+      setHasChanges(false);
     }
   }, [item, open]);
 
@@ -56,11 +58,11 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     if (!open) return;
 
     const hasEdits = 
-      formState.name !== item.name ||
-      formState.title !== item.title ||
-      formState.phone !== item.phone ||
-      formState.duration !== item.duration ||
-      formState.details !== item.details;
+      formState.name !== (item.name || '') ||
+      formState.title !== (item.title || '') ||
+      formState.phone !== (item.phone || '') ||
+      formState.duration !== (item.duration || 0) ||
+      formState.details !== (item.details || '');
     
     setHasChanges(hasEdits);
   }, [formState, item, open]);
