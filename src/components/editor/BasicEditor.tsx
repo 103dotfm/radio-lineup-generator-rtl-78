@@ -19,10 +19,6 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
     extensions: [
       StarterKit.configure({
         heading: false,
-        paste: {
-          priority: 100,
-          enable: true,
-        },
       }),
       Underline,
     ],
@@ -32,6 +28,7 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
         class: `prose prose-sm focus:outline-none ${align === 'right' ? 'text-right' : 'text-center'} ${className || ''}`,
         placeholder,
       },
+      handlePaste: true,
     },
     onUpdate: ({ editor }) => {
       if (onChange) {

@@ -40,7 +40,13 @@ const Index = () => {
     const loadShow = async () => {
       if (id) {
         try {
-          const { show, items: showItems } = await getShowWithItems(id);
+          const result = await getShowWithItems(id);
+          if (!result) {
+            toast.error('התוכנית לא נמצאה');
+            navigate('/');
+            return;
+          }
+          const { show, items: showItems } = result;
           if (show) {
             setShowName(show.name);
             setShowTime(show.time);
@@ -56,12 +62,13 @@ const Index = () => {
         } catch (error) {
           console.error('Error loading show:', error);
           toast.error('שגיאה בטעינת התוכנית');
+          navigate('/');
         }
       }
     };
 
     loadShow();
-  }, [id, editor]);
+  }, [id, editor, navigate]);
 
   const handleAdd = (newItem) => {
     if (editingItem) {
