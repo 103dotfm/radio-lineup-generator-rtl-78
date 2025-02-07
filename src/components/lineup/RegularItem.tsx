@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { addInterviewee, deleteInterviewee } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RegularItemProps {
   id: string;
@@ -36,6 +38,7 @@ const RegularItem = ({
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInterviewees, setShowInterviewees] = useState(false);
+  const { user } = useAuth();
 
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Handling save with updated item:', updatedItem);
@@ -44,6 +47,11 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
+      if (!user) {
+        toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
+        return;
+      }
+
       // Only proceed if we have a valid UUID
       if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
         console.error('Invalid UUID format for item_id:', id);
@@ -69,6 +77,11 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
+      if (!user) {
+        toast.error('עליך להיות מחובר כדי למחוק מרואיין');
+        return;
+      }
+
       await deleteInterviewee(intervieweeId);
       toast.success('מרואיין נמחק בהצלחה');
     } catch (error) {
