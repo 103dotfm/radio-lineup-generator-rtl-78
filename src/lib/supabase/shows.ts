@@ -30,7 +30,7 @@ export const getShowWithItems = async (id: string) => {
     .maybeSingle();
 
   if (showError) throw showError;
-  if (!show) return null;
+  if (!show) throw new Error('Show not found');
 
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
@@ -79,21 +79,10 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
         })
         .eq('id', showId)
         .select()
-        .single();
+        .maybeSingle();
 
-      if (updateError) {
-        // Check if the error is because the show doesn't exist
-        const { data: existingShow } = await supabase
-          .from('shows')
-          .select('id')
-          .eq('id', showId)
-          .maybeSingle();
-
-        if (!existingShow) {
-          throw new Error('Show not found');
-        }
-        throw updateError;
-      }
+      if (updateError) throw updateError;
+      if (!updatedShow) throw new Error('Show not found');
       showData = updatedShow;
     }
 
@@ -168,3 +157,4 @@ export const deleteShow = async (id: string) => {
     throw error;
   }
 };
+
