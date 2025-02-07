@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Show, ShowItem } from "@/types/show";
 
@@ -26,9 +27,10 @@ export const getShowWithItems = async (id: string) => {
     .from('shows')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (showError) throw showError;
+  if (!show) throw new Error('Show not found');
 
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
@@ -41,7 +43,7 @@ export const getShowWithItems = async (id: string) => {
 
   if (itemsError) throw itemsError;
 
-  return { show, items };
+  return { show, items: items || [] };
 };
 
 export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show>, items: Partial<ShowItem>[], id?: string) => {
@@ -52,17 +54,37 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
     if (!showId) {
       const { data: newShow, error: showError } = await supabase
         .from('shows')
-        .insert(show)
+        .insert({
+          name: show.name,
+          time: show.time,
+          date: show.date,
+          notes: show.notes
+        })
         .select()
         .single();
 
       if (showError) throw showError;
       showId = newShow.id;
     } else {
+      // Verify show exists before updating
+      const { data: existingShow, error: checkError } = await supabase
+        .from('shows')
+        .select('id')
+        .eq('id', showId)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+      if (!existingShow) throw new Error('Show not found');
+
       // Update existing show
       const { error: updateError } = await supabase
         .from('shows')
-        .update(show)
+        .update({
+          name: show.name,
+          time: show.time,
+          date: show.date,
+          notes: show.notes
+        })
         .eq('id', showId);
 
       if (updateError) throw updateError;
