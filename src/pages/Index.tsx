@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -13,7 +12,7 @@ import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
 
 const Index = () => {
-  const { id } = useParams();
+  const { id: showId } = useParams();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [showName, setShowName] = useState('');
@@ -39,9 +38,9 @@ const Index = () => {
 
   useEffect(() => {
     const loadShow = async () => {
-      if (id) {
+      if (showId) {
         try {
-          const result = await getShowWithItems(id);
+          const result = await getShowWithItems(showId);
           if (!result) {
             toast.error('התוכנית לא נמצאה');
             navigate('/');
@@ -69,7 +68,7 @@ const Index = () => {
     };
 
     loadShow();
-  }, [id, editor, navigate]);
+  }, [showId, editor, navigate]);
 
   const handleAdd = (newItem) => {
     if (editingItem) {
@@ -106,6 +105,11 @@ const Index = () => {
       );
 
       // Save changes
+      if (!showId) {
+        toast.error('מזהה תוכנית לא תקין');
+        return;
+      }
+
       const show = {
         name: showName,
         time: showTime,
@@ -115,8 +119,8 @@ const Index = () => {
 
       console.log('Index: Saving show with updated items');
       await saveShow(show, items.map(item => 
-        item.id === id ? updatedItem : item
-      ), id);
+        item.id === id ? { ...item, ...updatedItem } : item
+      ), showId);
       
       setHasUnsavedChanges(false);
       toast.success('השינויים נשמרו בהצלחה');
@@ -125,9 +129,9 @@ const Index = () => {
       toast.error('שגיאה בשמירת השינויים');
       
       // If we fail to save, try to restore the original state
-      if (id) {
+      if (showId) {
         try {
-          const result = await getShowWithItems(id);
+          const result = await getShowWithItems(showId);
           if (result) {
             setItems(result.items || []);
           }
@@ -156,14 +160,14 @@ const Index = () => {
         details: item.details,
         phone: item.phone,
         duration: item.duration,
-        is_break: item.isBreak || false,
-        is_note: item.isNote || false
+        is_break: item.is_break || false,
+        is_note: item.is_note || false
       }));
 
       console.log('Saving items:', itemsToSave);
 
-      const savedShow = await saveShow(show, itemsToSave, id);
-      if (savedShow && !id) {
+      const savedShow = await saveShow(show, itemsToSave, showId);
+      if (savedShow && !showId) {
         navigate(`/show/${savedShow.id}`);
       }
       setHasUnsavedChanges(false);
@@ -185,7 +189,7 @@ const Index = () => {
 
   const handleShare = async () => {
     try {
-      const shareUrl = `${window.location.origin}/print/${id}`;
+      const shareUrl = `${window.location.origin}/print/${showId}`;
       await navigator.clipboard.writeText(shareUrl);
       toast.success('קישור לליינאפ הועתק ללוח');
     } catch (error) {
