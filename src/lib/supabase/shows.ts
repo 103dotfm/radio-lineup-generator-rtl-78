@@ -30,7 +30,7 @@ export const getShowWithItems = async (id: string) => {
     .maybeSingle();
 
   if (showError) throw showError;
-  if (!show) throw new Error('Show not found');
+  if (!show) return null;
 
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
