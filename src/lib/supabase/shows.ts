@@ -49,6 +49,7 @@ export const getShowWithItems = async (id: string) => {
 export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show>, items: Partial<ShowItem>[], id?: string) => {
   try {
     let showId = id;
+    let showData;
 
     // If no ID provided, create new show
     if (!showId) {
@@ -65,19 +66,10 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 
       if (showError) throw showError;
       showId = newShow.id;
+      showData = newShow;
     } else {
-      // Verify show exists before updating
-      const { data: existingShow, error: checkError } = await supabase
-        .from('shows')
-        .select('id')
-        .eq('id', showId)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-      if (!existingShow) throw new Error('Show not found');
-
-      // Update existing show
-      const { error: updateError } = await supabase
+      // Update existing show and get the updated data
+      const { data: updatedShow, error: updateError } = await supabase
         .from('shows')
         .update({
           name: show.name,
@@ -85,9 +77,24 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
           date: show.date,
           notes: show.notes
         })
-        .eq('id', showId);
+        .eq('id', showId)
+        .select()
+        .single();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        // Check if the error is because the show doesn't exist
+        const { data: existingShow } = await supabase
+          .from('shows')
+          .select('id')
+          .eq('id', showId)
+          .maybeSingle();
+
+        if (!existingShow) {
+          throw new Error('Show not found');
+        }
+        throw updateError;
+      }
+      showData = updatedShow;
     }
 
     // Delete existing items
