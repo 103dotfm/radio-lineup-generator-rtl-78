@@ -23,15 +23,17 @@ export const getShows = async () => {
 };
 
 export const getShowWithItems = async (id: string) => {
-  const { data: show, error: showError } = await supabase
+  // First check if the show exists
+  const { data: existingShow, error: checkError } = await supabase
     .from('shows')
     .select('*')
     .eq('id', id)
     .maybeSingle();
 
-  if (showError) throw showError;
-  if (!show) throw new Error('Show not found');
+  if (checkError) throw checkError;
+  if (!existingShow) throw new Error('Show not found');
 
+  // Then get the items
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
     .select(`
@@ -43,7 +45,7 @@ export const getShowWithItems = async (id: string) => {
 
   if (itemsError) throw itemsError;
 
-  return { show, items: items || [] };
+  return { show: existingShow, items: items || [] };
 };
 
 export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show>, items: Partial<ShowItem>[], id?: string) => {
@@ -68,7 +70,18 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       showId = newShow.id;
       showData = newShow;
     } else {
-      // Update existing show and get the updated data
+      // First check if the show exists
+      const { data: existingShow } = await supabase
+        .from('shows')
+        .select('id')
+        .eq('id', showId)
+        .maybeSingle();
+
+      if (!existingShow) {
+        throw new Error('Show not found');
+      }
+
+      // Update existing show
       const { data: updatedShow, error: updateError } = await supabase
         .from('shows')
         .update({
@@ -79,10 +92,9 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
         })
         .eq('id', showId)
         .select()
-        .maybeSingle();
+        .single();
 
       if (updateError) throw updateError;
-      if (!updatedShow) throw new Error('Show not found');
       showData = updatedShow;
     }
 
@@ -157,4 +169,3 @@ export const deleteShow = async (id: string) => {
     throw error;
   }
 };
-
