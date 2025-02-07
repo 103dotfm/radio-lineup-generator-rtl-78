@@ -28,7 +28,16 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
         class: `prose prose-sm focus:outline-none ${align === 'right' ? 'text-right' : 'text-center'} ${className || ''}`,
         placeholder,
       },
-      handlePaste: true,
+      handleDOMEvents: {
+        paste: (view, event) => {
+          if (event.clipboardData?.types?.includes('text/plain')) {
+            const text = event.clipboardData.getData('text/plain');
+            view.dispatch(view.state.tr.insertText(text));
+            return true;
+          }
+          return false;
+        }
+      }
     },
     onUpdate: ({ editor }) => {
       if (onChange) {

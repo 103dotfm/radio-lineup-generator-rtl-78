@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -103,11 +104,6 @@ const Index = () => {
           item.id === id ? { ...item, ...updatedItem } : item
         )
       );
-      
-      if (!id) {
-        toast.error('מזהה תוכנית לא תקין');
-        return;
-      }
 
       // Save changes
       const show = {
@@ -127,10 +123,17 @@ const Index = () => {
     } catch (error) {
       console.error('Error saving item edit:', error);
       toast.error('שגיאה בשמירת השינויים');
-      // Revert local state on error
+      
+      // If we fail to save, try to restore the original state
       if (id) {
-        const { items: originalItems } = await getShowWithItems(id);
-        setItems(originalItems);
+        try {
+          const result = await getShowWithItems(id);
+          if (result) {
+            setItems(result.items || []);
+          }
+        } catch (restoreError) {
+          console.error('Error restoring original state:', restoreError);
+        }
       }
     }
   };
