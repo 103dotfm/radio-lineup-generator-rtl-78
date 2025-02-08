@@ -5,9 +5,9 @@ import { toast } from "sonner";
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>) => {
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: session } = await supabase.auth.getSession();
     
-    if (sessionError || !session) {
+    if (!session?.session?.user) {
       throw new Error('Authentication required');
     }
 
@@ -31,9 +31,9 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
 
 export const deleteInterviewee = async (id: string) => {
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: session } = await supabase.auth.getSession();
     
-    if (sessionError || !session) {
+    if (!session?.session?.user) {
       throw new Error('Authentication required');
     }
 
@@ -51,9 +51,9 @@ export const deleteInterviewee = async (id: string) => {
 
 export const getInterviewees = async (itemId: string) => {
   try {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: session } = await supabase.auth.getSession();
     
-    if (sessionError || !session) {
+    if (!session?.session?.user) {
       throw new Error('Authentication required');
     }
 
@@ -69,3 +69,4 @@ export const getInterviewees = async (itemId: string) => {
     throw error;
   }
 };
+

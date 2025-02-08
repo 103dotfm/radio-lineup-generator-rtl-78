@@ -38,7 +38,7 @@ const RegularItem = ({
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInterviewees, setShowInterviewees] = useState(false);
-  const { isAuthenticated: isUserAuthenticated } = useAuth();
+  const { user } = useAuth();
 
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Handling save with updated item:', updatedItem);
@@ -47,7 +47,7 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
-      if (!isUserAuthenticated) {
+      if (!user) {
         toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
         return;
       }
@@ -69,7 +69,7 @@ const RegularItem = ({
       
       await addInterviewee(newInterviewee);
       toast.success('מרואיין נוסף בהצלחה');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding interviewee:', error);
       if (error.message === 'Authentication required') {
         toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
@@ -81,14 +81,14 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      if (!isUserAuthenticated) {
+      if (!user) {
         toast.error('עליך להיות מחובר כדי למחוק מרואיין');
         return;
       }
 
       await deleteInterviewee(intervieweeId);
       toast.success('מרואיין נמחק בהצלחה');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting interviewee:', error);
       if (error.message === 'Authentication required') {
         toast.error('עליך להיות מחובר כדי למחוק מרואיין');
@@ -128,7 +128,7 @@ const RegularItem = ({
             variant="ghost"
             size="icon"
             onClick={handleAddInterviewee}
-            disabled={!isUserAuthenticated}
+            disabled={!user}
           >
             <UserPlus className="h-4 w-4" />
           </Button>
@@ -160,7 +160,7 @@ const RegularItem = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteInterviewee(interviewee.id)}
-                  disabled={!isUserAuthenticated}
+                  disabled={!user}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
