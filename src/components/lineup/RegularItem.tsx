@@ -38,7 +38,7 @@ const RegularItem = ({
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInterviewees, setShowInterviewees] = useState(false);
-  const { user } = useAuth();
+  const { isAuthenticated: isUserAuthenticated } = useAuth();
 
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Handling save with updated item:', updatedItem);
@@ -47,7 +47,7 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
-      if (!user) {
+      if (!isUserAuthenticated) {
         toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
         return;
       }
@@ -81,7 +81,7 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      if (!user) {
+      if (!isUserAuthenticated) {
         toast.error('עליך להיות מחובר כדי למחוק מרואיין');
         return;
       }
@@ -128,6 +128,7 @@ const RegularItem = ({
             variant="ghost"
             size="icon"
             onClick={handleAddInterviewee}
+            disabled={!isUserAuthenticated}
           >
             <UserPlus className="h-4 w-4" />
           </Button>
@@ -159,6 +160,7 @@ const RegularItem = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteInterviewee(interviewee.id)}
+                  disabled={!isUserAuthenticated}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
