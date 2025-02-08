@@ -81,7 +81,7 @@ const Index = () => {
     } else {
       const item = {
         ...newItem,
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
       };
       setItems([...items, item]);
     }
@@ -96,50 +96,15 @@ const Index = () => {
       return;
     }
     
-    try {
-      // Update local state first for immediate UI feedback
-      setItems(prevItems => 
-        prevItems.map(item => 
-          item.id === id ? { ...item, ...updatedItem } : item
-        )
-      );
-
-      // Save changes
-      if (!showId) {
-        toast.error('מזהה תוכנית לא תקין');
-        return;
-      }
-
-      const show = {
-        name: showName,
-        time: showTime,
-        date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
-        notes: editor?.getHTML() || '',
-      };
-
-      console.log('Index: Saving show with updated items');
-      await saveShow(show, items.map(item => 
+    // Update local state
+    setItems(prevItems => 
+      prevItems.map(item => 
         item.id === id ? { ...item, ...updatedItem } : item
-      ), showId);
-      
-      setHasUnsavedChanges(false);
-      toast.success('השינויים נשמרו בהצלחה');
-    } catch (error) {
-      console.error('Error saving item edit:', error);
-      toast.error('שגיאה בשמירת השינויים');
-      
-      // If we fail to save, try to restore the original state
-      if (showId) {
-        try {
-          const result = await getShowWithItems(showId);
-          if (result) {
-            setItems(result.items || []);
-          }
-        } catch (restoreError) {
-          console.error('Error restoring original state:', restoreError);
-        }
-      }
-    }
+      )
+    );
+    
+    // Mark changes as unsaved
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = async () => {

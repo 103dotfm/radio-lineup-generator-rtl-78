@@ -52,8 +52,8 @@ const RegularItem = ({
         return;
       }
 
-      // Only proceed if we have a valid UUID
-      if (!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+      // Validate UUID format
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
         console.error('Invalid UUID format for item_id:', id);
         toast.error('שגיאה בהוספת מרואיין - מזהה לא תקין');
         return;
@@ -71,7 +71,11 @@ const RegularItem = ({
       toast.success('מרואיין נוסף בהצלחה');
     } catch (error) {
       console.error('Error adding interviewee:', error);
-      toast.error('שגיאה בהוספת מרואיין');
+      if (error.message === 'Authentication required') {
+        toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
+      } else {
+        toast.error('שגיאה בהוספת מרואיין');
+      }
     }
   };
 
@@ -86,7 +90,11 @@ const RegularItem = ({
       toast.success('מרואיין נמחק בהצלחה');
     } catch (error) {
       console.error('Error deleting interviewee:', error);
-      toast.error('שגיאה במחיקת מרואיין');
+      if (error.message === 'Authentication required') {
+        toast.error('עליך להיות מחובר כדי למחוק מרואיין');
+      } else {
+        toast.error('שגיאה במחיקת מרואיין');
+      }
     }
   };
 
@@ -171,3 +179,4 @@ const RegularItem = ({
 };
 
 export default RegularItem;
+
