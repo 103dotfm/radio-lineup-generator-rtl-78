@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { searchGuests } from '@/lib/supabase/guests';
@@ -12,9 +13,11 @@ interface GuestSearchProps {
 const GuestSearch = ({ onNameChange, onGuestSelect }: GuestSearchProps) => {
   const [suggestions, setSuggestions] = useState<Array<{ name: string; title: string; phone: string }>>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [inputValue, setInputValue] = useState('');
 
   const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
+    setInputValue(newName);
     onNameChange(newName);
     
     if (newName.length > 2) {
@@ -38,6 +41,7 @@ const GuestSearch = ({ onNameChange, onGuestSelect }: GuestSearchProps) => {
   };
 
   const handleSuggestionSelect = (suggestion: { name: string; title: string; phone: string }) => {
+    setInputValue(suggestion.name);
     onGuestSelect({
       ...suggestion,
       phone: formatPhoneNumber(suggestion.phone)
@@ -50,6 +54,7 @@ const GuestSearch = ({ onNameChange, onGuestSelect }: GuestSearchProps) => {
       <Input
         placeholder="שם"
         onChange={handleNameChange}
+        value={inputValue}
         required
         autoComplete="off"
         name="guest-name"

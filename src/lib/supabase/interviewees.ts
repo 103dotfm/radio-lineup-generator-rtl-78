@@ -5,16 +5,10 @@ import { toast } from "sonner";
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>) => {
   try {
-    // Get the current session first
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    if (sessionError) {
-      console.error('Authentication error:', sessionError);
+    if (sessionError || !session) {
       throw new Error('Authentication required');
-    }
-
-    if (!session) {
-      throw new Error('No active session');
     }
 
     const { data, error } = await supabase
@@ -37,7 +31,6 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
 
 export const deleteInterviewee = async (id: string) => {
   try {
-    // Get the current session first
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
@@ -58,7 +51,6 @@ export const deleteInterviewee = async (id: string) => {
 
 export const getInterviewees = async (itemId: string) => {
   try {
-    // Get the current session first
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
