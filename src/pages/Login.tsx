@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -17,15 +18,32 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     
+    if (!email || !password) {
+      toast({
+        variant: "destructive",
+        title: "שגיאה בהתחברות",
+        description: "יש להזין אימייל וסיסמה"
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const { error } = await login(email, password);
       
       if (error) {
-        console.error("Login error:", error);
+        console.error("Login error details:", error);
+        let errorMessage = "אנא בדוק את פרטי ההתחברות ונסה שוב";
+        
+        // Handle specific error cases
+        if (error.message?.includes("Invalid login credentials")) {
+          errorMessage = "שם משתמש או סיסמה שגויים";
+        }
+        
         toast({
           variant: "destructive",
           title: "שגיאה בהתחברות",
-          description: "אנא בדוק את פרטי ההתחברות ונסה שוב"
+          description: errorMessage
         });
       } else {
         toast({
@@ -34,11 +52,11 @@ const Login = () => {
         navigate("/");
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      console.error("Unexpected login error:", err);
       toast({
         variant: "destructive",
         title: "שגיאה בהתחברות",
-        description: "אירעה שגיאה לא צפויה"
+        description: "אירעה שגיאה לא צפויה. אנא נסה שוב מאוחר יותר"
       });
     } finally {
       setIsLoading(false);
