@@ -33,7 +33,7 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
           if (event.clipboardData?.types?.includes('text/plain')) {
             const text = event.clipboardData.getData('text/plain');
             view.dispatch(view.state.tr.insertText(text));
-            return true;
+            return false;
           }
           return false;
         }
