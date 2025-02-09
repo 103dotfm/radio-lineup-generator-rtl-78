@@ -5,10 +5,15 @@ import { toast } from "sonner";
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>) => {
   // First check if we have an active session
-  const session = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!session.data.session?.access_token) {
-    console.error('No valid session found');
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    throw new Error('Authentication error');
+  }
+
+  if (!session) {
+    console.error('No active session found');
     throw new Error('Authentication required');
   }
 
@@ -27,10 +32,10 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
 };
 
 export const deleteInterviewee = async (id: string) => {
-  const session = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!session.data.session?.access_token) {
-    console.error('No valid session found');
+  if (sessionError || !session) {
+    console.error('Session error or no session:', sessionError);
     throw new Error('Authentication required');
   }
 
@@ -43,10 +48,10 @@ export const deleteInterviewee = async (id: string) => {
 };
 
 export const getInterviewees = async (itemId: string) => {
-  const session = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!session.data.session?.access_token) {
-    console.error('No valid session found');
+  if (sessionError || !session) {
+    console.error('Session error or no session:', sessionError);
     throw new Error('Authentication required');
   }
 
@@ -58,4 +63,3 @@ export const getInterviewees = async (itemId: string) => {
   if (error) throw error;
   return data;
 };
-
