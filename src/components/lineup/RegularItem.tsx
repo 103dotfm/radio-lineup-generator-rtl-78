@@ -38,6 +38,7 @@ const RegularItem = ({
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInterviewees, setShowInterviewees] = useState(false);
+  const { user } = useAuth();
 
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Handling save with updated item:', updatedItem);
@@ -46,7 +47,7 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !user) {
         toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
         return;
       }
@@ -58,6 +59,8 @@ const RegularItem = ({
         return;
       }
 
+      console.log('Adding interviewee with user:', user.id);
+      
       const newInterviewee = {
         item_id: id,
         name,
@@ -80,7 +83,7 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !user) {
         toast.error('עליך להיות מחובר כדי למחוק מרואיין');
         return;
       }
@@ -180,4 +183,3 @@ const RegularItem = ({
 };
 
 export default RegularItem;
-
