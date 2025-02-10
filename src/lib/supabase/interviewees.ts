@@ -3,85 +3,73 @@ import { supabase } from "@/integrations/supabase/client";
 import { Interviewee } from "@/types/show";
 import { Database } from "@/integrations/supabase/types";
 
-type IntervieweeRow = Database['public']['Tables']['interviewees']['Row'];
+type DbInterviewee = Database['public']['Tables']['interviewees']['Row'];
 
-export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>): Promise<Interviewee> => {
-  console.log('Starting addInterviewee process');
+export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>): Promise<DbInterviewee> => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError) {
-    console.error('Session error:', sessionError);
-    throw new Error('Authentication error');
-  }
-
-  if (!session?.user?.id) {
-    console.error('No authenticated user found');
+  if (sessionError || !sessionData.session?.user?.id) {
     throw new Error('Authentication required');
   }
 
-  console.log('Authenticated user ID:', session.user.id);
-
   const { data, error } = await supabase
     .from('interviewees')
-    .insert([{
-      ...interviewee,
-      user_id: session.user.id
-    }])
-    .select()
+    .insert({
+      item_id: interviewee.item_id,
+      name: interviewee.name,
+      title: interviewee.title || null,
+      phone: interviewee.phone || null,
+      duration: interviewee.duration || null,
+      user_id: sessionData.session.user.id
+    })
+    .select('*')
     .single();
 
   if (error) {
     console.error('Error adding interviewee:', error);
     throw error;
   }
-  
-  console.log('Successfully added interviewee:', data);
-  return data as Interviewee;
+
+  return data;
 };
 
 export const deleteInterviewee = async (id: string): Promise<void> => {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   
-  if (sessionError) {
-    console.error('Session error:', sessionError);
-    throw new Error('Authentication error');
-  }
-
-  if (!session?.user?.id) {
-    console.error('No authenticated user found');
+  if (sessionError || !sessionData.session?.user?.id) {
     throw new Error('Authentication required');
   }
 
   const { error } = await supabase
     .from('interviewees')
     .delete()
-    .eq('id', id)
-    .eq('user_id', session.user.id);
+    .match({ id, user_id: sessionData.session.user.id });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error deleting interviewee:', error);
+    throw error;
+  }
 };
 
-export const getInterviewees = async (itemId: string): Promise<IntervieweeRow[]> => {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   
-  if (sessionError) {
-    console.error('Session error:', sessionError);
-    throw new Error('Authentication error');
-  }
-
-  if (!session?.user?.id) {
-    console.error('No authenticated user found');
+  if (sessionError || !sessionData.session?.user?.id) {
     throw new Error('Authentication required');
   }
 
   const { data, error } = await supabase
     .from('interviewees')
-    .select()
-    .eq('item_id', itemId)
-    .eq('user_id', session.user.id);
+    .select('*')
+    .match({ 
+      item_id: itemId,
+      user_id: sessionData.session.user.id 
+    });
 
-  if (error) throw error;
-  
+  if (error) {
+    console.error('Error getting interviewees:', error);
+    throw error;
+  }
+
   return data || [];
 };
