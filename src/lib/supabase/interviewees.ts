@@ -1,6 +1,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Interviewee } from "@/types/show";
+import { Database } from "@/integrations/supabase/types";
+
+type IntervieweeRow = Database['public']['Tables']['interviewees']['Row'];
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>): Promise<Interviewee> => {
   console.log('Starting addInterviewee process');
@@ -20,7 +23,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
       ...interviewee,
       user_id: session.session.user.id
     }])
-    .select('*')
+    .select()
     .single();
 
   if (error) {
@@ -29,7 +32,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
   }
   
   console.log('Successfully added interviewee:', data);
-  return data;
+  return data as Interviewee;
 };
 
 export const deleteInterviewee = async (id: string): Promise<void> => {
@@ -49,7 +52,7 @@ export const deleteInterviewee = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-export const getInterviewees = async (itemId: string): Promise<Interviewee[]> => {
+export const getInterviewees = async (itemId: string): Promise<IntervieweeRow[]> => {
   const { data: session } = await supabase.auth.getSession();
   
   if (!session?.session?.user) {
@@ -59,7 +62,7 @@ export const getInterviewees = async (itemId: string): Promise<Interviewee[]> =>
 
   const { data, error } = await supabase
     .from('interviewees')
-    .select('*')
+    .select()
     .eq('item_id', itemId)
     .eq('user_id', session.session.user.id);
 
