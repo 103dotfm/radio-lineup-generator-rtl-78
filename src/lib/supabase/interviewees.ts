@@ -8,20 +8,25 @@ type IntervieweeRow = Database['public']['Tables']['interviewees']['Row'];
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>): Promise<Interviewee> => {
   console.log('Starting addInterviewee process');
   
-  const { data: session } = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!session?.session?.user) {
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    throw new Error('Authentication error');
+  }
+
+  if (!session?.user?.id) {
     console.error('No authenticated user found');
     throw new Error('Authentication required');
   }
 
-  console.log('Authenticated user ID:', session.session.user.id);
+  console.log('Authenticated user ID:', session.user.id);
 
   const { data, error } = await supabase
     .from('interviewees')
     .insert([{
       ...interviewee,
-      user_id: session.session.user.id
+      user_id: session.user.id
     }])
     .select()
     .single();
@@ -36,9 +41,14 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
 };
 
 export const deleteInterviewee = async (id: string): Promise<void> => {
-  const { data: session } = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!session?.session?.user) {
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    throw new Error('Authentication error');
+  }
+
+  if (!session?.user?.id) {
     console.error('No authenticated user found');
     throw new Error('Authentication required');
   }
@@ -47,15 +57,20 @@ export const deleteInterviewee = async (id: string): Promise<void> => {
     .from('interviewees')
     .delete()
     .eq('id', id)
-    .eq('user_id', session.session.user.id);
+    .eq('user_id', session.user.id);
 
   if (error) throw error;
 };
 
 export const getInterviewees = async (itemId: string): Promise<IntervieweeRow[]> => {
-  const { data: session } = await supabase.auth.getSession();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!session?.session?.user) {
+  if (sessionError) {
+    console.error('Session error:', sessionError);
+    throw new Error('Authentication error');
+  }
+
+  if (!session?.user?.id) {
     console.error('No authenticated user found');
     throw new Error('Authentication required');
   }
@@ -64,7 +79,7 @@ export const getInterviewees = async (itemId: string): Promise<IntervieweeRow[]>
     .from('interviewees')
     .select()
     .eq('item_id', itemId)
-    .eq('user_id', session.session.user.id);
+    .eq('user_id', session.user.id);
 
   if (error) throw error;
   
