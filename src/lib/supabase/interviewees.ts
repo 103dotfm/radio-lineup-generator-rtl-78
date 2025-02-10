@@ -21,7 +21,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
       ...interviewee,
       user_id: session.session.user.id
     })
-    .select('id, item_id, name, title, phone, duration, created_at')
+    .select()
     .single();
 
   if (error) {
@@ -30,7 +30,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
   }
   
   console.log('Successfully added interviewee:', data);
-  return data;
+  return data as Interviewee;
 };
 
 export const deleteInterviewee = async (id: string): Promise<void> => {
@@ -60,10 +60,10 @@ export const getInterviewees = async (itemId: string): Promise<Interviewee[]> =>
 
   const { data, error } = await supabase
     .from('interviewees')
-    .select('id, item_id, name, title, phone, duration, created_at')
+    .select()
     .eq('item_id', itemId)
     .eq('user_id', session.session.user.id);
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as Interviewee[];
 };
