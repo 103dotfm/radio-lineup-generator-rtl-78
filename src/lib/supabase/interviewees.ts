@@ -21,7 +21,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
       ...interviewee,
       user_id: session.session.user.id
     })
-    .select('*')
+    .select()
     .single();
 
   if (error) {
@@ -50,7 +50,7 @@ export const deleteInterviewee = async (id: string) => {
   if (error) throw error;
 };
 
-export const getInterviewees = async (itemId: string) => {
+export const getInterviewees = async (itemId: string): Promise<Interviewee[]> => {
   const { data: session } = await supabase.auth.getSession();
   
   if (!session?.session?.user) {
@@ -60,9 +60,9 @@ export const getInterviewees = async (itemId: string) => {
 
   const { data, error } = await supabase
     .from('interviewees')
-    .select('*')
+    .select()
     .eq('item_id', itemId)
-    .eq('user_id', session.session.user.id);
+    .eq('user_id', session.session.user.id) as { data: Interviewee[] | null, error: any };
 
   if (error) throw error;
   return (data || []) as Interviewee[];
