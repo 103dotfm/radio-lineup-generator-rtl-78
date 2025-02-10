@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Interviewee } from "@/types/show";
 import { toast } from "sonner";
 
-export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>) => {
+export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>): Promise<Interviewee> => {
   console.log('Starting addInterviewee process');
   
   const { data: session } = await supabase.auth.getSession();
@@ -22,7 +22,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
       user_id: session.session.user.id
     })
     .select('id, item_id, name, title, phone, duration, created_at')
-    .single() as { data: Interviewee | null, error: any };
+    .single();
 
   if (error) {
     console.error('Error adding interviewee:', error);
@@ -30,7 +30,7 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
   }
   
   console.log('Successfully added interviewee:', data);
-  return data as Interviewee;
+  return data;
 };
 
 export const deleteInterviewee = async (id: string): Promise<void> => {
@@ -62,7 +62,7 @@ export const getInterviewees = async (itemId: string): Promise<Interviewee[]> =>
     .from('interviewees')
     .select('id, item_id, name, title, phone, duration, created_at')
     .eq('item_id', itemId)
-    .eq('user_id', session.session.user.id) as { data: Interviewee[] | null, error: any };
+    .eq('user_id', session.session.user.id);
 
   if (error) throw error;
   return data || [];
