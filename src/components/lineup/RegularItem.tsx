@@ -47,12 +47,11 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
-      if (!isAuthenticated || !user) {
+      if (!user?.id) {
         toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
         return;
       }
 
-      // Validate UUID format
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
         console.error('Invalid UUID format for item_id:', id);
         toast.error('שגיאה בהוספת מרואיין - מזהה לא תקין');
@@ -66,24 +65,23 @@ const RegularItem = ({
         name,
         title,
         phone,
-        duration
+        duration,
+        user_id: user.id
       };
       
       await addInterviewee(newInterviewee);
       toast.success('מרואיין נוסף בהצלחה');
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
-      if (error.message === 'Authentication required') {
-        toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
-      } else {
-        toast.error('שגיאה בהוספת מרואיין');
-      }
+      toast.error(error.message === 'Authentication required' 
+        ? 'עליך להיות מחובר כדי להוסיף מרואיין'
+        : 'שגיאה בהוספת מרואיין');
     }
   };
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      if (!isAuthenticated || !user) {
+      if (!user?.id) {
         toast.error('עליך להיות מחובר כדי למחוק מרואיין');
         return;
       }
@@ -92,11 +90,9 @@ const RegularItem = ({
       toast.success('מרואיין נמחק בהצלחה');
     } catch (error: any) {
       console.error('Error deleting interviewee:', error);
-      if (error.message === 'Authentication required') {
-        toast.error('עליך להיות מחובר כדי למחוק מרואיין');
-      } else {
-        toast.error('שגיאה במחיקת מרואיין');
-      }
+      toast.error(error.message === 'Authentication required' 
+        ? 'עליך להיות מחובר כדי למחוק מרואיין'
+        : 'שגיאה במחיקת מרואיין');
     }
   };
 

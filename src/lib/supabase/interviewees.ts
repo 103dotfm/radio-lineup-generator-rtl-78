@@ -4,23 +4,23 @@ import { Interviewee } from "@/types/show";
 import { toast } from "sonner";
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>) => {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  console.log('Starting addInterviewee process');
   
-  if (sessionError) {
-    console.error('Session error:', sessionError);
-    throw new Error('Authentication error');
-  }
-
-  if (!sessionData.session) {
-    console.error('No active session found');
+  const { data: session } = await supabase.auth.getSession();
+  
+  if (!session?.session?.user) {
+    console.error('No authenticated user found');
     throw new Error('Authentication required');
   }
 
-  console.log('Adding interviewee with session:', sessionData.session.user.id);
+  console.log('Authenticated user ID:', session.session.user.id);
 
   const { data, error } = await supabase
     .from('interviewees')
-    .insert(interviewee)
+    .insert({
+      ...interviewee,
+      user_id: session.session.user.id
+    })
     .select()
     .single();
 
@@ -29,37 +29,40 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
     throw error;
   }
   
+  console.log('Successfully added interviewee:', data);
   return data;
 };
 
 export const deleteInterviewee = async (id: string) => {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const { data: session } = await supabase.auth.getSession();
   
-  if (sessionError || !sessionData.session) {
-    console.error('Session error or no session:', sessionError);
+  if (!session?.session?.user) {
+    console.error('No authenticated user found');
     throw new Error('Authentication required');
   }
 
   const { error } = await supabase
     .from('interviewees')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', session.session.user.id);
 
   if (error) throw error;
 };
 
 export const getInterviewees = async (itemId: string) => {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const { data: session } = await supabase.auth.getSession();
   
-  if (sessionError || !sessionData.session) {
-    console.error('Session error or no session:', sessionError);
+  if (!session?.session?.user) {
+    console.error('No authenticated user found');
     throw new Error('Authentication required');
   }
 
   const { data, error } = await supabase
     .from('interviewees')
     .select('*')
-    .eq('item_id', itemId);
+    .eq('item_id', itemId)
+    .eq('user_id', session.session.user.id);
 
   if (error) throw error;
   return data;
