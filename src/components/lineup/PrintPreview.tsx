@@ -2,20 +2,14 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
+import { ShowItem, Interviewee } from '@/types/show';
 
 interface PrintPreviewProps {
   showName: string;
   showTime: string;
   showDate?: Date;
-  items: Array<{
-    id: string;
-    name: string;
-    title: string;
-    details: string;
-    phone: string;
-    duration: number;
-    is_break?: boolean;
-    is_note?: boolean;
+  items: Array<ShowItem & {
+    interviewees?: Interviewee[];
   }>;
   editorContent: string;
 }
@@ -72,7 +66,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               <>
                 <td className="py-3 px-4 border border-gray-200 font-medium text-base">
                   <div>{item.name}</div>
-                  {item.interviewees?.map((interviewee: any) => (
+                  {item.interviewees?.map((interviewee) => (
                     <div key={interviewee.id} className="mt-2 pt-1 border-t">
                       {interviewee.name}
                     </div>
@@ -80,7 +74,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                 </td>
                 <td className="py-3 px-4 border border-gray-200 text-base">
                   <div>{item.title}</div>
-                  {item.interviewees?.map((interviewee: any) => (
+                  {item.interviewees?.map((interviewee) => (
                     <div key={interviewee.id} className="mt-2 pt-1 border-t">
                       {interviewee.title}
                     </div>
@@ -90,7 +84,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                 {isAuthenticated && (
                   <td className="py-3 px-4 border border-gray-200 text-base">
                     <div>{item.phone}</div>
-                    {item.interviewees?.map((interviewee: any) => (
+                    {item.interviewees?.map((interviewee) => (
                       <div key={interviewee.id} className="mt-2 pt-1 border-t">
                         {interviewee.phone}
                       </div>
