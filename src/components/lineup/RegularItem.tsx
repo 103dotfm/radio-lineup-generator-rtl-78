@@ -39,11 +39,10 @@ const RegularItem = ({
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
   const { user } = useAuth();
 
+  // Load interviewees on mount and when showInterviewees changes
   useEffect(() => {
-    if (showInterviewees) {
-      loadInterviewees();
-    }
-  }, [showInterviewees]);
+    loadInterviewees();
+  }, [id]); // Reload when item id changes
 
   const loadInterviewees = async () => {
     try {
@@ -72,9 +71,16 @@ const RegularItem = ({
         duration,
       };
       
-      await addInterviewee(newInterviewee);
+      const addedInterviewee = await addInterviewee(newInterviewee);
+      console.log('Successfully added interviewee:', addedInterviewee);
+      
+      // Automatically show interviewees list when adding a new one
+      setShowInterviewees(true);
+      
+      // Reload the list immediately
+      await loadInterviewees();
+      
       toast.success('מרואיין נוסף בהצלחה');
-      await loadInterviewees(); // Reload the interviewees list
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
       toast.error('שגיאה בהוספת מרואיין');
@@ -144,7 +150,7 @@ const RegularItem = ({
           </Button>
         </div>
 
-        {showInterviewees && interviewees && interviewees.length > 0 && (
+        {(showInterviewees || interviewees.length > 0) && (
           <div className="mt-2 space-y-2">
             {interviewees.map((interviewee) => (
               <div key={interviewee.id} className="flex items-center gap-2 text-sm">
