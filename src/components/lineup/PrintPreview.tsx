@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,7 +44,6 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             {isAuthenticated && (
               <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
-            {/* <th className="py-2 px-4 text-right border border-gray-200 text-base">דק'</th> */}
           </tr>
         </thead>
         <tbody>
@@ -68,24 +68,46 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               );
             }
 
+            const rowContent = (
+              <>
+                <td className="py-3 px-4 border border-gray-200 font-medium text-base">
+                  <div>{item.name}</div>
+                  {item.interviewees?.map((interviewee: any) => (
+                    <div key={interviewee.id} className="mt-2 pt-1 border-t">
+                      {interviewee.name}
+                    </div>
+                  ))}
+                </td>
+                <td className="py-3 px-4 border border-gray-200 text-base">
+                  <div>{item.title}</div>
+                  {item.interviewees?.map((interviewee: any) => (
+                    <div key={interviewee.id} className="mt-2 pt-1 border-t">
+                      {interviewee.title}
+                    </div>
+                  ))}
+                </td>
+                <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none [&_*]:!text-base" rowSpan={(item.interviewees?.length || 0) + 1} dangerouslySetInnerHTML={{ __html: item.details }} />
+                {isAuthenticated && (
+                  <td className="py-3 px-4 border border-gray-200 text-base">
+                    <div>{item.phone}</div>
+                    {item.interviewees?.map((interviewee: any) => (
+                      <div key={interviewee.id} className="mt-2 pt-1 border-t">
+                        {interviewee.phone}
+                      </div>
+                    ))}
+                  </td>
+                )}
+              </>
+            );
+
             return (
               <tr key={item.id}>
-                <td className="py-3 px-4 border border-gray-200 font-medium text-base">{item.name}</td>
-                <td className="py-3 px-4 border border-gray-200 text-base">{item.title}</td>
-                <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none [&_*]:!text-base" dangerouslySetInnerHTML={{ __html: item.details }} />
-                {isAuthenticated && (
-                  <td className="py-3 px-4 border border-gray-200 text-base">{item.phone}</td>
-                )}
-                {/* <td className="py-3 px-4 border border-gray-200 text-right text-base">{item.duration}</td> */}
+                {rowContent}
               </tr>
             );
           })}
         </tbody>
       </table>
-
-      {/* <div className="mt-4 text-left text-base text-gray-600">
-        <p>סה"כ זמן: {items.reduce((sum, item) => sum + (item.duration || 0), 0)} דקות</p>
-      </div> */}
 
       {editorContent && (
         <div 
