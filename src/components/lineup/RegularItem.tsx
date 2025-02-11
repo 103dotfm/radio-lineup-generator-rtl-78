@@ -8,6 +8,7 @@ import { Interviewee } from '@/types/show';
 import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import IntervieweeSearch from './form/IntervieweeSearch';
 
 interface RegularItemProps {
   id: string;
@@ -35,14 +36,13 @@ const RegularItem = ({
   isAuthenticated,
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showInterviewees, setShowInterviewees] = useState(false);
+  const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
   const { user } = useAuth();
 
-  // Load interviewees on mount and when showInterviewees changes
   useEffect(() => {
     loadInterviewees();
-  }, [id]); // Reload when item id changes
+  }, [id]);
 
   const loadInterviewees = async () => {
     try {
@@ -60,26 +60,20 @@ const RegularItem = ({
     onEdit(id, updatedItem);
   };
 
-  const handleAddInterviewee = async () => {
+  const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
     try {
-      console.log('Adding interviewee for item:', id);
+      console.log('Adding interviewee for item:', id, guest);
       const newInterviewee = {
         item_id: id,
-        name,
-        title,
-        phone,
+        name: guest.name,
+        title: guest.title,
+        phone: guest.phone,
         duration,
       };
       
-      const addedInterviewee = await addInterviewee(newInterviewee);
-      console.log('Successfully added interviewee:', addedInterviewee);
-      
-      // Automatically show interviewees list when adding a new one
-      setShowInterviewees(true);
-      
-      // Reload the list immediately
+      await addInterviewee(newInterviewee);
       await loadInterviewees();
-      
+      setShowIntervieweeInput(false);
       toast.success('מרואיין נוסף בהצלחה');
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
@@ -91,7 +85,7 @@ const RegularItem = ({
     try {
       await deleteInterviewee(intervieweeId);
       toast.success('מרואיין נמחק בהצלחה');
-      await loadInterviewees(); // Reload the interviewees list
+      await loadInterviewees();
     } catch (error: any) {
       console.error('Error deleting interviewee:', error);
       toast.error('שגיאה במחיקת מרואיין');
@@ -100,11 +94,44 @@ const RegularItem = ({
 
   return (
     <>
-      <td className="py-2 px-4 border border-gray-200 align-top">{name}</td>
-      <td className="py-2 px-4 border border-gray-200 align-top">{title}</td>
-      <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none align-top" dangerouslySetInnerHTML={{ __html: details }} />
+      <td className="py-2 px-4 border border-gray-200 align-top">
+        <div>{name}</div>
+        {interviewees.map((interviewee) => (
+          <div key={interviewee.id} className="mt-2 flex items-center gap-2">
+            <span>{interviewee.name}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDeleteInterviewee(interviewee.id)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        {showIntervieweeInput && (
+          <div className="mt-2">
+            <IntervieweeSearch onAdd={handleAddInterviewee} />
+          </div>
+        )}
+      </td>
+      <td className="py-2 px-4 border border-gray-200 align-top">
+        <div>{title}</div>
+        {interviewees.map((interviewee) => (
+          <div key={interviewee.id} className="mt-2 text-gray-600">
+            {interviewee.title}
+          </div>
+        ))}
+      </td>
+      <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none align-top" rowSpan={interviewees.length + 1} dangerouslySetInnerHTML={{ __html: details }} />
       {isAuthenticated && (
-        <td className="py-2 px-4 border border-gray-200 align-top">{phone}</td>
+        <td className="py-2 px-4 border border-gray-200 align-top">
+          <div>{phone}</div>
+          {interviewees.map((interviewee) => (
+            <div key={interviewee.id} className="mt-2 text-gray-600">
+              {interviewee.phone}
+            </div>
+          ))}
+        </td>
       )}
       <td className="py-2 px-4 border border-gray-200 align-top">
         <Input
@@ -120,14 +147,7 @@ const RegularItem = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowInterviewees(!showInterviewees)}
-          >
-            <Users className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleAddInterviewee}
+            onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}
           >
             <UserPlus className="h-4 w-4" />
           </Button>
@@ -149,23 +169,6 @@ const RegularItem = ({
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-
-        {(showInterviewees || interviewees.length > 0) && (
-          <div className="mt-2 space-y-2">
-            {interviewees.map((interviewee) => (
-              <div key={interviewee.id} className="flex items-center gap-2 text-sm">
-                <span>{interviewee.name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteInterviewee(interviewee.id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
       </td>
 
       <EditItemDialog
@@ -179,4 +182,3 @@ const RegularItem = ({
 };
 
 export default RegularItem;
-
