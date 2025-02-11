@@ -1,11 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2, UserPlus, Users } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
-import { addInterviewee, deleteInterviewee } from '@/lib/supabase/interviewees';
+import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,7 +16,6 @@ interface RegularItemProps {
   details: string;
   phone: string;
   duration: number;
-  interviewees?: Interviewee[];
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string, updatedItem: any) => void;
@@ -30,7 +29,6 @@ const RegularItem = ({
   details,
   phone,
   duration,
-  interviewees = [],
   onDelete,
   onDurationChange,
   onEdit,
@@ -38,7 +36,25 @@ const RegularItem = ({
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showInterviewees, setShowInterviewees] = useState(false);
+  const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (showInterviewees) {
+      loadInterviewees();
+    }
+  }, [showInterviewees]);
+
+  const loadInterviewees = async () => {
+    try {
+      const fetchedInterviewees = await getInterviewees(id);
+      console.log('Fetched interviewees:', fetchedInterviewees);
+      setInterviewees(fetchedInterviewees);
+    } catch (error) {
+      console.error('Error loading interviewees:', error);
+      toast.error('שגיאה בטעינת מרואיינים');
+    }
+  };
 
   const handleSave = (updatedItem: any) => {
     console.log('RegularItem: Handling save with updated item:', updatedItem);
@@ -47,52 +63,32 @@ const RegularItem = ({
 
   const handleAddInterviewee = async () => {
     try {
-      if (!user?.id) {
-        toast.error('עליך להיות מחובר כדי להוסיף מרואיין');
-        return;
-      }
-
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-        console.error('Invalid UUID format for item_id:', id);
-        toast.error('שגיאה בהוספת מרואיין - מזהה לא תקין');
-        return;
-      }
-
-      console.log('Adding interviewee with user:', user.id);
-      
+      console.log('Adding interviewee for item:', id);
       const newInterviewee = {
         item_id: id,
         name,
         title,
         phone,
         duration,
-        user_id: user.id
       };
       
       await addInterviewee(newInterviewee);
       toast.success('מרואיין נוסף בהצלחה');
+      await loadInterviewees(); // Reload the interviewees list
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
-      toast.error(error.message === 'Authentication required' 
-        ? 'עליך להיות מחובר כדי להוסיף מרואיין'
-        : 'שגיאה בהוספת מרואיין');
+      toast.error('שגיאה בהוספת מרואיין');
     }
   };
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      if (!user?.id) {
-        toast.error('עליך להיות מחובר כדי למחוק מרואיין');
-        return;
-      }
-
       await deleteInterviewee(intervieweeId);
       toast.success('מרואיין נמחק בהצלחה');
+      await loadInterviewees(); // Reload the interviewees list
     } catch (error: any) {
       console.error('Error deleting interviewee:', error);
-      toast.error(error.message === 'Authentication required' 
-        ? 'עליך להיות מחובר כדי למחוק מרואיין'
-        : 'שגיאה במחיקת מרואיין');
+      toast.error('שגיאה במחיקת מרואיין');
     }
   };
 
@@ -126,7 +122,6 @@ const RegularItem = ({
             variant="ghost"
             size="icon"
             onClick={handleAddInterviewee}
-            disabled={!isAuthenticated}
           >
             <UserPlus className="h-4 w-4" />
           </Button>
@@ -158,7 +153,6 @@ const RegularItem = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteInterviewee(interviewee.id)}
-                  disabled={!isAuthenticated}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -179,3 +173,4 @@ const RegularItem = ({
 };
 
 export default RegularItem;
+
