@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -97,15 +96,17 @@ const RegularItem = ({
       <td className="py-2 px-4 border border-gray-200 align-top">
         <div>{name}</div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 flex items-center gap-2">
-            <span>{interviewee.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDeleteInterviewee(interviewee.id)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+          <div key={interviewee.id} className="mt-2 border-t pt-2">
+            <div className="flex items-center gap-2">
+              <span>{interviewee.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDeleteInterviewee(interviewee.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         ))}
         {showIntervieweeInput && (
@@ -117,7 +118,7 @@ const RegularItem = ({
       <td className="py-2 px-4 border border-gray-200 align-top">
         <div>{title}</div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 text-gray-600">
+          <div key={interviewee.id} className="mt-2 border-t pt-2">
             {interviewee.title}
           </div>
         ))}
@@ -127,7 +128,7 @@ const RegularItem = ({
         <td className="py-2 px-4 border border-gray-200 align-top">
           <div>{phone}</div>
           {interviewees.map((interviewee) => (
-            <div key={interviewee.id} className="mt-2 text-gray-600">
+            <div key={interviewee.id} className="mt-2 border-t pt-2">
               {interviewee.phone}
             </div>
           ))}
