@@ -95,14 +95,14 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (updateError) throw updateError;
     }
 
-    // Delete existing items
+    // Delete existing items and their interviewees
     if (showId) {
-      const { error: deleteError } = await supabase
+      const { error: deleteItemsError } = await supabase
         .from('show_items')
         .delete()
         .eq('show_id', showId);
 
-      if (deleteError) throw deleteError;
+      if (deleteItemsError) throw deleteItemsError;
     }
 
     // Insert new items
@@ -116,7 +116,8 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
         phone: item.phone,
         duration: item.duration,
         is_break: item.is_break || false,
-        is_note: item.is_note || false
+        is_note: item.is_note || false,
+        interviewees: item.interviewees || []
       }));
 
       const { error: itemsError } = await supabase
