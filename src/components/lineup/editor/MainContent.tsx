@@ -5,6 +5,7 @@ import { Editor } from '@tiptap/react';
 import ShowInfo from '../../show/ShowInfo';
 import LineupActions from './LineupActions';
 import LineupTable from '../LineupTable';
+import LineupForm from '../../LineupForm';
 import { Interviewee } from '@/types/show';
 
 interface MainContentProps {
@@ -76,6 +77,13 @@ const MainContent = ({
         onShare={onShare}
         onPrint={onPrint}
         onExportPDF={onExportPDF}
+      />
+
+      <LineupForm
+        onAdd={onAdd}
+        onNameChange={handleNameLookup}
+        onBackToDashboard={onBackToDashboard}
+        editingItem={editingItem}
       />
 
       <DragDropContext onDragEnd={onDragEnd}>

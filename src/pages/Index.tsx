@@ -25,6 +25,14 @@ const Index = () => {
   const [isSaving, setIsSaving] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const [itemInterviewees, setItemInterviewees] = useState<Record<string, Array<Interviewee>>>({});
+  const [initialData, setInitialData] = useState({
+    items: [],
+    showName: '',
+    showTime: '',
+    showDate: new Date(),
+    notes: '',
+    itemInterviewees: {}
+  });
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -35,7 +43,7 @@ const Index = () => {
         placeholder: 'קרדיטים',
       },
     },
-    onUpdate: () => setHasUnsavedChanges(true),
+    onUpdate: () => checkForUnsavedChanges(),
   });
 
   useEffect(() => {
@@ -59,7 +67,6 @@ const Index = () => {
           }
           if (showItems) {
             setItems(showItems);
-            // Initialize interviewees state
             const intervieweesMap: Record<string, Array<Interviewee>> = {};
             showItems.forEach(item => {
               if (item.interviewees) {
@@ -67,8 +74,16 @@ const Index = () => {
               }
             });
             setItemInterviewees(intervieweesMap);
+            
+            setInitialData({
+              items: showItems,
+              showName: show.name,
+              showTime: show.time,
+              showDate: show.date ? new Date(show.date) : new Date(),
+              notes: show.notes || '',
+              itemInterviewees: intervieweesMap
+            });
           }
-          setHasUnsavedChanges(false);
         } catch (error) {
           console.error('Error loading show:', error);
           toast.error('שגיאה בטעינת התוכנית');
@@ -80,12 +95,31 @@ const Index = () => {
     loadShow();
   }, [showId, editor, navigate]);
 
+  const checkForUnsavedChanges = () => {
+    const currentNotes = editor?.getHTML() || '';
+    const hasChanges = 
+      showName !== initialData.showName ||
+      showTime !== initialData.showTime ||
+      showDate?.getTime() !== initialData.showDate?.getTime() ||
+      currentNotes !== initialData.notes ||
+      JSON.stringify(items) !== JSON.stringify(initialData.items) ||
+      JSON.stringify(itemInterviewees) !== JSON.stringify(initialData.itemInterviewees);
+
+    setHasUnsavedChanges(hasChanges);
+  };
+
+  useEffect(() => {
+    checkForUnsavedChanges();
+  }, [showName, showTime, showDate, items, itemInterviewees]);
+
   const handleIntervieweesChange = (itemId: string, interviewees: Interviewee[]) => {
-    setItemInterviewees(prev => ({
-      ...prev,
-      [itemId]: interviewees
-    }));
-    setHasUnsavedChanges(true);
+    setItemInterviewees(prev => {
+      const updated = {
+        ...prev,
+        [itemId]: interviewees
+      };
+      return updated;
+    });
   };
 
   const handleAdd = (newItem) => {
@@ -155,6 +189,16 @@ const Index = () => {
       if (savedShow && !showId) {
         navigate(`/show/${savedShow.id}`);
       }
+
+      setInitialData({
+        items,
+        showName,
+        showTime,
+        showDate,
+        notes: editor?.getHTML() || '',
+        itemInterviewees
+      });
+      
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
     } catch (error) {
@@ -220,7 +264,6 @@ const Index = () => {
       });
   };
 
-  // Update LineupEditor props to include onIntervieweesChange
   return (
     <>
       <div className="container mx-auto py-8 px-4">
