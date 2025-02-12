@@ -7,16 +7,17 @@ import { useNavigate } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
 import { Editor } from '@tiptap/react';
 import { DropResult } from 'react-beautiful-dnd';
+import { ShowItem } from '@/types/show';
 
 interface UseLineupHandlersProps {
-  items: any[];
-  setItems: (items: any[]) => void;
+  items: ShowItem[];
+  setItems: (items: ShowItem[]) => void;
   showName: string;
   showTime: string;
   showDate: Date;
   editor: Editor | null;
-  editingItem: any;
-  setEditingItem: (item: any) => void;
+  editingItem: ShowItem | null;
+  setEditingItem: (item: ShowItem | null) => void;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   isSaving: boolean;
   setIsSaving: (isSaving: boolean) => void;
@@ -42,35 +43,30 @@ export const useLineupHandlers = ({
   const navigate = useNavigate();
   const printRef = useRef<HTMLDivElement>(null);
 
-  const handleAdd = (newItem: any) => {
-    if (editingItem) {
-      setItems(items.map(item => 
-        item.id === editingItem.id 
-          ? { ...newItem, id: editingItem.id }
-          : item
-      ));
-      setEditingItem(null);
-    } else {
-      const item = {
-        ...newItem,
-        id: crypto.randomUUID(),
-      };
-      setItems([...items, item]);
-    }
+  const handleAdd = (newItem: Partial<ShowItem>) => {
+    const updatedItems = editingItem 
+      ? items.map(item => 
+          item.id === editingItem.id 
+            ? { ...newItem, id: editingItem.id } as ShowItem
+            : item
+        )
+      : [...items, { ...newItem, id: crypto.randomUUID() } as ShowItem];
+    
+    setItems(updatedItems);
+    setEditingItem(null);
     setHasUnsavedChanges(true);
   };
 
-  const handleEdit = async (id: string, updatedItem: any) => {
+  const handleEdit = async (id: string, updatedItem: Partial<ShowItem>) => {
     if (!id) {
       toast.error('מזהה פריט לא תקין');
       return;
     }
     
-    setItems(prevItems => 
-      prevItems.map(item => 
-        item.id === id ? { ...item, ...updatedItem } : item
-      )
+    const updatedItems = items.map(item => 
+      item.id === id ? { ...item, ...updatedItem } : item
     );
+    setItems(updatedItems);
     setHasUnsavedChanges(true);
   };
 
@@ -160,9 +156,10 @@ export const useLineupHandlers = ({
   };
 
   const handleDetailsChange = (id: string, details: string) => {
-    setItems(items.map(item => 
+    const updatedItems = items.map(item => 
       item.id === id ? { ...item, details } : item
-    ));
+    );
+    setItems(updatedItems);
     setHasUnsavedChanges(true);
   };
 
