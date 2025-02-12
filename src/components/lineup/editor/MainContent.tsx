@@ -1,9 +1,11 @@
+
 import React from 'react';
-import LineupForm from '../../LineupForm';
-import LineupTable from '../LineupTable';
-import ShowHeader from '../../show/ShowHeader';
-import ShowCredits from '../../show/ShowCredits';
+import { DragDropContext } from 'react-beautiful-dnd';
 import { Editor } from '@tiptap/react';
+import ShowInfo from '../../show/ShowInfo';
+import LineupActions from './LineupActions';
+import LineupTable from '../LineupTable';
+import { Interviewee } from '@/types/show';
 
 interface MainContentProps {
   showName: string;
@@ -28,6 +30,8 @@ interface MainContentProps {
   handleNameLookup: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
   onDetailsChange: (id: string, details: string) => void;
+  onIntervieweesChange: (id: string, interviewees: Interviewee[]) => void;
+  itemInterviewees: Record<string, Array<Interviewee>>;
 }
 
 const MainContent = ({
@@ -53,39 +57,28 @@ const MainContent = ({
   handleNameLookup,
   onBackToDashboard,
   onDetailsChange,
+  onIntervieweesChange,
+  itemInterviewees,
 }: MainContentProps) => {
   return (
-    <>
-      <div className="lineup-editor-show-header">
-        <ShowHeader
-          showName={showName}
-          showTime={showTime}
-          showDate={showDate}
-          onNameChange={onNameChange}
-          onTimeChange={onTimeChange}
-          onDateChange={onDateChange}
-          onSave={onSave}
-          onShare={onShare}
-          onPrint={onPrint}
-          onExportPDF={onExportPDF}
-        />
-      </div>
+    <div className="space-y-6">
+      <ShowInfo
+        showName={showName}
+        showTime={showTime}
+        showDate={showDate}
+        onNameChange={onNameChange}
+        onTimeChange={onTimeChange}
+        onDateChange={onDateChange}
+      />
 
-      <div className="lineup-editor-credits">
-        <ShowCredits editor={editor} />
-      </div>
+      <LineupActions
+        onSave={onSave}
+        onShare={onShare}
+        onPrint={onPrint}
+        onExportPDF={onExportPDF}
+      />
 
-      <h2 className="additemH2">הוספת אייטם לליינאפ:</h2>
-      <div className="lineup-editor-form mb-8">
-        <LineupForm 
-          onAdd={onAdd} 
-          onNameChange={handleNameLookup}
-          editingItem={editingItem}
-          onBackToDashboard={onBackToDashboard}
-        />
-      </div>
-
-      <div className="lineup-editor-table">
+      <DragDropContext onDragEnd={onDragEnd}>
         <LineupTable
           items={items}
           onDelete={onDelete}
@@ -93,10 +86,11 @@ const MainContent = ({
           onEdit={onEdit}
           onBreakTextChange={onBreakTextChange}
           onDetailsChange={onDetailsChange}
-          onDragEnd={onDragEnd}
+          onIntervieweesChange={onIntervieweesChange}
+          itemInterviewees={itemInterviewees}
         />
-      </div>
-    </>
+      </DragDropContext>
+    </div>
   );
 };
 
