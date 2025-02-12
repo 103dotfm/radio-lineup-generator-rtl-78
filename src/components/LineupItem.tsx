@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import BreakItem from './lineup/BreakItem';
 import NoteItem from './lineup/NoteItem';
 import RegularItem from './lineup/RegularItem';
+import { Interviewee } from '@/types/show';
 
 interface LineupItemProps {
   id: string;
@@ -22,6 +24,7 @@ interface LineupItemProps {
   onEdit: (id: string, updatedItem: any) => Promise<void>;
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange?: (id: string, details: string) => void;
+  onIntervieweesChange?: (id: string, interviewees: Interviewee[]) => void;
 }
 
 const LineupItem = ({
@@ -38,7 +41,8 @@ const LineupItem = ({
   onDurationChange,
   onEdit,
   onBreakTextChange,
-  onDetailsChange
+  onDetailsChange,
+  onIntervieweesChange
 }: LineupItemProps) => {
   const { isAuthenticated } = useAuth();
 
@@ -103,6 +107,7 @@ const LineupItem = ({
               onDelete={onDelete}
               onDurationChange={onDurationChange}
               onEdit={onEdit}
+              onIntervieweesChange={onIntervieweesChange!}
               isAuthenticated={isAuthenticated}
             />
           )}
