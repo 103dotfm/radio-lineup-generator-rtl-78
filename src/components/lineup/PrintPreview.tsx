@@ -32,11 +32,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
       <table className="w-full border-collapse border border-gray-200">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base align-top">שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base align-top">קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base align-top">פרטים</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base align-top">טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
           </tr>
         </thead>
@@ -62,17 +62,17 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
               );
             }
 
-            return (
-              <tr key={item.id}>
-                <td className="py-3 px-4 border border-gray-200 font-medium text-base align-top">
+            const rowContent = (
+              <>
+                <td className="py-3 px-4 border border-gray-200 font-medium text-base">
                   <div>{item.name}</div>
                   {item.interviewees?.map((interviewee) => (
-                    <div key={interviewee.id} className="mt-2 pt-1 border-t flex items-center gap-2">
-                      <span>{interviewee.name}</span>
+                    <div key={interviewee.id} className="mt-2 pt-1 border-t">
+                      {interviewee.name}
                     </div>
                   ))}
                 </td>
-                <td className="py-3 px-4 border border-gray-200 text-base align-top">
+                <td className="py-3 px-4 border border-gray-200 text-base">
                   <div>{item.title}</div>
                   {item.interviewees?.map((interviewee) => (
                     <div key={interviewee.id} className="mt-2 pt-1 border-t">
@@ -80,9 +80,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                     </div>
                   ))}
                 </td>
-                <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none align-top break-words whitespace-normal h-full [&_*]:!text-base" rowSpan={(item.interviewees?.length || 0) + 1} dangerouslySetInnerHTML={{ __html: item.details }} />
+                <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none [&_*]:!text-base" rowSpan={(item.interviewees?.length || 0) + 1} dangerouslySetInnerHTML={{ __html: item.details }} />
                 {isAuthenticated && (
-                  <td className="py-3 px-4 border border-gray-200 text-base align-top">
+                  <td className="py-3 px-4 border border-gray-200 text-base">
                     <div>{item.phone}</div>
                     {item.interviewees?.map((interviewee) => (
                       <div key={interviewee.id} className="mt-2 pt-1 border-t">
@@ -91,6 +91,12 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                     ))}
                   </td>
                 )}
+              </>
+            );
+
+            return (
+              <tr key={item.id}>
+                {rowContent}
               </tr>
             );
           })}
