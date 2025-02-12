@@ -1,6 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Show, ShowItem, Interviewee } from "@/types/show";
-import { Database } from "@/integrations/supabase/types";
+import { Show, ShowItem } from "@/types/show";
 
 export const getShows = async () => {
   const { data: shows, error } = await supabase
@@ -23,6 +23,7 @@ export const getShows = async () => {
 };
 
 export const getShowWithItems = async (id: string) => {
+  // First check if the show exists
   const { data: existingShow, error: checkError } = await supabase
     .from('shows')
     .select('*')
@@ -32,6 +33,7 @@ export const getShowWithItems = async (id: string) => {
   if (checkError) throw checkError;
   if (!existingShow) throw new Error('Show not found');
 
+  // Then get the items
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
     .select(`
@@ -50,6 +52,7 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
   try {
     let existingShow;
     
+    // First check if the show exists
     if (showId) {
       const { data: showCheck, error: checkError } = await supabase
         .from('shows')
@@ -62,6 +65,7 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       existingShow = showCheck;
     }
 
+    // If no existing show, create new one
     if (!existingShow) {
       const { data: newShow, error: showError } = await supabase
         .from('shows')
@@ -77,6 +81,7 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (showError) throw showError;
       showId = newShow.id;
     } else {
+      // Update existing show
       const { error: updateError } = await supabase
         .from('shows')
         .update({
@@ -90,37 +95,29 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (updateError) throw updateError;
     }
 
+    // Delete existing items
     if (showId) {
-      const { error: deleteItemsError } = await supabase
+      const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
         .eq('show_id', showId);
 
-      if (deleteItemsError) throw deleteItemsError;
+      if (deleteError) throw deleteError;
     }
 
+    // Insert new items
     if (items.length > 0) {
-      const itemsWithShowId = items.map((item, index) => {
-        const intervieweesForJson = (item.interviewees || []).map(interviewee => ({
-          name: interviewee.name || '',
-          title: interviewee.title || null,
-          phone: interviewee.phone || null,
-          duration: interviewee.duration || null
-        }));
-
-        return {
-          show_id: showId,
-          position: index,
-          name: item.name || '',
-          title: item.title || null,
-          details: item.details || null,
-          phone: item.phone || null,
-          duration: item.duration || null,
-          is_break: item.is_break || false,
-          is_note: item.is_note || false,
-          interviewees: intervieweesForJson
-        };
-      });
+      const itemsWithShowId = items.map((item, index) => ({
+        show_id: showId,
+        position: index,
+        name: item.name || '',
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        is_break: item.is_break || false,
+        is_note: item.is_note || false
+      }));
 
       const { error: itemsError } = await supabase
         .rpc('insert_show_items', {
@@ -169,3 +166,4 @@ export const deleteShow = async (id: string) => {
     throw error;
   }
 };
+

@@ -10,7 +10,6 @@ import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
-import { Interviewee } from '@/types/show';
 
 const Index = () => {
   const { id: showId } = useParams();
@@ -24,15 +23,6 @@ const Index = () => {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const [itemInterviewees, setItemInterviewees] = useState<Record<string, Array<Interviewee>>>({});
-  const [initialData, setInitialData] = useState({
-    items: [],
-    showName: '',
-    showTime: '',
-    showDate: new Date(),
-    notes: '',
-    itemInterviewees: {}
-  });
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -43,7 +33,7 @@ const Index = () => {
         placeholder: 'קרדיטים',
       },
     },
-    onUpdate: () => checkForUnsavedChanges(),
+    onUpdate: () => setHasUnsavedChanges(true),
   });
 
   useEffect(() => {
@@ -67,23 +57,8 @@ const Index = () => {
           }
           if (showItems) {
             setItems(showItems);
-            const intervieweesMap: Record<string, Array<Interviewee>> = {};
-            showItems.forEach(item => {
-              if (item.interviewees) {
-                intervieweesMap[item.id] = item.interviewees;
-              }
-            });
-            setItemInterviewees(intervieweesMap);
-            
-            setInitialData({
-              items: showItems,
-              showName: show.name,
-              showTime: show.time,
-              showDate: show.date ? new Date(show.date) : new Date(),
-              notes: show.notes || '',
-              itemInterviewees: intervieweesMap
-            });
           }
+          setHasUnsavedChanges(false);
         } catch (error) {
           console.error('Error loading show:', error);
           toast.error('שגיאה בטעינת התוכנית');
@@ -94,33 +69,6 @@ const Index = () => {
 
     loadShow();
   }, [showId, editor, navigate]);
-
-  const checkForUnsavedChanges = () => {
-    const currentNotes = editor?.getHTML() || '';
-    const hasChanges = 
-      showName !== initialData.showName ||
-      showTime !== initialData.showTime ||
-      showDate?.getTime() !== initialData.showDate?.getTime() ||
-      currentNotes !== initialData.notes ||
-      JSON.stringify(items) !== JSON.stringify(initialData.items) ||
-      JSON.stringify(itemInterviewees) !== JSON.stringify(initialData.itemInterviewees);
-
-    setHasUnsavedChanges(hasChanges);
-  };
-
-  useEffect(() => {
-    checkForUnsavedChanges();
-  }, [showName, showTime, showDate, items, itemInterviewees]);
-
-  const handleIntervieweesChange = (itemId: string, interviewees: Interviewee[]) => {
-    setItemInterviewees(prev => {
-      const updated = {
-        ...prev,
-        [itemId]: interviewees
-      };
-      return updated;
-    });
-  };
 
   const handleAdd = (newItem) => {
     if (editingItem) {
@@ -172,8 +120,6 @@ const Index = () => {
       };
 
       const itemsToSave = items.map(({ id: itemId, ...item }) => ({
-        ...item,
-        interviewees: itemInterviewees[itemId] || [],
         name: item.name,
         title: item.title,
         details: item.details,
@@ -189,16 +135,6 @@ const Index = () => {
       if (savedShow && !showId) {
         navigate(`/show/${savedShow.id}`);
       }
-
-      setInitialData({
-        items,
-        showName,
-        showTime,
-        showDate,
-        notes: editor?.getHTML() || '',
-        itemInterviewees
-      });
-      
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
     } catch (error) {
@@ -320,8 +256,6 @@ const Index = () => {
           handleNameLookup={async () => null}
           onBackToDashboard={handleBackToDashboard}
           onDetailsChange={handleDetailsChange}
-          onIntervieweesChange={handleIntervieweesChange}
-          itemInterviewees={itemInterviewees}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">
@@ -329,10 +263,7 @@ const Index = () => {
             showName={showName}
             showTime={showTime}
             showDate={showDate}
-            items={items.map(item => ({
-              ...item,
-              interviewees: itemInterviewees[item.id] || []
-            }))}
+            items={items}
             editorContent={editor?.getHTML() || ''}
           />
         </div>

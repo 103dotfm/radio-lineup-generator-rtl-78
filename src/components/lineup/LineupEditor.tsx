@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { Editor } from '@tiptap/react';
 import HeaderSection from './editor/HeaderSection';
 import MainContent from './editor/MainContent';
 import FooterSection from './editor/FooterSection';
-import { Interviewee } from '@/types/show';
 
 interface LineupEditorProps {
   showName: string;
@@ -29,8 +27,6 @@ interface LineupEditorProps {
   handleNameLookup: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
   onDetailsChange: (id: string, details: string) => void;
-  onIntervieweesChange: (id: string, interviewees: Interviewee[]) => void;
-  itemInterviewees: Record<string, Array<Interviewee>>;
 }
 
 const LineupEditor = ({
@@ -56,8 +52,6 @@ const LineupEditor = ({
   handleNameLookup,
   onBackToDashboard,
   onDetailsChange,
-  onIntervieweesChange,
-  itemInterviewees,
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden lineup-editor">
@@ -90,8 +84,6 @@ const LineupEditor = ({
         handleNameLookup={handleNameLookup}
         onBackToDashboard={onBackToDashboard}
         onDetailsChange={onDetailsChange}
-        onIntervieweesChange={onIntervieweesChange}
-        itemInterviewees={itemInterviewees}
       />
 
       <FooterSection />
