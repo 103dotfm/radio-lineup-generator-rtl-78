@@ -10,6 +10,7 @@ import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
+import { Interviewee } from '@/types/show';
 
 const Index = () => {
   const { id: showId } = useParams();
@@ -23,6 +24,7 @@ const Index = () => {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const [itemInterviewees, setItemInterviewees] = useState<Record<string, Array<Interviewee>>>({});
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -57,6 +59,14 @@ const Index = () => {
           }
           if (showItems) {
             setItems(showItems);
+            // Initialize interviewees state
+            const intervieweesMap: Record<string, Array<Interviewee>> = {};
+            showItems.forEach(item => {
+              if (item.interviewees) {
+                intervieweesMap[item.id] = item.interviewees;
+              }
+            });
+            setItemInterviewees(intervieweesMap);
           }
           setHasUnsavedChanges(false);
         } catch (error) {
@@ -69,6 +79,14 @@ const Index = () => {
 
     loadShow();
   }, [showId, editor, navigate]);
+
+  const handleIntervieweesChange = (itemId: string, interviewees: Interviewee[]) => {
+    setItemInterviewees(prev => ({
+      ...prev,
+      [itemId]: interviewees
+    }));
+    setHasUnsavedChanges(true);
+  };
 
   const handleAdd = (newItem) => {
     if (editingItem) {
@@ -120,6 +138,8 @@ const Index = () => {
       };
 
       const itemsToSave = items.map(({ id: itemId, ...item }) => ({
+        ...item,
+        interviewees: itemInterviewees[itemId] || [],
         name: item.name,
         title: item.title,
         details: item.details,
@@ -200,6 +220,7 @@ const Index = () => {
       });
   };
 
+  // Update LineupEditor props to include onIntervieweesChange
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -256,6 +277,8 @@ const Index = () => {
           handleNameLookup={async () => null}
           onBackToDashboard={handleBackToDashboard}
           onDetailsChange={handleDetailsChange}
+          onIntervieweesChange={handleIntervieweesChange}
+          itemInterviewees={itemInterviewees}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">
@@ -263,7 +286,10 @@ const Index = () => {
             showName={showName}
             showTime={showTime}
             showDate={showDate}
-            items={items}
+            items={items.map(item => ({
+              ...item,
+              interviewees: itemInterviewees[item.id] || []
+            }))}
             editorContent={editor?.getHTML() || ''}
           />
         </div>
