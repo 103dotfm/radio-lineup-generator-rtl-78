@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -22,6 +23,7 @@ const Index = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [initialState, setInitialState] = useState(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -54,6 +56,14 @@ const Index = () => {
             if (editor) {
               editor.commands.setContent(show.notes || '');
             }
+            // Store initial state for comparison
+            setInitialState({
+              name: show.name,
+              time: show.time,
+              date: show.date ? new Date(show.date) : new Date(),
+              notes: show.notes || '',
+              items: showItems
+            });
           }
           if (showItems) {
             setItems(showItems);
@@ -69,6 +79,28 @@ const Index = () => {
 
     loadShow();
   }, [showId, editor, navigate]);
+
+  // Check for unsaved changes whenever relevant state changes
+  useEffect(() => {
+    if (!initialState) return;
+
+    const currentState = {
+      name: showName,
+      time: showTime,
+      date: showDate,
+      notes: editor?.getHTML() || '',
+      items: items
+    };
+
+    const hasChanges = 
+      currentState.name !== initialState.name ||
+      currentState.time !== initialState.time ||
+      currentState.date?.getTime() !== initialState.date?.getTime() ||
+      currentState.notes !== initialState.notes ||
+      JSON.stringify(currentState.items) !== JSON.stringify(initialState.items);
+
+    setHasUnsavedChanges(hasChanges);
+  }, [showName, showTime, showDate, items, editor]);
 
   const handleAdd = (newItem) => {
     if (editingItem) {
@@ -96,14 +128,11 @@ const Index = () => {
       return;
     }
     
-    // Update local state
     setItems(prevItems => 
       prevItems.map(item => 
         item.id === id ? { ...item, ...updatedItem } : item
       )
     );
-    
-    // Mark changes as unsaved
     setHasUnsavedChanges(true);
   };
 
@@ -135,6 +164,16 @@ const Index = () => {
       if (savedShow && !showId) {
         navigate(`/show/${savedShow.id}`);
       }
+      
+      // Update initial state after successful save
+      setInitialState({
+        name: showName,
+        time: showTime,
+        date: showDate,
+        notes: editor?.getHTML() || '',
+        items: items
+      });
+      
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
     } catch (error) {
