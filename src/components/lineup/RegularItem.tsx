@@ -99,14 +99,17 @@ const RegularItem = ({
     }
   };
 
+  const baseItemClass = "py-2 px-4 min-h-[60px] flex flex-col justify-start";
+  const intervieweeClass = "mt-2 pt-2 border-t border-gray-200";
+
   return (
     <>
-      <td className="py-2 px-4 border border-gray-200 align-top">
+      <td className={`${baseItemClass} border border-gray-200`}>
         <div className="flex items-center gap-2">
           <span>{name}</span>
         </div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2">
+          <div key={interviewee.id} className={intervieweeClass}>
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.name || interviewee.name}
@@ -179,10 +182,10 @@ const RegularItem = ({
           </div>
         )}
       </td>
-      <td className="py-2 px-4 border border-gray-200 align-top">
+      <td className={`${baseItemClass} border border-gray-200`}>
         <div>{title}</div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2">
+          <div key={interviewee.id} className={intervieweeClass}>
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.title || interviewee.title}
@@ -197,10 +200,10 @@ const RegularItem = ({
       </td>
       <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none align-top overflow-visible" rowSpan={(interviewees.length || 0) + 1} dangerouslySetInnerHTML={{ __html: details }} />
       {isAuthenticated && (
-        <td className="py-2 px-4 border border-gray-200 align-top">
+        <td className={`${baseItemClass} border border-gray-200`}>
           <div>{phone}</div>
           {interviewees.map((interviewee) => (
-            <div key={interviewee.id} className="mt-2 border-t pt-2">
+            <div key={interviewee.id} className={intervieweeClass}>
               {editingInterviewee === interviewee.id ? (
                 <Input
                   value={manualInput.phone || interviewee.phone}
@@ -214,7 +217,7 @@ const RegularItem = ({
           ))}
         </td>
       )}
-      <td className="py-2 px-4 border border-gray-200 align-top">
+      <td className={`${baseItemClass} border border-gray-200`}>
         <Input
           type="number"
           min="1"
@@ -223,7 +226,7 @@ const RegularItem = ({
           className="w-20"
         />
       </td>
-      <td className="py-2 px-4 border border-gray-200 align-top">
+      <td className={`${baseItemClass} border border-gray-200`}>
         <div className="flex gap-2">
           <Button
             variant="ghost"
