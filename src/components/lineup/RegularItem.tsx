@@ -76,67 +76,33 @@ const RegularItem = ({
       }
 
       console.log('Adding interviewee for item:', id, guest);
-      
-      // First get all current items from the show
-      const { show, items } = await getShowWithItems(showId);
-      
-      // Find the current item index
-      const currentItemIndex = items.findIndex(item => item.id === id);
-      
-      // If item exists, update it, otherwise add it
-      if (currentItemIndex !== -1) {
-        items[currentItemIndex] = {
-          ...items[currentItemIndex],
-          name,
-          title,
-          details,
-          phone,
-          duration
-        };
-      } else {
-        // Add new item with all required properties
-        items.push({
-          id,
-          show_id: showId,
-          position: items.length, // Add at the end
-          name,
-          title,
-          details,
-          phone,
-          duration,
-          is_break: false,
-          is_note: false,
-          created_at: new Date().toISOString(),
-          interviewees: [] // Initialize empty array
-        });
-      }
-      
-      // Save the show with ALL items
-      const result = await saveShow(
-        { 
-          name: show.name, 
-          time: show.time, 
-          date: show.date,
-          notes: show.notes 
-        },
-        items,
-        showId
-      );
 
-      // Now add the interviewee
-      const newInterviewee = {
+      // Add to local state first
+      const newInterviewee: Interviewee = {
+        id: crypto.randomUUID(), // Temporary ID for local state
         item_id: id,
         name: guest.name,
         title: guest.title,
         phone: guest.phone,
         duration,
+        created_at: new Date().toISOString()
       };
-      
-      await addInterviewee(newInterviewee);
-      await loadInterviewees();
+
+      setInterviewees(prev => [...prev, newInterviewee]);
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
-      toast.success('מרואיין נוסף בהצלחה');
+
+      // Update the parent component to mark changes as unsaved
+      onEdit(id, {
+        id,
+        name,
+        title,
+        details,
+        phone,
+        duration,
+        interviewees: [...interviewees, newInterviewee]
+      });
+
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
       toast.error('שגיאה בהוספת מרואיין');
@@ -144,14 +110,19 @@ const RegularItem = ({
   };
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
-    try {
-      await deleteInterviewee(intervieweeId);
-      toast.success('מרואיין נמחק בהצלחה');
-      await loadInterviewees();
-    } catch (error: any) {
-      console.error('Error deleting interviewee:', error);
-      toast.error('שגיאה במחיקת מרואיין');
-    }
+    // Update local state first
+    setInterviewees(prev => prev.filter(i => i.id !== intervieweeId));
+    
+    // Update parent component to mark changes as unsaved
+    onEdit(id, {
+      id,
+      name,
+      title,
+      details,
+      phone,
+      duration,
+      interviewees: interviewees.filter(i => i.id !== intervieweeId)
+    });
   };
 
   return (
@@ -161,26 +132,35 @@ const RegularItem = ({
           <span>{name}</span>
         </div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2">
+          <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[3rem] flex items-center">
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.name || interviewee.name}
                 onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full"
-                onBlur={async () => {
+                onBlur={() => {
                   if (manualInput.name) {
-                    await handleAddInterviewee({
-                      ...interviewee,
-                      name: manualInput.name,
-                      title: manualInput.title || interviewee.title,
-                      phone: manualInput.phone || interviewee.phone
-                    });
+                    const updatedInterviewees = interviewees.map(i =>
+                      i.id === interviewee.id
+                        ? { ...i, name: manualInput.name }
+                        : i
+                    );
+                    setInterviewees(updatedInterviewees);
                     setEditingInterviewee(null);
+                    onEdit(id, {
+                      id,
+                      name,
+                      title,
+                      details,
+                      phone,
+                      duration,
+                      interviewees: updatedInterviewees
+                    });
                   }
                 }}
               />
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full">
                 <span>{interviewee.name}</span>
                 <Button
                   variant="ghost"
@@ -237,7 +217,7 @@ const RegularItem = ({
       <td className="py-2 px-4 border border-gray-200 align-top">
         <div>{title}</div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2">
+          <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[3rem] flex items-center">
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.title || interviewee.title}
@@ -245,7 +225,7 @@ const RegularItem = ({
                 className="w-full"
               />
             ) : (
-              interviewee.title
+              <span>{interviewee.title}</span>
             )}
           </div>
         ))}
@@ -255,7 +235,7 @@ const RegularItem = ({
         <td className="py-2 px-4 border border-gray-200 align-top">
           <div>{phone}</div>
           {interviewees.map((interviewee) => (
-            <div key={interviewee.id} className="mt-2 border-t pt-2">
+            <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[3rem] flex items-center">
               {editingInterviewee === interviewee.id ? (
                 <Input
                   value={manualInput.phone || interviewee.phone}
@@ -263,7 +243,7 @@ const RegularItem = ({
                   className="w-full"
                 />
               ) : (
-                interviewee.phone
+                <span>{interviewee.phone}</span>
               )}
             </div>
           ))}
