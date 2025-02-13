@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, UserPlus, Users } from "lucide-react";
+import { Edit2, Trash2, UserPlus } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import IntervieweeSearch from './form/IntervieweeSearch';
+import { saveShow } from '@/lib/supabase/shows';
 
 interface RegularItemProps {
   id: string;
@@ -69,6 +70,26 @@ const RegularItem = ({
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
     try {
       console.log('Adding interviewee for item:', id, guest);
+      
+      // First ensure the item exists in show_items
+      const item = {
+        name,
+        title,
+        details,
+        phone,
+        duration,
+        is_break: false,
+        is_note: false
+      };
+      
+      // Save or update the item first
+      await saveShow(
+        { name: "temp", time: "", date: new Date().toISOString() },
+        [{ ...item, id }],
+        undefined
+      );
+
+      // Now add the interviewee
       const newInterviewee = {
         item_id: id,
         name: guest.name,
