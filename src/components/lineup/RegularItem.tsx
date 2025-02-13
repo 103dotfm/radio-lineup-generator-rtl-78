@@ -94,15 +94,20 @@ const RegularItem = ({
           duration
         };
       } else {
+        // Add new item with all required properties
         items.push({
           id,
+          show_id: showId,
+          position: items.length, // Add at the end
           name,
           title,
           details,
           phone,
           duration,
           is_break: false,
-          is_note: false
+          is_note: false,
+          created_at: new Date().toISOString(),
+          interviewees: [] // Initialize empty array
         });
       }
       
