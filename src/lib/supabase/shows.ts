@@ -95,7 +95,7 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (updateError) throw updateError;
     }
 
-    // Delete existing items
+    // Delete existing items if show exists
     if (showId) {
       const { error: deleteError } = await supabase
         .from('show_items')
@@ -106,10 +106,12 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
     }
 
     // Insert new items
+    let savedItems = [];
     if (items.length > 0) {
       const itemsWithShowId = items.map((item, index) => ({
         show_id: showId,
         position: index,
+        id: item.id, // Keep the original ID if provided
         name: item.name || '',
         title: item.title,
         details: item.details,
@@ -119,15 +121,16 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
         is_note: item.is_note || false
       }));
 
-      const { error: itemsError } = await supabase
-        .rpc('insert_show_items', {
-          items_array: itemsWithShowId
-        });
+      const { data: insertedItems, error: itemsError } = await supabase
+        .from('show_items')
+        .insert(itemsWithShowId)
+        .select('*');
 
       if (itemsError) throw itemsError;
+      savedItems = insertedItems;
     }
 
-    return { id: showId };
+    return { id: showId, items: savedItems };
   } catch (error) {
     console.error('Error saving show:', error);
     throw error;
