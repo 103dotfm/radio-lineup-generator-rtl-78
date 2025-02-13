@@ -73,6 +73,7 @@ const RegularItem = ({
       
       // First ensure the item exists in show_items
       const item = {
+        id,
         name,
         title,
         details,
@@ -83,15 +84,16 @@ const RegularItem = ({
       };
       
       // Save or update the item first
-      await saveShow(
+      const result = await saveShow(
         { name: "temp", time: "", date: new Date().toISOString() },
-        [{ ...item, id }],
+        [item],
         undefined
       );
 
-      // Now add the interviewee
+      // Use the returned item ID for the interviewee
+      const savedItem = result.items[0];
       const newInterviewee = {
-        item_id: id,
+        item_id: savedItem.id,
         name: guest.name,
         title: guest.title,
         phone: guest.phone,
