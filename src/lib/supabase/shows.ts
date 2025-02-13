@@ -108,18 +108,22 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
     // Insert new items
     let savedItems = [];
     if (items.length > 0) {
-      const itemsWithShowId = items.map((item, index) => ({
-        show_id: showId,
-        position: index,
-        id: item.id, // Keep the original ID if provided
-        name: item.name || '',
-        title: item.title,
-        details: item.details,
-        phone: item.phone,
-        duration: item.duration,
-        is_break: item.is_break || false,
-        is_note: item.is_note || false
-      }));
+      const itemsWithShowId = items.map((item, index) => {
+        // Generate a new UUID for items without an ID
+        const itemId = item.id || crypto.randomUUID();
+        return {
+          id: itemId,
+          show_id: showId,
+          position: index,
+          name: item.name || '',
+          title: item.title,
+          details: item.details,
+          phone: item.phone,
+          duration: item.duration,
+          is_break: item.is_break || false,
+          is_note: item.is_note || false
+        };
+      });
 
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
@@ -169,4 +173,3 @@ export const deleteShow = async (id: string) => {
     throw error;
   }
 };
-
