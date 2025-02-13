@@ -37,7 +37,7 @@ const RegularItem = ({
   onEdit,
   isAuthenticated,
 }: RegularItemProps) => {
-  const { id: showId } = useParams();
+  const { id: showId } = useParams<{ id: string }>();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
@@ -47,7 +47,6 @@ const RegularItem = ({
     title: '',
     phone: ''
   });
-  const { user } = useAuth();
 
   useEffect(() => {
     loadInterviewees();
@@ -72,14 +71,16 @@ const RegularItem = ({
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
     try {
       if (!showId) {
-        throw new Error('Show ID is required');
+        console.error('Show ID is missing from URL parameters');
+        toast.error('שגיאה בהוספת מרואיין: מזהה תוכנית חסר');
+        return;
       }
 
       console.log('Adding interviewee for item:', id, guest);
 
       // Add to local state first
       const newInterviewee: Interviewee = {
-        id: crypto.randomUUID(), // Temporary ID for local state
+        id: crypto.randomUUID(),
         item_id: id,
         name: guest.name,
         title: guest.title,
@@ -88,11 +89,12 @@ const RegularItem = ({
         created_at: new Date().toISOString()
       };
 
-      setInterviewees(prev => [...prev, newInterviewee]);
+      const updatedInterviewees = [...interviewees, newInterviewee];
+      setInterviewees(updatedInterviewees);
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
 
-      // Update the parent component to mark changes as unsaved
+      // Update parent component with new state including all interviewees
       onEdit(id, {
         id,
         name,
@@ -100,7 +102,7 @@ const RegularItem = ({
         details,
         phone,
         duration,
-        interviewees: [...interviewees, newInterviewee]
+        interviewees: updatedInterviewees
       });
 
     } catch (error: any) {
