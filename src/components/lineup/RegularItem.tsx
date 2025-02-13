@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import IntervieweeSearch from './form/IntervieweeSearch';
 import { saveShow } from '@/lib/supabase/shows';
+import { useParams } from 'react-router-dom';
 
 interface RegularItemProps {
   id: string;
@@ -36,6 +36,7 @@ const RegularItem = ({
   onEdit,
   isAuthenticated,
 }: RegularItemProps) => {
+  const { id: showId } = useParams();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
@@ -83,17 +84,16 @@ const RegularItem = ({
         is_note: false
       };
       
-      // Save or update the item first
+      // Use the current show ID when saving
       const result = await saveShow(
-        { name: "temp", time: "", date: new Date().toISOString() },
+        { name: name, time: "", date: new Date().toISOString() },
         [item],
-        undefined
+        showId // Pass the current show ID
       );
 
-      // Use the returned item ID for the interviewee
-      const savedItem = result.items[0];
+      // Now add the interviewee using the existing item ID
       const newInterviewee = {
-        item_id: savedItem.id,
+        item_id: id, // Use the existing item ID since we know it exists
         name: guest.name,
         title: guest.title,
         phone: guest.phone,
