@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supaba
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import IntervieweeSearch from './form/IntervieweeSearch';
-import { saveShow } from '@/lib/supabase/shows';
+import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { useParams } from 'react-router-dom';
 
 interface RegularItemProps {
@@ -70,30 +71,56 @@ const RegularItem = ({
 
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
     try {
+      if (!showId) {
+        throw new Error('Show ID is required');
+      }
+
       console.log('Adding interviewee for item:', id, guest);
       
-      // First ensure the item exists in show_items
-      const item = {
-        id,
-        name,
-        title,
-        details,
-        phone,
-        duration,
-        is_break: false,
-        is_note: false
-      };
+      // First get all current items from the show
+      const { show, items } = await getShowWithItems(showId);
       
-      // Use the current show ID when saving
+      // Find the current item index
+      const currentItemIndex = items.findIndex(item => item.id === id);
+      
+      // If item exists, update it, otherwise add it
+      if (currentItemIndex !== -1) {
+        items[currentItemIndex] = {
+          ...items[currentItemIndex],
+          name,
+          title,
+          details,
+          phone,
+          duration
+        };
+      } else {
+        items.push({
+          id,
+          name,
+          title,
+          details,
+          phone,
+          duration,
+          is_break: false,
+          is_note: false
+        });
+      }
+      
+      // Save the show with ALL items
       const result = await saveShow(
-        { name: name, time: "", date: new Date().toISOString() },
-        [item],
-        showId // Pass the current show ID
+        { 
+          name: show.name, 
+          time: show.time, 
+          date: show.date,
+          notes: show.notes 
+        },
+        items,
+        showId
       );
 
-      // Now add the interviewee using the existing item ID
+      // Now add the interviewee
       const newInterviewee = {
-        item_id: id, // Use the existing item ID since we know it exists
+        item_id: id,
         name: guest.name,
         title: guest.title,
         phone: guest.phone,
