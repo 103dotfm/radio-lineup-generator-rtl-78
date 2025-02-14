@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,7 @@ import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 import IntervieweeSearch from './form/IntervieweeSearch';
-import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { useParams, useLocation } from 'react-router-dom';
 
 interface RegularItemProps {
@@ -49,27 +48,24 @@ const RegularItem = ({
     phone: ''
   });
 
+  // Load interviewees when the component mounts or when id changes
   useEffect(() => {
-    if (!isNewShow) {
-      loadInterviewees();
-    }
+    const loadData = async () => {
+      if (!isNewShow && id) {
+        try {
+          console.log('Loading interviewees for item:', id);
+          const fetchedInterviewees = await getInterviewees(id);
+          console.log('Fetched interviewees for item', id, ':', fetchedInterviewees);
+          setInterviewees(fetchedInterviewees);
+        } catch (error) {
+          console.error('Error loading interviewees:', error);
+          toast.error('שגיאה בטעינת מרואיינים');
+        }
+      }
+    };
+
+    loadData();
   }, [id, isNewShow]);
-
-  const loadInterviewees = async () => {
-    try {
-      const fetchedInterviewees = await getInterviewees(id);
-      console.log('Fetched interviewees:', fetchedInterviewees);
-      setInterviewees(fetchedInterviewees);
-    } catch (error) {
-      console.error('Error loading interviewees:', error);
-      toast.error('שגיאה בטעינת מרואיינים');
-    }
-  };
-
-  const handleSave = (updatedItem: any) => {
-    console.log('RegularItem: Handling save with updated item:', updatedItem);
-    onEdit(id, updatedItem);
-  };
 
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
     try {
@@ -104,7 +100,7 @@ const RegularItem = ({
       setManualInput({ name: '', title: '', phone: '' });
 
       // Update parent component
-      onEdit(id, {
+      const updatedItem = {
         id,
         name,
         title,
@@ -112,7 +108,10 @@ const RegularItem = ({
         phone,
         duration,
         interviewees: updatedInterviewees
-      });
+      };
+      
+      console.log('Updating item with new interviewees:', updatedItem);
+      await onEdit(id, updatedItem);
 
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
@@ -128,17 +127,18 @@ const RegularItem = ({
       }
       
       // Update local state
-      setInterviewees(prev => prev.filter(i => i.id !== intervieweeId));
+      const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
+      setInterviewees(updatedInterviewees);
       
       // Update parent component
-      onEdit(id, {
+      await onEdit(id, {
         id,
         name,
         title,
         details,
         phone,
         duration,
-        interviewees: interviewees.filter(i => i.id !== intervieweeId)
+        interviewees: updatedInterviewees
       });
     } catch (error) {
       console.error('Error deleting interviewee:', error);
@@ -312,7 +312,7 @@ const RegularItem = ({
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         item={{ id, name, title, details, phone, duration }}
-        onSave={handleSave}
+        onSave={onEdit}
       />
     </>
   );
