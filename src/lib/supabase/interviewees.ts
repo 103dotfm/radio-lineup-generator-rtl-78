@@ -7,6 +7,12 @@ type DbInterviewee = Database['public']['Tables']['interviewees']['Row'];
 
 export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'created_at'>): Promise<DbInterviewee> => {
   console.log('Adding interviewee:', interviewee);
+  
+  // Validate item_id
+  if (!interviewee.item_id) {
+    throw new Error('Item ID is required');
+  }
+
   const { data, error } = await supabase
     .from('interviewees')
     .insert({
@@ -29,30 +35,42 @@ export const addInterviewee = async (interviewee: Omit<Interviewee, 'id' | 'crea
 };
 
 export const deleteInterviewee = async (id: string): Promise<void> => {
+  console.log('Deleting interviewee:', id);
   const { error } = await supabase
     .from('interviewees')
     .delete()
-    .match({ id });
+    .eq('id', id);
 
   if (error) {
     console.error('Error deleting interviewee:', error);
     throw error;
   }
+  console.log('Successfully deleted interviewee:', id);
 };
 
 export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> => {
+  if (!itemId) {
+    console.error('Item ID is required for getting interviewees');
+    return [];
+  }
+
   console.log('Getting interviewees for item:', itemId);
-  const { data, error } = await supabase
+  
+  // Log the query we're about to make
+  const query = supabase
     .from('interviewees')
     .select('*')
-    .match({ item_id: itemId });
+    .eq('item_id', itemId);
+    
+  console.log('Supabase query:', query.toSQL());
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error getting interviewees:', error);
     throw error;
   }
 
-  console.log('Retrieved interviewees:', data);
+  console.log('Retrieved interviewees for item', itemId, ':', data);
   return data || [];
 };
-
