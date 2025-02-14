@@ -56,15 +56,13 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
 
   console.log('Getting interviewees for item:', itemId);
   
-  // Log the query we're about to make
-  const query = supabase
+  // Query for interviewees
+  console.log('Querying interviewees with item_id:', itemId);
+  
+  const { data, error } = await supabase
     .from('interviewees')
     .select('*')
     .eq('item_id', itemId);
-    
-  console.log('Supabase query:', query.toSQL());
-
-  const { data, error } = await query;
 
   if (error) {
     console.error('Error getting interviewees:', error);
@@ -74,3 +72,4 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
   console.log('Retrieved interviewees for item', itemId, ':', data);
   return data || [];
 };
+
