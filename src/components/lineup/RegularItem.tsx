@@ -75,8 +75,20 @@ const RegularItem = ({
     try {
       console.log('Adding interviewee for item:', id, guest);
 
-      // Add to local state first
-      const newInterviewee: Interviewee = {
+      // First, add to database if not a new show
+      let dbInterviewee = null;
+      if (!isNewShow && showId) {
+        dbInterviewee = await addInterviewee({
+          item_id: id,
+          name: guest.name,
+          title: guest.title,
+          phone: guest.phone,
+          duration
+        });
+      }
+
+      // Add to local state
+      const newInterviewee: Interviewee = dbInterviewee || {
         id: crypto.randomUUID(),
         item_id: id,
         name: guest.name,
@@ -91,7 +103,7 @@ const RegularItem = ({
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
 
-      // Update parent component with new state including all interviewees
+      // Update parent component
       onEdit(id, {
         id,
         name,
@@ -109,19 +121,29 @@ const RegularItem = ({
   };
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
-    // Update local state first
-    setInterviewees(prev => prev.filter(i => i.id !== intervieweeId));
-    
-    // Update parent component to mark changes as unsaved
-    onEdit(id, {
-      id,
-      name,
-      title,
-      details,
-      phone,
-      duration,
-      interviewees: interviewees.filter(i => i.id !== intervieweeId)
-    });
+    try {
+      // Delete from database if not a new show
+      if (!isNewShow && showId) {
+        await deleteInterviewee(intervieweeId);
+      }
+      
+      // Update local state
+      setInterviewees(prev => prev.filter(i => i.id !== intervieweeId));
+      
+      // Update parent component
+      onEdit(id, {
+        id,
+        name,
+        title,
+        details,
+        phone,
+        duration,
+        interviewees: interviewees.filter(i => i.id !== intervieweeId)
+      });
+    } catch (error) {
+      console.error('Error deleting interviewee:', error);
+      toast.error('שגיאה במחיקת מרואיין');
+    }
   };
 
   return (
