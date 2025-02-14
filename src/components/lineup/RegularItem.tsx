@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import IntervieweeSearch from './form/IntervieweeSearch';
 import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 
 interface RegularItemProps {
   id: string;
@@ -38,6 +37,8 @@ const RegularItem = ({
   isAuthenticated,
 }: RegularItemProps) => {
   const { id: showId } = useParams<{ id: string }>();
+  const location = useLocation();
+  const isNewShow = location.pathname === '/new';
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
@@ -49,8 +50,10 @@ const RegularItem = ({
   });
 
   useEffect(() => {
-    loadInterviewees();
-  }, [id]);
+    if (!isNewShow) {
+      loadInterviewees();
+    }
+  }, [id, isNewShow]);
 
   const loadInterviewees = async () => {
     try {
@@ -70,12 +73,6 @@ const RegularItem = ({
 
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
     try {
-      if (!showId) {
-        console.error('Show ID is missing from URL parameters');
-        toast.error('שגיאה בהוספת מרואיין: מזהה תוכנית חסר');
-        return;
-      }
-
       console.log('Adding interviewee for item:', id, guest);
 
       // Add to local state first
