@@ -27,7 +27,7 @@ interface EditItemDialogProps {
     phone: string;
     duration: number;
   };
-  onSave: (updatedItem: any) => void;
+  onSave: (id: string, updatedItem: any) => void;
 }
 
 const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProps) => {
@@ -85,7 +85,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       details: formState.details
     };
     
-    onSave(updatedItem);
+    onSave(item.id, updatedItem);
     setHasChanges(false);
     onOpenChange(false);
   };
