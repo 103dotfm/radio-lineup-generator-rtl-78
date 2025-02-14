@@ -9,6 +9,8 @@ import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supaba
 import { toast } from 'sonner';
 import IntervieweeSearch from './form/IntervieweeSearch';
 import { useParams, useLocation } from 'react-router-dom';
+import IntervieweeRow from './IntervieweeRow';
+import ManualIntervieweeForm from './ManualIntervieweeForm';
 
 interface RegularItemProps {
   id: string;
@@ -48,7 +50,6 @@ const RegularItem = ({
     phone: ''
   });
 
-  // Load interviewees when the component mounts or when id changes
   useEffect(() => {
     const loadData = async () => {
       if (!isNewShow && id) {
@@ -71,7 +72,6 @@ const RegularItem = ({
     try {
       console.log('Adding interviewee for item:', id, guest);
 
-      // First, add to database if not a new show
       let dbInterviewee = null;
       if (!isNewShow && showId) {
         dbInterviewee = await addInterviewee({
@@ -83,7 +83,6 @@ const RegularItem = ({
         });
       }
 
-      // Add to local state
       const newInterviewee: Interviewee = dbInterviewee || {
         id: crypto.randomUUID(),
         item_id: id,
@@ -99,7 +98,6 @@ const RegularItem = ({
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
 
-      // Update parent component
       const updatedItem = {
         id,
         name,
@@ -121,16 +119,13 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      // Delete from database if not a new show
       if (!isNewShow && showId) {
         await deleteInterviewee(intervieweeId);
       }
       
-      // Update local state
       const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
       setInterviewees(updatedInterviewees);
       
-      // Update parent component
       await onEdit(id, {
         id,
         name,
@@ -146,6 +141,10 @@ const RegularItem = ({
     }
   };
 
+  const handleManualInputChange = (field: keyof typeof manualInput, value: string) => {
+    setManualInput(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
     <>
       <td className="py-2 px-4 border border-gray-200 align-top">
@@ -153,121 +152,63 @@ const RegularItem = ({
           <span>{name}</span>
         </div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[3rem] flex items-center">
-            {editingInterviewee === interviewee.id ? (
-              <Input
-                value={manualInput.name || interviewee.name}
-                onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full"
-                onBlur={() => {
-                  if (manualInput.name) {
-                    const updatedInterviewees = interviewees.map(i =>
-                      i.id === interviewee.id
-                        ? { ...i, name: manualInput.name }
-                        : i
-                    );
-                    setInterviewees(updatedInterviewees);
-                    setEditingInterviewee(null);
-                    onEdit(id, {
-                      id,
-                      name,
-                      title,
-                      details,
-                      phone,
-                      duration,
-                      interviewees: updatedInterviewees
-                    });
-                  }
-                }}
-              />
-            ) : (
-              <div className="flex items-center gap-2 w-full">
-                <span>{interviewee.name}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setEditingInterviewee(interviewee.id)}
-                >
-                  <Edit2 className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteInterviewee(interviewee.id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-          </div>
+          <IntervieweeRow
+            key={interviewee.id}
+            interviewee={interviewee}
+            isEditing={editingInterviewee === interviewee.id}
+            manualInput={manualInput}
+            onManualInputChange={handleManualInputChange}
+            onStartEdit={() => setEditingInterviewee(interviewee.id)}
+            onDelete={() => handleDeleteInterviewee(interviewee.id)}
+            onSave={() => {
+              if (manualInput.name) {
+                const updatedInterviewees = interviewees.map(i =>
+                  i.id === interviewee.id
+                    ? { ...i, name: manualInput.name }
+                    : i
+                );
+                setInterviewees(updatedInterviewees);
+                setEditingInterviewee(null);
+                onEdit(id, {
+                  id,
+                  name,
+                  title,
+                  details,
+                  phone,
+                  duration,
+                  interviewees: updatedInterviewees
+                });
+              }
+            }}
+            isAuthenticated={isAuthenticated}
+          />
         ))}
         {showIntervieweeInput && (
           <div className="mt-2 space-y-2">
             <IntervieweeSearch onAdd={handleAddInterviewee} />
             <div className="text-sm text-gray-500">או הוספה ידנית:</div>
-            <div className="space-y-2">
-              <Input
-                placeholder="שם"
-                value={manualInput.name}
-                onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
-              />
-              <Input
-                placeholder="קרדיט"
-                value={manualInput.title}
-                onChange={(e) => setManualInput(prev => ({ ...prev, title: e.target.value }))}
-              />
-              <Input
-                placeholder="טלפון"
-                value={manualInput.phone}
-                onChange={(e) => setManualInput(prev => ({ ...prev, phone: e.target.value }))}
-              />
-              <Button
-                onClick={() => {
-                  if (manualInput.name) {
-                    handleAddInterviewee(manualInput);
-                  }
-                }}
-                disabled={!manualInput.name}
-              >
-                הוסף
-              </Button>
-            </div>
+            <ManualIntervieweeForm
+              manualInput={manualInput}
+              onInputChange={handleManualInputChange}
+              onAdd={() => {
+                if (manualInput.name) {
+                  handleAddInterviewee(manualInput);
+                }
+              }}
+            />
           </div>
         )}
       </td>
       <td className="py-2 px-4 border border-gray-200 align-top">
         <div>{title}</div>
-        {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[3rem] flex items-center">
-            {editingInterviewee === interviewee.id ? (
-              <Input
-                value={manualInput.title || interviewee.title}
-                onChange={(e) => setManualInput(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full"
-              />
-            ) : (
-              <span>{interviewee.title}</span>
-            )}
-          </div>
-        ))}
       </td>
-      <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none align-top overflow-visible" rowSpan={(interviewees.length || 0) + 1} dangerouslySetInnerHTML={{ __html: details }} />
+      <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none align-top overflow-visible" 
+          rowSpan={(interviewees.length || 0) + 1} 
+          dangerouslySetInnerHTML={{ __html: details }} 
+      />
       {isAuthenticated && (
         <td className="py-2 px-4 border border-gray-200 align-top">
           <div>{phone}</div>
-          {interviewees.map((interviewee) => (
-            <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[3rem] flex items-center">
-              {editingInterviewee === interviewee.id ? (
-                <Input
-                  value={manualInput.phone || interviewee.phone}
-                  onChange={(e) => setManualInput(prev => ({ ...prev, phone: e.target.value }))}
-                  className="w-full"
-                />
-              ) : (
-                <span>{interviewee.phone}</span>
-              )}
-            </div>
-          ))}
         </td>
       )}
       <td className="py-2 px-4 border border-gray-200 align-top">
