@@ -62,7 +62,8 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
   const { data, error } = await supabase
     .from('interviewees')
     .select('*')
-    .eq('item_id', itemId);
+    .eq('item_id', itemId)
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('Error getting interviewees:', error);
@@ -72,4 +73,3 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
   console.log('Retrieved interviewees for item', itemId, ':', data);
   return data || [];
 };
-

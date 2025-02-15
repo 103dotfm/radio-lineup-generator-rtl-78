@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Show, ShowItem } from "@/types/show";
 import { addInterviewee, deleteInterviewee } from "./interviewees";
@@ -96,73 +95,57 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (updateError) throw updateError;
     }
 
-    // Delete existing items and their interviewees if show exists
-    if (showId) {
-      // First get all existing items to handle interviewees
-      const { data: existingItems } = await supabase
-        .from('show_items')
-        .select('id')
-        .eq('show_id', showId);
-
-      if (existingItems) {
-        // Delete all interviewees for these items
-        for (const item of existingItems) {
-          const { error: deleteIntervieweesError } = await supabase
-            .from('interviewees')
-            .delete()
-            .eq('item_id', item.id);
-
-          if (deleteIntervieweesError) throw deleteIntervieweesError;
-        }
-      }
-
-      // Then delete the items
-      const { error: deleteError } = await supabase
-        .from('show_items')
-        .delete()
-        .eq('show_id', showId);
-
-      if (deleteError) throw deleteError;
-    }
-
-    // Insert new items
+    // Save all items and their interviewees
     let savedItems = [];
     if (items.length > 0) {
-      const itemsWithShowId = items.map((item, index) => ({
-        id: item.id || crypto.randomUUID(),
-        show_id: showId,
-        position: index,
-        name: item.name || '',
-        title: item.title,
-        details: item.details,
-        phone: item.phone,
-        duration: item.duration,
-        is_break: item.is_break || false,
-        is_note: item.is_note || false,
-        created_at: new Date().toISOString()
-      }));
-
-      const { data: insertedItems, error: itemsError } = await supabase
-        .from('show_items')
-        .insert(itemsWithShowId)
-        .select('*');
-
-      if (itemsError) throw itemsError;
-      savedItems = insertedItems;
-
-      // Now save all interviewees
       for (const item of items) {
+        // First, save the item
+        const itemToSave = {
+          id: item.id || crypto.randomUUID(),
+          show_id: showId,
+          name: item.name || '',
+          title: item.title,
+          details: item.details,
+          phone: item.phone,
+          duration: item.duration,
+          is_break: item.is_break || false,
+          is_note: item.is_note || false,
+          position: items.indexOf(item)
+        };
+
+        const { data: savedItem, error: itemError } = await supabase
+          .from('show_items')
+          .upsert(itemToSave)
+          .select()
+          .single();
+
+        if (itemError) throw itemError;
+
+        // Then, handle interviewees
         if (item.interviewees && item.interviewees.length > 0) {
-          for (const interviewee of item.interviewees) {
-            await addInterviewee({
-              item_id: item.id!,
-              name: interviewee.name,
-              title: interviewee.title,
-              phone: interviewee.phone,
-              duration: interviewee.duration
-            });
-          }
+          // Delete existing interviewees for this item
+          await supabase
+            .from('interviewees')
+            .delete()
+            .eq('item_id', savedItem.id);
+
+          // Add new interviewees
+          const intervieweesToSave = item.interviewees.map(interviewee => ({
+            item_id: savedItem.id,
+            name: interviewee.name,
+            title: interviewee.title,
+            phone: interviewee.phone,
+            duration: interviewee.duration
+          }));
+
+          const { error: intervieweesError } = await supabase
+            .from('interviewees')
+            .insert(intervieweesToSave);
+
+          if (intervieweesError) throw intervieweesError;
         }
+
+        savedItems.push(savedItem);
       }
     }
 
