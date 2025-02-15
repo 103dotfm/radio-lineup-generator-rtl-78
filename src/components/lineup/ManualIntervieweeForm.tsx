@@ -3,13 +3,15 @@ import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+interface ManualInputType {
+  name: string;
+  title: string;
+  phone: string;
+}
+
 interface ManualIntervieweeFormProps {
-  manualInput: {
-    name: string;
-    title: string;
-    phone: string;
-  };
-  onInputChange: (field: keyof typeof manualInput, value: string) => void;
+  manualInput: ManualInputType;
+  onInputChange: (field: keyof ManualInputType, value: string) => void;
   onAdd: () => void;
 }
 

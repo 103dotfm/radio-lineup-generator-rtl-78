@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
 import { Interviewee } from '@/types/show';
 
+interface ManualInputType {
+  name: string;
+  title: string;
+  phone: string;
+}
+
 interface IntervieweeRowProps {
   interviewee: Interviewee;
   isEditing: boolean;
-  manualInput: {
-    name: string;
-    title: string;
-    phone: string;
-  };
-  onManualInputChange: (field: keyof typeof manualInput, value: string) => void;
+  manualInput: ManualInputType;
+  onManualInputChange: (field: keyof ManualInputType, value: string) => void;
   onStartEdit: () => void;
   onDelete: () => void;
   onSave: () => void;
