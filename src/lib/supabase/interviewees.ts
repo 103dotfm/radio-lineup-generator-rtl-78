@@ -56,9 +56,7 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
 
   console.log('Getting interviewees for item:', itemId);
   
-  // Query for interviewees
-  console.log('Querying interviewees with item_id:', itemId);
-  
+  // Query for interviewees with explicit ordering
   const { data, error } = await supabase
     .from('interviewees')
     .select('*')
@@ -72,4 +70,23 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
 
   console.log('Retrieved interviewees for item', itemId, ':', data);
   return data || [];
+};
+
+export const updateInterviewee = async (id: string, updates: Partial<Omit<Interviewee, 'id' | 'created_at'>>): Promise<DbInterviewee> => {
+  console.log('Updating interviewee:', id, updates);
+  
+  const { data, error } = await supabase
+    .from('interviewees')
+    .update(updates)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error updating interviewee:', error);
+    throw error;
+  }
+
+  console.log('Updated interviewee:', data);
+  return data;
 };
