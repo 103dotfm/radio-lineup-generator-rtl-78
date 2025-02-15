@@ -33,6 +33,7 @@ export const getShowWithItems = async (id: string) => {
   if (checkError) throw checkError;
   if (!existingShow) throw new Error('Show not found');
 
+  // Query show items with their interviewees in a single request
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
     .select(`
@@ -42,7 +43,12 @@ export const getShowWithItems = async (id: string) => {
     .eq('show_id', id)
     .order('position');
 
-  if (itemsError) throw itemsError;
+  if (itemsError) {
+    console.error('Error fetching items:', itemsError);
+    throw itemsError;
+  }
+
+  console.log('Fetched show items with interviewees:', items);
 
   return { show: existingShow, items: items || [] };
 };
@@ -159,7 +165,22 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
           }
         }
 
-        savedItems.push(savedItem);
+        // Fetch the saved item with its interviewees
+        const { data: itemWithInterviewees, error: fetchError } = await supabase
+          .from('show_items')
+          .select(`
+            *,
+            interviewees(*)
+          `)
+          .eq('id', savedItem.id)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching saved item:', fetchError);
+          throw fetchError;
+        }
+
+        savedItems.push(itemWithInterviewees);
         existingItemIds.delete(itemId);
       }
 
