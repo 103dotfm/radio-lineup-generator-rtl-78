@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2, UserPlus } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
-import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
+import { addInterviewee, deleteInterviewee, getInterviewees, updateInterviewee } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import IntervieweeSearch from './form/IntervieweeSearch';
 import { useParams, useLocation } from 'react-router-dom';
@@ -72,48 +71,32 @@ const RegularItem = ({
     try {
       console.log('Adding interviewee for item:', id, guest);
 
-      let dbInterviewee = null;
       if (!isNewShow && showId) {
-        dbInterviewee = await addInterviewee({
+        const newInterviewee = await addInterviewee({
           item_id: id,
           name: guest.name,
           title: guest.title,
           phone: guest.phone,
           duration
         });
+
+        setInterviewees(prev => [...prev, newInterviewee]);
+        setShowIntervieweeInput(false);
+        setManualInput({ name: '', title: '', phone: '' });
+
+        const updatedItem = {
+          id,
+          name,
+          title,
+          details,
+          phone,
+          duration,
+          interviewees: [...interviewees, newInterviewee]
+        };
+        
+        console.log('Updating item with new interviewees:', updatedItem);
+        await onEdit(id, updatedItem);
       }
-
-      const newInterviewee: Interviewee = dbInterviewee || {
-        id: crypto.randomUUID(),
-        item_id: id,
-        name: guest.name,
-        title: guest.title,
-        phone: guest.phone,
-        duration,
-        created_at: new Date().toISOString()
-      };
-
-      const updatedInterviewees = [...interviewees, newInterviewee];
-      setInterviewees(updatedInterviewees);
-      setShowIntervieweeInput(false);
-      setManualInput({ name: '', title: '', phone: '' });
-
-      const updatedItem = {
-        id,
-        name,
-        title,
-        details,
-        phone,
-        duration,
-        interviewees: updatedInterviewees
-      };
-      
-      console.log('Updating item with new interviewees:', updatedItem);
-      await onEdit(id, updatedItem);
-
-      // Reload interviewees after update
-      await loadInterviewees();
-
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
       toast.error('שגיאה בהוספת מרואיין');
@@ -124,23 +107,19 @@ const RegularItem = ({
     try {
       if (!isNewShow && showId) {
         await deleteInterviewee(intervieweeId);
+        const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
+        setInterviewees(updatedInterviewees);
+        
+        await onEdit(id, {
+          id,
+          name,
+          title,
+          details,
+          phone,
+          duration,
+          interviewees: updatedInterviewees
+        });
       }
-      
-      const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
-      setInterviewees(updatedInterviewees);
-      
-      await onEdit(id, {
-        id,
-        name,
-        title,
-        details,
-        phone,
-        duration,
-        interviewees: updatedInterviewees
-      });
-
-      // Reload interviewees after deletion
-      await loadInterviewees();
     } catch (error) {
       console.error('Error deleting interviewee:', error);
       toast.error('שגיאה במחיקת מרואיין');
