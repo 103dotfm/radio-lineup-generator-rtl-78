@@ -50,22 +50,22 @@ const RegularItem = ({
     phone: ''
   });
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!isNewShow && id) {
-        try {
-          console.log('Loading interviewees for item:', id);
-          const fetchedInterviewees = await getInterviewees(id);
-          console.log('Fetched interviewees for item', id, ':', fetchedInterviewees);
-          setInterviewees(fetchedInterviewees);
-        } catch (error) {
-          console.error('Error loading interviewees:', error);
-          toast.error('שגיאה בטעינת מרואיינים');
-        }
+  const loadInterviewees = async () => {
+    if (!isNewShow && id) {
+      try {
+        console.log('Loading interviewees for item:', id);
+        const fetchedInterviewees = await getInterviewees(id);
+        console.log('Fetched interviewees for item', id, ':', fetchedInterviewees);
+        setInterviewees(fetchedInterviewees);
+      } catch (error) {
+        console.error('Error loading interviewees:', error);
+        toast.error('שגיאה בטעינת מרואיינים');
       }
-    };
+    }
+  };
 
-    loadData();
+  useEffect(() => {
+    loadInterviewees();
   }, [id, isNewShow]);
 
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
@@ -111,6 +111,9 @@ const RegularItem = ({
       console.log('Updating item with new interviewees:', updatedItem);
       await onEdit(id, updatedItem);
 
+      // Reload interviewees after update
+      await loadInterviewees();
+
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
       toast.error('שגיאה בהוספת מרואיין');
@@ -135,6 +138,9 @@ const RegularItem = ({
         duration,
         interviewees: updatedInterviewees
       });
+
+      // Reload interviewees after deletion
+      await loadInterviewees();
     } catch (error) {
       console.error('Error deleting interviewee:', error);
       toast.error('שגיאה במחיקת מרואיין');
