@@ -23,7 +23,6 @@ export const getShows = async () => {
 };
 
 export const getShowWithItems = async (id: string) => {
-  // First check if the show exists
   const { data: existingShow, error: checkError } = await supabase
     .from('shows')
     .select('*')
@@ -33,7 +32,6 @@ export const getShowWithItems = async (id: string) => {
   if (checkError) throw checkError;
   if (!existingShow) throw new Error('Show not found');
 
-  // Then get the items with their interviewees
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
     .select(`
@@ -52,7 +50,6 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
   try {
     let existingShow;
     
-    // First check if the show exists
     if (showId) {
       const { data: showCheck, error: checkError } = await supabase
         .from('shows')
@@ -65,7 +62,6 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       existingShow = showCheck;
     }
 
-    // If no existing show, create new one
     if (!existingShow) {
       const { data: newShow, error: showError } = await supabase
         .from('shows')
@@ -81,7 +77,6 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (showError) throw showError;
       showId = newShow.id;
     } else {
-      // Update existing show
       const { error: updateError } = await supabase
         .from('shows')
         .update({
@@ -95,13 +90,19 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (updateError) throw updateError;
     }
 
-    // Save all items and their interviewees
+    const { data: existingItems } = await supabase
+      .from('show_items')
+      .select('id')
+      .eq('show_id', showId);
+
+    const existingItemIds = new Set(existingItems?.map(item => item.id) || []);
+
     let savedItems = [];
     if (items.length > 0) {
       for (const item of items) {
-        // First, save the item
+        const itemId = item.id || crypto.randomUUID();
         const itemToSave = {
-          id: item.id || crypto.randomUUID(),
+          id: itemId,
           show_id: showId,
           name: item.name || '',
           title: item.title,
@@ -121,15 +122,12 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 
         if (itemError) throw itemError;
 
-        // Then, handle interviewees
         if (item.interviewees && item.interviewees.length > 0) {
-          // Delete existing interviewees for this item
           await supabase
             .from('interviewees')
             .delete()
             .eq('item_id', savedItem.id);
 
-          // Add new interviewees
           const intervieweesToSave = item.interviewees.map(interviewee => ({
             item_id: savedItem.id,
             name: interviewee.name,
@@ -146,6 +144,16 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
         }
 
         savedItems.push(savedItem);
+        existingItemIds.delete(itemId);
+      }
+
+      if (existingItemIds.size > 0) {
+        const { error: deleteError } = await supabase
+          .from('show_items')
+          .delete()
+          .in('id', Array.from(existingItemIds));
+
+        if (deleteError) throw deleteError;
       }
     }
 
