@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -81,27 +80,12 @@ const RegularItem = ({
           duration
         });
 
-        const updatedInterviewees = [...interviewees, newInterviewee];
-        setInterviewees(updatedInterviewees);
+        setInterviewees(prev => [...prev, newInterviewee]);
         setShowIntervieweeInput(false);
         setManualInput({ name: '', title: '', phone: '' });
 
-        // Preserve the original item ID and include ALL properties
-        const updatedItem = {
-          id,
-          name,
-          title,
-          details,
-          phone,
-          duration,
-          is_break: false,
-          is_note: false,
-          interviewees: updatedInterviewees
-        };
-        
-        console.log('Updating item with new interviewees:', updatedItem);
-        await onEdit(id, updatedItem);
-        await loadInterviewees(); // Reload interviewees after saving
+        // Do NOT trigger a full item update, just add the interviewee
+        await loadInterviewees(); // Reload to ensure consistency
       }
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
@@ -113,24 +97,7 @@ const RegularItem = ({
     try {
       if (!isNewShow && showId) {
         await deleteInterviewee(intervieweeId);
-        const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
-        setInterviewees(updatedInterviewees);
-        
-        // Preserve the original item ID and include ALL properties
-        const updatedItem = {
-          id,
-          name,
-          title,
-          details,
-          phone,
-          duration,
-          is_break: false,
-          is_note: false,
-          interviewees: updatedInterviewees
-        };
-        
-        await onEdit(id, updatedItem);
-        await loadInterviewees(); // Reload interviewees after saving
+        setInterviewees(prev => prev.filter(i => i.id !== intervieweeId));
       }
     } catch (error) {
       console.error('Error deleting interviewee:', error);
