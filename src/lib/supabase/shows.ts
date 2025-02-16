@@ -14,11 +14,7 @@ export const getShows = async () => {
     `)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching shows:', error);
-    throw error;
-  }
-
+  if (error) throw error;
   return shows;
 };
 
@@ -38,190 +34,117 @@ export const getShowWithItems = async (id: string) => {
     .from('show_items')
     .select(`
       *,
-      interviewees (
-        id,
-        item_id,
-        name,
-        title,
-        phone,
-        duration,
-        created_at
-      )
+      interviewees (*)
     `)
     .eq('show_id', id)
     .order('position');
 
-  if (itemsError) {
-    console.error('Error fetching items:', itemsError);
-    throw itemsError;
-  }
-
-  console.log('Fetched show items with interviewees:', items);
+  if (itemsError) throw itemsError;
 
   return { show: existingShow, items: items || [] };
 };
 
 export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show>, items: Partial<ShowItem>[], showId?: string) => {
   try {
-    let existingShow;
+    // Save or update show
+    const showData = {
+      name: show.name,
+      time: show.time,
+      date: show.date,
+      notes: show.notes
+    };
+
+    let savedShowId = showId;
     
-    if (showId) {
-      const { data: showCheck, error: checkError } = await supabase
+    if (!showId) {
+      const { data: newShow, error: createError } = await supabase
         .from('shows')
-        .select('id')
-        .eq('id', showId)
-        .maybeSingle();
-
-      if (checkError) throw checkError;
-      if (!showCheck) throw new Error('Show not found');
-      existingShow = showCheck;
-    }
-
-    // Create or update show
-    if (!existingShow) {
-      const { data: newShow, error: showError } = await supabase
-        .from('shows')
-        .insert({
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes
-        })
+        .insert(showData)
         .select()
         .single();
 
-      if (showError) throw showError;
-      showId = newShow.id;
+      if (createError) throw createError;
+      savedShowId = newShow.id;
     } else {
       const { error: updateError } = await supabase
         .from('shows')
-        .update({
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes
-        })
+        .update(showData)
         .eq('id', showId);
 
       if (updateError) throw updateError;
     }
 
-    // Get existing items to track what needs to be deleted
+    // Get existing items with their interviewees
     const { data: existingItems } = await supabase
       .from('show_items')
       .select(`
-        id,
-        position,
-        interviewees (id)
+        *,
+        interviewees (*)
       `)
-      .eq('show_id', showId);
+      .eq('show_id', savedShowId);
 
     const existingItemsMap = new Map(existingItems?.map(item => [item.id, item]) || []);
     let savedItems = [];
 
-    // Save items and their interviewees
-    if (items.length > 0) {
-      for (const [index, item] of items.entries()) {
-        // Preserve existing item ID or create new one
-        const itemId = item.id || crypto.randomUUID();
-        const existingItem = existingItemsMap.get(itemId);
-        existingItemsMap.delete(itemId);
+    // Update or create items while preserving interviewees
+    for (const [index, item] of items.entries()) {
+      const itemId = item.id || crypto.randomUUID();
+      const existingItem = existingItemsMap.get(itemId);
+      existingItemsMap.delete(itemId);
 
-        console.log('Processing item:', {
-          itemId,
-          isExisting: !!existingItem,
-          item
-        });
+      console.log('Processing item:', {
+        itemId,
+        isExisting: !!existingItem,
+        item
+      });
 
-        // Save item
-        const { data: savedItem, error: itemError } = await supabase
-          .from('show_items')
-          .upsert({
-            id: itemId,
-            show_id: showId,
-            name: item.name || '',
-            title: item.title,
-            details: item.details,
-            phone: item.phone,
-            duration: item.duration,
-            is_break: item.is_break || false,
-            is_note: item.is_note || false,
-            position: index // Use index for consistent ordering
-          })
-          .select()
-          .single();
+      // Preserve existing interviewees if not explicitly provided
+      const interviewees = item.interviewees || (existingItem?.interviewees || []);
 
-        if (itemError) throw itemError;
+      // Save item
+      const { data: savedItem, error: itemError } = await supabase
+        .from('show_items')
+        .upsert({
+          id: itemId,
+          show_id: savedShowId,
+          name: item.name || '',
+          title: item.title,
+          details: item.details,
+          phone: item.phone,
+          duration: item.duration,
+          is_break: item.is_break || false,
+          is_note: item.is_note || false,
+          position: index
+        })
+        .select()
+        .single();
 
-        // Don't delete existing interviewees unless we have new ones to replace them
-        if (item.interviewees?.length > 0) {
-          // Delete existing interviewees only if we have new ones
-          const { error: deleteError } = await supabase
-            .from('interviewees')
-            .delete()
-            .eq('item_id', itemId);
+      if (itemError) throw itemError;
 
-          if (deleteError) throw deleteError;
+      // Include the interviewees in the saved item
+      savedItem.interviewees = interviewees;
+      savedItems.push(savedItem);
+    }
 
-          // Insert new interviewees
-          const { error: insertError } = await supabase
-            .from('interviewees')
-            .insert(
-              item.interviewees.map(interviewee => ({
-                item_id: itemId,
-                name: interviewee.name,
-                title: interviewee.title,
-                phone: interviewee.phone,
-                duration: interviewee.duration
-              }))
-            );
+    // Only delete items that are explicitly removed
+    const itemsToDelete = Array.from(existingItemsMap.keys());
+    if (itemsToDelete.length > 0) {
+      console.log('Deleting removed items:', itemsToDelete);
+      const { error: deleteError } = await supabase
+        .from('show_items')
+        .delete()
+        .in('id', itemsToDelete);
 
-          if (insertError) throw insertError;
-        }
-
-        // Fetch the complete item with its interviewees
-        const { data: completeItem, error: fetchError } = await supabase
-          .from('show_items')
-          .select(`
-            *,
-            interviewees (
-              id,
-              item_id,
-              name,
-              title,
-              phone,
-              duration,
-              created_at
-            )
-          `)
-          .eq('id', itemId)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        savedItems.push(completeItem);
-      }
-
-      // Delete items that are no longer in the list
-      const itemsToDelete = Array.from(existingItemsMap.keys());
-      if (itemsToDelete.length > 0) {
-        console.log('Deleting removed items:', itemsToDelete);
-        const { error: deleteError } = await supabase
-          .from('show_items')
-          .delete()
-          .in('id', itemsToDelete);
-
-        if (deleteError) throw deleteError;
-      }
+      if (deleteError) throw deleteError;
     }
 
     console.log('Saved show with items:', {
-      showId,
+      showId: savedShowId,
       itemCount: savedItems.length,
       items: savedItems
     });
 
-    return { id: showId, items: savedItems };
+    return { id: savedShowId, items: savedItems };
   } catch (error) {
     console.error('Error saving show:', error);
     throw error;
@@ -241,11 +164,7 @@ export const searchShows = async (query: string) => {
     .or(`name.ilike.%${query}%, items.name.ilike.%${query}%, items.title.ilike.%${query}%`)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error searching shows:', error);
-    throw error;
-  }
-
+  if (error) throw error;
   return shows;
 };
 
@@ -255,8 +174,5 @@ export const deleteShow = async (id: string) => {
     .delete()
     .eq('id', id);
 
-  if (error) {
-    console.error('Error deleting show:', error);
-    throw error;
-  }
+  if (error) throw error;
 };
