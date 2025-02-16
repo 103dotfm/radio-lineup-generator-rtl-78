@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -80,10 +81,12 @@ const RegularItem = ({
           duration
         });
 
-        setInterviewees(prev => [...prev, newInterviewee]);
+        const updatedInterviewees = [...interviewees, newInterviewee];
+        setInterviewees(updatedInterviewees);
         setShowIntervieweeInput(false);
         setManualInput({ name: '', title: '', phone: '' });
 
+        // Preserve the original item ID and include ALL properties
         const updatedItem = {
           id,
           name,
@@ -91,11 +94,14 @@ const RegularItem = ({
           details,
           phone,
           duration,
-          interviewees: [...interviewees, newInterviewee]
+          is_break: false,
+          is_note: false,
+          interviewees: updatedInterviewees
         };
         
         console.log('Updating item with new interviewees:', updatedItem);
         await onEdit(id, updatedItem);
+        await loadInterviewees(); // Reload interviewees after saving
       }
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
@@ -110,15 +116,21 @@ const RegularItem = ({
         const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
         setInterviewees(updatedInterviewees);
         
-        await onEdit(id, {
+        // Preserve the original item ID and include ALL properties
+        const updatedItem = {
           id,
           name,
           title,
           details,
           phone,
           duration,
+          is_break: false,
+          is_note: false,
           interviewees: updatedInterviewees
-        });
+        };
+        
+        await onEdit(id, updatedItem);
+        await loadInterviewees(); // Reload interviewees after saving
       }
     } catch (error) {
       console.error('Error deleting interviewee:', error);
@@ -161,6 +173,8 @@ const RegularItem = ({
                   details,
                   phone,
                   duration,
+                  is_break: false,
+                  is_note: false,
                   interviewees: updatedInterviewees
                 });
               }
