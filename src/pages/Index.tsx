@@ -108,7 +108,7 @@ const Index = () => {
           ? {
               ...item,
               ...updatedItem,
-              interviewees: updatedItem.interviewees || item.interviewees || []
+              interviewees: updatedItem.interviewees
             }
           : item
       )
@@ -139,20 +139,24 @@ const Index = () => {
         interviewees: item.interviewees || []
       }));
 
-      console.log('Saving items:', itemsToSave);
+      console.log('Saving items with interviewees:', itemsToSave);
 
       const savedShow = await saveShow(show, itemsToSave, showId);
       if (savedShow && !showId) {
         navigate(`/show/${savedShow.id}`);
       }
       
-      setInitialState({
-        name: showName,
-        time: showTime,
-        date: showDate,
-        notes: editor?.getHTML() || '',
-        items: items
-      });
+      const result = await getShowWithItems(showId);
+      if (result) {
+        setItems(result.items);
+        setInitialState({
+          name: showName,
+          time: showTime,
+          date: showDate,
+          notes: editor?.getHTML() || '',
+          items: result.items
+        });
+      }
       
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
