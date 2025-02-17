@@ -2,12 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, UserPlus, Users } from "lucide-react";
+import { Edit2, Trash2, UserPlus } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
 import IntervieweeSearch from './form/IntervieweeSearch';
 
 interface RegularItemProps {
@@ -44,7 +43,6 @@ const RegularItem = ({
     title: '',
     phone: ''
   });
-  const { user } = useAuth();
 
   useEffect(() => {
     loadInterviewees();
@@ -62,8 +60,13 @@ const RegularItem = ({
   };
 
   const handleSave = (updatedItem: any) => {
-    console.log('RegularItem: Handling save with updated item:', updatedItem);
-    onEdit(id, updatedItem);
+    // Preserve existing interviewees when saving
+    const itemWithInterviewees = {
+      ...updatedItem,
+      interviewees: interviewees
+    };
+    console.log('RegularItem: Handling save with updated item:', itemWithInterviewees);
+    onEdit(id, itemWithInterviewees);
   };
 
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
@@ -77,11 +80,24 @@ const RegularItem = ({
         duration,
       };
       
-      await addInterviewee(newInterviewee);
-      await loadInterviewees();
+      const addedInterviewee = await addInterviewee(newInterviewee);
+      await loadInterviewees(); // Reload interviewees list
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
       toast.success('מרואיין נוסף בהצלחה');
+
+      // Update the item state without triggering a save
+      const updatedItem = {
+        id,
+        name,
+        title,
+        details,
+        phone,
+        duration,
+        interviewees: [...interviewees, addedInterviewee]
+      };
+      handleSave(updatedItem);
+      
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
       toast.error('שגיאה בהוספת מרואיין');
@@ -236,7 +252,7 @@ const RegularItem = ({
             variant="ghost"
             size="icon"
             onClick={() => {
-              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration });
+              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration, interviewees });
               setShowEditDialog(true);
             }}
           >
@@ -255,7 +271,7 @@ const RegularItem = ({
       <EditItemDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
-        item={{ id, name, title, details, phone, duration }}
+        item={{ id, name, title, details, phone, duration, interviewees }}
         onSave={handleSave}
       />
     </>
