@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -63,7 +62,7 @@ const RegularItem = ({
     // Preserve existing interviewees when saving
     const itemWithInterviewees = {
       ...updatedItem,
-      interviewees: interviewees
+      interviewees
     };
     console.log('RegularItem: Handling save with updated item:', itemWithInterviewees);
     onEdit(id, itemWithInterviewees);
@@ -81,22 +80,11 @@ const RegularItem = ({
       };
       
       const addedInterviewee = await addInterviewee(newInterviewee);
-      await loadInterviewees(); // Reload interviewees list
+      const updatedInterviewees = [...interviewees, addedInterviewee];
+      setInterviewees(updatedInterviewees);
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
       toast.success('מרואיין נוסף בהצלחה');
-
-      // Update the item state without triggering a save
-      const updatedItem = {
-        id,
-        name,
-        title,
-        details,
-        phone,
-        duration,
-        interviewees: [...interviewees, addedInterviewee]
-      };
-      handleSave(updatedItem);
       
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
@@ -107,8 +95,9 @@ const RegularItem = ({
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
       await deleteInterviewee(intervieweeId);
+      const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
+      setInterviewees(updatedInterviewees);
       toast.success('מרואיין נמחק בהצלחה');
-      await loadInterviewees();
     } catch (error: any) {
       console.error('Error deleting interviewee:', error);
       toast.error('שגיאה במחיקת מרואיין');
