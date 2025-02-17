@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ interface RegularItemProps {
   duration: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
-  onEdit: (id: string, updatedItem: any) => void;
+  onEdit: (id: string, updatedItem: any) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -80,12 +81,25 @@ const RegularItem = ({
           duration
         });
 
-        setInterviewees(prev => [...prev, newInterviewee]);
+        // Update the item with the new interviewee without triggering a save
+        const updatedInterviewees = [...interviewees, newInterviewee];
+        setInterviewees(updatedInterviewees);
+
+        // Update the item to include the interviewees
+        await onEdit(id, {
+          id,
+          name,
+          title,
+          details,
+          phone,
+          duration,
+          is_break: false,
+          is_note: false,
+          interviewees: updatedInterviewees
+        });
+
         setShowIntervieweeInput(false);
         setManualInput({ name: '', title: '', phone: '' });
-
-        // Do NOT trigger a full item update, just add the interviewee
-        await loadInterviewees(); // Reload to ensure consistency
       }
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
@@ -97,7 +111,21 @@ const RegularItem = ({
     try {
       if (!isNewShow && showId) {
         await deleteInterviewee(intervieweeId);
-        setInterviewees(prev => prev.filter(i => i.id !== intervieweeId));
+        const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
+        setInterviewees(updatedInterviewees);
+
+        // Update the item to include the updated interviewees list
+        await onEdit(id, {
+          id,
+          name,
+          title,
+          details,
+          phone,
+          duration,
+          is_break: false,
+          is_note: false,
+          interviewees: updatedInterviewees
+        });
       }
     } catch (error) {
       console.error('Error deleting interviewee:', error);
@@ -124,16 +152,20 @@ const RegularItem = ({
             onManualInputChange={handleManualInputChange}
             onStartEdit={() => setEditingInterviewee(interviewee.id)}
             onDelete={() => handleDeleteInterviewee(interviewee.id)}
-            onSave={() => {
+            onSave={async () => {
               if (manualInput.name) {
+                const updatedInterviewee = await updateInterviewee(interviewee.id, {
+                  ...interviewee,
+                  name: manualInput.name
+                });
                 const updatedInterviewees = interviewees.map(i =>
-                  i.id === interviewee.id
-                    ? { ...i, name: manualInput.name }
-                    : i
+                  i.id === interviewee.id ? updatedInterviewee : i
                 );
                 setInterviewees(updatedInterviewees);
                 setEditingInterviewee(null);
-                onEdit(id, {
+                
+                // Update the item with the updated interviewees
+                await onEdit(id, {
                   id,
                   name,
                   title,
@@ -198,10 +230,7 @@ const RegularItem = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration });
-              setShowEditDialog(true);
-            }}
+            onClick={() => setShowEditDialog(true)}
           >
             <Edit2 className="h-4 w-4" />
           </Button>
