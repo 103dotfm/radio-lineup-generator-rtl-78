@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import BasicEditor from '../editor/BasicEditor';
+import { Interviewee } from '@/types/show';
 
 interface EditItemDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ interface EditItemDialogProps {
     details: string;
     phone: string;
     duration: number;
+    interviewees?: Interviewee[];
   };
   onSave: (updatedItem: any) => void;
 }
@@ -82,7 +84,8 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       title: formState.title,
       phone: formState.phone,
       duration: formState.duration,
-      details: formState.details
+      details: formState.details,
+      interviewees: item.interviewees || []
     };
     
     onSave(updatedItem);
