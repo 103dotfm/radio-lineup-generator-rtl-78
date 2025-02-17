@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -56,7 +55,6 @@ const Index = () => {
             if (editor) {
               editor.commands.setContent(show.notes || '');
             }
-            // Store initial state for comparison
             setInitialState({
               name: show.name,
               time: show.time,
@@ -80,7 +78,6 @@ const Index = () => {
     loadShow();
   }, [showId, editor, navigate]);
 
-  // Check for unsaved changes whenever relevant state changes
   useEffect(() => {
     if (!initialState) return;
 
@@ -100,37 +97,20 @@ const Index = () => {
       JSON.stringify(currentState.items) !== JSON.stringify(initialState.items);
 
     setHasUnsavedChanges(hasChanges);
-  }, [showName, showTime, showDate, items, editor]);
-
-  const handleAdd = (newItem) => {
-    if (editingItem) {
-      setItems(items.map(item => 
-        item.id === editingItem.id 
-          ? { ...newItem, id: editingItem.id }
-          : item
-      ));
-      setEditingItem(null);
-    } else {
-      const item = {
-        ...newItem,
-        id: crypto.randomUUID(),
-      };
-      setItems([...items, item]);
-    }
-    setHasUnsavedChanges(true);
-  };
+  }, [showName, showTime, showDate, items, editor, initialState]);
 
   const handleEdit = async (id: string, updatedItem: any) => {
     console.log('Index: Handling edit for item:', id, updatedItem);
     
-    if (!id) {
-      toast.error('מזהה פריט לא תקין');
-      return;
-    }
-    
     setItems(prevItems => 
       prevItems.map(item => 
-        item.id === id ? { ...item, ...updatedItem } : item
+        item.id === id 
+          ? {
+              ...item,
+              ...updatedItem,
+              interviewees: updatedItem.interviewees || item.interviewees || []
+            }
+          : item
       )
     );
     setHasUnsavedChanges(true);
@@ -155,7 +135,8 @@ const Index = () => {
         phone: item.phone,
         duration: item.duration,
         is_break: item.is_break || false,
-        is_note: item.is_note || false
+        is_note: item.is_note || false,
+        interviewees: item.interviewees || []
       }));
 
       console.log('Saving items:', itemsToSave);
@@ -165,7 +146,6 @@ const Index = () => {
         navigate(`/show/${savedShow.id}`);
       }
       
-      // Update initial state after successful save
       setInitialState({
         name: showName,
         time: showTime,
@@ -182,6 +162,24 @@ const Index = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAdd = (newItem) => {
+    if (editingItem) {
+      setItems(items.map(item => 
+        item.id === editingItem.id 
+          ? { ...newItem, id: editingItem.id }
+          : item
+      ));
+      setEditingItem(null);
+    } else {
+      const item = {
+        ...newItem,
+        id: crypto.randomUUID(),
+      };
+      setItems([...items, item]);
+    }
+    setHasUnsavedChanges(true);
   };
 
   const handleDetailsChange = (id: string, details: string) => {
@@ -318,7 +316,7 @@ const Index = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => navigate('/')}>
-              התעלמות משינויים
+              התעלם משינויים
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
@@ -326,7 +324,7 @@ const Index = () => {
                 navigate('/');
               }}
             >
-              שמירה ומעבר לעמוד הראשי
+              שמור שינויים
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
