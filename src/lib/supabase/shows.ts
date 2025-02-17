@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Show, ShowItem } from "@/types/show";
+import { Show, ShowItem, Interviewee } from "@/types/show";
 
 export const getShows = async () => {
   const { data: shows, error } = await supabase
@@ -84,7 +84,7 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       .eq('show_id', savedShowId);
 
     const existingItemsMap = new Map(existingItems?.map(item => [item.id, item]) || []);
-    let savedItems = [];
+    let savedItems: (ShowItem & { interviewees: Interviewee[] })[] = [];
 
     // Update or create items while preserving interviewees
     for (const [index, item] of items.entries()) {
@@ -121,9 +121,13 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 
       if (itemError) throw itemError;
 
-      // Include the interviewees in the saved item
-      savedItem.interviewees = interviewees;
-      savedItems.push(savedItem);
+      // Type cast the saved item to include interviewees
+      const fullItem: ShowItem & { interviewees: Interviewee[] } = {
+        ...savedItem,
+        interviewees
+      };
+
+      savedItems.push(fullItem);
     }
 
     // Only delete items that are explicitly removed
