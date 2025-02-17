@@ -33,7 +33,7 @@ export const getShowWithItems = async (id: string) => {
   if (checkError) throw checkError;
   if (!existingShow) throw new Error('Show not found');
 
-  // Then get the items
+  // Then get the items with their interviewees
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
     .select(`
@@ -95,18 +95,38 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
       if (updateError) throw updateError;
     }
 
-    // Delete existing items
+    // Delete existing items and their interviewees
     if (showId) {
-      const { error: deleteError } = await supabase
+      // First get all existing item IDs
+      const { data: existingItems } = await supabase
         .from('show_items')
-        .delete()
+        .select('id')
         .eq('show_id', showId);
 
-      if (deleteError) throw deleteError;
+      if (existingItems && existingItems.length > 0) {
+        const itemIds = existingItems.map(item => item.id);
+        
+        // Delete interviewees first (due to foreign key constraints)
+        const { error: deleteIntervieweesError } = await supabase
+          .from('interviewees')
+          .delete()
+          .in('item_id', itemIds);
+
+        if (deleteIntervieweesError) throw deleteIntervieweesError;
+
+        // Then delete items
+        const { error: deleteItemsError } = await supabase
+          .from('show_items')
+          .delete()
+          .eq('show_id', showId);
+
+        if (deleteItemsError) throw deleteItemsError;
+      }
     }
 
     // Insert new items
     if (items.length > 0) {
+      // First insert items
       const itemsWithShowId = items.map((item, index) => ({
         show_id: showId,
         position: index,
@@ -119,12 +139,34 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
         is_note: item.is_note || false
       }));
 
-      const { error: itemsError } = await supabase
-        .rpc('insert_show_items', {
-          items_array: itemsWithShowId
-        });
+      const { data: newItems, error: itemsError } = await supabase
+        .from('show_items')
+        .insert(itemsWithShowId)
+        .select('*');
 
       if (itemsError) throw itemsError;
+
+      // Then insert interviewees for each item
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const newItem = newItems[i];
+        
+        if (item.interviewees && item.interviewees.length > 0) {
+          const intervieweesWithItemId = item.interviewees.map(interviewee => ({
+            item_id: newItem.id,
+            name: interviewee.name,
+            title: interviewee.title,
+            phone: interviewee.phone,
+            duration: interviewee.duration
+          }));
+
+          const { error: intervieweesError } = await supabase
+            .from('interviewees')
+            .insert(intervieweesWithItemId);
+
+          if (intervieweesError) throw intervieweesError;
+        }
+      }
     }
 
     return { id: showId };
@@ -166,4 +208,3 @@ export const deleteShow = async (id: string) => {
     throw error;
   }
 };
-
