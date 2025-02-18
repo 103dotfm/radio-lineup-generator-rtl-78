@@ -55,4 +55,3 @@ export const getInterviewees = async (itemId: string): Promise<DbInterviewee[]> 
   console.log('Retrieved interviewees:', data);
   return data || [];
 };
-

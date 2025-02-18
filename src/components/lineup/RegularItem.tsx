@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Edit2, Trash2, UserPlus } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
-import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
+import { getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import IntervieweeSearch from './form/IntervieweeSearch';
 
@@ -59,7 +59,6 @@ const RegularItem = ({
   };
 
   const handleSave = (updatedItem: any) => {
-    // Preserve existing interviewees when saving
     const itemWithInterviewees = {
       ...updatedItem,
       interviewees
@@ -72,6 +71,7 @@ const RegularItem = ({
     try {
       console.log('Adding interviewee for item:', id, guest);
       const newInterviewee = {
+        id: crypto.randomUUID(),
         item_id: id,
         name: guest.name,
         title: guest.title,
@@ -79,13 +79,22 @@ const RegularItem = ({
         duration,
       };
       
-      const addedInterviewee = await addInterviewee(newInterviewee);
-      const updatedInterviewees = [...interviewees, addedInterviewee];
+      const updatedInterviewees = [...interviewees, newInterviewee];
       setInterviewees(updatedInterviewees);
       setShowIntervieweeInput(false);
       setManualInput({ name: '', title: '', phone: '' });
-      toast.success('מרואיין נוסף בהצלחה');
       
+      const updatedItem = {
+        name,
+        title,
+        details,
+        phone,
+        duration,
+        interviewees: updatedInterviewees
+      };
+      onEdit(id, updatedItem);
+      
+      toast.success('מרואיין נוסף בהצלחה');
     } catch (error: any) {
       console.error('Error adding interviewee:', error);
       toast.error('שגיאה בהוספת מרואיין');
@@ -94,9 +103,19 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
     try {
-      await deleteInterviewee(intervieweeId);
       const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
       setInterviewees(updatedInterviewees);
+      
+      const updatedItem = {
+        name,
+        title,
+        details,
+        phone,
+        duration,
+        interviewees: updatedInterviewees
+      };
+      onEdit(id, updatedItem);
+      
       toast.success('מרואיין נמחק בהצלחה');
     } catch (error: any) {
       console.error('Error deleting interviewee:', error);
