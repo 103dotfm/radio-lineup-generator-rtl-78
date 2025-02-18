@@ -125,12 +125,64 @@ const RegularItem = ({
 
   return (
     <>
-      <td className="py-2 px-4 border border-gray-200 align-top">
-        <div className="flex items-center gap-2">
-          <span>{name}</span>
-        </div>
-        {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2">
+      <tr>
+        <td className="py-2 px-4 border border-gray-200">
+          <div className="flex items-center gap-2">
+            <span>{name}</span>
+          </div>
+        </td>
+        <td className="py-2 px-4 border border-gray-200">
+          <div>{title}</div>
+        </td>
+        <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none overflow-visible" 
+            rowSpan={(interviewees.length || 0) + 1} 
+            dangerouslySetInnerHTML={{ __html: details }} />
+        {isAuthenticated && (
+          <td className="py-2 px-4 border border-gray-200">
+            <div>{phone}</div>
+          </td>
+        )}
+        <td className="py-2 px-4 border border-gray-200">
+          <Input
+            type="number"
+            min="1"
+            value={duration}
+            onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
+            className="w-20"
+          />
+        </td>
+        <td className="py-2 px-4 border border-gray-200">
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}
+            >
+              <UserPlus className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration, interviewees });
+                setShowEditDialog(true);
+              }}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+      {interviewees.map((interviewee) => (
+        <tr key={interviewee.id}>
+          <td className="py-2 px-4 border border-gray-200">
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.name || interviewee.name}
@@ -167,46 +219,8 @@ const RegularItem = ({
                 </Button>
               </div>
             )}
-          </div>
-        ))}
-        {showIntervieweeInput && (
-          <div className="mt-2 space-y-2">
-            <IntervieweeSearch onAdd={handleAddInterviewee} />
-            <div className="text-sm text-gray-500">או הוספה ידנית:</div>
-            <div className="space-y-2">
-              <Input
-                placeholder="שם"
-                value={manualInput.name}
-                onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
-              />
-              <Input
-                placeholder="קרדיט"
-                value={manualInput.title}
-                onChange={(e) => setManualInput(prev => ({ ...prev, title: e.target.value }))}
-              />
-              <Input
-                placeholder="טלפון"
-                value={manualInput.phone}
-                onChange={(e) => setManualInput(prev => ({ ...prev, phone: e.target.value }))}
-              />
-              <Button
-                onClick={() => {
-                  if (manualInput.name) {
-                    handleAddInterviewee(manualInput);
-                  }
-                }}
-                disabled={!manualInput.name}
-              >
-                הוסף
-              </Button>
-            </div>
-          </div>
-        )}
-      </td>
-      <td className="py-2 px-4 border border-gray-200 align-top">
-        <div>{title}</div>
-        {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2">
+          </td>
+          <td className="py-2 px-4 border border-gray-200">
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.title || interviewee.title}
@@ -216,15 +230,9 @@ const RegularItem = ({
             ) : (
               interviewee.title
             )}
-          </div>
-        ))}
-      </td>
-      <td className="py-2 px-4 border border-gray-200 prose prose-sm max-w-none align-top overflow-visible" rowSpan={(interviewees.length || 0) + 1} dangerouslySetInnerHTML={{ __html: details }} />
-      {isAuthenticated && (
-        <td className="py-2 px-4 border border-gray-200 align-top">
-          <div>{phone}</div>
-          {interviewees.map((interviewee) => (
-            <div key={interviewee.id} className="mt-2 border-t pt-2">
+          </td>
+          {isAuthenticated && (
+            <td className="py-2 px-4 border border-gray-200">
               {editingInterviewee === interviewee.id ? (
                 <Input
                   value={manualInput.phone || interviewee.phone}
@@ -234,47 +242,48 @@ const RegularItem = ({
               ) : (
                 interviewee.phone
               )}
+            </td>
+          )}
+          <td className="py-2 px-4 border border-gray-200" colSpan={2}></td>
+        </tr>
+      ))}
+      {showIntervieweeInput && (
+        <tr>
+          <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
+            <div className="space-y-2">
+              <IntervieweeSearch onAdd={handleAddInterviewee} />
+              <div className="text-sm text-gray-500">או הוספה ידנית:</div>
+              <div className="space-y-2">
+                <Input
+                  placeholder="שם"
+                  value={manualInput.name}
+                  onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
+                />
+                <Input
+                  placeholder="קרדיט"
+                  value={manualInput.title}
+                  onChange={(e) => setManualInput(prev => ({ ...prev, title: e.target.value }))}
+                />
+                <Input
+                  placeholder="טלפון"
+                  value={manualInput.phone}
+                  onChange={(e) => setManualInput(prev => ({ ...prev, phone: e.target.value }))}
+                />
+                <Button
+                  onClick={() => {
+                    if (manualInput.name) {
+                      handleAddInterviewee(manualInput);
+                    }
+                  }}
+                  disabled={!manualInput.name}
+                >
+                  הוסף
+                </Button>
+              </div>
             </div>
-          ))}
-        </td>
+          </td>
+        </tr>
       )}
-      <td className="py-2 px-4 border border-gray-200 align-top">
-        <Input
-          type="number"
-          min="1"
-          value={duration}
-          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-          className="w-20"
-        />
-      </td>
-      <td className="py-2 px-4 border border-gray-200 align-top">
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}
-          >
-            <UserPlus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration, interviewees });
-              setShowEditDialog(true);
-            }}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
 
       <EditItemDialog
         open={showEditDialog}
