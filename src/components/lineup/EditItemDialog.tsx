@@ -112,48 +112,72 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             </button>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">שם</label>
-                <Input 
-                  value={formState.name} 
-                  onChange={(e) => handleInputChange('name', e.target.value)} 
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">קרדיט</label>
-                <Input 
-                  value={formState.title} 
-                  onChange={(e) => handleInputChange('title', e.target.value)} 
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">פרטים</label>
-              <BasicEditor
-                content={formState.details}
-                onChange={(html) => handleInputChange('details', html)}
-                className="min-h-[100px]"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">טלפון</label>
-                <Input 
-                  value={formState.phone} 
-                  onChange={(e) => handleInputChange('phone', e.target.value)} 
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">משך בדקות</label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={formState.duration}
-                  onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 5)}
-                />
-              </div>
-            </div>
+            <table className="w-full border-collapse">
+              <tbody>
+                <tr>
+                  <td className="py-2">
+                    <label className="text-sm font-medium">שם</label>
+                    <Input 
+                      value={formState.name} 
+                      onChange={(e) => handleInputChange('name', e.target.value)} 
+                    />
+                  </td>
+                  <td className="py-2 pr-4">
+                    <label className="text-sm font-medium">קרדיט</label>
+                    <Input 
+                      value={formState.title} 
+                      onChange={(e) => handleInputChange('title', e.target.value)} 
+                    />
+                  </td>
+                </tr>
+                {item.interviewees?.map((interviewee) => (
+                  <tr key={interviewee.id}>
+                    <td className="py-2">
+                      <Input 
+                        value={interviewee.name} 
+                        disabled
+                        className="bg-gray-50"
+                      />
+                    </td>
+                    <td className="py-2 pr-4">
+                      <Input 
+                        value={interviewee.title} 
+                        disabled
+                        className="bg-gray-50"
+                      />
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={2} className="py-2">
+                    <label className="text-sm font-medium">פרטים</label>
+                    <BasicEditor
+                      content={formState.details}
+                      onChange={(html) => handleInputChange('details', html)}
+                      className="min-h-[100px]"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2">
+                    <label className="text-sm font-medium">טלפון</label>
+                    <Input 
+                      value={formState.phone} 
+                      onChange={(e) => handleInputChange('phone', e.target.value)} 
+                    />
+                  </td>
+                  <td className="py-2 pr-4">
+                    <label className="text-sm font-medium">משך בדקות</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={formState.duration}
+                      onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 5)}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
             <div className="flex justify-end gap-2">
               <Button onClick={handleClose} variant="outline">ביטול</Button>
               <Button onClick={handleSave} disabled={!hasChanges}>שמור</Button>
