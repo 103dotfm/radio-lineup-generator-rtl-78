@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2, UserPlus } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
-import { getInterviewees } from '@/lib/supabase/interviewees';
+import { addInterviewee, deleteInterviewee, getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import IntervieweeSearch from './form/IntervieweeSearch';
 
@@ -60,6 +59,7 @@ const RegularItem = ({
   };
 
   const handleSave = (updatedItem: any) => {
+    // Preserve existing interviewees when saving
     const itemWithInterviewees = {
       ...updatedItem,
       interviewees
@@ -69,48 +69,39 @@ const RegularItem = ({
   };
 
   const handleAddInterviewee = async (guest: { name: string; title: string; phone: string }) => {
-    const newInterviewee = {
-      id: crypto.randomUUID(), // Temporary ID for local state
-      item_id: id,
-      name: guest.name,
-      title: guest.title,
-      phone: guest.phone,
-      duration,
-    };
-    
-    const updatedInterviewees = [...interviewees, newInterviewee];
-    setInterviewees(updatedInterviewees);
-    setShowIntervieweeInput(false);
-    setManualInput({ name: '', title: '', phone: '' });
-    
-    // Update the parent component with the new interviewee
-    handleSave({
-      name,
-      title,
-      details,
-      phone,
-      duration,
-      interviewees: updatedInterviewees
-    });
-    
-    toast.success('מרואיין נוסף בהצלחה');
+    try {
+      console.log('Adding interviewee for item:', id, guest);
+      const newInterviewee = {
+        item_id: id,
+        name: guest.name,
+        title: guest.title,
+        phone: guest.phone,
+        duration,
+      };
+      
+      const addedInterviewee = await addInterviewee(newInterviewee);
+      const updatedInterviewees = [...interviewees, addedInterviewee];
+      setInterviewees(updatedInterviewees);
+      setShowIntervieweeInput(false);
+      setManualInput({ name: '', title: '', phone: '' });
+      toast.success('מרואיין נוסף בהצלחה');
+      
+    } catch (error: any) {
+      console.error('Error adding interviewee:', error);
+      toast.error('שגיאה בהוספת מרואיין');
+    }
   };
 
   const handleDeleteInterviewee = async (intervieweeId: string) => {
-    const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
-    setInterviewees(updatedInterviewees);
-    
-    // Update the parent component with the removed interviewee
-    handleSave({
-      name,
-      title,
-      details,
-      phone,
-      duration,
-      interviewees: updatedInterviewees
-    });
-    
-    toast.success('מרואיין נמחק בהצלחה');
+    try {
+      await deleteInterviewee(intervieweeId);
+      const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
+      setInterviewees(updatedInterviewees);
+      toast.success('מרואיין נמחק בהצלחה');
+    } catch (error: any) {
+      console.error('Error deleting interviewee:', error);
+      toast.error('שגיאה במחיקת מרואיין');
+    }
   };
 
   return (
@@ -120,7 +111,7 @@ const RegularItem = ({
           <span>{name}</span>
         </div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[24px] flex items-center">
+          <div key={interviewee.id} className="mt-2 border-t pt-2">
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.name || interviewee.name}
@@ -139,7 +130,7 @@ const RegularItem = ({
                 }}
               />
             ) : (
-              <div className="flex items-center gap-2 w-full">
+              <div className="flex items-center gap-2">
                 <span>{interviewee.name}</span>
                 <Button
                   variant="ghost"
@@ -196,7 +187,7 @@ const RegularItem = ({
       <td className="py-2 px-4 border border-gray-200 align-top">
         <div>{title}</div>
         {interviewees.map((interviewee) => (
-          <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[24px] flex items-center">
+          <div key={interviewee.id} className="mt-2 border-t pt-2">
             {editingInterviewee === interviewee.id ? (
               <Input
                 value={manualInput.title || interviewee.title}
@@ -214,7 +205,7 @@ const RegularItem = ({
         <td className="py-2 px-4 border border-gray-200 align-top">
           <div>{phone}</div>
           {interviewees.map((interviewee) => (
-            <div key={interviewee.id} className="mt-2 border-t pt-2 min-h-[24px] flex items-center">
+            <div key={interviewee.id} className="mt-2 border-t pt-2">
               {editingInterviewee === interviewee.id ? (
                 <Input
                   value={manualInput.phone || interviewee.phone}
