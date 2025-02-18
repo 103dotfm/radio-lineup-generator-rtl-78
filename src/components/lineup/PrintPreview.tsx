@@ -63,35 +63,39 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             }
 
             return (
-              <tr key={item.id}>
-                <td className="py-3 px-4 border border-gray-200 font-medium text-base align-top">
-                  <div>{item.name}</div>
-                  {item.interviewees?.map((interviewee) => (
-                    <div key={interviewee.id} className="mt-2 pt-1 border-t flex items-center gap-2">
-                      <span>{interviewee.name}</span>
-                    </div>
-                  ))}
-                </td>
-                <td className="py-3 px-4 border border-gray-200 text-base align-top">
-                  <div>{item.title}</div>
-                  {item.interviewees?.map((interviewee) => (
-                    <div key={interviewee.id} className="mt-2 pt-1 border-t">
-                      {interviewee.title}
-                    </div>
-                  ))}
-                </td>
-                <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none align-top break-words whitespace-normal h-full [&_*]:!text-base" rowSpan={(item.interviewees?.length || 0) + 1} dangerouslySetInnerHTML={{ __html: item.details }} />
-                {isAuthenticated && (
-                  <td className="py-3 px-4 border border-gray-200 text-base align-top">
-                    <div>{item.phone}</div>
-                    {item.interviewees?.map((interviewee) => (
-                      <div key={interviewee.id} className="mt-2 pt-1 border-t">
-                        {interviewee.phone}
-                      </div>
-                    ))}
+              <>
+                <tr key={item.id}>
+                  <td className="py-3 px-4 border border-gray-200 font-medium text-base">
+                    <div className="min-h-[24px] flex items-center">{item.name}</div>
                   </td>
-                )}
-              </tr>
+                  <td className="py-3 px-4 border border-gray-200 text-base">
+                    <div className="min-h-[24px] flex items-center">{item.title}</div>
+                  </td>
+                  <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none break-words whitespace-normal" rowSpan={(item.interviewees?.length || 0) + 1}>
+                    <div dangerouslySetInnerHTML={{ __html: item.details }} />
+                  </td>
+                  {isAuthenticated && (
+                    <td className="py-3 px-4 border border-gray-200 text-base">
+                      <div className="min-h-[24px] flex items-center">{item.phone}</div>
+                    </td>
+                  )}
+                </tr>
+                {item.interviewees?.map((interviewee) => (
+                  <tr key={interviewee.id}>
+                    <td className="py-3 px-4 border border-gray-200 text-base">
+                      <div className="min-h-[24px] flex items-center">{interviewee.name}</div>
+                    </td>
+                    <td className="py-3 px-4 border border-gray-200 text-base">
+                      <div className="min-h-[24px] flex items-center">{interviewee.title}</div>
+                    </td>
+                    {isAuthenticated && (
+                      <td className="py-3 px-4 border border-gray-200 text-base">
+                        <div className="min-h-[24px] flex items-center">{interviewee.phone}</div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </>
             );
           })}
         </tbody>
