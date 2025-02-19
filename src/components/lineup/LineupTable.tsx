@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
@@ -43,17 +44,25 @@ const LineupTable = ({
             className="min-h-[200px] transition-all overflow-x-auto"
           >
             <div className="w-full min-w-[800px] lg:min-w-0">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse table-fixed">
+                <colgroup>
+                  <col className="w-[20%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[30%]" />
+                  {isAuthenticated && <col className="w-[10%]" />}
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-name align-top">שם</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-title align-top">קרדיט</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-details align-top">פרטים</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">שם</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">קרדיט</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">פרטים</th>
                     {isAuthenticated && (
-                      <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-phone align-top">טלפון</th>
+                      <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">טלפון</th>
                     )}
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-duration align-top">דקות</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold lineup-header-actions align-top">פעולות</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">דקות</th>
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
