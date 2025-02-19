@@ -41,31 +41,23 @@ const LineupTable = ({
           <div 
             ref={provided.innerRef} 
             {...provided.droppableProps}
-            className="min-h-[200px] transition-all overflow-x-auto"
+            className="min-h-[200px] transition-all"
           >
-            <div className="w-full min-w-[800px] lg:min-w-0">
-              <table className="w-full border-collapse">
-                <colgroup>
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '20%' }} />
-                  <col style={{ width: '30%' }} />
-                  {isAuthenticated && <col style={{ width: '10%' }} />}
-                  <col style={{ width: '10%' }} />
-                  <col style={{ width: '10%' }} />
-                </colgroup>
+            <div className="w-full overflow-x-auto">
+              <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr>
-                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[20%]">שם</th>
-                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[20%]">קרדיט</th>
-                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[30%]">פרטים</th>
+                    <th className="w-[20%] py-2 px-4 text-right border border-gray-200 font-bold align-top">שם</th>
+                    <th className="w-[20%] py-2 px-4 text-right border border-gray-200 font-bold align-top">קרדיט</th>
+                    <th className="w-[30%] py-2 px-4 text-right border border-gray-200 font-bold align-top">פרטים</th>
                     {isAuthenticated && (
-                      <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[10%]">טלפון</th>
+                      <th className="w-[10%] py-2 px-4 text-right border border-gray-200 font-bold align-top">טלפון</th>
                     )}
-                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[10%]">דקות</th>
-                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[10%]">פעולות</th>
+                    <th className="w-[10%] py-2 px-4 text-right border border-gray-200 font-bold align-top">דקות</th>
+                    <th className="w-[10%] py-2 px-4 text-right border border-gray-200 font-bold align-top">פעולות</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200">
                   {items.map((item, index) => (
                     <LineupItem
                       key={item.id}
