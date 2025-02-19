@@ -41,41 +41,45 @@ const LineupTable = ({
           <div 
             ref={provided.innerRef} 
             {...provided.droppableProps}
-            className="min-h-[200px] transition-all"
+            className="min-h-[200px]"
           >
-            <div className="w-full">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '800px' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '20%' }} className="py-2 px-4 text-right border border-gray-200 font-bold align-top">שם</th>
-                      <th style={{ width: '20%' }} className="py-2 px-4 text-right border border-gray-200 font-bold align-top">קרדיט</th>
-                      <th style={{ width: '30%' }} className="py-2 px-4 text-right border border-gray-200 font-bold align-top">פרטים</th>
-                      {isAuthenticated && (
-                        <th style={{ width: '10%' }} className="py-2 px-4 text-right border border-gray-200 font-bold align-top">טלפון</th>
-                      )}
-                      <th style={{ width: '10%' }} className="py-2 px-4 text-right border border-gray-200 font-bold align-top">דקות</th>
-                      <th style={{ width: '10%' }} className="py-2 px-4 text-right border border-gray-200 font-bold align-top">פעולות</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {items.map((item, index) => (
-                      <LineupItem
-                        key={item.id}
-                        {...item}
-                        index={index}
-                        onDelete={onDelete}
-                        onDurationChange={onDurationChange}
-                        onEdit={onEdit}
-                        onBreakTextChange={onBreakTextChange}
-                        onDetailsChange={onDetailsChange}
-                      />
-                    ))}
-                    {provided.placeholder}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <table className="w-full table-fixed border-collapse">
+              <colgroup>
+                <col className="w-1/5" />
+                <col className="w-1/5" />
+                <col className="w-[30%]" />
+                {isAuthenticated && <col className="w-[10%]" />}
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 text-right border border-gray-200 font-bold">שם</th>
+                  <th className="py-2 px-4 text-right border border-gray-200 font-bold">קרדיט</th>
+                  <th className="py-2 px-4 text-right border border-gray-200 font-bold">פרטים</th>
+                  {isAuthenticated && (
+                    <th className="py-2 px-4 text-right border border-gray-200 font-bold">טלפון</th>
+                  )}
+                  <th className="py-2 px-4 text-right border border-gray-200 font-bold">דקות</th>
+                  <th className="py-2 px-4 text-right border border-gray-200 font-bold">פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => (
+                  <LineupItem
+                    key={item.id}
+                    {...item}
+                    index={index}
+                    onDelete={onDelete}
+                    onDurationChange={onDurationChange}
+                    onEdit={onEdit}
+                    onBreakTextChange={onBreakTextChange}
+                    onDetailsChange={onDetailsChange}
+                  />
+                ))}
+                {provided.placeholder}
+              </tbody>
+            </table>
           </div>
         )}
       </Droppable>
