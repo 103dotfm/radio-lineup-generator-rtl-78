@@ -44,25 +44,25 @@ const LineupTable = ({
             className="min-h-[200px] transition-all overflow-x-auto"
           >
             <div className="w-full min-w-[800px] lg:min-w-0">
-              <table className="w-full border-collapse table-fixed">
+              <table className="w-full border-collapse">
                 <colgroup>
-                  <col className="w-[20%]" />
-                  <col className="w-[20%]" />
-                  <col className="w-[30%]" />
-                  {isAuthenticated && <col className="w-[10%]" />}
-                  <col className="w-[10%]" />
-                  <col className="w-[10%]" />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '30%' }} />
+                  {isAuthenticated && <col style={{ width: '10%' }} />}
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">שם</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">קרדיט</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">פרטים</th>
+                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[20%]">שם</th>
+                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[20%]">קרדיט</th>
+                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[30%]">פרטים</th>
                     {isAuthenticated && (
-                      <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">טלפון</th>
+                      <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[10%]">טלפון</th>
                     )}
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">דקות</th>
-                    <th className="py-2 px-4 text-right border border-gray-200 font-bold align-top">פעולות</th>
+                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[10%]">דקות</th>
+                    <th scope="col" className="py-2 px-4 text-right border border-gray-200 font-bold align-top w-[10%]">פעולות</th>
                   </tr>
                 </thead>
                 <tbody>
