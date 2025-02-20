@@ -59,93 +59,76 @@ const RegularItem = ({
     }
   };
 
+  const handleDeleteInterviewee = (intervieweeId: string) => {
+    const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
+    setInterviewees(updatedInterviewees);
+    const updatedItem = {
+      name,
+      title,
+      details,
+      phone,
+      duration,
+      interviewees: updatedInterviewees
+    };
+    onEdit(id, updatedItem);
+    toast.success('מרואיין נמחק בהצלחה');
+  };
+
+  const handleEditInterviewee = (intervieweeId: string, updatedData: Partial<Interviewee>) => {
+    const updatedInterviewees = interviewees.map(i => 
+      i.id === intervieweeId ? { ...i, ...updatedData } : i
+    );
+    setInterviewees(updatedInterviewees);
+    const updatedItem = {
+      name,
+      title,
+      details,
+      phone,
+      duration,
+      interviewees: updatedInterviewees
+    };
+    onEdit(id, updatedItem);
+    toast.success('מרואיין עודכן בהצלחה');
+  };
+
   return (
     <>
-      <td className="py-2 px-4 border border-gray-200 w-1/5">
+      <td className="py-2 px-4 border border-gray-200 w-1/5 relative">
         <div className="flex flex-col gap-1">
           <div>{name}</div>
           {interviewees.length > 0 && (
-            <div className="text-sm text-gray-600">
-              {interviewees.map((interviewee, index) => (
-                <div key={interviewee.id} className="pl-4">
-                  {interviewee.name}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </td>
-      <td className="py-2 px-4 border border-gray-200 w-1/5">
-        <div className="flex flex-col gap-1">
-          <div>{title}</div>
-          {interviewees.length > 0 && (
-            <div className="text-sm text-gray-600">
-              {interviewees.map((interviewee, index) => (
-                <div key={interviewee.id} className="pl-4">
-                  {interviewee.title}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </td>
-      <td className="py-2 px-4 border border-gray-200 w-[30%] align-top" 
-          dangerouslySetInnerHTML={{ __html: details }} />
-      {isAuthenticated && (
-        <td className="py-2 px-4 border border-gray-200 w-[10%]">
-          <div className="flex flex-col gap-1">
-            <div>{phone}</div>
-            {interviewees.length > 0 && (
-              <div className="text-sm text-gray-600">
-                {interviewees.map((interviewee, index) => (
-                  <div key={interviewee.id} className="pl-4">
-                    {interviewee.phone}
+            <div className="space-y-2">
+              {interviewees.map((interviewee) => (
+                <div key={interviewee.id} className="flex items-center justify-between gap-2 py-1">
+                  <span>{interviewee.name}</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditInterviewee(interviewee.id, {
+                        name: prompt('שם חדש:', interviewee.name) || interviewee.name,
+                        title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
+                        phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
+                      })}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteInterviewee(interviewee.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </td>
-      )}
-      <td className="py-2 px-4 border border-gray-200 w-[10%]">
-        <Input
-          type="number"
-          min="1"
-          value={duration}
-          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-          className="w-20"
-        />
-      </td>
-      <td className="py-2 px-4 border border-gray-200 w-[10%]">
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}
-          >
-            <UserPlus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration, interviewees });
-              setShowEditDialog(true);
-            }}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
+        
         {showIntervieweeInput && (
-          <div className="absolute mt-2 bg-white shadow-lg rounded-md p-4 border z-10">
+          <div className="absolute top-full right-0 mt-2 bg-white shadow-lg rounded-md p-4 border z-10 min-w-[300px]">
             <div className="space-y-2">
               <IntervieweeSearch onAdd={async (guest) => {
                 try {
@@ -238,6 +221,75 @@ const RegularItem = ({
             </div>
           </div>
         )}
+      </td>
+      <td className="py-2 px-4 border border-gray-200 w-1/5">
+        <div className="flex flex-col gap-1">
+          <div>{title}</div>
+          {interviewees.length > 0 && (
+            <div className="space-y-2">
+              {interviewees.map((interviewee) => (
+                <div key={interviewee.id} className="py-1">
+                  {interviewee.title}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="py-2 px-4 border border-gray-200 w-[30%] align-top" 
+          dangerouslySetInnerHTML={{ __html: details }} />
+      {isAuthenticated && (
+        <td className="py-2 px-4 border border-gray-200 w-[10%]">
+          <div className="flex flex-col gap-1">
+            <div>{phone}</div>
+            {interviewees.length > 0 && (
+              <div className="space-y-2">
+                {interviewees.map((interviewee) => (
+                  <div key={interviewee.id} className="py-1">
+                    {interviewee.phone}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </td>
+      )}
+      <td className="py-2 px-4 border border-gray-200 w-[10%]">
+        <Input
+          type="number"
+          min="1"
+          value={duration}
+          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
+          className="w-20"
+        />
+      </td>
+      <td className="py-2 px-4 border border-gray-200 w-[10%]">
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              console.log('Opening edit dialog for item:', { id, name, title, details, phone, duration, interviewees });
+              setShowEditDialog(true);
+            }}
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </td>
 
       <EditItemDialog
