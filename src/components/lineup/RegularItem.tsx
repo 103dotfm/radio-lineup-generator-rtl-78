@@ -62,18 +62,49 @@ const RegularItem = ({
   return (
     <>
       <td className="py-2 px-4 border border-gray-200 w-1/5">
-        <div className="flex items-center gap-2">
-          <span>{name}</span>
+        <div className="flex flex-col gap-1">
+          <div>{name}</div>
+          {interviewees.length > 0 && (
+            <div className="text-sm text-gray-600">
+              {interviewees.map((interviewee, index) => (
+                <div key={interviewee.id} className="pl-4">
+                  {interviewee.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </td>
       <td className="py-2 px-4 border border-gray-200 w-1/5">
-        <div>{title}</div>
+        <div className="flex flex-col gap-1">
+          <div>{title}</div>
+          {interviewees.length > 0 && (
+            <div className="text-sm text-gray-600">
+              {interviewees.map((interviewee, index) => (
+                <div key={interviewee.id} className="pl-4">
+                  {interviewee.title}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </td>
       <td className="py-2 px-4 border border-gray-200 w-[30%] align-top" 
           dangerouslySetInnerHTML={{ __html: details }} />
       {isAuthenticated && (
         <td className="py-2 px-4 border border-gray-200 w-[10%]">
-          <div>{phone}</div>
+          <div className="flex flex-col gap-1">
+            <div>{phone}</div>
+            {interviewees.length > 0 && (
+              <div className="text-sm text-gray-600">
+                {interviewees.map((interviewee, index) => (
+                  <div key={interviewee.id} className="pl-4">
+                    {interviewee.phone}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </td>
       )}
       <td className="py-2 px-4 border border-gray-200 w-[10%]">
@@ -112,25 +143,9 @@ const RegularItem = ({
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      </td>
 
-      <EditItemDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        item={{ id, name, title, details, phone, duration, interviewees }}
-        onSave={(updatedItem) => {
-          const itemWithInterviewees = {
-            ...updatedItem,
-            interviewees
-          };
-          console.log('RegularItem: Handling save with updated item:', itemWithInterviewees);
-          onEdit(id, itemWithInterviewees);
-        }}
-      />
-
-      {showIntervieweeInput && (
-        <tr>
-          <td colSpan={isAuthenticated ? 6 : 5} className="py-2 px-4 border border-gray-200">
+        {showIntervieweeInput && (
+          <div className="absolute mt-2 bg-white shadow-lg rounded-md p-4 border z-10">
             <div className="space-y-2">
               <IntervieweeSearch onAdd={async (guest) => {
                 try {
@@ -221,9 +236,23 @@ const RegularItem = ({
                 </Button>
               </div>
             </div>
-          </td>
-        </tr>
-      )}
+          </div>
+        )}
+      </td>
+
+      <EditItemDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        item={{ id, name, title, details, phone, duration, interviewees }}
+        onSave={(updatedItem) => {
+          const itemWithInterviewees = {
+            ...updatedItem,
+            interviewees
+          };
+          console.log('RegularItem: Handling save with updated item:', itemWithInterviewees);
+          onEdit(id, itemWithInterviewees);
+        }}
+      />
     </>
   );
 };
