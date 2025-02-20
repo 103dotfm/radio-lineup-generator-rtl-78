@@ -7,7 +7,8 @@ import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
-import IntervieweeSearch from './form/IntervieweeSearch';
+import IntervieweeList from './interviewees/IntervieweeList';
+import IntervieweeForm from './interviewees/IntervieweeForm';
 
 interface RegularItemProps {
   id: string;
@@ -37,12 +38,6 @@ const RegularItem = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
-  const [editingInterviewee, setEditingInterviewee] = useState<string | null>(null);
-  const [manualInput, setManualInput] = useState({
-    name: '',
-    title: '',
-    phone: ''
-  });
 
   useEffect(() => {
     loadInterviewees();
@@ -61,16 +56,7 @@ const RegularItem = ({
 
   const handleDeleteInterviewee = (intervieweeId: string) => {
     const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
-    setInterviewees(updatedInterviewees);
-    const updatedItem = {
-      name,
-      title,
-      details,
-      phone,
-      duration,
-      interviewees: updatedInterviewees
-    };
-    onEdit(id, updatedItem);
+    updateInterviewees(updatedInterviewees);
     toast.success('מרואיין נמחק בהצלחה');
   };
 
@@ -78,6 +64,16 @@ const RegularItem = ({
     const updatedInterviewees = interviewees.map(i => 
       i.id === intervieweeId ? { ...i, ...updatedData } : i
     );
+    updateInterviewees(updatedInterviewees);
+    toast.success('מרואיין עודכן בהצלחה');
+  };
+
+  const handleAddInterviewee = (newInterviewee: Interviewee) => {
+    const updatedInterviewees = [...interviewees, newInterviewee];
+    updateInterviewees(updatedInterviewees);
+  };
+
+  const updateInterviewees = (updatedInterviewees: Interviewee[]) => {
     setInterviewees(updatedInterviewees);
     const updatedItem = {
       name,
@@ -88,7 +84,6 @@ const RegularItem = ({
       interviewees: updatedInterviewees
     };
     onEdit(id, updatedItem);
-    toast.success('מרואיין עודכן בהצלחה');
   };
 
   return (
@@ -97,128 +92,22 @@ const RegularItem = ({
         <div className="flex flex-col gap-1">
           <div>{name}</div>
           {interviewees.length > 0 && (
-            <div className="space-y-2">
-              {interviewees.map((interviewee) => (
-                <div key={interviewee.id} className="flex items-center justify-between gap-2 py-1">
-                  <span>{interviewee.name}</span>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditInterviewee(interviewee.id, {
-                        name: prompt('שם חדש:', interviewee.name) || interviewee.name,
-                        title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
-                        phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
-                      })}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteInterviewee(interviewee.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <IntervieweeList
+              interviewees={interviewees}
+              onEdit={handleEditInterviewee}
+              onDelete={handleDeleteInterviewee}
+            />
           )}
         </div>
         
         {showIntervieweeInput && (
           <div className="absolute top-full right-0 mt-2 bg-white shadow-lg rounded-md p-4 border z-10 min-w-[300px]">
-            <div className="space-y-2">
-              <IntervieweeSearch onAdd={async (guest) => {
-                try {
-                  console.log('Adding interviewee for item:', id, guest);
-                  const newInterviewee = {
-                    id: crypto.randomUUID(),
-                    item_id: id,
-                    name: guest.name,
-                    title: guest.title,
-                    phone: guest.phone,
-                    duration,
-                  };
-                  
-                  const updatedInterviewees = [...interviewees, newInterviewee];
-                  setInterviewees(updatedInterviewees);
-                  setShowIntervieweeInput(false);
-                  setManualInput({ name: '', title: '', phone: '' });
-                  
-                  const updatedItem = {
-                    name,
-                    title,
-                    details,
-                    phone,
-                    duration,
-                    interviewees: updatedInterviewees
-                  };
-                  onEdit(id, updatedItem);
-                  
-                  toast.success('מרואיין נוסף בהצלחה');
-                } catch (error: any) {
-                  console.error('Error adding interviewee:', error);
-                  toast.error('שגיאה בהוספת מרואיין');
-                }
-              }} />
-              <div className="text-sm text-gray-500">או הוספה ידנית:</div>
-              <div className="space-y-2">
-                <Input
-                  placeholder="שם"
-                  value={manualInput.name}
-                  onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
-                />
-                <Input
-                  placeholder="קרדיט"
-                  value={manualInput.title}
-                  onChange={(e) => setManualInput(prev => ({ ...prev, title: e.target.value }))}
-                />
-                <Input
-                  placeholder="טלפון"
-                  value={manualInput.phone}
-                  onChange={(e) => setManualInput(prev => ({ ...prev, phone: e.target.value }))}
-                />
-                <Button
-                  onClick={() => {
-                    if (manualInput.name) {
-                      const guest = {
-                        name: manualInput.name,
-                        title: manualInput.title,
-                        phone: manualInput.phone
-                      };
-                      const newInterviewee = {
-                        id: crypto.randomUUID(),
-                        item_id: id,
-                        ...guest,
-                        duration,
-                      };
-                      
-                      const updatedInterviewees = [...interviewees, newInterviewee];
-                      setInterviewees(updatedInterviewees);
-                      setShowIntervieweeInput(false);
-                      setManualInput({ name: '', title: '', phone: '' });
-                      
-                      const updatedItem = {
-                        name,
-                        title,
-                        details,
-                        phone,
-                        duration,
-                        interviewees: updatedInterviewees
-                      };
-                      onEdit(id, updatedItem);
-                      
-                      toast.success('מרואיין נוסף בהצלחה');
-                    }
-                  }}
-                  disabled={!manualInput.name}
-                >
-                  הוסף
-                </Button>
-              </div>
-            </div>
+            <IntervieweeForm
+              itemId={id}
+              duration={duration}
+              onAdd={handleAddInterviewee}
+              onClose={() => setShowIntervieweeInput(false)}
+            />
           </div>
         )}
       </td>
