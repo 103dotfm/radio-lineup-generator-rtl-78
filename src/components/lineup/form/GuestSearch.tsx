@@ -8,11 +8,12 @@ import { searchGuests } from '@/lib/supabase/guests';
 interface GuestSearchProps {
   onGuestSelect: (guest: { name: string; title: string; phone: string }) => void;
   onNameChange: (name: string) => void;
+  value?: string;
+  clearValue?: () => void;
 }
 
-const GuestSearch = ({ onGuestSelect, onNameChange }: GuestSearchProps) => {
+const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: GuestSearchProps) => {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -32,7 +33,6 @@ const GuestSearch = ({ onGuestSelect, onNameChange }: GuestSearchProps) => {
 
   const handleSelect = (guest: { name: string; title: string; phone: string }) => {
     onGuestSelect(guest);
-    setValue(guest.name);
     setOpen(false);
   };
 
@@ -44,10 +44,7 @@ const GuestSearch = ({ onGuestSelect, onNameChange }: GuestSearchProps) => {
             ref={inputRef}
             placeholder="שם מרואיינ/ת"
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              onNameChange(e.target.value);
-            }}
+            onChange={(e) => onNameChange(e.target.value)}
             required
             autoComplete="off"
             name="guest-name"

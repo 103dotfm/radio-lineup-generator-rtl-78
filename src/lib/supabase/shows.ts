@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Show, ShowItem } from "@/types/show";
 
@@ -176,8 +177,8 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 };
 
 export const searchShows = async (query: string) => {
-  // Get shows with matching names
-  const { data: nameMatches, error: nameError } = await supabase
+  // First try to find shows by name
+  const { data: shows, error } = await supabase
     .from('shows')
     .select(`
       *,
@@ -186,32 +187,37 @@ export const searchShows = async (query: string) => {
         interviewees(*)
       )
     `)
-    .ilike('name', `%${query}%`);
+    .filter('name', 'ilike', `%${query}%`);
 
-  if (nameError) {
-    console.error('Error searching shows by name:', nameError);
-    throw nameError;
+  if (error) {
+    console.error('Error searching shows:', error);
+    throw error;
   }
 
-  // Get shows with matching items
-  const { data: itemMatches, error: itemError } = await supabase
-    .from('shows')
+  // Then try to find shows by item name or title
+  const { data: showsByItems, error: itemsError } = await supabase
+    .from('show_items')
     .select(`
-      *,
-      items:show_items!inner(
+      show:shows(
         *,
-        interviewees(*)
+        items:show_items(
+          *,
+          interviewees(*)
+        )
       )
     `)
-    .or(`show_items.name.ilike.%${query}%,show_items.title.ilike.%${query}%`);
+    .or(`name.ilike.%${query}%,title.ilike.%${query}%`);
 
-  if (itemError) {
-    console.error('Error searching show items:', itemError);
-    throw itemError;
+  if (itemsError) {
+    console.error('Error searching show items:', itemsError);
+    throw itemsError;
   }
 
-  // Combine and deduplicate results
-  const allShows = [...(nameMatches || []), ...(itemMatches || [])];
+  // Combine results
+  const showsByItemsData = showsByItems?.map(item => item.show).filter(Boolean) || [];
+  const allShows = [...(shows || []), ...showsByItemsData];
+  
+  // Remove duplicates
   const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
 
   // Sort by created_at
