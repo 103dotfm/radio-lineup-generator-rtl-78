@@ -1,13 +1,14 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut, Settings, Trash2 } from "lucide-react";
-import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from 'date-fns';
+import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "sonner";
 
@@ -201,12 +202,12 @@ const Dashboard = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-right font-bold dashboard-header-name">מרואיינ/ת</TableHead>
-              <TableHead className="text-right font-bold dashboard-header-title">כותרת</TableHead>
-              <TableHead className="text-right font-bold dashboard-header-phone">טלפון</TableHead>
-              <TableHead className="text-right font-bold dashboard-header-show">שם תוכנית</TableHead>
-              <TableHead className="text-right font-bold dashboard-header-date">תאריך</TableHead>
-              <TableHead className="text-right font-bold dashboard-header-actions">פעולות</TableHead>
+              <TableHead className="text-right font-bold">מרואיינ/ת</TableHead>
+              <TableHead className="text-right font-bold">כותרת</TableHead>
+              <TableHead className="text-right font-bold">טלפון</TableHead>
+              <TableHead className="text-right font-bold">שם תוכנית</TableHead>
+              <TableHead className="text-right font-bold">תאריך</TableHead>
+              <TableHead className="text-right font-bold">פעולות</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -230,7 +231,7 @@ const Dashboard = () => {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))
+              )) || []
             )}
           </TableBody>
         </Table>
