@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Show, ShowItem } from "@/types/show";
 
@@ -177,6 +176,7 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 };
 
 export const searchShows = async (query: string) => {
+  // First, get all shows with their items
   const { data: shows, error } = await supabase
     .from('shows')
     .select(`
@@ -186,7 +186,7 @@ export const searchShows = async (query: string) => {
         interviewees(*)
       )
     `)
-    .or(`name.ilike.%${query}%, items.name.ilike.%${query}%, items.title.ilike.%${query}%`)
+    .or(`name.ilike.%${query}%`)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -194,7 +194,29 @@ export const searchShows = async (query: string) => {
     throw error;
   }
 
-  return shows;
+  // Then, get shows where any item matches the query
+  const { data: itemMatches, error: itemError } = await supabase
+    .from('shows')
+    .select(`
+      *,
+      items:show_items!inner(
+        *,
+        interviewees(*)
+      )
+    `)
+    .or(`items.name.ilike.%${query}%,items.title.ilike.%${query}%`)
+    .order('created_at', { ascending: false });
+
+  if (itemError) {
+    console.error('Error searching show items:', itemError);
+    throw itemError;
+  }
+
+  // Combine and deduplicate results
+  const allShows = [...(shows || []), ...(itemMatches || [])];
+  const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
+
+  return uniqueShows;
 };
 
 export const deleteShow = async (id: string) => {
