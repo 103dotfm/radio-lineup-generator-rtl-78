@@ -1,85 +1,80 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { searchGuests } from '@/lib/supabase/guests';
-import { toast } from "sonner";
-import { formatPhoneNumber } from './PhoneInput';
 
 interface GuestSearchProps {
-  onNameChange: (name: string) => void;
   onGuestSelect: (guest: { name: string; title: string; phone: string }) => void;
+  onNameChange: (name: string) => void;
 }
 
-const GuestSearch = ({ onNameChange, onGuestSelect }: GuestSearchProps) => {
-  const [suggestions, setSuggestions] = useState<Array<{ name: string; title: string; phone: string }>>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+const GuestSearch = ({ onGuestSelect, onNameChange }: GuestSearchProps) => {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleNameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setInputValue(newName);
-    onNameChange(newName);
-    
-    if (newName.length > 2) {
-      setIsSearching(true);
-      try {
-        const guests = await searchGuests(newName);
-        setSuggestions(guests.map(guest => ({
-          name: guest.name,
-          title: guest.title,
-          phone: guest.phone || ''
-        })));
-      } catch (error) {
-        console.error('Error searching guests:', error);
-        toast.error('שגיאה בחיפוש אורחים');
-      } finally {
-        setIsSearching(false);
-      }
+  useEffect(() => {
+    if (value) {
+      const search = async () => {
+        console.log('Searching for guests with query:', value);
+        const results = await searchGuests(value);
+        console.log('Search results:', results);
+        setSearchResults(results || []);
+      };
+      search();
     } else {
-      setSuggestions([]);
+      setSearchResults([]);
     }
-  };
+  }, [value]);
 
-  const handleSuggestionSelect = (suggestion: { name: string; title: string; phone: string }) => {
-    setInputValue(suggestion.name);
-    onGuestSelect({
-      ...suggestion,
-      phone: formatPhoneNumber(suggestion.phone)
-    });
-    setSuggestions([]);
+  const handleSelect = (guest: { name: string; title: string; phone: string }) => {
+    onGuestSelect(guest);
+    setValue(guest.name);
+    setOpen(false);
   };
 
   return (
-    <div className="relative">
-      <Input
-        placeholder="שם"
-        onChange={handleNameChange}
-        value={inputValue}
-        required
-        autoComplete="off"
-        name="guest-name"
-        className="lineup-form-input-name"
-      />
-      {suggestions.length > 0 && (
-        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1">
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={index}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-              onClick={() => handleSuggestionSelect(suggestion)}
-            >
-              <div>{suggestion.name}</div>
-              <div className="text-sm text-gray-500">{suggestion.title}</div>
-            </div>
-          ))}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div className="w-full">
+          <Input
+            ref={inputRef}
+            placeholder="שם מרואיינ/ת"
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              onNameChange(e.target.value);
+            }}
+            required
+            autoComplete="off"
+            name="guest-name"
+            className="w-full"
+          />
         </div>
+      </PopoverTrigger>
+      {searchResults.length > 0 && (
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command>
+            <CommandEmpty>לא נמצאו תוצאות</CommandEmpty>
+            <CommandGroup>
+              {searchResults.map((guest) => (
+                <CommandItem
+                  key={guest.created_at}
+                  onSelect={() => handleSelect(guest)}
+                  className="flex flex-col items-start"
+                >
+                  <div className="font-bold">{guest.name}</div>
+                  <div className="text-sm text-gray-500">{guest.title}</div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
       )}
-      {isSearching && (
-        <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 p-2 text-center text-gray-500">
-          מחפש...
-        </div>
-      )}
-    </div>
+    </Popover>
   );
 };
 
