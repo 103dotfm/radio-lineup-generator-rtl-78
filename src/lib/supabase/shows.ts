@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Show, ShowItem } from "@/types/show";
 
@@ -19,7 +18,7 @@ export const getShows = async () => {
     throw error;
   }
 
-  return shows;
+  return shows || [];
 };
 
 export const getShowWithItems = async (id: string) => {
@@ -177,53 +176,72 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 };
 
 export const searchShows = async (query: string) => {
-  // First try to find shows by name
-  const { data: shows, error } = await supabase
-    .from('shows')
-    .select(`
-      *,
-      items:show_items(
-        *,
-        interviewees(*)
-      )
-    `)
-    .filter('name', 'ilike', `%${query}%`);
-
-  if (error) {
-    console.error('Error searching shows:', error);
-    throw error;
-  }
-
-  // Then try to find shows by item name or title
-  const { data: showsByItems, error: itemsError } = await supabase
-    .from('show_items')
-    .select(`
-      show:shows(
+  try {
+    // First try to find shows by name
+    const { data: shows, error } = await supabase
+      .from('shows')
+      .select(`
         *,
         items:show_items(
           *,
           interviewees(*)
         )
-      )
-    `)
-    .or(`name.ilike.%${query}%,title.ilike.%${query}%`);
+      `)
+      .ilike('name', `%${query}%`);
 
-  if (itemsError) {
-    console.error('Error searching show items:', itemsError);
-    throw itemsError;
+    if (error) {
+      console.error('Error searching shows:', error);
+      throw error;
+    }
+
+    const nameMatches = shows || [];
+
+    // Then try to find shows by item name or title
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select(`
+        show:shows(
+          *,
+          items:show_items(
+            *,
+            interviewees(*)
+          )
+        )
+      `)
+      .or(`name.ilike.%${query}%,title.ilike.%${query}%`);
+
+    if (itemsError) {
+      console.error('Error searching show items:', itemsError);
+      throw itemsError;
+    }
+
+    // Safely map and filter the item results
+    const itemMatches = items
+      ? items
+          .map(item => item.show)
+          .filter((show): show is Show => show !== null)
+      : [];
+
+    // Combine results ensuring we have arrays
+    const allShows = [...nameMatches, ...itemMatches];
+    
+    // Create a Map to remove duplicates
+    const uniqueShowsMap = new Map();
+    allShows.forEach(show => {
+      if (show && show.id) {
+        uniqueShowsMap.set(show.id, show);
+      }
+    });
+
+    // Convert Map values to array and sort
+    const uniqueShows = Array.from(uniqueShowsMap.values());
+    return uniqueShows.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  } catch (error) {
+    console.error('Error in searchShows:', error);
+    return [];
   }
-
-  // Combine results
-  const showsByItemsData = showsByItems?.map(item => item.show).filter(Boolean) || [];
-  const allShows = [...(shows || []), ...showsByItemsData];
-  
-  // Remove duplicates
-  const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
-
-  // Sort by created_at
-  return uniqueShows.sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
 };
 
 export const deleteShow = async (id: string) => {

@@ -14,21 +14,27 @@ interface GuestSearchProps {
 
 const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: GuestSearchProps) => {
   const [open, setOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ name: string; title: string; phone: string; created_at: string }>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (value) {
-      const search = async () => {
-        console.log('Searching for guests with query:', value);
-        const results = await searchGuests(value);
-        console.log('Search results:', results);
-        setSearchResults(results || []);
-      };
-      search();
-    } else {
-      setSearchResults([]);
-    }
+    const fetchResults = async () => {
+      if (value && value.trim()) {
+        try {
+          console.log('Searching for guests with query:', value);
+          const results = await searchGuests(value);
+          console.log('Search results:', results);
+          setSearchResults(results || []);
+        } catch (error) {
+          console.error('Error searching guests:', error);
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    };
+
+    fetchResults();
   }, [value]);
 
   const handleSelect = (guest: { name: string; title: string; phone: string }) => {
