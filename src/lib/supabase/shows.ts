@@ -176,8 +176,8 @@ export const saveShow = async (show: Required<Pick<Show, 'name'>> & Partial<Show
 };
 
 export const searchShows = async (query: string) => {
-  // First, get all shows with their items
-  const { data: shows, error } = await supabase
+  // Get shows with matching names
+  const { data: nameMatches, error: nameError } = await supabase
     .from('shows')
     .select(`
       *,
@@ -186,15 +186,14 @@ export const searchShows = async (query: string) => {
         interviewees(*)
       )
     `)
-    .or(`name.ilike.%${query}%`)
-    .order('created_at', { ascending: false });
+    .ilike('name', `%${query}%`);
 
-  if (error) {
-    console.error('Error searching shows:', error);
-    throw error;
+  if (nameError) {
+    console.error('Error searching shows by name:', nameError);
+    throw nameError;
   }
 
-  // Then, get shows where any item matches the query
+  // Get shows with matching items
   const { data: itemMatches, error: itemError } = await supabase
     .from('shows')
     .select(`
@@ -204,8 +203,7 @@ export const searchShows = async (query: string) => {
         interviewees(*)
       )
     `)
-    .or(`items.name.ilike.%${query}%,items.title.ilike.%${query}%`)
-    .order('created_at', { ascending: false });
+    .or(`show_items.name.ilike.%${query}%,show_items.title.ilike.%${query}%`);
 
   if (itemError) {
     console.error('Error searching show items:', itemError);
@@ -213,10 +211,13 @@ export const searchShows = async (query: string) => {
   }
 
   // Combine and deduplicate results
-  const allShows = [...(shows || []), ...(itemMatches || [])];
+  const allShows = [...(nameMatches || []), ...(itemMatches || [])];
   const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
 
-  return uniqueShows;
+  // Sort by created_at
+  return uniqueShows.sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 };
 
 export const deleteShow = async (id: string) => {
