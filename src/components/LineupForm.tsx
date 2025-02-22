@@ -72,8 +72,10 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
     };
     
     onAdd(newItem);
+    clearForm();
+  };
 
-    // Clear all fields including name
+  const clearForm = () => {
     setName('');
     setTitle('');
     setDetails('');
@@ -119,6 +121,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       <div className="lineup-form-inputs">
         <div className="grid grid-cols-2 gap-4 mb-4">
           <GuestSearch 
+            value={name}
             onNameChange={(newName) => {
               setName(newName);
               onNameChange(newName);
