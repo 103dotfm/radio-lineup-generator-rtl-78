@@ -8,7 +8,7 @@ export const searchGuests = async (query: string) => {
     const { data, error } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
-      .ilike('name', `%${query}%`)
+      .ilike('name', `%${query}%`) // Only return items where name matches the query
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
       .order('created_at', { ascending: false })
@@ -18,9 +18,14 @@ export const searchGuests = async (query: string) => {
       console.error('Error searching guests:', error);
       return [];
     }
+
+    // Filter to ensure name actually contains the query (case-insensitive)
+    const filteredData = data?.filter(item => 
+      item.name.toLowerCase().includes(query.toLowerCase())
+    );
     
     // Remove duplicates based on name
-    const uniqueGuests = data?.reduce((acc: any[], current) => {
+    const uniqueGuests = filteredData?.reduce((acc: any[], current) => {
       const exists = acc.find(item => item.name === current.name);
       if (!exists) {
         return [...acc, current];
