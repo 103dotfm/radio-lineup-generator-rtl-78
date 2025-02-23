@@ -219,7 +219,7 @@ export const searchShows = async (query: string) => {
     const itemMatches = items
       ? items
           .map(item => item.show)
-          .filter((show): show is Show => show !== null)
+          .filter((show): show is NonNullable<typeof show> => show !== null)
       : [];
 
     // Combine results ensuring we have arrays

@@ -64,19 +64,23 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command>
-          <CommandEmpty>לא נמצאו תוצאות</CommandEmpty>
+        <Command shouldFilter={false}>
           <CommandGroup>
-            {(searchResults || []).map((guest) => (
-              <CommandItem
-                key={guest.created_at}
-                onSelect={() => handleSelect(guest)}
-                className="flex flex-col items-start"
-              >
-                <div className="font-bold">{guest.name}</div>
-                <div className="text-sm text-gray-500">{guest.title}</div>
-              </CommandItem>
-            ))}
+            {searchResults.length === 0 ? (
+              <CommandEmpty>לא נמצאו תוצאות</CommandEmpty>
+            ) : (
+              searchResults.map((guest) => (
+                <CommandItem
+                  key={guest.created_at}
+                  onSelect={() => handleSelect(guest)}
+                  value={guest.name}
+                  className="flex flex-col items-start"
+                >
+                  <div className="font-bold">{guest.name}</div>
+                  <div className="text-sm text-gray-500">{guest.title}</div>
+                </CommandItem>
+              ))
+            )}
           </CommandGroup>
         </Command>
       </PopoverContent>
