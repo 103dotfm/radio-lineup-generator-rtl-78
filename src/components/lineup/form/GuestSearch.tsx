@@ -15,9 +15,12 @@ interface GuestSearchProps {
 const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: GuestSearchProps) => {
   const [open, setOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{ name: string; title: string; phone: string; created_at: string }>>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!isTyping) return;
+
     const fetchResults = async () => {
       if (value && value.trim()) {
         try {
@@ -38,12 +41,18 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
     };
 
     fetchResults();
-  }, [value]);
+  }, [value, isTyping]);
 
   const handleSelect = (guest: { name: string; title: string; phone: string }) => {
     onGuestSelect(guest);
     setOpen(false);
     setSearchResults([]);
+    setIsTyping(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsTyping(true);
+    onNameChange(e.target.value);
   };
 
   return (
@@ -52,13 +61,13 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         ref={inputRef}
         placeholder="שם מרואיינ/ת"
         value={value}
-        onChange={(e) => onNameChange(e.target.value)}
+        onChange={handleInputChange}
         required
         autoComplete="new-password"
         aria-autocomplete="none"
         name="off"
         className="w-full"
-        onFocus={() => setOpen(true)}
+        onFocus={() => setIsTyping(true)}
       />
       {open && searchResults.length > 0 && (
         <div className="absolute w-full z-50 mt-1 bg-white rounded-md shadow-lg overflow-hidden">
