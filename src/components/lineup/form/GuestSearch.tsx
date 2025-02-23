@@ -42,22 +42,9 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
 
   const handleSelect = (guest: { name: string; title: string; phone: string }) => {
     onGuestSelect(guest);
-    setOpen(false);  // Close the dropdown
-    setSearchResults([]); // Clear results
+    setOpen(false);
+    setSearchResults([]);
   };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (inputRef.current && !inputRef.current.contains(event.target as Node)) {
-      setOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   return (
     <div className="relative w-full">
@@ -68,7 +55,7 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         onChange={(e) => onNameChange(e.target.value)}
         required
         autoComplete="off"
-        name="guest-name-search"  // Changed name to avoid browser autocomplete
+        name="guest-name"
         className="w-full"
         onFocus={() => setOpen(true)}
       />
