@@ -25,12 +25,16 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
           const results = await searchGuests(value);
           console.log('Search results:', results);
           setSearchResults(results || []);
+          if (results && results.length > 0) {
+            setOpen(true);
+          }
         } catch (error) {
           console.error('Error searching guests:', error);
           setSearchResults([]);
         }
       } else {
         setSearchResults([]);
+        setOpen(false);
       }
     };
 
@@ -40,6 +44,7 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
   const handleSelect = (guest: { name: string; title: string; phone: string }) => {
     onGuestSelect(guest);
     setOpen(false);
+    setSearchResults([]);
   };
 
   return (
@@ -58,25 +63,23 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
           />
         </div>
       </PopoverTrigger>
-      {searchResults.length > 0 && (
-        <PopoverContent className="w-[400px] p-0" align="start">
-          <Command>
-            <CommandEmpty>לא נמצאו תוצאות</CommandEmpty>
-            <CommandGroup>
-              {searchResults.map((guest) => (
-                <CommandItem
-                  key={guest.created_at}
-                  onSelect={() => handleSelect(guest)}
-                  className="flex flex-col items-start"
-                >
-                  <div className="font-bold">{guest.name}</div>
-                  <div className="text-sm text-gray-500">{guest.title}</div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
-      )}
+      <PopoverContent className="w-[400px] p-0" align="start">
+        <Command>
+          <CommandEmpty>לא נמצאו תוצאות</CommandEmpty>
+          <CommandGroup>
+            {(searchResults || []).map((guest) => (
+              <CommandItem
+                key={guest.created_at}
+                onSelect={() => handleSelect(guest)}
+                className="flex flex-col items-start"
+              >
+                <div className="font-bold">{guest.name}</div>
+                <div className="text-sm text-gray-500">{guest.title}</div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
     </Popover>
   );
 };
