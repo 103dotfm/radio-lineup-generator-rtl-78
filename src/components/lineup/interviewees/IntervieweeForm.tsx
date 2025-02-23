@@ -63,6 +63,7 @@ const IntervieweeForm = ({ itemId, duration, onAdd, onClose }: IntervieweeFormPr
       <div className="space-y-2">
         <Input
           placeholder="שם"
+          autoComplete="off"
           value={manualInput.name}
           onChange={(e) => setManualInput(prev => ({ ...prev, name: e.target.value }))}
         />
