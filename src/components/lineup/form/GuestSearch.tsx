@@ -54,8 +54,9 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         value={value}
         onChange={(e) => onNameChange(e.target.value)}
         required
-        autoComplete="off"
-        name="guest-name"
+        autoComplete="new-password"
+        aria-autocomplete="none"
+        name="off"
         className="w-full"
         onFocus={() => setOpen(true)}
       />
