@@ -25,12 +25,11 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
           const results = await searchGuests(value);
           console.log('Search results:', results);
           setSearchResults(results || []);
-          if (results && results.length > 0) {
-            setOpen(true);
-          }
+          setOpen(results && results.length > 0);
         } catch (error) {
           console.error('Error searching guests:', error);
           setSearchResults([]);
+          setOpen(false);
         }
       } else {
         setSearchResults([]);
@@ -64,17 +63,18 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandGroup>
-            {searchResults.length === 0 ? (
+        <Command shouldFilter={false} className="overflow-hidden rounded-md bg-popover text-popover-foreground">
+          <CommandInput className="border-none focus:ring-0" value={value} readOnly />
+          <CommandGroup className="overflow-hidden p-1">
+            {searchResults.length === 0 && value ? (
               <CommandEmpty>לא נמצאו תוצאות</CommandEmpty>
             ) : (
               searchResults.map((guest) => (
                 <CommandItem
-                  key={guest.created_at}
-                  onSelect={() => handleSelect(guest)}
+                  key={`${guest.created_at}-${guest.name}`}
                   value={guest.name}
-                  className="flex flex-col items-start"
+                  onSelect={() => handleSelect(guest)}
+                  className="flex flex-col items-start cursor-pointer"
                 >
                   <div className="font-bold">{guest.name}</div>
                   <div className="text-sm text-gray-500">{guest.title}</div>
