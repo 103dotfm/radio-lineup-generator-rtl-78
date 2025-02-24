@@ -5,11 +5,10 @@ export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
   try {
-    // Use word boundaries in ILIKE to match exact words
     const { data, error } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
-      .or(`name.ilike.'% ${query} %', name.ilike.'${query} %', name.ilike.'% ${query}', name.ilike.'${query}'`)
+      .or(`name.ilike.%${query}%, title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
       .order('created_at', { ascending: false })
@@ -20,12 +19,14 @@ export const searchGuests = async (query: string) => {
       return [];
     }
 
-    // Double check the matches
+    // Strict filtering to ensure exact substring match
     const filteredData = data?.filter(item => {
-      // Convert both strings to lowercase and add spaces at start/end for word boundary checking
-      const itemName = ` ${item.name.toLowerCase()} `;
-      const searchQuery = ` ${query.toLowerCase()} `;
-      return itemName.includes(searchQuery);
+      const nameLower = item.name.toLowerCase();
+      const titleLower = (item.title || '').toLowerCase();
+      const queryLower = query.toLowerCase();
+      
+      // Check for exact substring match in either name or title
+      return nameLower.includes(queryLower) || titleLower.includes(queryLower);
     });
     
     // Remove duplicates based on name
