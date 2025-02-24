@@ -5,11 +5,11 @@ export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
   try {
-    // First get all items that might contain the query
+    // Use word boundaries in ILIKE to match exact words
     const { data, error } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
-      .textSearch('name', `'${query}'`) // Use text search for more precise matching
+      .or(`name.ilike.'% ${query} %', name.ilike.'${query} %', name.ilike.'% ${query}', name.ilike.'${query}'`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
       .order('created_at', { ascending: false })
@@ -20,15 +20,12 @@ export const searchGuests = async (query: string) => {
       return [];
     }
 
-    // Additional strict filtering to ensure we only get items that contain the exact query
+    // Double check the matches
     const filteredData = data?.filter(item => {
-      const words = item.name.toLowerCase().split(/\s+/);
-      const queryWords = query.toLowerCase().split(/\s+/);
-      
-      // Check if all query words are present as complete words in the item name
-      return queryWords.every(queryWord => 
-        words.some(word => word === queryWord)
-      );
+      // Convert both strings to lowercase and add spaces at start/end for word boundary checking
+      const itemName = ` ${item.name.toLowerCase()} `;
+      const searchQuery = ` ${query.toLowerCase()} `;
+      return itemName.includes(searchQuery);
     });
     
     // Remove duplicates based on name
