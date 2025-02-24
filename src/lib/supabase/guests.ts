@@ -4,23 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
-  if (query.length < 2) return [];
-  
   try {
-    // Direct exact match on individual items only
     const { data, error } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
-      .or(`name.ilike.%${query}%, title.ilike.%${query}%`)
+      .ilike('name', `%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
-      .limit(5); // Limit directly in the query
+      .order('created_at', { ascending: false })
+      .limit(20);
 
     if (error) {
       console.error('Error searching guests:', error);
       return [];
     }
-
+    
     // Remove duplicates based on name
     const uniqueGuests = data?.reduce((acc: any[], current) => {
       const exists = acc.find(item => item.name === current.name);
@@ -28,7 +26,8 @@ export const searchGuests = async (query: string) => {
         return [...acc, current];
       }
       return acc;
-    }, []);
+    }, [])
+    .slice(0, 5); // Only return top 5 results
 
     console.log('Search results:', uniqueGuests);
     return uniqueGuests || [];
