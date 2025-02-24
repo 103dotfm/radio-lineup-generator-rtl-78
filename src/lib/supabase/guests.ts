@@ -8,25 +8,27 @@ export const searchGuests = async (query: string) => {
     const { data, error } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
-      .or(`name.ilike.%${query}%, title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error searching guests:', error);
       return [];
     }
 
-    // Strict filtering to ensure exact substring match
+    // Convert query to lowercase and split into words for exact matching
+    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+    
+    // Very strict filtering that requires ALL query words to match EXACTLY
     const filteredData = data?.filter(item => {
-      const nameLower = item.name.toLowerCase();
-      const titleLower = (item.title || '').toLowerCase();
-      const queryLower = query.toLowerCase();
+      const nameWords = item.name.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+      const titleWords = (item.title || '').toLowerCase().split(/\s+/).filter(word => word.length > 0);
       
-      // Check for exact substring match in either name or title
-      return nameLower.includes(queryLower) || titleLower.includes(queryLower);
+      // Check if ALL query words appear in either name or title as complete words
+      return queryWords.every(queryWord => 
+        nameWords.includes(queryWord) || titleWords.includes(queryWord)
+      );
     });
     
     // Remove duplicates based on name
