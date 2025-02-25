@@ -10,47 +10,66 @@ export const searchGuests = async (query: string) => {
   }
   
   try {
-    // Use SQL ILIKE with proper wildcards
-    const { data, error } = await supabase
+    // Split the query construction for better debugging
+    const searchQuery = supabase
       .from('show_items')
-      .select('*')
-      .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
+      .select('name, title, phone, created_at')
+      .ilike('name', `%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
       .limit(5);
 
-    if (error) {
-      console.error('[SEARCH] Database error:', error);
-      throw error;
+    console.log('[SEARCH] Executing query:', searchQuery.toSQL());
+
+    const { data: nameMatches, error: nameError } = await searchQuery;
+
+    if (nameError) {
+      console.error('[SEARCH] Database error for name search:', nameError);
+      throw nameError;
     }
 
-    if (!data) {
-      console.log('[SEARCH] No data returned from database');
-      return [];
+    // Search by title if needed
+    const titleQuery = supabase
+      .from('show_items')
+      .select('name, title, phone, created_at')
+      .ilike('title', `%${query}%`)
+      .not('is_break', 'eq', true)
+      .not('is_note', 'eq', true)
+      .limit(5);
+
+    const { data: titleMatches, error: titleError } = await titleQuery;
+
+    if (titleError) {
+      console.error('[SEARCH] Database error for title search:', titleError);
+      throw titleError;
     }
 
-    console.log('[SEARCH] Raw results from database:', data);
+    // Combine and deduplicate results
+    const allMatches = [...(nameMatches || []), ...(titleMatches || [])];
+    
+    console.log('[SEARCH] Name matches:', nameMatches);
+    console.log('[SEARCH] Title matches:', titleMatches);
 
-    // No JavaScript filtering - trust the database query
-    // Just deduplicate based on name if needed
-    const uniqueResults = data.reduce((acc: any[], current) => {
-      const exists = acc.find(item => item.name === current.name);
+    // Deduplicate based on both name and title to ensure exact matches
+    const uniqueResults = allMatches.reduce((acc: any[], current) => {
+      const exists = acc.find(item => 
+        item.name === current.name && 
+        item.title === current.title
+      );
       if (!exists) {
         return [...acc, current];
       }
       return acc;
-    }, []);
+    }, []).slice(0, 5);
 
     console.log('[SEARCH] Final unique results:', uniqueResults);
     return uniqueResults;
   } catch (error) {
     console.error('[SEARCH] Error in searchGuests:', error);
-    throw error; // Let the error bubble up so we can see it in the UI
+    throw error;
   }
 };
 
 export const addGuest = async (guest: { name: string; title: string; phone: string }) => {
-  // Since we're not using a separate guests table anymore, this function can be empty
-  // or you might want to remove it entirely since guests are added directly to show_items
   return;
 };
