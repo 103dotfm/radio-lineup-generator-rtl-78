@@ -10,8 +10,8 @@ export const searchGuests = async (query: string) => {
   }
   
   try {
-    // Split the query construction for better debugging
-    const searchQuery = supabase
+    // Search by name
+    const { data: nameMatches, error: nameError } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
       .ilike('name', `%${query}%`)
@@ -19,25 +19,19 @@ export const searchGuests = async (query: string) => {
       .not('is_note', 'eq', true)
       .limit(5);
 
-    console.log('[SEARCH] Executing query:', searchQuery.toSQL());
-
-    const { data: nameMatches, error: nameError } = await searchQuery;
-
     if (nameError) {
       console.error('[SEARCH] Database error for name search:', nameError);
       throw nameError;
     }
 
-    // Search by title if needed
-    const titleQuery = supabase
+    // Search by title
+    const { data: titleMatches, error: titleError } = await supabase
       .from('show_items')
       .select('name, title, phone, created_at')
       .ilike('title', `%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
       .limit(5);
-
-    const { data: titleMatches, error: titleError } = await titleQuery;
 
     if (titleError) {
       console.error('[SEARCH] Database error for title search:', titleError);
