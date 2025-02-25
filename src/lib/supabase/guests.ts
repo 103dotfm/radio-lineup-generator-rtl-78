@@ -4,23 +4,36 @@ import { supabase } from "@/integrations/supabase/client";
 export const searchGuests = async (query: string) => {
   console.log('Searching for guests with query:', query);
   
+  if (query.length < 2) return [];
+  
   try {
+    // Get items that might match
     const { data, error } = await supabase
       .from('show_items')
-      .select('name, title, phone, created_at')
-      .ilike('name', `%${query}%`)
+      .select('*')
       .not('is_break', 'eq', true)
-      .not('is_note', 'eq', true)
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .not('is_note', 'eq', true);
 
     if (error) {
       console.error('Error searching guests:', error);
       return [];
     }
-    
+
+    console.log('Raw data before filtering:', data);
+
+    // Strict filtering to only include items where name or title contains the query
+    const queryLower = query.toLowerCase();
+    const filteredResults = data?.filter(item => {
+      const nameMatches = item.name?.toLowerCase().includes(queryLower);
+      const titleMatches = item.title?.toLowerCase().includes(queryLower);
+      console.log(`Checking item: "${item.name}" (${nameMatches}) / "${item.title}" (${titleMatches}) against query: "${queryLower}"`);
+      return nameMatches || titleMatches;
+    }) || [];
+
+    console.log('Filtered results:', filteredResults);
+
     // Remove duplicates based on name
-    const uniqueGuests = data?.reduce((acc: any[], current) => {
+    const uniqueResults = filteredResults.reduce((acc: any[], current) => {
       const exists = acc.find(item => item.name === current.name);
       if (!exists) {
         return [...acc, current];
@@ -29,8 +42,8 @@ export const searchGuests = async (query: string) => {
     }, [])
     .slice(0, 5); // Only return top 5 results
 
-    console.log('Search results:', uniqueGuests);
-    return uniqueGuests || [];
+    console.log('Final unique results:', uniqueResults);
+    return uniqueResults;
   } catch (error) {
     console.error('Error searching guests:', error);
     return [];
