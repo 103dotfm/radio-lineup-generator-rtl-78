@@ -154,7 +154,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    console.log('Clicked slot:', slot);
+    console.log('Clicked slot details:', {
+      show_name: slot.show_name,
+      host_name: slot.host_name,
+      start_time: slot.start_time,
+      is_prerecorded: slot.is_prerecorded,
+      is_collection: slot.is_collection
+    });
+
     if (slot.shows && slot.shows.length > 0) {
       const show = slot.shows[0];
       console.log('Found existing show, navigating to:', show.id);
@@ -163,8 +170,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
       const slotDate = addDays(weekStart, slot.day_of_week);
       
+      const generatedShowName = slot.show_name === slot.host_name 
+        ? slot.host_name 
+        : `${slot.show_name} עם ${slot.host_name}`;
+
+      console.log('Navigating to new lineup with generated name:', generatedShowName);
+      
       navigate('/new', {
         state: {
+          generatedShowName,
           showName: slot.show_name,
           hostName: slot.host_name,
           time: slot.start_time,

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -42,23 +41,22 @@ const Index = () => {
   // Initial setup effect for new shows
   useEffect(() => {
     if (!showId && state) {
-      const { showName, hostName, time, date } = state;
+      console.log('Received state in Index:', state);
       
-      // Generate the show name based on the specified logic
-      let generatedShowName;
-      if (showName === hostName) {
-        generatedShowName = hostName;
-      } else {
-        generatedShowName = `${showName} עם ${hostName}`;
-      }
+      // Use the pre-generated show name if available, otherwise generate it here
+      const displayName = state.generatedShowName || (
+        state.showName === state.hostName 
+          ? state.hostName 
+          : `${state.showName} עם ${state.hostName}`
+      );
       
-      console.log('Setting show name to:', generatedShowName);
-      setShowName(generatedShowName);
-      setShowTime(time || '');
+      console.log('Setting display name:', displayName);
+      setShowName(displayName);
+      setShowTime(state.time || '');
       
-      if (date) {
-        console.log('Setting date:', date);
-        setShowDate(new Date(date));
+      if (state.date) {
+        console.log('Setting date:', state.date);
+        setShowDate(new Date(state.date));
       }
     }
   }, [showId, state]);
@@ -288,6 +286,7 @@ const Index = () => {
           editor={editor}
           editingItem={editingItem}
           onNameChange={(name) => {
+            console.log('Name change requested:', name);
             setShowName(name);
             setHasUnsavedChanges(true);
           }}
