@@ -118,7 +118,7 @@ const Dashboard = () => {
 
       <h2 className="text-2xl font-semibold mb-4">ליינאפים אחרונים</h2>
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 mb-4">
         <Button
           variant={sortBy === 'recent' ? 'default' : 'outline'}
           onClick={() => setSortBy('recent')}
