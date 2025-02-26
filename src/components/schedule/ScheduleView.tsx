@@ -11,11 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ViewMode, ScheduleSlot } from '@/types/schedule';
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FileCheck } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
 import ScheduleSlotDialog from './ScheduleSlotDialog';
+import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
 
 interface ScheduleViewProps {
@@ -27,6 +28,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSlotDialog, setShowSlotDialog] = useState(false);
+  const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -100,12 +102,32 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingSlot(slot);
+    setShowEditModeDialog(true);
+  };
+
+  const handleEditCurrent = () => {
+    setShowEditModeDialog(false);
+    setShowSlotDialog(true);
+  };
+
+  const handleEditAll = () => {
+    setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
     if (editingSlot) {
-      await updateSlotMutation.mutateAsync({ id: editingSlot.id, updates: slotData });
+      if (showEditModeDialog) {
+        await updateSlotMutation.mutateAsync({
+          id: editingSlot.id,
+          updates: { ...slotData, is_modified: false }
+        });
+      } else {
+        await updateSlotMutation.mutateAsync({
+          id: editingSlot.id,
+          updates: { ...slotData, is_modified: true }
+        });
+      }
     } else {
       await createSlotMutation.mutateAsync(slotData);
     }
@@ -116,6 +138,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
       state: { 
         showName: slot.show_name,
         hostName: slot.host_name,
+        time: slot.start_time,
         isPrerecorded: slot.is_prerecorded,
         isCollection: slot.is_collection
       } 
@@ -134,6 +157,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
+    if (slot.is_modified) return 'bg-yellow-200';
     if (slot.is_collection) return 'bg-orange-500 text-white';
     if (slot.is_prerecorded) return 'bg-purple-500 text-white';
     if (!slot.is_recurring) return 'bg-orange-200';
@@ -161,7 +185,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
         zIndex: 10
       }}
     >
-      <div className="font-medium">{slot.show_name}</div>
+      <div className="flex justify-between items-start">
+        <div className="font-medium">{slot.show_name}</div>
+        {slot.has_lineup && (
+          <FileCheck className="h-4 w-4 text-green-600" />
+        )}
+      </div>
       {slot.host_name && (
         <div className="text-sm opacity-75">{slot.host_name}</div>
       )}
@@ -402,6 +431,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
       <div className="border rounded-lg overflow-hidden">
         {renderGrid()}
       </div>
+
+      <EditModeDialog
+        isOpen={showEditModeDialog}
+        onClose={() => setShowEditModeDialog(false)}
+        onEditCurrent={handleEditCurrent}
+        onEditAll={handleEditAll}
+      />
 
       <ScheduleSlotDialog
         isOpen={showSlotDialog}

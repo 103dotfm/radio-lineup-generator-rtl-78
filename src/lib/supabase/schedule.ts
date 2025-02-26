@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 
@@ -61,6 +60,14 @@ export const deleteScheduleSlot = async (id: string): Promise<void> => {
 
   if (error) {
     console.error('Error deleting schedule slot:', error);
+    throw error;
+  }
+};
+
+export const addMissingColumns = async () => {
+  const { error } = await supabase.rpc('add_schedule_slots_columns');
+  if (error) {
+    console.error('Error adding missing columns:', error);
     throw error;
   }
 };
