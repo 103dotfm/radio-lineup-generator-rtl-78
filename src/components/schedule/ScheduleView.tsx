@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -161,21 +160,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);
     } else {
-      console.log('Creating new show with data:', {
-        showName: slot.show_name,
-        hostName: slot.host_name,
-        time: slot.start_time,
-        date: selectedDate
-      });
-
-      // Calculate the specific date for this slot based on the selected week
       const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
       const slotDate = addDays(weekStart, slot.day_of_week);
       
       navigate('/new', {
         state: {
-          showName: slot.show_name, // This is the program name (e.g., "הבוקר טוב")
-          hostName: slot.host_name, // This is the host name (e.g., "פנינה בת צבי")
+          showName: slot.show_name,
+          hostName: slot.host_name,
           time: slot.start_time,
           date: slotDate,
           isPrerecorded: slot.is_prerecorded,

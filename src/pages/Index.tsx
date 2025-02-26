@@ -42,16 +42,18 @@ const Index = () => {
   // Initial setup effect for new shows
   useEffect(() => {
     if (!showId && state) {
-      console.log('Setting up new show from state:', state);
       const { showName, hostName, time, date } = state;
       
-      // Generate the title based on the logic
-      const generatedTitle = showName === hostName ? 
-        hostName : 
-        `${showName} עם ${hostName}`;
+      // Generate the show name based on the specified logic
+      let generatedShowName;
+      if (showName === hostName) {
+        generatedShowName = hostName;
+      } else {
+        generatedShowName = `${showName} עם ${hostName}`;
+      }
       
-      console.log('Generated title:', generatedTitle);
-      setShowName(generatedTitle);
+      console.log('Setting show name to:', generatedShowName);
+      setShowName(generatedShowName);
       setShowTime(time || '');
       
       if (date) {
