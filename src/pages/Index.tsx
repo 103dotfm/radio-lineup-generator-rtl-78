@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
@@ -14,6 +14,7 @@ import PrintPreview from '../components/lineup/PrintPreview';
 const Index = () => {
   const { id: showId } = useParams();
   const navigate = useNavigate();
+  const { state } = useLocation();
   const [items, setItems] = useState([]);
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
@@ -98,6 +99,18 @@ const Index = () => {
 
     setHasUnsavedChanges(hasChanges);
   }, [showName, showTime, showDate, items, editor, initialState]);
+
+  useEffect(() => {
+    if (state) {
+      setShowName(state.showName || '');
+      setShowTime(state.time || '');
+      if (state.hostName) {
+        if (editor) {
+          editor.commands.setContent(`מגיש/ה: ${state.hostName}`);
+        }
+      }
+    }
+  }, [state, editor]);
 
   const handleEdit = async (id: string, updatedItem: any) => {
     console.log('Index: Handling edit for item:', id, updatedItem);
