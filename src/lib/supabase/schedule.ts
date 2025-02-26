@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 
@@ -7,7 +8,7 @@ export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
     .from('schedule_slots')
     .select(`
       *,
-      shows:shows(*)
+      shows(id, name, time, date, notes, created_at)
     `)
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
@@ -17,6 +18,7 @@ export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
     throw error;
   }
 
+  console.log('Fetched schedule slots:', slots);
   return slots || [];
 };
 

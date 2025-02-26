@@ -127,7 +127,7 @@ export const saveShow = async (
     time: string;
     date: string;
     notes: string;
-    slot_id?: string; // Add this field to link with schedule slot
+    slot_id?: string;
   },
   items: Array<{
     name: string;
@@ -149,7 +149,6 @@ export const saveShow = async (
     let finalShowId = showId;
     let isUpdate = Boolean(showId);
 
-    // If updating existing show
     if (isUpdate) {
       const { error: showError } = await supabase
         .from('shows')
@@ -158,6 +157,7 @@ export const saveShow = async (
           time: show.time,
           date: show.date,
           notes: show.notes,
+          slot_id: show.slot_id // Add slot_id to update
         })
         .eq('id', showId);
 
@@ -171,7 +171,7 @@ export const saveShow = async (
 
       if (deleteError) throw deleteError;
     } else {
-      // If creating new show
+      // Creating new show
       const { data: newShow, error: createError } = await supabase
         .from('shows')
         .insert({
@@ -179,6 +179,7 @@ export const saveShow = async (
           time: show.time,
           date: show.date,
           notes: show.notes,
+          slot_id: show.slot_id // Add slot_id to insert
         })
         .select()
         .single();
@@ -187,7 +188,7 @@ export const saveShow = async (
       finalShowId = newShow.id;
     }
 
-    // Update schedule slot to link with this show if slot_id is provided
+    // Update schedule slot to link with this show
     if (show.slot_id) {
       const { error: slotError } = await supabase
         .from('schedule_slots')
@@ -240,7 +241,6 @@ export const saveShow = async (
     }
 
     return { id: finalShowId };
-
   } catch (error) {
     console.error('Error saving show:', error);
     throw error;
