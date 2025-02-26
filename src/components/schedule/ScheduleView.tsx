@@ -160,7 +160,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);
     } else {
-      console.log('No existing show found, creating new show for slot:', slot.id);
+      console.log('Creating new show with data:', {
+        showName: slot.show_name,
+        hostName: slot.host_name,
+        time: slot.start_time,
+        date: getSlotDate(selectedDate, slot.day_of_week)
+      });
+
       // Calculate the specific date for this slot based on the selected week
       const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
       const slotDate = addDays(weekStart, slot.day_of_week);
@@ -170,7 +176,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           showName: slot.show_name,
           hostName: slot.host_name,
           time: slot.start_time,
-          date: slotDate, // Pass the calculated date
+          date: slotDate,
           isPrerecorded: slot.is_prerecorded,
           isCollection: slot.is_collection,
           slotId: slot.id
