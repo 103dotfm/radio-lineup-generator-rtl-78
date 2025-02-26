@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -181,17 +182,43 @@ export const saveShow = async (
 
     // Insert new items
     if (items.length > 0) {
-      const itemsToInsert = items.map((item, index) => ({
-        show_id: showId,
-        position: index,
-        ...item
-      }));
+      const itemsToInsert = items.map((item, index) => {
+        // Extract interviewees to insert separately
+        const { interviewees, ...itemData } = item;
+        return {
+          show_id: showId,
+          position: index,
+          ...itemData
+        };
+      });
 
-      const { error: itemsError } = await supabase
+      const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
-        .insert(itemsToInsert);
+        .insert(itemsToInsert)
+        .select();
 
       if (itemsError) throw itemsError;
+
+      // Insert interviewees for each item
+      if (insertedItems) {
+        for (let i = 0; i < insertedItems.length; i++) {
+          const item = insertedItems[i];
+          const itemInterviewees = items[i].interviewees;
+          
+          if (itemInterviewees && itemInterviewees.length > 0) {
+            const intervieweesToInsert = itemInterviewees.map(interviewee => ({
+              item_id: item.id,
+              ...interviewee
+            }));
+
+            const { error: intervieweesError } = await supabase
+              .from('interviewees')
+              .insert(intervieweesToInsert);
+
+            if (intervieweesError) throw intervieweesError;
+          }
+        }
+      }
     }
 
     return { id: showId };
