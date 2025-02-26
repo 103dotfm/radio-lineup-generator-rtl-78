@@ -1,9 +1,10 @@
+
 import React from 'react';
-import LineupForm from '../../LineupForm';
-import LineupTable from '../LineupTable';
+import { Editor } from '@tiptap/react';
 import ShowHeader from '../../show/ShowHeader';
 import ShowCredits from '../../show/ShowCredits';
-import { Editor } from '@tiptap/react';
+import LineupForm from '../../LineupForm';
+import LineupTable from '../LineupTable';
 
 interface MainContentProps {
   showName: string;
@@ -54,38 +55,33 @@ const MainContent = ({
   onBackToDashboard,
   onDetailsChange,
 }: MainContentProps) => {
+  console.log('MainContent received showName:', showName); // Add debug log
+
   return (
-    <>
-      <div className="lineup-editor-show-header">
-        <ShowHeader
-          showName={showName}
-          showTime={showTime}
-          showDate={showDate}
-          onNameChange={onNameChange}
-          onTimeChange={onTimeChange}
-          onDateChange={onDateChange}
-          onSave={onSave}
-          onShare={onShare}
-          onPrint={onPrint}
-          onExportPDF={onExportPDF}
-        />
-      </div>
+    <main className="space-y-8">
+      <ShowHeader
+        showName={showName}
+        showTime={showTime}
+        showDate={showDate}
+        onNameChange={onNameChange}
+        onTimeChange={onTimeChange}
+        onDateChange={onDateChange}
+        onSave={onSave}
+        onShare={onShare}
+        onPrint={onPrint}
+        onExportPDF={onExportPDF}
+      />
 
-      <div className="lineup-editor-credits">
+      <div className="space-y-8">
         <ShowCredits editor={editor} />
-      </div>
 
-      <h2 className="additemH2">הוספת אייטם לליינאפ:</h2>
-      <div className="lineup-editor-form mb-8">
         <LineupForm 
-          onAdd={onAdd} 
+          onAdd={onAdd}
           onNameChange={handleNameLookup}
-          editingItem={editingItem}
           onBackToDashboard={onBackToDashboard}
+          editingItem={editingItem}
         />
-      </div>
 
-      <div className="lineup-editor-table">
         <LineupTable
           items={items}
           onDelete={onDelete}
@@ -96,7 +92,7 @@ const MainContent = ({
           onDragEnd={onDragEnd}
         />
       </div>
-    </>
+    </main>
   );
 };
 

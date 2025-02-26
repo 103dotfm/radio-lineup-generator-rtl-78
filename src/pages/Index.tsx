@@ -42,8 +42,9 @@ const Index = () => {
   useEffect(() => {
     if (!showId && state) {
       console.log('Received state in Index:', state);
+      console.log('Current showName before update:', showName);
       
-      // Use the pre-generated show name if available, otherwise generate it here
+      // Use the pre-generated show name if available
       const displayName = state.generatedShowName || (
         state.showName === state.hostName 
           ? state.hostName 
@@ -55,7 +56,6 @@ const Index = () => {
       setShowTime(state.time || '');
       
       if (state.date) {
-        console.log('Setting date:', state.date);
         setShowDate(new Date(state.date));
       }
     }
