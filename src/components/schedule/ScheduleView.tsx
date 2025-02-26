@@ -36,6 +36,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const {
     toast
   } = useToast();
+  const queryClient = useQueryClient();
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const {
     data: scheduleSlots = [],
@@ -112,7 +113,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור ��ו?')) {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       await deleteSlotMutation.mutateAsync(slot.id);
     }
   };
