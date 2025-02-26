@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Calendar } from "@/components/ui/calendar";
@@ -46,9 +46,22 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     data: scheduleSlots = [],
     isLoading
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate],
-    queryFn: () => getScheduleSlots(selectedDate, isMasterSchedule)
+    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
+    queryFn: () => {
+      console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
+      return getScheduleSlots(selectedDate, isMasterSchedule);
+    },
+    onSuccess: (data) => {
+      console.log('Successfully fetched slots:', data);
+    },
+    onError: (error) => {
+      console.error('Error fetching slots:', error);
+    }
   });
+
+  useEffect(() => {
+    console.log('Schedule slots updated:', scheduleSlots);
+  }, [scheduleSlots]);
 
   const createSlotMutation = useMutation({
     mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 

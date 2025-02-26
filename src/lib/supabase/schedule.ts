@@ -7,8 +7,10 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
   
   const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
+  console.log('Using start date:', startDate);
 
   if (isMasterSchedule) {
+    console.log('Fetching master schedule slots...');
     const { data: slots, error } = await supabase
       .from('schedule_slots')
       .select(`
@@ -27,7 +29,11 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching master schedule:', error);
+      throw error;
+    }
+    console.log('Retrieved master schedule slots:', slots);
     return slots || [];
   }
 
@@ -104,7 +110,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 };
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
-  console.log('Creating schedule slot:', slot);
+  console.log('Creating schedule slot:', { slot, isMasterSchedule });
   
   // Check if a slot already exists at this time
   const { data: existingSlots } = await supabase
@@ -114,7 +120,10 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     .eq('start_time', slot.start_time)
     .eq('is_recurring', isMasterSchedule);
 
+  console.log('Existing slots check:', existingSlots);
+
   if (existingSlots && existingSlots.length > 0) {
+    console.error('Slot conflict found:', existingSlots);
     throw new Error('משבצת שידור כבר קיימת בזמן זה');
   }
 
@@ -124,13 +133,20 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     is_modified: !isMasterSchedule
   };
 
+  console.log('Inserting new slot with data:', slotData);
+
   const { data, error } = await supabase
     .from('schedule_slots')
     .insert(slotData)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error creating slot:', error);
+    throw error;
+  }
+
+  console.log('Successfully created slot:', data);
   return data;
 };
 
