@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,10 +72,10 @@ const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
       day_of_week: parseInt(dayOfWeek),
       start_time: startTime,
       end_time: endTime,
-      is_recurring: isMasterSchedule, // Always true for master schedule, false otherwise
+      is_recurring: isMasterSchedule,
       is_prerecorded: isPrerecorded,
       is_collection: isCollection,
-      is_modified: true,
+      is_modified: false,
     });
   };
 
