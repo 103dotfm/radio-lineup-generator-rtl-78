@@ -1,58 +1,48 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 
 export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...');
   
-  // First, get all schedule slots with their related shows
   const { data: slots, error } = await supabase
-    .from('shows')
+    .from('schedule_slots')
     .select(`
-      schedule_slots!inner(
+      *,
+      shows (
         id,
-        show_name,
-        host_name,
-        start_time,
-        end_time,
-        day_of_week,
-        is_recurring,
-        is_prerecorded,
-        is_collection,
-        has_lineup,
-        is_modified,
-        created_at,
-        updated_at
-      ),
-      id,
-      name,
-      time,
-      date,
-      notes,
-      created_at
+        name,
+        time,
+        date,
+        notes,
+        created_at
+      )
     `)
-    .order('schedule_slots.day_of_week', { ascending: true })
-    .order('schedule_slots.start_time', { ascending: true });
+    .order('day_of_week', { ascending: true })
+    .order('start_time', { ascending: true });
 
   if (error) {
     console.error('Error fetching schedule slots:', error);
     throw error;
   }
 
-  // Transform the data to match the ScheduleSlot type
-  const transformedSlots = slots?.map(record => {
-    const slot = record.schedule_slots;
-    return {
-      ...slot,
-      shows: [{
-        id: record.id,
-        name: record.name,
-        time: record.time,
-        date: record.date,
-        notes: record.notes,
-        created_at: record.created_at
-      }]
-    };
-  }) || [];
+  // Transform the data to ensure it matches the ScheduleSlot type
+  const transformedSlots: ScheduleSlot[] = slots?.map(slot => ({
+    id: slot.id,
+    show_name: slot.show_name,
+    host_name: slot.host_name,
+    start_time: slot.start_time,
+    end_time: slot.end_time,
+    day_of_week: slot.day_of_week,
+    is_recurring: slot.is_recurring,
+    is_prerecorded: slot.is_prerecorded,
+    is_collection: slot.is_collection,
+    has_lineup: slot.has_lineup,
+    is_modified: slot.is_modified,
+    created_at: slot.created_at,
+    updated_at: slot.updated_at,
+    shows: slot.shows || []
+  })) || [];
 
   console.log('Fetched and transformed slots:', transformedSlots);
   return transformedSlots;
