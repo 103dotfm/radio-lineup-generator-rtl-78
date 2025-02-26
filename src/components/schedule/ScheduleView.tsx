@@ -198,7 +198,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       zIndex: 10
     }}>
         <div className="flex justify-between items-start">
-          <div className="font-medium">{displayName}</div>
+          <div className="font-bold">{displayName}</div>
           {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
         </div>
         {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
