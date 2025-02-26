@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isBefore, startOfDay, isSameDay } from 'date-fns';
@@ -52,7 +51,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       return isSameDay(showDate, addDays(startDate, slot.day_of_week));
     }) || [];
 
-    // For past weeks, show the original data
+    // For past weeks, show the original data without modifications
     if (isBefore(endDate, today)) {
       return {
         ...slot,
@@ -71,15 +70,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         shows: showsInWeek,
         has_lineup: true,
         is_modified: true
-      };
-    }
-
-    // For recurring slots with modifications, only apply to current and future weeks
-    if (slot.is_recurring && slot.is_modified && !isBefore(startDate, today)) {
-      return {
-        ...slot,
-        shows: showsInWeek,
-        has_lineup: showsInWeek.length > 0
       };
     }
 
@@ -148,4 +138,3 @@ export const addMissingColumns = async () => {
     throw error;
   }
 };
-

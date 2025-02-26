@@ -9,7 +9,7 @@ const MasterSchedule = () => {
         <h2 className="text-lg font-bold mb-2">לוח שידורים ראשי</h2>
         <p>שינויים שנעשים כאן ישפיעו על כל השבועות העתידיות, אך לא על שבועות קודמות.</p>
       </div>
-      <ScheduleView isAdmin isMasterSchedule />
+      <ScheduleView isAdmin isMasterSchedule hideDateControls />
     </div>
   );
 };

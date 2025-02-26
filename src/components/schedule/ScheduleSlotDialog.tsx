@@ -25,50 +25,43 @@ interface ScheduleSlotDialogProps {
   onClose: () => void;
   onSave: (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   editingSlot?: ScheduleSlot;
+  isMasterSchedule?: boolean;
 }
 
 const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
   isOpen,
   onClose,
   onSave,
-  editingSlot
+  editingSlot,
+  isMasterSchedule = false
 }) => {
   const [showName, setShowName] = React.useState('');
   const [hostName, setHostName] = React.useState('');
   const [dayOfWeek, setDayOfWeek] = React.useState<string>('0');
   const [startTime, setStartTime] = React.useState('');
   const [endTime, setEndTime] = React.useState('');
-  const [isRecurring, setIsRecurring] = React.useState(true);
   const [isPrerecorded, setIsPrerecorded] = React.useState(false);
   const [isCollection, setIsCollection] = React.useState(false);
 
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-  // Reset form when dialog opens
   useEffect(() => {
-    if (isOpen) {
-      if (editingSlot) {
-        // When editing, load the slot's current data
-        console.log('Loading slot data for editing:', editingSlot);
-        setShowName(editingSlot.show_name);
-        setHostName(editingSlot.host_name || '');
-        setDayOfWeek(editingSlot.day_of_week.toString());
-        setStartTime(editingSlot.start_time);
-        setEndTime(editingSlot.end_time);
-        setIsRecurring(editingSlot.is_recurring);
-        setIsPrerecorded(editingSlot.is_prerecorded || false);
-        setIsCollection(editingSlot.is_collection || false);
-      } else {
-        // When adding new, reset to defaults
-        setShowName('');
-        setHostName('');
-        setDayOfWeek('0');
-        setStartTime('');
-        setEndTime('');
-        setIsRecurring(true);
-        setIsPrerecorded(false);
-        setIsCollection(false);
-      }
+    if (isOpen && editingSlot) {
+      setShowName(editingSlot.show_name);
+      setHostName(editingSlot.host_name || '');
+      setDayOfWeek(editingSlot.day_of_week.toString());
+      setStartTime(editingSlot.start_time);
+      setEndTime(editingSlot.end_time);
+      setIsPrerecorded(editingSlot.is_prerecorded || false);
+      setIsCollection(editingSlot.is_collection || false);
+    } else {
+      setShowName('');
+      setHostName('');
+      setDayOfWeek('0');
+      setStartTime('');
+      setEndTime('');
+      setIsPrerecorded(false);
+      setIsCollection(false);
     }
   }, [editingSlot, isOpen]);
 
@@ -80,10 +73,10 @@ const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
       day_of_week: parseInt(dayOfWeek),
       start_time: startTime,
       end_time: endTime,
-      is_recurring: isRecurring,
+      is_recurring: isMasterSchedule, // Always true for master schedule, false otherwise
       is_prerecorded: isPrerecorded,
       is_collection: isCollection,
-      is_modified: true, // Always mark as modified when saving changes
+      is_modified: true,
     });
   };
 
@@ -155,15 +148,6 @@ const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_recurring"
-                checked={isRecurring}
-                onCheckedChange={(checked: boolean) => setIsRecurring(checked)}
-              />
-              <Label htmlFor="is_recurring">חוזר על עצמו מדי שבוע</Label>
-            </div>
-
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="is_prerecorded"
