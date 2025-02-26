@@ -124,8 +124,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditingSlot(slot);
-    setShowEditModeDialog(true);
+    if (!isMasterSchedule) {
+      setEditingSlot(slot);
+      setShowSlotDialog(true);
+    } else {
+      setEditingSlot(slot);
+      setShowEditModeDialog(true);
+    }
   };
 
   const handleEditCurrent = () => {
@@ -139,49 +144,58 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
-    console.log('Saving slot with data:', slotData);
-    
-    if (editingSlot) {
-      await updateSlotMutation.mutateAsync({
-        id: editingSlot.id,
-        updates: {
+    try {
+      if (isMasterSchedule) {
+        await createSlotMutation.mutateAsync({
           ...slotData,
+          is_recurring: true,
+          is_modified: false
+        });
+      } else {
+        await createSlotMutation.mutateAsync({
+          ...slotData,
+          is_recurring: false,
           is_modified: true
-        }
-      });
-
-      if (!slotData.is_recurring) {
-        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-        const showDate = addDays(weekStart, slotData.day_of_week);
-        
-        const { error: showError } = await supabase
-          .from('shows')
-          .insert({
-            slot_id: editingSlot.id,
-            name: slotData.show_name,
-            date: showDate.toISOString().split('T')[0],
-            time: slotData.start_time
-          });
-
-        if (showError) {
-          console.error('Error creating show record:', showError);
-          toast({
-            title: 'שגיאה בשמירת השינויים',
-            variant: 'destructive'
-          });
-          return;
-        }
+        });
       }
-    } else {
-      await createSlotMutation.mutateAsync({
-        ...slotData,
-        is_recurring: true,
-        is_modified: false
+      toast({
+        title: 'משבצת שידור נוספה בהצלחה'
+      });
+      setShowSlotDialog(false);
+    } catch (error) {
+      console.error('Error saving slot:', error);
+      toast({
+        title: 'שגיאה בהוספת משבצת שידור',
+        variant: 'destructive'
       });
     }
+  };
 
-    setShowSlotDialog(false);
-    setEditingSlot(undefined);
+  const handleUpdateSlot = async (id: string, updates: Partial<ScheduleSlot>) => {
+    try {
+      if (!isMasterSchedule) {
+        await updateSlotMutation.mutateAsync({
+          id,
+          updates: {
+            ...updates,
+            is_recurring: false,
+            is_modified: true
+          }
+        });
+      } else {
+        await updateSlotMutation.mutateAsync({
+          id,
+          updates: {
+            ...updates,
+            is_recurring: true,
+            is_modified: false
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error updating slot:', error);
+      throw error;
+    }
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
@@ -234,11 +248,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
-    if (slot.is_modified) return 'bg-yellow-200';
+    if (slot.has_lineup) return 'bg-green-600 text-white';
+    if (!isMasterSchedule && slot.is_modified) return 'bg-yellow-200';
+    if (!isMasterSchedule && slot.is_recurring) return 'bg-green-100';
     if (slot.is_collection) return 'bg-orange-500 text-white';
     if (slot.is_prerecorded) return 'bg-purple-500 text-white';
-    if (!slot.is_recurring) return 'bg-orange-200';
-    return 'bg-green-100';
+    return 'bg-gray-100';
   };
 
   const getSlotHeight = (slot: ScheduleSlot) => {
