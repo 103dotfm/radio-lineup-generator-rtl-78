@@ -82,36 +82,49 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     }
   });
 
+  const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+    console.log('Saving slot with data:', slotData);
+    
+    if (editingSlot) {
+      await updateSlotMutation.mutateAsync({
+        id: editingSlot.id,
+        updates: {
+          ...slotData,
+          is_modified: !slotData.is_recurring,
+          is_recurring: slotData.is_recurring
+        }
+      });
+    } else {
+      await createSlotMutation.mutateAsync({
+        ...slotData,
+        is_recurring: true
+      });
+    }
+    setShowSlotDialog(false);
+    setEditingSlot(undefined);
+  };
+
   const handleEditCurrent = () => {
+    if (editingSlot) {
+      setEditingSlot({
+        ...editingSlot,
+        is_recurring: false
+      });
+    }
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
 
   const handleEditAll = () => {
     if (editingSlot) {
-      updateSlotMutation.mutateAsync({
-        id: editingSlot.id,
-        updates: { is_modified: false, is_recurring: true }
+      setEditingSlot({
+        ...editingSlot,
+        is_recurring: true,
+        is_modified: false
       });
     }
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
-  };
-
-  const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
-    if (editingSlot) {
-      await updateSlotMutation.mutateAsync({
-        id: editingSlot.id,
-        updates: {
-          ...slotData,
-          is_modified: !slotData.is_recurring
-        }
-      });
-    } else {
-      await createSlotMutation.mutateAsync(slotData);
-    }
-    setShowSlotDialog(false);
-    setEditingSlot(undefined);
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
