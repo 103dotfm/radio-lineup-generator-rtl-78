@@ -17,10 +17,12 @@ import { supabase } from "@/lib/supabase";
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
+  isMasterSchedule?: boolean;
 }
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
-  isAdmin = false
+  isAdmin = false,
+  isMasterSchedule = false
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -39,7 +41,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isLoading
   } = useQuery({
     queryKey: ['scheduleSlots', selectedDate],
-    queryFn: () => getScheduleSlots(selectedDate)
+    queryFn: () => getScheduleSlots(selectedDate, isMasterSchedule)
   });
   const createSlotMutation = useMutation({
     mutationFn: createScheduleSlot,
@@ -109,7 +111,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור ��ו?')) {
       await deleteSlotMutation.mutateAsync(slot.id);
     }
   };
