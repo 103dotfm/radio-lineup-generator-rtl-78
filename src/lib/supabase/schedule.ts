@@ -1,25 +1,61 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 
 export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...');
+  
+  // First, get all schedule slots with their related shows
   const { data: slots, error } = await supabase
-    .from('schedule_slots')
+    .from('shows')
     .select(`
-      *,
-      shows(id, name, time, date, notes, created_at)
+      schedule_slots!inner(
+        id,
+        show_name,
+        host_name,
+        start_time,
+        end_time,
+        day_of_week,
+        is_recurring,
+        is_prerecorded,
+        is_collection,
+        has_lineup,
+        is_modified,
+        created_at,
+        updated_at
+      ),
+      id,
+      name,
+      time,
+      date,
+      notes,
+      created_at
     `)
-    .order('day_of_week', { ascending: true })
-    .order('start_time', { ascending: true });
+    .order('schedule_slots.day_of_week', { ascending: true })
+    .order('schedule_slots.start_time', { ascending: true });
 
   if (error) {
     console.error('Error fetching schedule slots:', error);
     throw error;
   }
 
-  console.log('Fetched schedule slots:', slots);
-  return slots || [];
+  // Transform the data to match the ScheduleSlot type
+  const transformedSlots = slots?.map(record => {
+    const slot = record.schedule_slots;
+    return {
+      ...slot,
+      shows: [{
+        id: record.id,
+        name: record.name,
+        time: record.time,
+        date: record.date,
+        notes: record.notes,
+        created_at: record.created_at
+      }]
+    };
+  }) || [];
+
+  console.log('Fetched and transformed slots:', transformedSlots);
+  return transformedSlots;
 };
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>): Promise<ScheduleSlot> => {
