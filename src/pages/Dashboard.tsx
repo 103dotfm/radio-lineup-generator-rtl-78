@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -98,8 +99,9 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="mb-8 space-y-4">
-        <div className="relative">
+      {/* Search Section */}
+      <div className="mb-8">
+        <div className="relative mb-4">
           <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
           <Input
             placeholder="חיפוש לפי שם תוכנית, תאריך או פריט..."
@@ -108,6 +110,48 @@ const Dashboard = () => {
             className="pl-4 pr-10"
           />
         </div>
+
+        {/* Search Results */}
+        {searchQuery && (
+          <div className="mb-8">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right font-bold">מרואיינ/ת</TableHead>
+                  <TableHead className="text-right font-bold">כותרת</TableHead>
+                  <TableHead className="text-right font-bold">טלפון</TableHead>
+                  <TableHead className="text-right font-bold">שם תוכנית</TableHead>
+                  <TableHead className="text-right font-bold">תאריך</TableHead>
+                  <TableHead className="text-right font-bold">פעולות</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedShows.flatMap(show => 
+                  show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => (
+                    <TableRow key={`${show.id}-${index}`}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.title}</TableCell>
+                      <TableCell>{item.phone}</TableCell>
+                      <TableCell>{show.name}</TableCell>
+                      <TableCell>
+                        {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/show/${show.id}`)}
+                        >
+                          צפייה בליינאפ
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) || []
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
       {/* Schedule View */}
@@ -116,134 +160,100 @@ const Dashboard = () => {
         <ScheduleView isAdmin={isAdmin} />
       </div>
 
-      <h2 className="text-2xl font-semibold mb-4">ליינאפים אחרונים</h2>
-      
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant={sortBy === 'recent' ? 'default' : 'outline'}
-          onClick={() => setSortBy('recent')}
-          size="sm"
-        >
-          אחרון
-        </Button>
-        <Button
-          variant={sortBy === 'date' ? 'default' : 'outline'}
-          onClick={() => setSortBy('date')}
-          size="sm"
-        >
-          <Calendar className="h-4 w-4 ml-2" />
-          תאריך
-        </Button>
-        <Button
-          variant={sortBy === 'time' ? 'default' : 'outline'}
-          onClick={() => setSortBy('time')}
-          size="sm"
-        >
-          <Clock className="h-4 w-4 ml-2" />
-          שעה
-        </Button>
-        <Button
-          variant={sortBy === 'name' ? 'default' : 'outline'}
-          onClick={() => setSortBy('name')}
-          size="sm"
-        >
-          <SortAsc className="h-4 w-4 ml-2" />
-          שם
-        </Button>
-        <Button
-          variant={sortBy === 'modified' ? 'default' : 'outline'}
-          onClick={() => setSortBy('modified')}
-          size="sm"
-        >
-          עודכן
-        </Button>
-      </div>
+      {/* Latest Lineups Section */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">ליינאפים אחרונים</h2>
+        
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant={sortBy === 'recent' ? 'default' : 'outline'}
+            onClick={() => setSortBy('recent')}
+            size="sm"
+          >
+            אחרון
+          </Button>
+          <Button
+            variant={sortBy === 'date' ? 'default' : 'outline'}
+            onClick={() => setSortBy('date')}
+            size="sm"
+          >
+            <Calendar className="h-4 w-4 ml-2" />
+            תאריך
+          </Button>
+          <Button
+            variant={sortBy === 'time' ? 'default' : 'outline'}
+            onClick={() => setSortBy('time')}
+            size="sm"
+          >
+            <Clock className="h-4 w-4 ml-2" />
+            שעה
+          </Button>
+          <Button
+            variant={sortBy === 'name' ? 'default' : 'outline'}
+            onClick={() => setSortBy('name')}
+            size="sm"
+          >
+            <SortAsc className="h-4 w-4 ml-2" />
+            שם
+          </Button>
+          <Button
+            variant={sortBy === 'modified' ? 'default' : 'outline'}
+            onClick={() => setSortBy('modified')}
+            size="sm"
+          >
+            עודכן
+          </Button>
+        </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">טוען...</div>
-      ) : !searchQuery ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedShows.map((show) => (
-            <Card 
-              key={show.id} 
-              className="p-4 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-lg">{show.name}</h3>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-gray-500 flex items-center">
-                    <Calendar className="h-4 w-4 ml-1" />
-                    {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
+        {isLoading ? (
+          <div className="text-center py-8">טוען...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedShows.slice(0, 15).map((show) => (
+              <Card 
+                key={show.id} 
+                className="p-4 hover:shadow-lg transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-lg">{show.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-gray-500 flex items-center">
+                      <Calendar className="h-4 w-4 ml-1" />
+                      {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
+                    </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(show.id);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(show.id);
-                      }}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                </div>
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/show/${show.id}`)}
+                >
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <List className="h-4 w-4" />
+                    <span>{show.time || 'ללא שעה'}</span>
+                  </div>
+                  {show.notes && (
+                    <p className="mt-2 text-sm text-gray-600 line-clamp-2"
+                       dangerouslySetInnerHTML={{ __html: show.notes }} />
                   )}
                 </div>
-              </div>
-              <div 
-                className="cursor-pointer"
-                onClick={() => navigate(`/show/${show.id}`)}
-              >
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <List className="h-4 w-4" />
-                  <span>{show.time || 'ללא שעה'}</span>
-                </div>
-                {show.notes && (
-                  <p className="mt-2 text-sm text-gray-600 line-clamp-2"
-                     dangerouslySetInnerHTML={{ __html: show.notes }} />
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-right font-bold">מרואיינ/ת</TableHead>
-              <TableHead className="text-right font-bold">כותרת</TableHead>
-              <TableHead className="text-right font-bold">טלפון</TableHead>
-              <TableHead className="text-right font-bold">שם תוכנית</TableHead>
-              <TableHead className="text-right font-bold">תאריך</TableHead>
-              <TableHead className="text-right font-bold">פעולות</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedShows.flatMap(show => 
-              show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => (
-                <TableRow key={`${show.id}-${index}`}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.title}</TableCell>
-                  <TableCell>{item.phone}</TableCell>
-                  <TableCell>{show.name}</TableCell>
-                  <TableCell>
-                    {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
-                  </TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate(`/show/${show.id}`)}
-                    >
-                      צפייה בליינאפ
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )) || []
-            )}
-          </TableBody>
-        </Table>
-      )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
       
       <div className="flex justify-center mt-12">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo footer-logo" />
