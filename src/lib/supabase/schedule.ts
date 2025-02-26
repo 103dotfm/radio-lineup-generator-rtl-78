@@ -5,7 +5,10 @@ export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...');
   const { data: slots, error } = await supabase
     .from('schedule_slots')
-    .select('*')
+    .select(`
+      *,
+      shows:shows(*)
+    `)
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
@@ -14,8 +17,7 @@ export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
     throw error;
   }
 
-  console.log('Fetched schedule slots:', slots);
-  return slots;
+  return slots || [];
 };
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>): Promise<ScheduleSlot> => {
