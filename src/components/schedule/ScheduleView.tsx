@@ -34,13 +34,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
 
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   
-  // Fetch schedule slots
   const { data: scheduleSlots = [] } = useQuery({
     queryKey: ['scheduleSlots'],
     queryFn: getScheduleSlots,
   });
 
-  // Create schedule slot mutation
   const createSlotMutation = useMutation({
     mutationFn: createScheduleSlot,
     onSuccess: () => {
@@ -56,7 +54,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     },
   });
 
-  // Update schedule slot mutation
   const updateSlotMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) =>
       updateScheduleSlot(id, updates),
@@ -73,7 +70,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     },
   });
 
-  // Delete schedule slot mutation
   const deleteSlotMutation = useMutation({
     mutationFn: deleteScheduleSlot,
     onSuccess: () => {
@@ -89,7 +85,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     },
   });
 
-  // Handle slot actions
   const handleAddSlot = () => {
     setEditingSlot(undefined);
     setShowSlotDialog(true);
@@ -122,13 +117,41 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     }
   };
 
-  // Generate time slots from 06:00 to 02:00
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const isSlotInTimeRange = (slot: ScheduleSlot, timeSlot: string) => {
+    const slotStart = timeToMinutes(slot.start_time);
+    const slotEnd = timeToMinutes(slot.end_time);
+    const currentTime = timeToMinutes(timeSlot);
+    const nextTime = timeToMinutes(timeSlot) + 60;
+
+    return (slotStart < nextTime && slotEnd > currentTime);
+  };
+
+  const renderSlot = (slot: ScheduleSlot) => (
+    <div
+      key={slot.id}
+      onClick={() => handleSlotClick(slot)}
+      className="p-2 bg-blue-100 rounded cursor-pointer hover:bg-blue-200 transition-colors"
+    >
+      <div className="font-medium">{slot.show_name}</div>
+      {slot.host_name && (
+        <div className="text-sm text-gray-600">{slot.host_name}</div>
+      )}
+      <div className="text-xs text-gray-500">
+        {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+      </div>
+    </div>
+  );
+
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let i = 6; i <= 23; i++) {
       slots.push(`${i.toString().padStart(2, '0')}:00`);
     }
-    // Add the next day's hours (00:00 to 02:00)
     for (let i = 0; i <= 2; i++) {
       slots.push(`${i.toString().padStart(2, '0')}:00`);
     }
@@ -184,7 +207,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
                   {time}
                 </div>
                 <div className="p-2 border-b border-r min-h-[60px]">
-                  {/* Placeholder for schedule items */}
+                  {scheduleSlots
+                    .filter(slot => 
+                      slot.day_of_week === selectedDate.getDay() &&
+                      isSlotInTimeRange(slot, time)
+                    )
+                    .map(renderSlot)}
                 </div>
               </React.Fragment>
             ))}
@@ -215,7 +243,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
                     key={`${time}-${dayIndex}`}
                     className="p-2 border-b border-r last:border-r-0 min-h-[60px]"
                   >
-                    {/* Placeholder for schedule items */}
+                    {scheduleSlots
+                      .filter(slot => 
+                        slot.day_of_week === dayIndex &&
+                        isSlotInTimeRange(slot, time)
+                      )
+                      .map(renderSlot)}
                   </div>
                 ))}
               </React.Fragment>
@@ -252,7 +285,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
                         !isCurrentMonth ? 'bg-gray-50' : ''
                       }`}
                     >
-                      {/* Placeholder for schedule items */}
+                      {isCurrentMonth && scheduleSlots
+                        .filter(slot => 
+                          slot.day_of_week === dayIndex &&
+                          isSlotInTimeRange(slot, time)
+                        )
+                        .map(renderSlot)}
                     </div>
                   );
                 })}
