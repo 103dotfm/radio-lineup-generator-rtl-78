@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -84,8 +85,13 @@ const Index = () => {
       console.log('Received state:', state);
       const { showName, hostName, time, date, slotId } = state;
       
-      // Set the show name and generate the title based on the logic
-      setShowName(showName === hostName ? hostName : `${showName} עם ${hostName}`);
+      // Generate the title based on the logic
+      const generatedTitle = showName === hostName ? 
+        hostName : 
+        `${showName} עם ${hostName}`;
+      
+      console.log('Generated title:', generatedTitle);
+      setShowName(generatedTitle);
       setShowTime(time || '');
       
       // Handle the date from the schedule
