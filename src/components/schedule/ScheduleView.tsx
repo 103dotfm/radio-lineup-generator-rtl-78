@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -13,7 +14,6 @@ import ScheduleSlotDialog from './ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
 import { getShowDisplay } from '@/utils/showDisplay';
-import { supabase } from "@/lib/supabase";
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -37,11 +37,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
   const {
     data: scheduleSlots = [],
     isLoading
@@ -51,11 +49,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
       return getScheduleSlots(selectedDate, isMasterSchedule);
     },
-    onSuccess: (data) => {
-      console.log('Successfully fetched slots:', data);
-    },
-    onError: (error) => {
-      console.error('Error fetching slots:', error);
+    meta: {
+      onSuccess: (data: ScheduleSlot[]) => {
+        console.log('Successfully fetched slots:', data);
+      },
+      onError: (error: Error) => {
+        console.error('Error fetching slots:', error);
+      }
     }
   });
 
