@@ -130,27 +130,49 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+    console.log('Saving slot with data:', slotData);
+    
     if (editingSlot) {
-      if (showEditModeDialog) {
-        await updateSlotMutation.mutateAsync({
-          id: editingSlot.id,
-          updates: {
-            ...slotData,
-            is_modified: false
-          }
-        });
-      } else {
-        await updateSlotMutation.mutateAsync({
-          id: editingSlot.id,
-          updates: {
-            ...slotData,
-            is_modified: true
-          }
-        });
+      await updateSlotMutation.mutateAsync({
+        id: editingSlot.id,
+        updates: {
+          ...slotData,
+          is_modified: true
+        }
+      });
+
+      if (!slotData.is_recurring) {
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+        const showDate = addDays(weekStart, slotData.day_of_week);
+        
+        const { error: showError } = await supabase
+          .from('shows')
+          .insert({
+            slot_id: editingSlot.id,
+            name: slotData.show_name,
+            date: showDate.toISOString().split('T')[0],
+            time: slotData.start_time
+          });
+
+        if (showError) {
+          console.error('Error creating show record:', showError);
+          toast({
+            title: 'שגיאה בשמירת השינויים',
+            variant: 'destructive'
+          });
+          return;
+        }
       }
     } else {
-      await createSlotMutation.mutateAsync(slotData);
+      await createSlotMutation.mutateAsync({
+        ...slotData,
+        is_recurring: true,
+        is_modified: false
+      });
     }
+
+    setShowSlotDialog(false);
+    setEditingSlot(undefined);
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
