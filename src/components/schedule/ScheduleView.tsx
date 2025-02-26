@@ -153,9 +153,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    if (slot.has_lineup && slot.shows && slot.shows[0]) {
+    console.log('Clicked slot:', slot);
+    if (slot.has_lineup && slot.shows && slot.shows.length > 0) {
+      console.log('Navigating to show:', slot.shows[0].id);
       navigate(`/show/${slot.shows[0].id}`);
     } else {
+      console.log('Creating new show for slot:', slot.id);
       navigate('/new', {
         state: {
           showName: slot.show_name,
@@ -213,7 +216,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
         </div>
         {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
-        {slot.start_time && slot.end_time}
+        <div className="text-sm">{slot.start_time}</div>
         {isAdmin && <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
             <Button variant="ghost" size="sm" className="p-1 h-8 w-8" onClick={e => handleEditSlot(slot, e)}>
               <Pencil className="h-4 w-4" />
