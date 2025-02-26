@@ -166,13 +166,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleUpdateSlot = async (id: string, updates: Partial<ScheduleSlot>) => {
     try {
-      if (!isMasterSchedule) {
+      if (isMasterSchedule) {
         await updateSlotMutation.mutateAsync({
           id,
           updates: {
             ...updates,
-            is_recurring: false,
-            is_modified: true
+            is_recurring: true,
+            is_modified: false
           }
         });
       } else {
@@ -180,8 +180,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           id,
           updates: {
             ...updates,
-            is_recurring: true,
-            is_modified: false
+            is_modified: true
           }
         });
       }
@@ -244,10 +243,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     if (isMasterSchedule) return 'bg-green-100';
     if (slot.has_lineup) return 'bg-green-600 text-white';
     if (slot.is_modified) return 'bg-yellow-200';
-    if (slot.is_recurring) return 'bg-green-100';
-    if (slot.is_collection) return 'bg-orange-500 text-white';
-    if (slot.is_prerecorded) return 'bg-purple-500 text-white';
-    return 'bg-gray-100';
+    return 'bg-green-100';
   };
 
   const getSlotHeight = (slot: ScheduleSlot) => {
