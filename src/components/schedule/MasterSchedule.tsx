@@ -4,9 +4,14 @@ import ScheduleView from './ScheduleView';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import ScheduleSlotDialog from './ScheduleSlotDialog';
+import { useQueryClient } from '@tanstack/react-query';
+import { createScheduleSlot } from '@/lib/supabase/schedule';
+import { useToast } from '@/hooks/use-toast';
 
 const MasterSchedule = () => {
   const [showSlotDialog, setShowSlotDialog] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   return (
     <div className="space-y-4">
@@ -27,23 +32,31 @@ const MasterSchedule = () => {
         isMasterSchedule 
         hideDateControls 
         showAddButton={false}
+        hideHeaderDates
       />
 
       <ScheduleSlotDialog 
         isOpen={showSlotDialog} 
         onClose={() => setShowSlotDialog(false)}
         onSave={async (slotData) => {
-          // Always set is_recurring to true for master schedule
           const updatedSlotData = {
             ...slotData,
             is_recurring: true
           };
+          
           try {
-            // Here we would call the save function from ScheduleView
-            // For now, we'll close the dialog
+            await createScheduleSlot(updatedSlotData);
+            queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+            toast({
+              title: "משבצת שידור נוספה בהצלחה"
+            });
             setShowSlotDialog(false);
           } catch (error) {
             console.error('Error saving slot:', error);
+            toast({
+              title: "שגיאה בהוספת משבצת שידור",
+              variant: "destructive"
+            });
           }
         }}
         isMasterSchedule={true}

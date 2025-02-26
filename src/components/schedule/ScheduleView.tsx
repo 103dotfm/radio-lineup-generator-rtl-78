@@ -20,13 +20,15 @@ interface ScheduleViewProps {
   isMasterSchedule?: boolean;
   hideDateControls?: boolean;
   showAddButton?: boolean;
+  hideHeaderDates?: boolean;
 }
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
   isAdmin = false,
   isMasterSchedule = false,
   hideDateControls = false,
-  showAddButton = true
+  showAddButton = true,
+  hideHeaderDates = false
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -340,9 +342,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             </div>
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               {weekDays[selectedDate.getDay()]}
-              <div className="text-sm text-gray-600">
-                {format(selectedDate, 'dd/MM')}
-              </div>
+              {!hideHeaderDates && (
+                <div className="text-sm text-gray-600">
+                  {format(selectedDate, 'dd/MM')}
+                </div>
+              )}
             </div>
             {timeSlots.map(time => <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
@@ -358,17 +362,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             </div>
             {dates.map((date, index) => <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
                 {weekDays[date.getDay()]}
-                <div className="text-sm text-gray-600">
-                  {format(date, 'dd/MM')}
-                </div>
+                {!hideHeaderDates && (
+                  <div className="text-sm text-gray-600">
+                    {format(date, 'dd/MM')}
+                  </div>
+                )}
               </div>)}
             {timeSlots.map(time => <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {Array.from({
-              length: 7
-            }).map((_, dayIndex) => <React.Fragment key={`${time}-${dayIndex}`}>
+                {Array.from({length: 7}).map((_, dayIndex) => <React.Fragment key={`${time}-${dayIndex}`}>
                     {renderTimeCell(dayIndex, time)}
                   </React.Fragment>)}
               </React.Fragment>)}
@@ -386,9 +390,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                   {time}
                 </div>
                 {weekDays.map((_, dayIndex) => {
-              const isCurrentMonth = dates.some(date => date.getDay() === dayIndex && isSameMonth(date, selectedDate));
-              return renderTimeCell(dayIndex, time, isCurrentMonth);
-            })}
+                  const isCurrentMonth = dates.some(date => date.getDay() === dayIndex && isSameMonth(date, selectedDate));
+                  return renderTimeCell(dayIndex, time, isCurrentMonth);
+                })}
               </React.Fragment>)}
           </div>;
     }
