@@ -24,29 +24,26 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
     const fetchResults = async () => {
       if (value && value.trim()) {
         try {
-          console.log('GuestSearch: Initiating search with value:', value);
+          console.log('Searching for guests with query:', value);
           const results = await searchGuests(value);
-          console.log('GuestSearch: Received results:', results);
+          console.log('Search results:', results);
           setSearchResults(results || []);
           setOpen(results && results.length > 0);
         } catch (error) {
-          console.error('GuestSearch: Error searching guests:', error);
+          console.error('Error searching guests:', error);
           setSearchResults([]);
           setOpen(false);
         }
       } else {
-        console.log('GuestSearch: Empty search value, clearing results');
         setSearchResults([]);
         setOpen(false);
       }
     };
 
-    console.log('GuestSearch: Value changed, fetching results');
     fetchResults();
   }, [value, isTyping]);
 
   const handleSelect = (guest: { name: string; title: string; phone: string }) => {
-    console.log('GuestSearch: Selected guest:', guest);
     onGuestSelect(guest);
     setOpen(false);
     setSearchResults([]);
@@ -54,7 +51,6 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('GuestSearch: Input changed:', e.target.value);
     setIsTyping(true);
     onNameChange(e.target.value);
   };
@@ -71,10 +67,7 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         aria-autocomplete="none"
         name="off"
         className="w-full"
-        onFocus={() => {
-          console.log('GuestSearch: Input focused');
-          setIsTyping(true);
-        }}
+        onFocus={() => setIsTyping(true)}
       />
       {open && searchResults.length > 0 && (
         <div className="absolute w-full z-50 mt-1 bg-white rounded-md shadow-lg overflow-hidden">
