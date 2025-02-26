@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import ScheduleSlotDialog from './ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
+import { getShowDisplay } from '@/utils/showDisplay';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -171,54 +172,60 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     return `${hoursDiff * 60}px`;
   };
 
-  const renderSlot = (slot: ScheduleSlot) => (
-    <div
-      key={slot.id}
-      onClick={() => handleSlotClick(slot)}
-      className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group ${getSlotColor(slot)}`}
-      style={{ 
-        height: getSlotHeight(slot),
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        zIndex: 10
-      }}
-    >
-      <div className="flex justify-between items-start">
-        <div className="font-medium">{slot.show_name}</div>
-        {slot.has_lineup && (
-          <FileCheck className="h-4 w-4 text-green-600" />
+  const renderSlot = (slot: ScheduleSlot) => {
+    const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
+    
+    return (
+      <div
+        key={slot.id}
+        onClick={() => handleSlotClick(slot)}
+        className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group ${getSlotColor(slot)}`}
+        style={{ 
+          height: getSlotHeight(slot),
+          position: 'absolute',
+          top: '0',
+          left: '0',
+          right: '0',
+          zIndex: 10
+        }}
+      >
+        <div className="flex justify-between items-start">
+          <div className="font-medium">{displayName}</div>
+          {slot.has_lineup && (
+            <FileCheck className="h-4 w-4 text-green-600" />
+          )}
+        </div>
+        {displayHost && (
+          <div className="text-sm opacity-75">{displayHost}</div>
+        )}
+        {slot.start_time && slot.end_time && (
+          <div className="text-xs opacity-75">
+            {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
+          </div>
+        )}
+        {isAdmin && (
+          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-1 h-8 w-8"
+              onClick={(e) => handleEditSlot(slot, e)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-1 h-8 w-8 hover:bg-red-100"
+              onClick={(e) => handleDeleteSlot(slot, e)}
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+          </div>
         )}
       </div>
-      {slot.host_name && (
-        <div className="text-sm opacity-75">{slot.host_name}</div>
-      )}
-      <div className="text-xs opacity-75">
-        {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
-      </div>
-      {isAdmin && (
-        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-1 h-8 w-8"
-            onClick={(e) => handleEditSlot(slot, e)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-1 h-8 w-8 hover:bg-red-100"
-            onClick={(e) => handleDeleteSlot(slot, e)}
-          >
-            <Trash2 className="h-4 w-4 text-red-500" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   const timeSlots = useMemo(() => {
     const slots = [];

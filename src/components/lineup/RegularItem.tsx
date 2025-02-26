@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import IntervieweeList from './interviewees/IntervieweeList';
 import IntervieweeForm from './interviewees/IntervieweeForm';
+import { getShowDisplay } from '@/utils/showDisplay';
 
 interface RegularItemProps {
   id: string;
@@ -38,6 +38,7 @@ const RegularItem = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
+  const { displayName, displayHost } = getShowDisplay(name, title);
 
   useEffect(() => {
     loadInterviewees();
@@ -90,7 +91,8 @@ const RegularItem = ({
     <>
       <td className="py-2 px-4 border border-gray-200 w-1/5 relative">
         <div className="flex flex-col gap-1">
-          <div>{name}</div>
+          <div>{displayName}</div>
+          {displayHost && <div>{displayHost}</div>}
           {interviewees.length > 0 && (
             <IntervieweeList
               interviewees={interviewees}
