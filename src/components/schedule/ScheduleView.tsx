@@ -153,16 +153,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    navigate('/new', {
-      state: {
-        showName: slot.show_name,
-        hostName: slot.host_name,
-        time: slot.start_time,
-        isPrerecorded: slot.is_prerecorded,
-        isCollection: slot.is_collection,
-        slotId: slot.id
-      }
-    });
+    if (slot.has_lineup && slot.shows && slot.shows[0]) {
+      navigate(`/show/${slot.shows[0].id}`);
+    } else {
+      navigate('/new', {
+        state: {
+          showName: slot.show_name,
+          hostName: slot.host_name,
+          time: slot.start_time,
+          isPrerecorded: slot.is_prerecorded,
+          isCollection: slot.is_collection,
+          slotId: slot.id
+        }
+      });
+    }
   };
 
   const timeToMinutes = (time: string) => {
