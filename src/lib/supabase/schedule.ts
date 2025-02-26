@@ -8,9 +8,22 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   // Get the start and end of the selected week
   const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
   const endDate = addDays(startDate, 6);
-  const today = startOfDay(new Date());
 
-  const { data: slots, error } = await supabase
+  if (isMasterSchedule) {
+    // For master schedule, just get the recurring slots
+    const { data: slots, error } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('is_recurring', true)
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    if (error) throw error;
+    return slots || [];
+  }
+
+  // For weekly schedule, get both recurring and modified slots
+  const { data: allSlots, error } = await supabase
     .from('schedule_slots')
     .select(`
       *,
@@ -27,95 +40,121 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching schedule slots:', error);
-    throw error;
-  }
+  if (error) throw error;
 
-  // Transform the data to ensure it matches the ScheduleSlot type
-  const transformedSlots: ScheduleSlot[] = slots?.map(slot => {
-    // For master schedule, return the base slots without modifications
-    if (isMasterSchedule) {
+  // Create a map of modified slots for the selected week
+  const modifiedSlots = new Map();
+  allSlots?.forEach(slot => {
+    if (!slot.is_recurring) {
+      const slotKey = `${slot.day_of_week}-${slot.start_time}`;
+      const slotDate = addDays(startDate, slot.day_of_week);
+      
+      // Only include modifications for the selected week
+      if (isSameDay(slotDate, addDays(startDate, slot.day_of_week))) {
+        modifiedSlots.set(slotKey, slot);
+      }
+    }
+  });
+
+  // Get base recurring slots
+  const recurringSlots = allSlots?.filter(slot => slot.is_recurring) || [];
+
+  // Merge recurring and modified slots
+  const mergedSlots = recurringSlots.map(baseSlot => {
+    const slotKey = `${baseSlot.day_of_week}-${baseSlot.start_time}`;
+    const modifiedSlot = modifiedSlots.get(slotKey);
+    
+    if (modifiedSlot) {
+      // Return the modified slot for this specific week
       return {
-        ...slot,
-        is_modified: false,
-        shows: [],
-        has_lineup: false
+        ...modifiedSlot,
+        is_modified: true
       };
     }
 
-    // Get shows for this specific week
+    // Return the base recurring slot
+    return {
+      ...baseSlot,
+      is_modified: false
+    };
+  });
+
+  // Add any shows to the slots
+  const finalSlots = mergedSlots.map(slot => {
     const showsInWeek = slot.shows?.filter(show => {
       if (!show.date) return false;
       const showDate = new Date(show.date);
       return isSameDay(showDate, addDays(startDate, slot.day_of_week));
     }) || [];
 
-    // For past weeks, show the original data without modifications
-    if (isBefore(endDate, today)) {
-      return {
-        ...slot,
-        shows: showsInWeek,
-        has_lineup: showsInWeek.length > 0,
-        is_modified: false
-      };
-    }
-
-    // For the current week's shows (non-recurring modifications)
-    const showForCurrentWeek = showsInWeek[0];
-    if (showForCurrentWeek) {
-      return {
-        ...slot,
-        show_name: showForCurrentWeek.name || slot.show_name,
-        shows: showsInWeek,
-        has_lineup: true,
-        is_modified: true
-      };
-    }
-
-    // Default case: return the slot as is
     return {
       ...slot,
       shows: showsInWeek,
       has_lineup: showsInWeek.length > 0
     };
-  }) || [];
+  });
 
-  console.log('Fetched and transformed slots:', transformedSlots);
-  return transformedSlots;
+  console.log('Fetched and transformed slots:', finalSlots);
+  return finalSlots;
 };
 
-export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>): Promise<ScheduleSlot> => {
+export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
   console.log('Creating schedule slot:', slot);
+  
+  const slotData = isMasterSchedule 
+    ? { ...slot, is_recurring: true, is_modified: false }
+    : { ...slot, is_recurring: false, is_modified: true };
+
   const { data, error } = await supabase
     .from('schedule_slots')
-    .insert(slot)
+    .insert(slotData)
     .select()
     .single();
 
-  if (error) {
-    console.error('Error creating schedule slot:', error);
-    throw error;
-  }
-
+  if (error) throw error;
   return data;
 };
 
-export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSlot>): Promise<ScheduleSlot> => {
-  console.log('Updating schedule slot:', id, updates);
-  const { data, error } = await supabase
-    .from('schedule_slots')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSlot>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
+  console.log('Updating schedule slot:', { id, updates, isMasterSchedule });
 
-  if (error) {
-    console.error('Error updating schedule slot:', error);
-    throw error;
+  if (isMasterSchedule) {
+    // Update master schedule slot
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .update({ ...updates, is_recurring: true, is_modified: false })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } else {
+    // For weekly modifications, create a new non-recurring slot
+    const { data: originalSlot } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (!originalSlot) throw new Error('Original slot not found');
+
+    // Create a new modified slot for this specific week
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .insert({
+        ...originalSlot,
+        ...updates,
+        id: undefined, // Let Supabase generate a new ID
+        is_recurring: false,
+        is_modified: true
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
-
-  return data;
 };
 
 export const deleteScheduleSlot = async (id: string): Promise<void> => {

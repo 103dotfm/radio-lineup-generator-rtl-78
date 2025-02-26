@@ -145,12 +145,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      await createSlotMutation.mutateAsync({
-        ...slotData,
-        is_recurring: true,
-        is_modified: false
-      });
-      
+      await createSlotMutation.mutateAsync({ slotData, isMasterSchedule });
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
       });
@@ -166,24 +161,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleUpdateSlot = async (id: string, updates: Partial<ScheduleSlot>) => {
     try {
-      if (isMasterSchedule) {
-        await updateSlotMutation.mutateAsync({
-          id,
-          updates: {
-            ...updates,
-            is_recurring: true,
-            is_modified: false
-          }
-        });
-      } else {
-        await updateSlotMutation.mutateAsync({
-          id,
-          updates: {
-            ...updates,
-            is_modified: true
-          }
-        });
-      }
+      await updateSlotMutation.mutateAsync({ id, updates, isMasterSchedule });
+      toast({
+        title: 'משבצת שידור עודכנה בהצלחה'
+      });
     } catch (error) {
       console.error('Error updating slot:', error);
       throw error;
