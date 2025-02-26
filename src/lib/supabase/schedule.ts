@@ -1,6 +1,7 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek } from 'date-fns';
+import { addDays, startOfWeek, isBefore, startOfDay } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...');
@@ -8,6 +9,7 @@ export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlo
   // Get the start and end of the selected week
   const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
   const endDate = addDays(startDate, 6);
+  const today = startOfDay(new Date());
 
   const { data: slots, error } = await supabase
     .from('schedule_slots')
@@ -33,28 +35,52 @@ export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlo
 
   // Transform the data to ensure it matches the ScheduleSlot type
   const transformedSlots: ScheduleSlot[] = slots?.map(slot => {
-    // Filter shows to only include those within the selected week
+    // Get shows for this week
     const showsInWeek = slot.shows?.filter(show => {
       if (!show.date) return false;
       const showDate = new Date(show.date);
       return showDate >= startDate && showDate <= endDate;
     }) || [];
 
+    // If this slot is not recurring and modified, we should only show the modified version
+    // for the current week and future weeks
+    if (!slot.is_recurring && slot.is_modified) {
+      // For past weeks, show the original slot
+      if (isBefore(endDate, today)) {
+        return {
+          ...slot,
+          is_modified: false,
+          shows: [],
+          has_lineup: false
+        };
+      }
+
+      // For current/future weeks with no specific show, use the modified slot
+      if (showsInWeek.length === 0) {
+        return {
+          ...slot,
+          has_lineup: false
+        };
+      }
+    }
+
+    // For recurring slots that were modified
+    if (slot.is_recurring && slot.is_modified) {
+      // For past weeks, show the original slot
+      if (isBefore(endDate, today)) {
+        return {
+          ...slot,
+          is_modified: false,
+          shows: [],
+          has_lineup: false
+        };
+      }
+    }
+
     return {
-      id: slot.id,
-      show_name: slot.show_name,
-      host_name: slot.host_name,
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      day_of_week: slot.day_of_week,
-      is_recurring: slot.is_recurring,
-      is_prerecorded: slot.is_prerecorded,
-      is_collection: slot.is_collection,
-      has_lineup: showsInWeek.length > 0, // Set has_lineup based on actual shows in the week
-      is_modified: slot.is_modified,
-      created_at: slot.created_at,
-      updated_at: slot.updated_at,
-      shows: showsInWeek
+      ...slot,
+      shows: showsInWeek,
+      has_lineup: showsInWeek.length > 0
     };
   }) || [];
 
