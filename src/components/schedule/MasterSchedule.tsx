@@ -39,20 +39,21 @@ const MasterSchedule = () => {
         isOpen={showSlotDialog} 
         onClose={() => setShowSlotDialog(false)}
         onSave={async (slotData) => {
-          const updatedSlotData = {
-            ...slotData,
-            is_recurring: true
-          };
-          
+          console.log('Attempting to save master schedule slot:', slotData);
           try {
-            await createScheduleSlot(updatedSlotData);
-            queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+            await createScheduleSlot(slotData, true);
+            console.log('Master schedule slot created successfully');
+            
+            // Force refresh the schedule view
+            await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+            console.log('Query cache invalidated');
+            
             toast({
               title: "משבצת שידור נוספה בהצלחה"
             });
             setShowSlotDialog(false);
           } catch (error) {
-            console.error('Error saving slot:', error);
+            console.error('Error saving master schedule slot:', error);
             toast({
               title: "שגיאה בהוספת משבצת שידור",
               variant: "destructive"
