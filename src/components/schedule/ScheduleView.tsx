@@ -13,9 +13,11 @@ import ScheduleSlotDialog from './ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
 import { getShowDisplay } from '@/utils/showDisplay';
+
 interface ScheduleViewProps {
   isAdmin?: boolean;
 }
+
 const ScheduleView: React.FC<ScheduleViewProps> = ({
   isAdmin = false
 }) => {
@@ -97,29 +99,35 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       });
     }
   });
+
   const handleAddSlot = () => {
     setEditingSlot(undefined);
     setShowSlotDialog(true);
   };
+
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       await deleteSlotMutation.mutateAsync(slot.id);
     }
   };
+
   const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingSlot(slot);
     setShowEditModeDialog(true);
   };
+
   const handleEditCurrent = () => {
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
+
   const handleEditAll = () => {
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
+
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
     if (editingSlot) {
       if (showEditModeDialog) {
@@ -143,6 +151,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       await createSlotMutation.mutateAsync(slotData);
     }
   };
+
   const handleSlotClick = (slot: ScheduleSlot) => {
     navigate('/new', {
       state: {
@@ -150,19 +159,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         hostName: slot.host_name,
         time: slot.start_time,
         isPrerecorded: slot.is_prerecorded,
-        isCollection: slot.is_collection
+        isCollection: slot.is_collection,
+        slotId: slot.id
       }
     });
   };
+
   const timeToMinutes = (time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
   };
+
   const isSlotStartTime = (slot: ScheduleSlot, timeSlot: string) => {
     const slotStartMinutes = timeToMinutes(slot.start_time);
     const currentTimeMinutes = timeToMinutes(timeSlot);
     return slotStartMinutes === currentTimeMinutes;
   };
+
   const getSlotColor = (slot: ScheduleSlot) => {
     if (slot.is_modified) return 'bg-yellow-200';
     if (slot.is_collection) return 'bg-orange-500 text-white';
@@ -170,12 +183,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     if (!slot.is_recurring) return 'bg-orange-200';
     return 'bg-green-100';
   };
+
   const getSlotHeight = (slot: ScheduleSlot) => {
     const start = timeToMinutes(slot.start_time);
     const end = timeToMinutes(slot.end_time);
     const hoursDiff = (end - start) / 60;
     return `${hoursDiff * 60}px`;
   };
+
   const renderSlot = (slot: ScheduleSlot) => {
     const {
       displayName,
@@ -205,6 +220,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           </div>}
       </div>;
   };
+
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let i = 6; i <= 23; i++) {
@@ -215,6 +231,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }
     return slots;
   }, []);
+
   const dates = useMemo(() => {
     switch (viewMode) {
       case 'daily':
@@ -240,6 +257,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         return [];
     }
   }, [selectedDate, viewMode]);
+
   const navigateDate = (direction: 'prev' | 'next') => {
     const days = viewMode === 'daily' ? 1 : viewMode === 'weekly' ? 7 : 30;
     const newDate = new Date(selectedDate);
@@ -250,12 +268,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }
     setSelectedDate(newDate);
   };
+
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time));
     return <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
         {isCurrentMonth && relevantSlots.map(renderSlot)}
       </div>;
   };
+
   const renderGrid = () => {
     switch (viewMode) {
       case 'daily':
@@ -318,6 +338,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           </div>;
     }
   };
+
   return <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -374,4 +395,5 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }} onSave={handleSaveSlot} editingSlot={editingSlot} />
     </div>;
 };
+
 export default ScheduleView;

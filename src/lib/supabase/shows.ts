@@ -85,6 +85,11 @@ export const searchShows = async (query: string): Promise<Show[]> => {
 export const getShowWithItems = async (showId: string) => {
   console.log('Fetching show with ID:', showId);
   
+  if (!showId) {
+    console.error('No show ID provided');
+    throw new Error('No show ID provided');
+  }
+
   const { data: show, error: showError } = await supabase
     .from('shows')
     .select('*')
@@ -122,6 +127,7 @@ export const saveShow = async (
     time: string;
     date: string;
     notes: string;
+    slot_id?: string; // Add this field to link with schedule slot
   },
   items: Array<{
     name: string;
@@ -140,8 +146,11 @@ export const saveShow = async (
   showId?: string
 ) => {
   try {
+    let finalShowId = showId;
+    let isUpdate = Boolean(showId);
+
     // If updating existing show
-    if (showId) {
+    if (isUpdate) {
       const { error: showError } = await supabase
         .from('shows')
         .update({
@@ -161,10 +170,8 @@ export const saveShow = async (
         .eq('show_id', showId);
 
       if (deleteError) throw deleteError;
-    }
-
-    // If creating new show
-    if (!showId) {
+    } else {
+      // If creating new show
       const { data: newShow, error: createError } = await supabase
         .from('shows')
         .insert({
@@ -177,16 +184,27 @@ export const saveShow = async (
         .single();
 
       if (createError) throw createError;
-      showId = newShow.id;
+      finalShowId = newShow.id;
+    }
+
+    // Update schedule slot to link with this show if slot_id is provided
+    if (show.slot_id) {
+      const { error: slotError } = await supabase
+        .from('schedule_slots')
+        .update({ 
+          has_lineup: true
+        })
+        .eq('id', show.slot_id);
+
+      if (slotError) throw slotError;
     }
 
     // Insert new items
     if (items.length > 0) {
       const itemsToInsert = items.map((item, index) => {
-        // Extract interviewees to insert separately
         const { interviewees, ...itemData } = item;
         return {
-          show_id: showId,
+          show_id: finalShowId,
           position: index,
           ...itemData
         };
@@ -221,7 +239,7 @@ export const saveShow = async (
       }
     }
 
-    return { id: showId };
+    return { id: finalShowId };
 
   } catch (error) {
     console.error('Error saving show:', error);

@@ -134,6 +134,7 @@ const Index = () => {
         time: showTime,
         date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
         notes: editor?.getHTML() || '',
+        slot_id: state?.slotId
       };
 
       const itemsToSave = items.map(({ id: itemId, ...item }) => ({
@@ -150,11 +151,12 @@ const Index = () => {
       console.log('Saving items with interviewees:', itemsToSave);
 
       const savedShow = await saveShow(show, itemsToSave, showId);
+      
       if (savedShow && !showId) {
-        navigate(`/show/${savedShow.id}`);
+        navigate(`/show/${savedShow.id}`, { replace: true });
       }
       
-      const result = await getShowWithItems(showId);
+      const result = await getShowWithItems(showId || savedShow.id);
       if (result) {
         setItems(result.items);
         setInitialState({
