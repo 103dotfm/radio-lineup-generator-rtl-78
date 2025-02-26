@@ -19,12 +19,14 @@ interface ScheduleViewProps {
   isAdmin?: boolean;
   isMasterSchedule?: boolean;
   hideDateControls?: boolean;
+  showAddButton?: boolean;
 }
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
   isAdmin = false,
   isMasterSchedule = false,
-  hideDateControls = false
+  hideDateControls = false,
+  showAddButton = true
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -421,10 +423,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               </SelectContent>
             </Select>
 
-            {isAdmin && <Button onClick={handleAddSlot} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              הוסף משבצת
-            </Button>}
+            {isAdmin && showAddButton && (
+              <Button onClick={handleAddSlot} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                הוסף משבצת
+              </Button>
+            )}
           </div>
         </div>
       )}
