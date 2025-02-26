@@ -39,6 +39,29 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
+  // Initial setup effect for new shows
+  useEffect(() => {
+    if (!showId && state) {
+      console.log('Setting up new show from state:', state);
+      const { showName, hostName, time, date } = state;
+      
+      // Generate the title based on the logic
+      const generatedTitle = showName === hostName ? 
+        hostName : 
+        `${showName} עם ${hostName}`;
+      
+      console.log('Generated title:', generatedTitle);
+      setShowName(generatedTitle);
+      setShowTime(time || '');
+      
+      if (date) {
+        console.log('Setting date:', date);
+        setShowDate(new Date(date));
+      }
+    }
+  }, [showId, state]);
+
+  // Effect for loading existing shows
   useEffect(() => {
     const loadShow = async () => {
       if (showId) {
@@ -79,28 +102,6 @@ const Index = () => {
 
     loadShow();
   }, [showId, editor, navigate]);
-
-  useEffect(() => {
-    if (state) {
-      console.log('Received state:', state);
-      const { showName, hostName, time, date, slotId } = state;
-      
-      // Generate the title based on the logic
-      const generatedTitle = showName === hostName ? 
-        hostName : 
-        `${showName} עם ${hostName}`;
-      
-      console.log('Generated title:', generatedTitle);
-      setShowName(generatedTitle);
-      setShowTime(time || '');
-      
-      // Handle the date from the schedule
-      if (date) {
-        console.log('Setting date from schedule:', date);
-        setShowDate(new Date(date));
-      }
-    }
-  }, [state]);
 
   useEffect(() => {
     if (!initialState) return;
