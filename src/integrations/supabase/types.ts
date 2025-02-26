@@ -47,6 +47,54 @@ export type Database = {
           },
         ]
       }
+      schedule_slots: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          has_lineup: boolean | null
+          host_name: string | null
+          id: string
+          is_collection: boolean | null
+          is_modified: boolean | null
+          is_prerecorded: boolean | null
+          is_recurring: boolean | null
+          show_name: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       show_items: {
         Row: {
           created_at: string | null
@@ -156,6 +204,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_schedule_slots_columns: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       gtrgm_compress: {
         Args: {
           "": unknown
