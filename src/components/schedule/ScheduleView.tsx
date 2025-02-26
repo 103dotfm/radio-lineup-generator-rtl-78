@@ -145,19 +145,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      if (isMasterSchedule) {
-        await createSlotMutation.mutateAsync({
-          ...slotData,
-          is_recurring: true,
-          is_modified: false
-        });
-      } else {
-        await createSlotMutation.mutateAsync({
-          ...slotData,
-          is_recurring: false,
-          is_modified: true
-        });
-      }
+      await createSlotMutation.mutateAsync({
+        ...slotData,
+        is_recurring: true,
+        is_modified: false
+      });
+      
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
       });
@@ -248,9 +241,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
+    if (isMasterSchedule) return 'bg-green-100';
     if (slot.has_lineup) return 'bg-green-600 text-white';
-    if (!isMasterSchedule && slot.is_modified) return 'bg-yellow-200';
-    if (!isMasterSchedule && slot.is_recurring) return 'bg-green-100';
+    if (slot.is_modified) return 'bg-yellow-200';
+    if (slot.is_recurring) return 'bg-green-100';
     if (slot.is_collection) return 'bg-orange-500 text-white';
     if (slot.is_prerecorded) return 'bg-purple-500 text-white';
     return 'bg-gray-100';
@@ -351,7 +345,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const renderGrid = () => {
     switch (viewMode) {
       case 'daily':
-        return <div className="grid grid-cols-[auto,1fr]">
+        return <div className="grid grid-cols-[auto,1fr]" dir="rtl">
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
@@ -371,7 +365,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               </React.Fragment>)}
           </div>;
       case 'weekly':
-        return <div className="grid grid-cols-[auto,repeat(7,1fr)]">
+        return <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
@@ -393,7 +387,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               </React.Fragment>)}
           </div>;
       case 'monthly':
-        return <div className="grid grid-cols-[auto,repeat(7,1fr)]">
+        return <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
