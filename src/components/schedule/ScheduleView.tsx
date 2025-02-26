@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -11,8 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ViewMode } from '@/types/schedule';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ViewMode, ScheduleSlot } from '@/types/schedule';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
+import { useToast } from '@/hooks/use-toast';
+import ScheduleSlotDialog from './ScheduleSlotDialog';
+import { useNavigate } from 'react-router-dom';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -22,9 +26,102 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showSlotDialog, setShowSlotDialog] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   
+  // Fetch schedule slots
+  const { data: scheduleSlots = [] } = useQuery({
+    queryKey: ['scheduleSlots'],
+    queryFn: getScheduleSlots,
+  });
+
+  // Create schedule slot mutation
+  const createSlotMutation = useMutation({
+    mutationFn: createScheduleSlot,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      toast({ title: 'משבצת שידור נוספה בהצלחה' });
+    },
+    onError: (error) => {
+      console.error('Error creating slot:', error);
+      toast({ 
+        title: 'שגיאה בהוספת משבצת שידור',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Update schedule slot mutation
+  const updateSlotMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) =>
+      updateScheduleSlot(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      toast({ title: 'משבצת שידור עודכנה בהצלחה' });
+    },
+    onError: (error) => {
+      console.error('Error updating slot:', error);
+      toast({ 
+        title: 'שגיאה בעדכון משבצת שידור',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Delete schedule slot mutation
+  const deleteSlotMutation = useMutation({
+    mutationFn: deleteScheduleSlot,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+      toast({ title: 'משבצת שידור נמחקה בהצלחה' });
+    },
+    onError: (error) => {
+      console.error('Error deleting slot:', error);
+      toast({ 
+        title: 'שגיאה במחיקת משבצת שידור',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Handle slot actions
+  const handleAddSlot = () => {
+    setEditingSlot(undefined);
+    setShowSlotDialog(true);
+  };
+
+  const handleEditSlot = (slot: ScheduleSlot) => {
+    setEditingSlot(slot);
+    setShowSlotDialog(true);
+  };
+
+  const handleDeleteSlot = async (slot: ScheduleSlot) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
+      await deleteSlotMutation.mutateAsync(slot.id);
+    }
+  };
+
+  const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+    if (editingSlot) {
+      await updateSlotMutation.mutateAsync({ id: editingSlot.id, updates: slotData });
+    } else {
+      await createSlotMutation.mutateAsync(slotData);
+    }
+  };
+
+  const handleSlotClick = (slot: ScheduleSlot) => {
+    if (isAdmin) {
+      handleEditSlot(slot);
+    } else {
+      navigate('/new', { state: { showName: slot.show_name } });
+    }
+  };
+
   // Generate time slots from 06:00 to 02:00
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -192,19 +289,28 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
           </Button>
         </div>
 
-        <Select
-          value={viewMode}
-          onValueChange={(value: ViewMode) => setViewMode(value)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">יומי</SelectItem>
-            <SelectItem value="weekly">שבועי</SelectItem>
-            <SelectItem value="monthly">חודשי</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={viewMode}
+            onValueChange={(value: ViewMode) => setViewMode(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">יומי</SelectItem>
+              <SelectItem value="weekly">שבועי</SelectItem>
+              <SelectItem value="monthly">חודשי</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {isAdmin && (
+            <Button onClick={handleAddSlot} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              הוסף משבצת
+            </Button>
+          )}
+        </div>
       </div>
 
       {showDatePicker && (
@@ -226,6 +332,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
       <div className="border rounded-lg overflow-hidden">
         {renderGrid()}
       </div>
+
+      <ScheduleSlotDialog
+        isOpen={showSlotDialog}
+        onClose={() => {
+          setShowSlotDialog(false);
+          setEditingSlot(undefined);
+        }}
+        onSave={handleSaveSlot}
+        editingSlot={editingSlot}
+      />
     </div>
   );
 };
