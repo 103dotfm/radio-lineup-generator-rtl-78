@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ViewMode, ScheduleSlot } from '@/types/schedule';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -113,7 +113,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     if (isAdmin) {
       handleEditSlot(slot);
     } else {
-      navigate('/new', { state: { showName: slot.show_name } });
+      navigate('/new', { 
+        state: { 
+          showName: slot.show_name,
+          hostName: slot.host_name,
+          isPrerecorded: slot.is_prerecorded,
+          isCollection: slot.is_collection
+        } 
+      });
     }
   };
 
@@ -131,19 +138,54 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     return (slotStart < nextTime && slotEnd > currentTime);
   };
 
+  const getSlotColor = (slot: ScheduleSlot) => {
+    if (slot.is_collection) return 'bg-orange-500 text-white';
+    if (slot.is_prerecorded) return 'bg-purple-500 text-white';
+    if (!slot.is_recurring) return 'bg-orange-200';
+    return 'bg-green-100';
+  };
+
+  const getSlotHeight = (slot: ScheduleSlot) => {
+    const start = timeToMinutes(slot.start_time);
+    const end = timeToMinutes(slot.end_time);
+    const hoursDiff = (end - start) / 60;
+    return `${hoursDiff * 60}px`; // Each hour is 60px high
+  };
+
   const renderSlot = (slot: ScheduleSlot) => (
     <div
       key={slot.id}
       onClick={() => handleSlotClick(slot)}
-      className="p-2 bg-blue-100 rounded cursor-pointer hover:bg-blue-200 transition-colors"
+      className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors ${getSlotColor(slot)}`}
+      style={{ 
+        height: getSlotHeight(slot),
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        right: '0',
+        zIndex: 10
+      }}
     >
       <div className="font-medium">{slot.show_name}</div>
       {slot.host_name && (
-        <div className="text-sm text-gray-600">{slot.host_name}</div>
+        <div className="text-sm opacity-75">{slot.host_name}</div>
       )}
-      <div className="text-xs text-gray-500">
+      <div className="text-xs opacity-75">
         {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
       </div>
+      {isAdmin && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditSlot(slot);
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 
@@ -187,6 +229,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     setSelectedDate(newDate);
   };
 
+  const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
+    const relevantSlots = scheduleSlots.filter(slot => 
+      slot.day_of_week === dayIndex &&
+      isSlotInTimeRange(slot, time)
+    );
+
+    return (
+      <div
+        className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${
+          !isCurrentMonth ? 'bg-gray-50' : ''
+        }`}
+      >
+        {isCurrentMonth && relevantSlots.map(renderSlot)}
+      </div>
+    );
+  };
+
   const renderGrid = () => {
     switch (viewMode) {
       case 'daily':
@@ -206,14 +265,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                <div className="p-2 border-b border-r min-h-[60px]">
-                  {scheduleSlots
-                    .filter(slot => 
-                      slot.day_of_week === selectedDate.getDay() &&
-                      isSlotInTimeRange(slot, time)
-                    )
-                    .map(renderSlot)}
-                </div>
+                {renderTimeCell(selectedDate.getDay(), time)}
               </React.Fragment>
             ))}
           </div>
@@ -239,17 +291,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
                   {time}
                 </div>
                 {Array.from({ length: 7 }).map((_, dayIndex) => (
-                  <div
-                    key={`${time}-${dayIndex}`}
-                    className="p-2 border-b border-r last:border-r-0 min-h-[60px]"
-                  >
-                    {scheduleSlots
-                      .filter(slot => 
-                        slot.day_of_week === dayIndex &&
-                        isSlotInTimeRange(slot, time)
-                      )
-                      .map(renderSlot)}
-                  </div>
+                  <React.Fragment key={`${time}-${dayIndex}`}>
+                    {renderTimeCell(dayIndex, time)}
+                  </React.Fragment>
                 ))}
               </React.Fragment>
             ))}
@@ -278,21 +322,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
                       date.getDay() === dayIndex && 
                       isSameMonth(date, selectedDate)
                   );
-                  return (
-                    <div
-                      key={`${time}-${dayIndex}`}
-                      className={`p-2 border-b border-r last:border-r-0 min-h-[60px] ${
-                        !isCurrentMonth ? 'bg-gray-50' : ''
-                      }`}
-                    >
-                      {isCurrentMonth && scheduleSlots
-                        .filter(slot => 
-                          slot.day_of_week === dayIndex &&
-                          isSlotInTimeRange(slot, time)
-                        )
-                        .map(renderSlot)}
-                    </div>
-                  );
+                  return renderTimeCell(dayIndex, time, isCurrentMonth);
                 })}
               </React.Fragment>
             ))}

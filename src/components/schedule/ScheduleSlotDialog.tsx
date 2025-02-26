@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,8 @@ const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
   const [startTime, setStartTime] = React.useState(editingSlot?.start_time || '');
   const [endTime, setEndTime] = React.useState(editingSlot?.end_time || '');
   const [isRecurring, setIsRecurring] = React.useState(editingSlot?.is_recurring ?? true);
+  const [isPrerecorded, setIsPrerecorded] = React.useState(editingSlot?.is_prerecorded ?? false);
+  const [isCollection, setIsCollection] = React.useState(editingSlot?.is_collection ?? false);
 
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -50,6 +53,8 @@ const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
       start_time: startTime,
       end_time: endTime,
       is_recurring: isRecurring,
+      is_prerecorded: isPrerecorded,
+      is_collection: isCollection,
     });
     onClose();
   };
@@ -118,6 +123,26 @@ const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
                 onChange={(e) => setEndTime(e.target.value)}
                 required
               />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_prerecorded"
+                checked={isPrerecorded}
+                onCheckedChange={(checked: boolean) => setIsPrerecorded(checked)}
+              />
+              <Label htmlFor="is_prerecorded">הוקלט מראש</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_collection"
+                checked={isCollection}
+                onCheckedChange={(checked: boolean) => setIsCollection(checked)}
+              />
+              <Label htmlFor="is_collection">לקט</Label>
             </div>
           </div>
 
