@@ -110,18 +110,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    if (isAdmin) {
-      handleEditSlot(slot);
-    } else {
-      navigate('/new', { 
-        state: { 
-          showName: slot.show_name,
-          hostName: slot.host_name,
-          isPrerecorded: slot.is_prerecorded,
-          isCollection: slot.is_collection
-        } 
-      });
-    }
+    navigate('/new', { 
+      state: { 
+        showName: slot.show_name,
+        hostName: slot.host_name,
+        isPrerecorded: slot.is_prerecorded,
+        isCollection: slot.is_collection
+      } 
+    });
   };
 
   const timeToMinutes = (time: string) => {
@@ -133,9 +129,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     const slotStart = timeToMinutes(slot.start_time);
     const slotEnd = timeToMinutes(slot.end_time);
     const currentTime = timeToMinutes(timeSlot);
-    const nextTime = timeToMinutes(timeSlot) + 60;
 
-    return (slotStart < nextTime && slotEnd > currentTime);
+    return slotStart <= currentTime && slotEnd > currentTime;
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
@@ -156,7 +151,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     <div
       key={slot.id}
       onClick={() => handleSlotClick(slot)}
-      className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors ${getSlotColor(slot)}`}
+      className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group ${getSlotColor(slot)}`}
       style={{ 
         height: getSlotHeight(slot),
         position: 'absolute',
