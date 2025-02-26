@@ -152,6 +152,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          slot_id: string | null
           time: string | null
         }
         Insert: {
@@ -160,6 +161,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          slot_id?: string | null
           time?: string | null
         }
         Update: {
@@ -168,9 +170,18 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          slot_id?: string | null
           time?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shows_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_slots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
