@@ -80,6 +80,23 @@ const Index = () => {
   }, [showId, editor, navigate]);
 
   useEffect(() => {
+    if (state) {
+      console.log('Received state:', state);
+      const { showName, hostName, time, date, slotId } = state;
+      
+      // Set the show name and generate the title based on the logic
+      setShowName(showName === hostName ? hostName : `${showName} עם ${hostName}`);
+      setShowTime(time || '');
+      
+      // Handle the date from the schedule
+      if (date) {
+        console.log('Setting date from schedule:', date);
+        setShowDate(new Date(date));
+      }
+    }
+  }, [state]);
+
+  useEffect(() => {
     if (!initialState) return;
 
     const currentState = {
