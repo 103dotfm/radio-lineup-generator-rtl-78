@@ -127,12 +127,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     return hours * 60 + minutes;
   };
 
-  const isSlotInTimeRange = (slot: ScheduleSlot, timeSlot: string) => {
-    const slotStart = timeToMinutes(slot.start_time);
-    const slotEnd = timeToMinutes(slot.end_time);
-    const currentTime = timeToMinutes(timeSlot);
-
-    return slotStart <= currentTime && slotEnd > currentTime;
+  const isSlotStartTime = (slot: ScheduleSlot, timeSlot: string) => {
+    const slotStartMinutes = timeToMinutes(slot.start_time);
+    const currentTimeMinutes = timeToMinutes(timeSlot);
+    return slotStartMinutes === currentTimeMinutes;
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
@@ -146,7 +144,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     const start = timeToMinutes(slot.start_time);
     const end = timeToMinutes(slot.end_time);
     const hoursDiff = (end - start) / 60;
-    return `${hoursDiff * 60}px`; // Each hour is 60px high
+    return `${hoursDiff * 60}px`;
   };
 
   const renderSlot = (slot: ScheduleSlot) => (
@@ -236,7 +234,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(slot => 
       slot.day_of_week === dayIndex &&
-      isSlotInTimeRange(slot, time)
+      isSlotStartTime(slot, time)
     );
 
     return (
