@@ -36,8 +36,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const {
     data: scheduleSlots = []
   } = useQuery({
-    queryKey: ['scheduleSlots'],
-    queryFn: getScheduleSlots
+    queryKey: ['scheduleSlots', selectedDate],
+    queryFn: () => getScheduleSlots(selectedDate)
   });
   const createSlotMutation = useMutation({
     mutationFn: createScheduleSlot,
@@ -160,11 +160,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       navigate(`/show/${show.id}`);
     } else {
       console.log('No existing show found, creating new show for slot:', slot.id);
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+      const slotDate = addDays(weekStart, slot.day_of_week);
+      
       navigate('/new', {
         state: {
           showName: slot.show_name,
           hostName: slot.host_name,
           time: slot.start_time,
+          date: slotDate,
           isPrerecorded: slot.is_prerecorded,
           isCollection: slot.is_collection,
           slotId: slot.id

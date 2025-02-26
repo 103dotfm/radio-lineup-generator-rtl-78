@@ -1,10 +1,14 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
+import { addDays, startOfWeek } from 'date-fns';
 
-export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
+export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...');
   
+  // Get the start and end of the selected week
+  const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
+  const endDate = addDays(startDate, 6);
+
   const { data: slots, error } = await supabase
     .from('schedule_slots')
     .select(`
@@ -15,7 +19,8 @@ export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
         time,
         date,
         notes,
-        created_at
+        created_at,
+        slot_id
       )
     `)
     .order('day_of_week', { ascending: true })
@@ -27,22 +32,36 @@ export const getScheduleSlots = async (): Promise<ScheduleSlot[]> => {
   }
 
   // Transform the data to ensure it matches the ScheduleSlot type
-  const transformedSlots: ScheduleSlot[] = slots?.map(slot => ({
-    id: slot.id,
-    show_name: slot.show_name,
-    host_name: slot.host_name,
-    start_time: slot.start_time,
-    end_time: slot.end_time,
-    day_of_week: slot.day_of_week,
-    is_recurring: slot.is_recurring,
-    is_prerecorded: slot.is_prerecorded,
-    is_collection: slot.is_collection,
-    has_lineup: slot.has_lineup,
-    is_modified: slot.is_modified,
-    created_at: slot.created_at,
-    updated_at: slot.updated_at,
-    shows: slot.shows || []
-  })) || [];
+  const transformedSlots: ScheduleSlot[] = slots?.map(slot => {
+    // Filter shows to only include those within the selected week
+    const relevantShows = slot.shows?.filter(show => {
+      if (!show.date) return false;
+      const showDate = new Date(show.date);
+      return showDate >= startDate && showDate <= endDate;
+    }) || [];
+
+    // For non-recurring slots, only show lineup status if there's a show in the current week
+    const hasLineupThisWeek = slot.is_recurring 
+      ? slot.has_lineup 
+      : (relevantShows.length > 0);
+
+    return {
+      id: slot.id,
+      show_name: slot.show_name,
+      host_name: slot.host_name,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      day_of_week: slot.day_of_week,
+      is_recurring: slot.is_recurring,
+      is_prerecorded: slot.is_prerecorded,
+      is_collection: slot.is_collection,
+      has_lineup: hasLineupThisWeek,
+      is_modified: slot.is_modified,
+      created_at: slot.created_at,
+      updated_at: slot.updated_at,
+      shows: relevantShows
+    };
+  }) || [];
 
   console.log('Fetched and transformed slots:', transformedSlots);
   return transformedSlots;
