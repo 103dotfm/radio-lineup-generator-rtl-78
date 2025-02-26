@@ -13,6 +13,7 @@ import ScheduleSlotDialog from './ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
 import { getShowDisplay } from '@/utils/showDisplay';
+import { supabase } from "@/lib/supabase";
 
 interface ScheduleViewProps {
   isAdmin?: boolean;

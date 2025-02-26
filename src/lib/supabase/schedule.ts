@@ -3,8 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isBefore, startOfDay, isSameDay } from 'date-fns';
 
-export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlot[]> => {
-  console.log('Fetching schedule slots...');
+export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
+  console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
   
   // Get the start and end of the selected week
   const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
@@ -35,51 +35,55 @@ export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlo
 
   // Transform the data to ensure it matches the ScheduleSlot type
   const transformedSlots: ScheduleSlot[] = slots?.map(slot => {
+    // For master schedule, return the base slots without modifications
+    if (isMasterSchedule) {
+      return {
+        ...slot,
+        is_modified: false,
+        shows: [],
+        has_lineup: false
+      };
+    }
+
     // Get shows for this specific week
     const showsInWeek = slot.shows?.filter(show => {
       if (!show.date) return false;
       const showDate = new Date(show.date);
-      return showDate >= startDate && showDate <= endDate;
+      return isSameDay(showDate, addDays(startDate, slot.day_of_week));
     }) || [];
 
-    // If this is a past week, show original data
+    // For past weeks, show the original data
     if (isBefore(endDate, today)) {
       return {
         ...slot,
-        is_modified: false,
+        shows: showsInWeek,
+        has_lineup: showsInWeek.length > 0,
+        is_modified: false
+      };
+    }
+
+    // For the current week's shows (non-recurring modifications)
+    const showForCurrentWeek = showsInWeek[0];
+    if (showForCurrentWeek) {
+      return {
+        ...slot,
+        show_name: showForCurrentWeek.name || slot.show_name,
+        shows: showsInWeek,
+        has_lineup: true,
+        is_modified: true
+      };
+    }
+
+    // For recurring slots with modifications, only apply to current and future weeks
+    if (slot.is_recurring && slot.is_modified && !isBefore(startDate, today)) {
+      return {
+        ...slot,
         shows: showsInWeek,
         has_lineup: showsInWeek.length > 0
       };
     }
 
-    // For non-recurring modified slots
-    if (!slot.is_recurring && slot.is_modified) {
-      // Find the show for this specific week
-      const showForWeek = showsInWeek[0];
-      if (showForWeek) {
-        return {
-          ...slot,
-          show_name: showForWeek.name || slot.show_name,
-          shows: showsInWeek,
-          has_lineup: true
-        };
-      }
-    }
-
-    // For recurring slots with modifications
-    if (slot.is_recurring && slot.is_modified && !isBefore(startDate, today)) {
-      // Apply modifications only to current and future weeks
-      const showForWeek = showsInWeek[0];
-      if (showForWeek) {
-        return {
-          ...slot,
-          show_name: showForWeek.name || slot.show_name,
-          shows: showsInWeek,
-          has_lineup: true
-        };
-      }
-    }
-
+    // Default case: return the slot as is
     return {
       ...slot,
       shows: showsInWeek,
@@ -144,3 +148,4 @@ export const addMissingColumns = async () => {
     throw error;
   }
 };
+
