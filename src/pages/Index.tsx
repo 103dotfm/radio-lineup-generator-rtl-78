@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -41,8 +42,7 @@ const Index = () => {
   // Initial setup effect for new shows
   useEffect(() => {
     if (!showId && state) {
-      console.log('Received state in Index:', state);
-      console.log('Current showName before update:', showName);
+      console.log('Processing initial state:', state);
       
       // Use the pre-generated show name if available
       const displayName = state.generatedShowName || (
@@ -51,13 +51,23 @@ const Index = () => {
           : `${state.showName} עם ${state.hostName}`
       );
       
-      console.log('Setting display name:', displayName);
+      console.log('Initial setup - Setting show name to:', displayName);
+      
       setShowName(displayName);
       setShowTime(state.time || '');
       
       if (state.date) {
         setShowDate(new Date(state.date));
       }
+
+      // Set initial state to prevent unwanted updates
+      setInitialState({
+        name: displayName,
+        time: state.time || '',
+        date: state.date ? new Date(state.date) : new Date(),
+        notes: '',
+        items: []
+      });
     }
   }, [showId, state]);
 
