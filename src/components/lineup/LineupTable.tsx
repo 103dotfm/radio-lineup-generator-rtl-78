@@ -1,7 +1,10 @@
+
 import React from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
 import { useAuth } from '../../contexts/AuthContext';
+import { getShowDisplay } from '@/utils/showDisplay';
+
 interface LineupTableProps {
   items: Array<{
     id: string;
@@ -20,6 +23,7 @@ interface LineupTableProps {
   onDetailsChange: (id: string, details: string) => void;
   onDragEnd: (result: DropResult) => void;
 }
+
 const LineupTable = ({
   items,
   onDelete,
@@ -29,12 +33,13 @@ const LineupTable = ({
   onDetailsChange,
   onDragEnd
 }: LineupTableProps) => {
-  const {
-    isAuthenticated
-  } = useAuth();
-  return <DragDropContext onDragEnd={onDragEnd}>
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="lineup">
-        {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
+        {provided => (
+          <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
             <table className="w-full table-fixed border-collapse">
               <colgroup>
                 <col className="w-1/5" />
@@ -55,12 +60,26 @@ const LineupTable = ({
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, index) => <LineupItem key={item.id} {...item} index={index} onDelete={onDelete} onDurationChange={onDurationChange} onEdit={onEdit} onBreakTextChange={onBreakTextChange} onDetailsChange={onDetailsChange} />)}
+                {items.map((item, index) => (
+                  <LineupItem 
+                    key={item.id} 
+                    {...item} 
+                    index={index} 
+                    onDelete={onDelete} 
+                    onDurationChange={onDurationChange} 
+                    onEdit={onEdit} 
+                    onBreakTextChange={onBreakTextChange} 
+                    onDetailsChange={onDetailsChange} 
+                  />
+                ))}
                 {provided.placeholder}
               </tbody>
             </table>
-          </div>}
+          </div>
+        )}
       </Droppable>
-    </DragDropContext>;
+    </DragDropContext>
+  );
 };
+
 export default LineupTable;
