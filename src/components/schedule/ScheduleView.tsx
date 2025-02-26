@@ -18,11 +18,13 @@ import { supabase } from "@/lib/supabase";
 interface ScheduleViewProps {
   isAdmin?: boolean;
   isMasterSchedule?: boolean;
+  hideDateControls?: boolean;
 }
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
   isAdmin = false,
-  isMasterSchedule = false
+  isMasterSchedule = false,
+  hideDateControls = false
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -34,7 +36,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const {
     toast
   } = useToast();
-  const queryClient = useQueryClient();
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const {
     data: scheduleSlots = [],
@@ -391,48 +392,52 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   return <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => navigateDate('prev')}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" onClick={() => setShowDatePicker(!showDatePicker)}>
-            {format(selectedDate, 'dd/MM/yyyy', {
-            locale: he
-          })}
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => navigateDate('next')}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </div>
+      {!hideDateControls && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => navigateDate('prev')}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={() => setShowDatePicker(!showDatePicker)}>
+              {format(selectedDate, 'dd/MM/yyyy', {
+                locale: he
+              })}
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => navigateDate('next')}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">יומי</SelectItem>
-              <SelectItem value="weekly">שבועי</SelectItem>
-              <SelectItem value="monthly">חודשי</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">יומי</SelectItem>
+                <SelectItem value="weekly">שבועי</SelectItem>
+                <SelectItem value="monthly">חודשי</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {isAdmin && <Button onClick={handleAddSlot} className="flex items-center gap-2">
+            {isAdmin && <Button onClick={handleAddSlot} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               הוסף משבצת
             </Button>}
+          </div>
         </div>
-      </div>
+      )}
 
-      {showDatePicker && <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
+      {showDatePicker && !hideDateControls && (
+        <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
           <Calendar mode="single" selected={selectedDate} onSelect={date => {
-        if (date) {
-          setSelectedDate(date);
-          setShowDatePicker(false);
-        }
-      }} locale={he} />
-        </div>}
+            if (date) {
+              setSelectedDate(date);
+              setShowDatePicker(false);
+            }
+          }} locale={he} />
+        </div>
+      )}
 
       <div className="border rounded-lg overflow-hidden">
         {renderGrid()}
@@ -441,9 +446,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       <EditModeDialog isOpen={showEditModeDialog} onClose={() => setShowEditModeDialog(false)} onEditCurrent={handleEditCurrent} onEditAll={handleEditAll} />
 
       <ScheduleSlotDialog isOpen={showSlotDialog} onClose={() => {
-      setShowSlotDialog(false);
-      setEditingSlot(undefined);
-    }} onSave={handleSaveSlot} editingSlot={editingSlot} />
+        setShowSlotDialog(false);
+        setEditingSlot(undefined);
+      }} onSave={handleSaveSlot} editingSlot={editingSlot} />
     </div>;
 };
 
