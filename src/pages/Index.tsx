@@ -102,13 +102,8 @@ const Index = () => {
 
   useEffect(() => {
     if (state) {
-      setShowName(state.showName || '');
+      setShowName(state.hostName || '');
       setShowTime(state.time || '');
-      if (state.hostName) {
-        if (editor) {
-          editor.commands.setContent(`מגיש/ה: ${state.hostName}`);
-        }
-      }
     }
   }, [state, editor]);
 

@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ViewMode, ScheduleSlot } from '@/types/schedule';
-import { ChevronLeft, ChevronRight, Plus, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -90,15 +90,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     setShowSlotDialog(true);
   };
 
-  const handleEditSlot = (slot: ScheduleSlot) => {
-    setEditingSlot(slot);
-    setShowSlotDialog(true);
-  };
-
-  const handleDeleteSlot = async (slot: ScheduleSlot) => {
+  const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       await deleteSlotMutation.mutateAsync(slot.id);
     }
+  };
+
+  const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSlot(slot);
+    setShowSlotDialog(true);
   };
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
@@ -169,17 +171,24 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
         {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
       </div>
       {isAdmin && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEditSlot(slot);
-          }}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
+        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-1 h-8 w-8"
+            onClick={(e) => handleEditSlot(slot, e)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-1 h-8 w-8 hover:bg-red-100"
+            onClick={(e) => handleDeleteSlot(slot, e)}
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
       )}
     </div>
   );
