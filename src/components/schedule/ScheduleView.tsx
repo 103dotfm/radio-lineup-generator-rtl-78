@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, isSameDay } from 'date-fns';
+import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ interface ScheduleViewProps {
   isAdmin?: boolean;
 }
 
-const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
+const ScheduleView: React.FC<ScheduleViewProps> = ({
+  isAdmin = false
+}) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -26,10 +28,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const queryClient = useQueryClient();
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-
   const {
     data: scheduleSlots = [],
     isLoading
@@ -37,109 +40,136 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     queryKey: ['scheduleSlots', selectedDate],
     queryFn: () => getScheduleSlots(selectedDate)
   });
-
   const createSlotMutation = useMutation({
     mutationFn: createScheduleSlot,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      toast({ title: 'משבצת שידור נוספה בהצלחה' });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduleSlots']
+      });
+      toast({
+        title: 'משבצת שידור נוספה בהצלחה'
+      });
     },
     onError: error => {
       console.error('Error creating slot:', error);
-      toast({ title: 'שגיאה בהוספת משבצת שידור', variant: 'destructive' });
+      toast({
+        title: 'שגיאה בהוספת משבצת שידור',
+        variant: 'destructive'
+      });
     }
   });
-
   const updateSlotMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot>; }) => {
-      const updatedSlot = { ...updates };
-      
-      if (!updates.is_recurring) {
-        updatedSlot.is_modified = true;
-      }
-      
-      return updateScheduleSlot(id, updatedSlot);
-    },
+    mutationFn: ({
+      id,
+      updates
+    }: {
+      id: string;
+      updates: Partial<ScheduleSlot>;
+    }) => updateScheduleSlot(id, updates),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      toast({ title: 'משבצת שידור עודכנה בהצלחה' });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduleSlots']
+      });
+      toast({
+        title: 'משבצת שידור עודכנה בהצלחה'
+      });
     },
     onError: error => {
       console.error('Error updating slot:', error);
-      toast({ title: 'שגיאה בעדכון משבצת שידור', variant: 'destructive' });
+      toast({
+        title: 'שגיאה בעדכון משבצת שידור',
+        variant: 'destructive'
+      });
     }
   });
-
   const deleteSlotMutation = useMutation({
     mutationFn: deleteScheduleSlot,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
-      toast({ title: 'משבצת שידור נמחקה בהצלחה' });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduleSlots']
+      });
+      toast({
+        title: 'משבצת שידור נמחקה בהצלחה'
+      });
     },
     onError: error => {
       console.error('Error deleting slot:', error);
-      toast({ title: 'שגיאה במחיקת משבצת שידור', variant: 'destructive' });
+      toast({
+        title: 'שגיאה במחיקת משבצת שידור',
+        variant: 'destructive'
+      });
     }
   });
 
-  const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
-    console.log('Saving slot with data:', slotData);
-    
-    if (editingSlot) {
-      await updateSlotMutation.mutateAsync({
-        id: editingSlot.id,
-        updates: {
-          ...slotData,
-          is_modified: !slotData.is_recurring,
-          is_recurring: slotData.is_recurring
-        }
-      });
-    } else {
-      await createSlotMutation.mutateAsync({
-        ...slotData,
-        is_recurring: true
-      });
-    }
-    setShowSlotDialog(false);
+  const handleAddSlot = () => {
     setEditingSlot(undefined);
+    setShowSlotDialog(true);
+  };
+
+  const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
+      await deleteSlotMutation.mutateAsync(slot.id);
+    }
+  };
+
+  const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSlot(slot);
+    setShowEditModeDialog(true);
   };
 
   const handleEditCurrent = () => {
-    if (editingSlot) {
-      setEditingSlot({
-        ...editingSlot,
-        is_recurring: false
-      });
-    }
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
 
   const handleEditAll = () => {
-    if (editingSlot) {
-      setEditingSlot({
-        ...editingSlot,
-        is_recurring: true,
-        is_modified: false
-      });
-    }
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
 
+  const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+    if (editingSlot) {
+      if (showEditModeDialog) {
+        await updateSlotMutation.mutateAsync({
+          id: editingSlot.id,
+          updates: {
+            ...slotData,
+            is_modified: false
+          }
+        });
+      } else {
+        await updateSlotMutation.mutateAsync({
+          id: editingSlot.id,
+          updates: {
+            ...slotData,
+            is_modified: true
+          }
+        });
+      }
+    } else {
+      await createSlotMutation.mutateAsync(slotData);
+    }
+  };
+
   const handleSlotClick = (slot: ScheduleSlot) => {
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    const slotDate = addDays(currentWeekStart, slot.day_of_week);
-    
-    const showForThisWeek = slot.shows?.find(show => {
-      const showDate = new Date(show.date!);
-      return isSameDay(showDate, slotDate);
+    console.log('Clicked slot details:', {
+      show_name: slot.show_name,
+      host_name: slot.host_name,
+      start_time: slot.start_time,
+      is_prerecorded: slot.is_prerecorded,
+      is_collection: slot.is_collection
     });
 
-    if (showForThisWeek) {
-      console.log('Found existing show, navigating to:', showForThisWeek.id);
-      navigate(`/show/${showForThisWeek.id}`);
+    if (slot.shows && slot.shows.length > 0) {
+      const show = slot.shows[0];
+      console.log('Found existing show, navigating to:', show.id);
+      navigate(`/show/${show.id}`);
     } else {
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+      const slotDate = addDays(weekStart, slot.day_of_week);
+      
       const generatedShowName = slot.show_name === slot.host_name 
         ? slot.host_name 
         : `${slot.show_name} עם ${slot.host_name}`;
@@ -187,72 +217,34 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     return `${hoursDiff * 60}px`;
   };
 
-  const renderSlotForDate = (slot: ScheduleSlot, date: Date) => {
-    const isModifiedForDate = slot.is_modified && slot.shows?.some(show => 
-      show.date && isSameDay(new Date(show.date), date)
-    );
-
-    const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
-
-    const showForDate = slot.shows?.find(show => 
-      show.date && isSameDay(new Date(show.date), date)
-    );
-
-    const finalDisplayName = (isModifiedForDate && showForDate) 
-      ? showForDate.name 
-      : displayName;
-
-    return (
-      <div 
-        key={`${slot.id}-${date.toISOString()}`}
-        onClick={() => handleSlotClick(slot)} 
-        className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group ${getSlotColor(slot)}`}
-        style={{
-          height: getSlotHeight(slot),
-          position: 'absolute',
-          top: '0',
-          left: '0',
-          right: '0',
-          zIndex: 10
-        }}
-      >
+  const renderSlot = (slot: ScheduleSlot) => {
+    const {
+      displayName,
+      displayHost
+    } = getShowDisplay(slot.show_name, slot.host_name);
+    return <div key={slot.id} onClick={() => handleSlotClick(slot)} className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group ${getSlotColor(slot)}`} style={{
+      height: getSlotHeight(slot),
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      right: '0',
+      zIndex: 10
+    }}>
         <div className="flex justify-between items-start">
-          <div className="font-bold">{finalDisplayName}</div>
+          <div className="font-bold">{displayName}</div>
           {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
         </div>
         {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
         
-        {isAdmin && (
-          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="p-1 h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingSlot(slot);
-                setShowEditModeDialog(true);
-              }}
-            >
+        {isAdmin && <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
+            <Button variant="ghost" size="sm" className="p-1 h-8 w-8" onClick={e => handleEditSlot(slot, e)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="p-1 h-8 w-8 hover:bg-red-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
-                  deleteSlotMutation.mutate(slot.id);
-                }
-              }}
-            >
+            <Button variant="ghost" size="sm" className="p-1 h-8 w-8 hover:bg-red-100" onClick={e => handleDeleteSlot(slot, e)}>
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>
-          </div>
-        )}
-      </div>
-    );
+          </div>}
+      </div>;
   };
 
   const timeSlots = useMemo(() => {
@@ -305,14 +297,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
 
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time));
-    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    const cellDate = addDays(currentWeekStart, dayIndex);
-    
-    return (
-      <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
-        {isCurrentMonth && relevantSlots.map(slot => renderSlotForDate(slot, cellDate))}
-      </div>
-    );
+    return <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
+        {isCurrentMonth && relevantSlots.map(renderSlot)}
+      </div>;
   };
 
   const renderGrid = () => {
@@ -378,11 +365,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     }
   };
 
-  const handleAddSlot = () => {
-    setEditingSlot(undefined);
-    setShowSlotDialog(true);
-  };
-
   return <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -411,49 +393,32 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
             </SelectContent>
           </Select>
 
-          {isAdmin && (
-            <Button onClick={handleAddSlot} className="flex items-center gap-2">
+          {isAdmin && <Button onClick={handleAddSlot} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               הוסף משבצת
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
 
       {showDatePicker && <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
-          <Calendar 
-            mode="single" 
-            selected={selectedDate} 
-            onSelect={date => {
-              if (date) {
-                setSelectedDate(date);
-                setShowDatePicker(false);
-              }
-            }} 
-            locale={he} 
-          />
+          <Calendar mode="single" selected={selectedDate} onSelect={date => {
+        if (date) {
+          setSelectedDate(date);
+          setShowDatePicker(false);
+        }
+      }} locale={he} />
         </div>}
 
       <div className="border rounded-lg overflow-hidden">
         {renderGrid()}
       </div>
 
-      <EditModeDialog 
-        isOpen={showEditModeDialog} 
-        onClose={() => setShowEditModeDialog(false)} 
-        onEditCurrent={handleEditCurrent} 
-        onEditAll={handleEditAll} 
-      />
+      <EditModeDialog isOpen={showEditModeDialog} onClose={() => setShowEditModeDialog(false)} onEditCurrent={handleEditCurrent} onEditAll={handleEditAll} />
 
-      <ScheduleSlotDialog 
-        isOpen={showSlotDialog} 
-        onClose={() => {
-          setShowSlotDialog(false);
-          setEditingSlot(undefined);
-        }} 
-        onSave={handleSaveSlot} 
-        editingSlot={editingSlot} 
-      />
+      <ScheduleSlotDialog isOpen={showSlotDialog} onClose={() => {
+      setShowSlotDialog(false);
+      setEditingSlot(undefined);
+    }} onSave={handleSaveSlot} editingSlot={editingSlot} />
     </div>;
 };
 
