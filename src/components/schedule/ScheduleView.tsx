@@ -49,8 +49,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     queryKey: ['scheduleSlots', selectedDate],
     queryFn: () => getScheduleSlots(selectedDate, isMasterSchedule)
   });
+
   const createSlotMutation = useMutation({
-    mutationFn: createScheduleSlot,
+    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
+      createScheduleSlot(slotData, isMasterSchedule),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
@@ -67,14 +69,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       });
     }
   });
+
   const updateSlotMutation = useMutation({
-    mutationFn: ({
-      id,
-      updates
-    }: {
-      id: string;
-      updates: Partial<ScheduleSlot>;
-    }) => updateScheduleSlot(id, updates),
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => 
+      updateScheduleSlot(id, updates, isMasterSchedule),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
@@ -91,6 +89,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       });
     }
   });
+
   const deleteSlotMutation = useMutation({
     mutationFn: deleteScheduleSlot,
     onSuccess: () => {
@@ -145,7 +144,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      await createSlotMutation.mutateAsync({ slotData, isMasterSchedule });
+      await createSlotMutation.mutateAsync(slotData);
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
       });
@@ -161,7 +160,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const handleUpdateSlot = async (id: string, updates: Partial<ScheduleSlot>) => {
     try {
-      await updateSlotMutation.mutateAsync({ id, updates, isMasterSchedule });
+      await updateSlotMutation.mutateAsync({ id, updates });
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
       });
