@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Editor } from '@tiptap/react';
 import HeaderSection from './editor/HeaderSection';
@@ -53,6 +54,8 @@ const LineupEditor = ({
   onBackToDashboard,
   onDetailsChange,
 }: LineupEditorProps) => {
+  console.log('LineupEditor received showName:', showName); // Add debug log
+
   return (
     <div className="print:hidden lineup-editor">
       <HeaderSection 
