@@ -174,7 +174,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     return `${hoursDiff * 60}px`;
   };
 
-  const renderSlot = (slot: ScheduleSlot, date: Date) => {
+  const renderSlotForDate = (slot: ScheduleSlot, date: Date) => {
     const isModifiedForDate = slot.is_modified && slot.shows?.some(show => 
       show.date && isSameDay(new Date(show.date), date)
     );
@@ -292,9 +292,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
 
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time));
-    return <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
-        {isCurrentMonth && relevantSlots.map(renderSlot)}
-      </div>;
+    const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+    const cellDate = addDays(currentWeekStart, dayIndex);
+    
+    return (
+      <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
+        {isCurrentMonth && relevantSlots.map(slot => renderSlotForDate(slot, cellDate))}
+      </div>
+    );
   };
 
   const renderGrid = () => {
@@ -360,6 +365,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
     }
   };
 
+  const handleAddSlot = () => {
+    setEditingSlot(undefined);
+    setShowSlotDialog(true);
+  };
+
   return <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -388,32 +398,49 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ isAdmin = false }) => {
             </SelectContent>
           </Select>
 
-          {isAdmin && <Button onClick={handleAddSlot} className="flex items-center gap-2">
+          {isAdmin && (
+            <Button onClick={handleAddSlot} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               הוסף משבצת
-            </Button>}
+            </Button>
+          )}
         </div>
       </div>
 
       {showDatePicker && <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
-          <Calendar mode="single" selected={selectedDate} onSelect={date => {
-        if (date) {
-          setSelectedDate(date);
-          setShowDatePicker(false);
-        }
-      }} locale={he} />
+          <Calendar 
+            mode="single" 
+            selected={selectedDate} 
+            onSelect={date => {
+              if (date) {
+                setSelectedDate(date);
+                setShowDatePicker(false);
+              }
+            }} 
+            locale={he} 
+          />
         </div>}
 
       <div className="border rounded-lg overflow-hidden">
         {renderGrid()}
       </div>
 
-      <EditModeDialog isOpen={showEditModeDialog} onClose={() => setShowEditModeDialog(false)} onEditCurrent={handleEditCurrent} onEditAll={handleEditAll} />
+      <EditModeDialog 
+        isOpen={showEditModeDialog} 
+        onClose={() => setShowEditModeDialog(false)} 
+        onEditCurrent={handleEditCurrent} 
+        onEditAll={handleEditAll} 
+      />
 
-      <ScheduleSlotDialog isOpen={showSlotDialog} onClose={() => {
-      setShowSlotDialog(false);
-      setEditingSlot(undefined);
-    }} onSave={handleSaveSlot} editingSlot={editingSlot} />
+      <ScheduleSlotDialog 
+        isOpen={showSlotDialog} 
+        onClose={() => {
+          setShowSlotDialog(false);
+          setEditingSlot(undefined);
+        }} 
+        onSave={handleSaveSlot} 
+        editingSlot={editingSlot} 
+      />
     </div>;
 };
 
