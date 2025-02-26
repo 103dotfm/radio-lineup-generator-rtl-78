@@ -40,6 +40,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
   const {
     data: scheduleSlots = [],
     isLoading
