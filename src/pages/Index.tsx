@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -26,6 +25,7 @@ const Index = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [initialState, setInitialState] = useState(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const isNewLineup = !showId;
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -39,20 +39,25 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
-  // Initial setup effect for new shows
+  // Initial setup effect for new shows ONLY
   useEffect(() => {
-    if (!showId && state) {
-      console.log('Processing initial state:', state);
+    if (isNewLineup && state) {
+      console.log('New lineup - Processing initial state:', state);
       
-      // Use the pre-generated show name if available
-      const displayName = state.generatedShowName || (
-        state.showName === state.hostName 
-          ? state.hostName 
-          : `${state.showName} עם ${state.hostName}`
-      );
+      // Generate show name ONLY for new lineups
+      let displayName;
+      if (state.generatedShowName) {
+        console.log('Using pre-generated show name:', state.generatedShowName);
+        displayName = state.generatedShowName;
+      } else {
+        // Fallback generation if somehow we don't have a pre-generated name
+        displayName = state.showName === state.hostName
+          ? state.hostName
+          : `${state.showName} עם ${state.hostName}`;
+        console.log('Generated fallback show name:', displayName);
+      }
       
-      console.log('Initial setup - Setting show name to:', displayName);
-      
+      console.log('Setting initial show name for new lineup:', displayName);
       setShowName(displayName);
       setShowTime(state.time || '');
       
@@ -60,7 +65,6 @@ const Index = () => {
         setShowDate(new Date(state.date));
       }
 
-      // Set initial state to prevent unwanted updates
       setInitialState({
         name: displayName,
         time: state.time || '',
@@ -69,9 +73,9 @@ const Index = () => {
         items: []
       });
     }
-  }, [showId, state]);
+  }, [isNewLineup, state]);
 
-  // Effect for loading existing shows
+  // Effect for loading existing shows - never overwrite form values for existing shows
   useEffect(() => {
     const loadShow = async () => {
       if (showId) {
@@ -113,33 +117,12 @@ const Index = () => {
     loadShow();
   }, [showId, editor, navigate]);
 
+  // Remove the effect that was using state directly to prevent overwriting
   useEffect(() => {
-    if (!initialState) return;
-
-    const currentState = {
-      name: showName,
-      time: showTime,
-      date: showDate,
-      notes: editor?.getHTML() || '',
-      items: items
-    };
-
-    const hasChanges = 
-      currentState.name !== initialState.name ||
-      currentState.time !== initialState.time ||
-      currentState.date?.getTime() !== initialState.date?.getTime() ||
-      currentState.notes !== initialState.notes ||
-      JSON.stringify(currentState.items) !== JSON.stringify(initialState.items);
-
-    setHasUnsavedChanges(hasChanges);
-  }, [showName, showTime, showDate, items, editor, initialState]);
-
-  useEffect(() => {
-    if (state) {
-      setShowName(state.hostName || '');
-      setShowTime(state.time || '');
+    if (state && isNewLineup) {
+      setHasUnsavedChanges(false);
     }
-  }, [state, editor]);
+  }, [state, isNewLineup]);
 
   const handleEdit = async (id: string, updatedItem: any) => {
     console.log('Index: Handling edit for item:', id, updatedItem);
@@ -296,7 +279,7 @@ const Index = () => {
           editor={editor}
           editingItem={editingItem}
           onNameChange={(name) => {
-            console.log('Name change requested:', name);
+            console.log('Manual name change requested:', name);
             setShowName(name);
             setHasUnsavedChanges(true);
           }}
