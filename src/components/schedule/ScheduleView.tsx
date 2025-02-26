@@ -34,7 +34,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const queryClient = useQueryClient();
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const {
-    data: scheduleSlots = []
+    data: scheduleSlots = [],
+    isLoading
   } = useQuery({
     queryKey: ['scheduleSlots', selectedDate],
     queryFn: () => getScheduleSlots(selectedDate)
@@ -160,6 +161,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       navigate(`/show/${show.id}`);
     } else {
       console.log('No existing show found, creating new show for slot:', slot.id);
+      // Calculate the specific date for this slot based on the selected week
       const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
       const slotDate = addDays(weekStart, slot.day_of_week);
       
@@ -168,7 +170,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           showName: slot.show_name,
           hostName: slot.host_name,
           time: slot.start_time,
-          date: slotDate,
+          date: slotDate, // Pass the calculated date
           isPrerecorded: slot.is_prerecorded,
           isCollection: slot.is_collection,
           slotId: slot.id

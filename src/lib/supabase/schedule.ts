@@ -34,16 +34,11 @@ export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlo
   // Transform the data to ensure it matches the ScheduleSlot type
   const transformedSlots: ScheduleSlot[] = slots?.map(slot => {
     // Filter shows to only include those within the selected week
-    const relevantShows = slot.shows?.filter(show => {
+    const showsInWeek = slot.shows?.filter(show => {
       if (!show.date) return false;
       const showDate = new Date(show.date);
       return showDate >= startDate && showDate <= endDate;
     }) || [];
-
-    // For non-recurring slots, only show lineup status if there's a show in the current week
-    const hasLineupThisWeek = slot.is_recurring 
-      ? slot.has_lineup 
-      : (relevantShows.length > 0);
 
     return {
       id: slot.id,
@@ -55,11 +50,11 @@ export const getScheduleSlots = async (selectedDate?: Date): Promise<ScheduleSlo
       is_recurring: slot.is_recurring,
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection,
-      has_lineup: hasLineupThisWeek,
+      has_lineup: showsInWeek.length > 0, // Set has_lineup based on actual shows in the week
       is_modified: slot.is_modified,
       created_at: slot.created_at,
       updated_at: slot.updated_at,
-      shows: relevantShows
+      shows: showsInWeek
     };
   }) || [];
 
