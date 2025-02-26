@@ -11,6 +11,8 @@ export interface ScheduleSlot {
   is_recurring: boolean;
   is_prerecorded?: boolean;
   is_collection?: boolean;
+  has_lineup?: boolean;
+  is_modified?: boolean;
   created_at?: string;
   updated_at?: string;
 }
