@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { format } from 'date-fns';
 import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "sonner";
+import ScheduleView from '@/components/schedule/ScheduleView';
 
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
@@ -108,47 +108,55 @@ const Dashboard = () => {
             className="pl-4 pr-10"
           />
         </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant={sortBy === 'recent' ? 'default' : 'outline'}
-            onClick={() => setSortBy('recent')}
-            size="sm"
-          >
-            אחרון
-          </Button>
-          <Button
-            variant={sortBy === 'date' ? 'default' : 'outline'}
-            onClick={() => setSortBy('date')}
-            size="sm"
-          >
-            <Calendar className="h-4 w-4 ml-2" />
-            תאריך
-          </Button>
-          <Button
-            variant={sortBy === 'time' ? 'default' : 'outline'}
-            onClick={() => setSortBy('time')}
-            size="sm"
-          >
-            <Clock className="h-4 w-4 ml-2" />
-            שעה
-          </Button>
-          <Button
-            variant={sortBy === 'name' ? 'default' : 'outline'}
-            onClick={() => setSortBy('name')}
-            size="sm"
-          >
-            <SortAsc className="h-4 w-4 ml-2" />
-            שם
-          </Button>
-          <Button
-            variant={sortBy === 'modified' ? 'default' : 'outline'}
-            onClick={() => setSortBy('modified')}
-            size="sm"
-          >
-            עודכן
-          </Button>
-        </div>
+      </div>
+
+      {/* Schedule View */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-4">לוח שידורים</h2>
+        <ScheduleView isAdmin={isAdmin} />
+      </div>
+
+      <h2 className="text-2xl font-semibold mb-4">ליינאפים אחרונים</h2>
+      
+      <div className="flex gap-2">
+        <Button
+          variant={sortBy === 'recent' ? 'default' : 'outline'}
+          onClick={() => setSortBy('recent')}
+          size="sm"
+        >
+          אחרון
+        </Button>
+        <Button
+          variant={sortBy === 'date' ? 'default' : 'outline'}
+          onClick={() => setSortBy('date')}
+          size="sm"
+        >
+          <Calendar className="h-4 w-4 ml-2" />
+          תאריך
+        </Button>
+        <Button
+          variant={sortBy === 'time' ? 'default' : 'outline'}
+          onClick={() => setSortBy('time')}
+          size="sm"
+        >
+          <Clock className="h-4 w-4 ml-2" />
+          שעה
+        </Button>
+        <Button
+          variant={sortBy === 'name' ? 'default' : 'outline'}
+          onClick={() => setSortBy('name')}
+          size="sm"
+        >
+          <SortAsc className="h-4 w-4 ml-2" />
+          שם
+        </Button>
+        <Button
+          variant={sortBy === 'modified' ? 'default' : 'outline'}
+          onClick={() => setSortBy('modified')}
+          size="sm"
+        >
+          עודכן
+        </Button>
       </div>
 
       {isLoading ? (
