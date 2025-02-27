@@ -106,7 +106,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   });
 
   const deleteSlotMutation = useMutation({
-    mutationFn: deleteScheduleSlot,
+    mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
@@ -235,10 +235,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
-    if (isMasterSchedule) return 'bg-green-100';
-    if (slot.has_lineup) return 'bg-green-600 text-white';
-    if (slot.is_modified) return 'bg-yellow-200';
-    return 'bg-green-100';
+    if (slot.is_collection) return 'cell-collection';
+    if (slot.is_prerecorded) return 'cell-prerecorded';
+    if (slot.is_modified) return 'cell-modified';
+    return 'cell-regular';
   };
 
   const getSlotHeight = (slot: ScheduleSlot) => {
@@ -253,7 +253,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       displayName,
       displayHost
     } = getShowDisplay(slot.show_name, slot.host_name);
-    return <div key={slot.id} onClick={() => handleSlotClick(slot)} className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group ${getSlotColor(slot)}`} style={{
+    return <div key={slot.id} onClick={() => handleSlotClick(slot)} className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} style={{
       height: getSlotHeight(slot),
       position: 'absolute',
       top: '0',
@@ -267,7 +267,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
         {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
         
-        {isAdmin && <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
+        {isAdmin && <div className="actions">
             <Button variant="ghost" size="sm" className="p-1 h-8 w-8" onClick={e => handleEditSlot(slot, e)}>
               <Pencil className="h-4 w-4" />
             </Button>
