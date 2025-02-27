@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, UserPlus } from "lucide-react";
+import { Edit2, Trash2, UserPlus, FileCheck } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { getInterviewees } from '@/lib/supabase/interviewees';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import IntervieweeList from './interviewees/IntervieweeList';
 import IntervieweeForm from './interviewees/IntervieweeForm';
 import { getShowDisplay } from '@/utils/showDisplay';
+
 interface RegularItemProps {
   id: string;
   name: string;
@@ -21,6 +22,7 @@ interface RegularItemProps {
   onEdit: (id: string, updatedItem: any) => void;
   isAuthenticated: boolean;
 }
+
 const RegularItem = ({
   id,
   name,
@@ -40,9 +42,11 @@ const RegularItem = ({
     displayName,
     displayHost
   } = getShowDisplay(name, title);
+
   useEffect(() => {
     loadInterviewees();
   }, [id]);
+
   const loadInterviewees = async () => {
     try {
       const fetchedInterviewees = await getInterviewees(id);
@@ -53,11 +57,13 @@ const RegularItem = ({
       toast.error('שגיאה בטעינת מרואיינים');
     }
   };
+
   const handleDeleteInterviewee = (intervieweeId: string) => {
     const updatedInterviewees = interviewees.filter(i => i.id !== intervieweeId);
     updateInterviewees(updatedInterviewees);
     toast.success('מרואיין נמחק בהצלחה');
   };
+
   const handleEditInterviewee = (intervieweeId: string, updatedData: Partial<Interviewee>) => {
     const updatedInterviewees = interviewees.map(i => i.id === intervieweeId ? {
       ...i,
@@ -66,10 +72,12 @@ const RegularItem = ({
     updateInterviewees(updatedInterviewees);
     toast.success('מרואיין עודכן בהצלחה');
   };
+
   const handleAddInterviewee = (newInterviewee: Interviewee) => {
     const updatedInterviewees = [...interviewees, newInterviewee];
     updateInterviewees(updatedInterviewees);
   };
+
   const updateInterviewees = (updatedInterviewees: Interviewee[]) => {
     setInterviewees(updatedInterviewees);
     const updatedItem = {
@@ -82,10 +90,36 @@ const RegularItem = ({
     };
     onEdit(id, updatedItem);
   };
+
   return <>
-      <td className="py-2 px-4 border border-gray-200 w-1/5 relative">
+      <td className="py-2 px-4 border border-black bg-cell-regular w-1/5 relative">
+        <div className="absolute top-2 left-2 flex gap-1 z-10">
+          <Button variant="ghost" size="icon" onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}>
+            <UserPlus className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => {
+            console.log('Opening edit dialog for item:', {
+              id,
+              name,
+              title,
+              details,
+              phone,
+              duration,
+              interviewees
+            });
+            setShowEditDialog(true);
+          }}>
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => onDelete(id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
         <div className="flex flex-col gap-1">
-          <div>{displayName}</div>
+          <div className="flex justify-between items-start">
+            <div>{displayName}</div>
+            {interviewees.length > 0 && <FileCheck className="h-4 w-4 text-green-600" />}
+          </div>
           {displayHost}
           {interviewees.length > 0 && <IntervieweeList interviewees={interviewees} onEdit={handleEditInterviewee} onDelete={handleDeleteInterviewee} />}
         </div>
@@ -163,4 +197,5 @@ const RegularItem = ({
     }} />
     </>;
 };
+
 export default RegularItem;
