@@ -30,16 +30,42 @@ body {
   direction: rtl;
 }
 
-.h-16 {
-  max-width: 138px;
-  height: auto;
-  margin: 0px -19px -15px 0px;
+/* Schedule cell styles */
+.schedule-cell {
+  border: 1px solid #000;
+  position: relative;
 }
 
-.text-xs {
-  text-align: center;
-  font-size: 1rem;
-  line-height: 1.6rem;
+.schedule-cell .actions {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.schedule-cell:hover .actions {
+  opacity: 1;
+}
+
+/* Schedule cell background colors */
+.cell-regular {
+  background-color: #F2FCE2;  /* Light green */
+}
+
+.cell-modified {
+  background-color: #FEF7CD;  /* Light yellow */
+}
+
+.cell-prerecorded {
+  background-color: #D3E4FD;  /* Light blue */
+}
+
+.cell-collection {
+  background-color: #F1F1F1;  /* Light gray */
 }
 
 /* Editor styles */
