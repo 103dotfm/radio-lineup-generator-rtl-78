@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay } from 'date-fns';
@@ -65,25 +64,37 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     if (!slot.is_recurring) {
       const slotCreationDate = startOfWeek(new Date(slot.created_at), { weekStartsOn: 0 });
       if (isSameDay(slotCreationDate, startDate)) {
-        acc.push({
-          ...slot,
-          is_modified: true
-        });
+        if (!slot.is_deleted) { // Only add non-deleted slots
+          acc.push({
+            ...slot,
+            is_modified: true
+          });
+        }
       }
       return acc;
     }
 
-    const nonRecurringVersion = allSlots.find(s => 
+    // Check for modifications (including deletions) in the current week
+    const weekModification = allSlots.find(s => 
       !s.is_recurring && 
       s.day_of_week === slot.day_of_week && 
       s.start_time === slot.start_time &&
       isSameDay(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), startDate)
     );
 
-    if (nonRecurringVersion) {
+    if (weekModification) {
+      // If there's a modification and it's not deleted, add the modified version
+      if (!weekModification.is_deleted) {
+        acc.push({
+          ...weekModification,
+          is_modified: true
+        });
+      }
+      // If it's deleted, don't add anything
       return acc;
     }
 
+    // Add the recurring slot if no modifications exist
     if (isBefore(new Date(slot.created_at), addDays(startDate, 7))) {
       acc.push({
         ...slot,

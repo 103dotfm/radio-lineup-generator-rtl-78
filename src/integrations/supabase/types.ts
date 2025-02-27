@@ -56,6 +56,7 @@ export type Database = {
           host_name: string | null
           id: string
           is_collection: boolean | null
+          is_deleted: boolean | null
           is_modified: boolean | null
           is_prerecorded: boolean | null
           is_recurring: boolean | null
@@ -71,6 +72,7 @@ export type Database = {
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
+          is_deleted?: boolean | null
           is_modified?: boolean | null
           is_prerecorded?: boolean | null
           is_recurring?: boolean | null
@@ -86,6 +88,7 @@ export type Database = {
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
+          is_deleted?: boolean | null
           is_modified?: boolean | null
           is_prerecorded?: boolean | null
           is_recurring?: boolean | null
