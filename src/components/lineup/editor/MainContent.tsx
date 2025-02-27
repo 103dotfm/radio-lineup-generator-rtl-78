@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Editor } from '@tiptap/react';
 import ShowHeader from '../../show/ShowHeader';
 import ShowCredits from '../../show/ShowCredits';
@@ -31,7 +31,8 @@ interface MainContentProps {
   onDetailsChange: (id: string, details: string) => void;
 }
 
-const MainContent = ({
+// Using React.memo to prevent unnecessary re-renders
+const MainContent = memo(({
   showName,
   showTime,
   showDate,
@@ -55,8 +56,6 @@ const MainContent = ({
   onBackToDashboard,
   onDetailsChange,
 }: MainContentProps) => {
-  console.log('MainContent received showName:', showName); // Add debug log
-
   return (
     <main className="space-y-8">
       <ShowHeader
@@ -94,6 +93,9 @@ const MainContent = ({
       </div>
     </main>
   );
-};
+});
+
+// Add display name for debugging
+MainContent.displayName = 'MainContent';
 
 export default MainContent;

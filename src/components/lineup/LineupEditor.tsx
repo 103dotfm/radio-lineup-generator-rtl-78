@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Editor } from '@tiptap/react';
 import HeaderSection from './editor/HeaderSection';
 import MainContent from './editor/MainContent';
@@ -30,7 +30,8 @@ interface LineupEditorProps {
   onDetailsChange: (id: string, details: string) => void;
 }
 
-const LineupEditor = ({
+// Using React.memo to prevent unnecessary re-renders
+const LineupEditor = memo(({
   showName,
   showTime,
   showDate,
@@ -54,8 +55,6 @@ const LineupEditor = ({
   onBackToDashboard,
   onDetailsChange,
 }: LineupEditorProps) => {
-  console.log('LineupEditor received showName:', showName); // Add debug log
-
   return (
     <div className="print:hidden lineup-editor">
       <HeaderSection 
@@ -92,6 +91,9 @@ const LineupEditor = ({
       <FooterSection />
     </div>
   );
-};
+});
+
+// Add display name for debugging
+LineupEditor.displayName = 'LineupEditor';
 
 export default LineupEditor;
