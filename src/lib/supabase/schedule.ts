@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
@@ -257,7 +258,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
     return;
   }
 
-  // If it's a recurring slot in weekly view, create a "deleted" instance
+  // If it's a recurring slot in weekly view, create a "deleted" instance for the current week
   if (originalSlot.is_recurring) {
     // Create a new non-recurring slot marked as deleted for this specific week
     const { error: insertError } = await supabase
@@ -271,7 +272,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         is_recurring: false,
         is_modified: true,
         is_deleted: true, // Mark as deleted for this week
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString() // Use current date instead of inheriting from original
       });
 
     if (insertError) {
