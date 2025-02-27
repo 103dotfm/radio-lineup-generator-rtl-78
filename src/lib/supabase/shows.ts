@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -141,6 +140,8 @@ export const saveShow = async (
       name: string;
       title?: string;
       phone?: string;
+      duration?: number;
+      id?: string;
     }>;
   }>,
   showId?: string
@@ -148,8 +149,10 @@ export const saveShow = async (
   try {
     let finalShowId = showId;
     let isUpdate = Boolean(showId);
+    console.log('Saving show. Is update?', isUpdate);
 
     if (isUpdate) {
+      // Update existing show
       const { error: showError } = await supabase
         .from('shows')
         .update({
@@ -157,19 +160,28 @@ export const saveShow = async (
           time: show.time,
           date: show.date,
           notes: show.notes,
-          slot_id: show.slot_id // Add slot_id to update
+          slot_id: show.slot_id
         })
         .eq('id', showId);
 
       if (showError) throw showError;
-
-      // Delete existing items
+      
+      // Get all existing items to later check which interviewees need to be deleted
+      const { data: existingItems, error: fetchError } = await supabase
+        .from('show_items')
+        .select('id')
+        .eq('show_id', showId);
+        
+      if (fetchError) throw fetchError;
+      
+      // Delete all existing items for this show - we'll recreate them
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
         .eq('show_id', showId);
 
       if (deleteError) throw deleteError;
+      
     } else {
       // Creating new show
       const { data: newShow, error: createError } = await supabase
@@ -179,7 +191,7 @@ export const saveShow = async (
           time: show.time,
           date: show.date,
           notes: show.notes,
-          slot_id: show.slot_id // Add slot_id to insert
+          slot_id: show.slot_id
         })
         .select()
         .single();
@@ -203,6 +215,7 @@ export const saveShow = async (
     // Insert new items
     if (items.length > 0) {
       const itemsToInsert = items.map((item, index) => {
+        // Keep track of interviewees but don't include them in the item insert
         const { interviewees, ...itemData } = item;
         return {
           show_id: finalShowId,
@@ -211,6 +224,7 @@ export const saveShow = async (
         };
       });
 
+      console.log('Inserting items:', itemsToInsert);
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
         .insert(itemsToInsert)
@@ -218,23 +232,32 @@ export const saveShow = async (
 
       if (itemsError) throw itemsError;
 
-      // Insert interviewees for each item
+      // Now that we have the inserted items with their new IDs, we can insert the interviewees
       if (insertedItems) {
         for (let i = 0; i < insertedItems.length; i++) {
           const item = insertedItems[i];
           const itemInterviewees = items[i].interviewees;
           
           if (itemInterviewees && itemInterviewees.length > 0) {
+            // Create interviewees for this item
             const intervieweesToInsert = itemInterviewees.map(interviewee => ({
               item_id: item.id,
-              ...interviewee
+              name: interviewee.name,
+              title: interviewee.title || null,
+              phone: interviewee.phone || null,
+              duration: interviewee.duration || null
             }));
 
+            console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}:`, intervieweesToInsert);
+            
             const { error: intervieweesError } = await supabase
               .from('interviewees')
               .insert(intervieweesToInsert);
 
-            if (intervieweesError) throw intervieweesError;
+            if (intervieweesError) {
+              console.error('Error inserting interviewees:', intervieweesError);
+              throw intervieweesError;
+            }
           }
         }
       }
