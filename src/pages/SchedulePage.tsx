@@ -166,7 +166,12 @@ const SchedulePage = () => {
         
         <TabsContent value="schedule" className="mt-4">
           <div className="border rounded-lg overflow-hidden bg-white p-4">
-            <ScheduleView selectedDate={currentWeek} hideDateControls hideHeaderDates={false} />
+            <ScheduleView 
+              selectedDate={currentWeek} 
+              hideDateControls 
+              hideHeaderDates={false} 
+              isPublic={true}
+            />
           </div>
         </TabsContent>
         
