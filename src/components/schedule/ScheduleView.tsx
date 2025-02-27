@@ -22,6 +22,7 @@ interface ScheduleViewProps {
   showAddButton?: boolean;
   hideHeaderDates?: boolean;
   selectedDate?: Date;
+  isPublic?: boolean;
 }
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -30,7 +31,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   hideDateControls = false,
   showAddButton = true,
   hideHeaderDates = false,
-  selectedDate: externalSelectedDate
+  selectedDate: externalSelectedDate,
+  isPublic = false
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(externalSelectedDate || new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -55,9 +57,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     data: scheduleSlots = [],
     isLoading
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
+    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule, isPublic],
     queryFn: () => {
-      console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
+      console.log('Fetching slots with params:', { selectedDate, isMasterSchedule, isPublic });
       return getScheduleSlots(selectedDate, isMasterSchedule);
     },
     meta: {
@@ -195,7 +197,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    if (!isAdmin) return; // Only allow click actions for admin users
+    if (!isAdmin || isPublic) return; // Only allow click actions for admin users and not in public view
     
     console.log('Clicked slot details:', {
       show_name: slot.show_name,
@@ -265,12 +267,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       displayHost
     } = getShowDisplay(slot.show_name, slot.host_name);
     
-    const slotClickHandler = isAdmin ? () => handleSlotClick(slot) : undefined;
+    const slotClickHandler = isAdmin && !isPublic ? () => handleSlotClick(slot) : undefined;
     
     return <div 
       key={slot.id} 
       onClick={slotClickHandler} 
-      className={`p-2 rounded ${isAdmin ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
+      className={`p-2 rounded ${isAdmin && !isPublic ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
       style={{
         height: getSlotHeight(slot),
         position: 'absolute',
@@ -282,11 +284,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     >
         <div className="flex justify-between items-start">
           <div className="font-bold">{displayName}</div>
-          {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
+          {slot.has_lineup && !isPublic && <FileCheck className="h-4 w-4 text-green-600" />}
         </div>
         {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
         
-        {isAdmin && <div className="actions">
+        {isAdmin && !isPublic && <div className="actions">
             <Button variant="ghost" size="sm" className="p-1 h-8 w-8" onClick={e => handleEditSlot(slot, e)}>
               <Pencil className="h-4 w-4" />
             </Button>
@@ -353,7 +355,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const renderGrid = () => {
     switch (viewMode) {
       case 'daily':
-        return <div className="grid grid-cols-[auto,1fr]" dir="rtl">
+        return (
+          <div className="grid grid-cols-[auto,1fr]" dir="rtl">
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
@@ -366,50 +369,58 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               )}
             </div>
             {timeSlots.map(time => (
-                <React.Fragment key={time}>
+              <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
                 {renderTimeCell(selectedDate.getDay(), time)}
               </React.Fragment>
             ))}
-          </div>;
+          </div>
+        );
       case 'weekly':
-        return <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
+        return (
+          <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            {dates.map((date, index) => <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
+            {dates.map((date, index) => (
+              <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
                 {weekDays[date.getDay()]}
                 {!hideHeaderDates && (
                   <div className="text-sm text-gray-600">
                     {format(date, 'dd/MM')}
                   </div>
                 )}
-              </div>)}
+              </div>
+            ))}
             {timeSlots.map(time => (
-                <React.Fragment key={time}>
+              <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
                 {Array.from({length: 7}).map((_, dayIndex) => (
-                    <React.Fragment key={dayIndex}>
+                  <React.Fragment key={dayIndex}>
                     {renderTimeCell(dayIndex, time)}
                   </React.Fragment>
                 ))}
               </React.Fragment>
             ))}
-          </div>;
+          </div>
+        );
       case 'monthly':
-        return <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
+        return (
+          <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            {weekDays.map(day => <div key={day} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
+            {weekDays.map(day => (
+              <div key={day} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
                 {day}
-              </div>)}
+              </div>
+            ))}
             {timeSlots.map(time => (
-                <React.Fragment key={time}>
+              <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
@@ -419,11 +430,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 })}
               </React.Fragment>
             ))}
-          </div>;
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
-  return <div className="space-y-4">
+  return (
+    <div className="space-y-4">
       {!hideDateControls && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -452,7 +467,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               </SelectContent>
             </Select>
 
-            {isAdmin && showAddButton && (
+            {isAdmin && showAddButton && !isPublic && (
               <Button onClick={handleAddSlot} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 הוסף משבצת
@@ -464,12 +479,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {showDatePicker && !hideDateControls && (
         <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
-          <Calendar mode="single" selected={selectedDate} onSelect={date => {
-            if (date) {
-              setSelectedDate(date);
-              setShowDatePicker(false);
-            }
-          }} locale={he} />
+          <Calendar 
+            mode="single" 
+            selected={selectedDate} 
+            onSelect={date => {
+              if (date) {
+                setSelectedDate(date);
+                setShowDatePicker(false);
+              }
+            }} 
+            locale={he} 
+          />
         </div>
       )}
 
@@ -477,7 +497,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         {renderGrid()}
       </div>
 
-      {isAdmin && (
+      {isAdmin && !isPublic && (
         <>
           <EditModeDialog 
             isOpen={showEditModeDialog} 
@@ -497,7 +517,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           />
         </>
       )}
-    </div>;
+    </div>
+  );
 };
 
 export default ScheduleView;

@@ -153,7 +153,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       // For recurring slots, check if there's a modification in the current week
       const weekModification = weeklyModifications?.find(s => 
         s.day_of_week === slot.day_of_week && 
-        s.start_time === slot.start_time
+        s.start_time === slot.start_time &&
+        isSameDay(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), startDate)
       );
 
       if (weekModification) {
