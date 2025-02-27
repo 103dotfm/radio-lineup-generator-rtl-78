@@ -1,90 +1,58 @@
-
-import React, { useEffect, useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import BasicEditor from '../editor/BasicEditor';
-import { Interviewee } from '@/types/show';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Edit2, Trash2, X } from "lucide-react";
+import { BasicEditor } from '../editor/BasicEditor';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Item } from '@/types/show';
 
 interface EditItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: {
-    id: string;
-    name: string;
-    title: string;
-    details: string;
-    phone: string;
-    duration: number;
-    interviewees?: Interviewee[];
-  };
+  item: Item;
   onSave: (updatedItem: any) => void;
 }
 
 const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProps) => {
-  // Store the form state in a ref to persist across tab switches
-  const formDataRef = useRef({
-    name: item?.name || '',
-    title: item?.title || '',
-    phone: item?.phone || '',
-    duration: item?.duration || 0,
-    details: item?.details || ''
+  const [formState, setFormState] = useState({
+    name: item.name,
+    title: item.title,
+    details: item.details,
+    phone: item.phone,
+    duration: item.duration,
   });
-
-  // State for UI rendering
-  const [formState, setFormState] = useState(formDataRef.current);
-  const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  
-  // Initialize form state when dialog opens or item changes
-  useEffect(() => {
-    if (open && item) {
-      const initialState = {
-        name: item.name || '',
-        title: item.title || '',
-        phone: item.phone || '',
-        duration: item.duration || 0,
-        details: item.details || ''
-      };
-      
-      formDataRef.current = initialState;
-      setFormState(initialState);
-      setHasChanges(false);
-    }
-  }, [open, item?.id]); // Only depend on open state and item ID
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Check for changes against the initial state
   useEffect(() => {
-    if (!open) return;
-    
-    const initialState = {
-      name: item.name || '',
-      title: item.title || '',
-      phone: item.phone || '',
-      duration: item.duration || 0,
-      details: item.details || ''
-    };
+    setFormState({
+      name: item.name,
+      title: item.title,
+      details: item.details,
+      phone: item.phone,
+      duration: item.duration,
+    });
+    setHasChanges(false);
+  }, [item]);
 
-    const hasEdits = 
-      formState.name !== initialState.name ||
-      formState.title !== initialState.title ||
-      formState.phone !== initialState.phone ||
-      formState.duration !== initialState.duration ||
-      formState.details !== initialState.details;
-    
-    setHasChanges(hasEdits);
-  }, [formState, item, open]);
+  const handleInputChange = (key: string, value: any) => {
+    setFormState(prevState => ({
+      ...prevState,
+      [key]: value,
+    }));
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    onSave(formState);
+    onOpenChange(false);
+  };
 
   const handleClose = () => {
     if (hasChanges) {
@@ -94,33 +62,17 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     }
   };
 
-  const handleSave = () => {
-    const updatedItem = {
-      ...item,
-      name: formState.name,
-      title: formState.title,
-      phone: formState.phone,
-      duration: formState.duration,
-      details: formState.details,
-      interviewees: item.interviewees || []
-    };
-    
-    onSave(updatedItem);
-    setHasChanges(false);
+  const confirmClose = () => {
+    setShowUnsavedDialog(false);
     onOpenChange(false);
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
-    // Update both the React state and the ref
-    formDataRef.current = {
-      ...formDataRef.current,
-      [field]: value
-    };
-    
-    setFormState(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleDeleteInterviewee = (intervieweeId: string) => {
+    // Placeholder for delete logic
+  };
+
+  const handleEditInterviewee = (intervieweeId: string, updatedData: Partial<any>) => {
+    // Placeholder for edit logic
   };
 
   return (
@@ -138,16 +90,20 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             </button>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="w-full overflow-x-auto">
+            <div className="w-full">
               <table className="w-full border-collapse">
                 <thead>
                   <tr>
-                    <th className="w-1/2 text-right">
+                    <th className="text-right pb-2">
                       <label className="text-sm font-medium">שם</label>
                     </th>
-                    <th className="w-1/2 text-right pr-4">
+                    <th className="text-right pb-2">
                       <label className="text-sm font-medium">קרדיט</label>
                     </th>
+                    <th className="text-right pb-2">
+                      <label className="text-sm font-medium">טלפון</label>
+                    </th>
+                    <th className="w-[80px]"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -155,67 +111,88 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                     <td className="py-2">
                       <Input 
                         value={formState.name} 
-                        onChange={(e) => handleInputChange('name', e.target.value)} 
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        className="text-base" 
                       />
                     </td>
-                    <td className="py-2 pr-4">
+                    <td className="py-2 pl-2">
                       <Input 
                         value={formState.title} 
-                        onChange={(e) => handleInputChange('title', e.target.value)} 
+                        onChange={(e) => handleInputChange('title', e.target.value)}
+                        className="text-base" 
                       />
                     </td>
+                    <td className="py-2 pl-2">
+                      <Input 
+                        value={formState.phone} 
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className="text-base" 
+                      />
+                    </td>
+                    <td></td>
                   </tr>
                   {item.interviewees?.map((interviewee) => (
-                    <tr key={interviewee.id}>
+                    <tr key={interviewee.id} className="border-t">
                       <td className="py-2">
-                        <Input 
-                          value={interviewee.name} 
-                          disabled
-                          className="bg-gray-50 text-right"
-                        />
+                        <div className="text-base">{interviewee.name}</div>
                       </td>
-                      <td className="py-2 pr-4">
-                        <Input 
-                          value={interviewee.title} 
-                          disabled
-                          className="bg-gray-50 text-right"
-                        />
+                      <td className="py-2 pl-2">
+                        <div className="text-base">{interviewee.title}</div>
+                      </td>
+                      <td className="py-2 pl-2">
+                        <div className="text-base">{interviewee.phone}</div>
+                      </td>
+                      <td className="py-2 pl-2">
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleEditInterviewee?.(interviewee.id, {
+                              name: prompt('שם חדש:', interviewee.name) || interviewee.name,
+                              title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
+                              phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
+                            })}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleDeleteInterviewee?.(interviewee.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  <tr>
-                    <td colSpan={2} className="py-2">
-                      <label className="text-sm font-medium text-right block">פרטים</label>
-                      <BasicEditor
-                        content={formState.details}
-                        onChange={(html) => handleInputChange('details', html)}
-                        className="min-h-[100px]"
-                        align="right"
-                      />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2">
-                      <label className="text-sm font-medium">טלפון</label>
-                      <Input 
-                        value={formState.phone} 
-                        onChange={(e) => handleInputChange('phone', e.target.value)} 
-                      />
-                    </td>
-                    <td className="py-2 pr-4">
-                      <label className="text-sm font-medium">משך בדקות</label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={formState.duration}
-                        onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 5)}
-                      />
-                    </td>
-                  </tr>
                 </tbody>
               </table>
+
+              <div className="mt-4">
+                <label className="text-sm font-medium text-right block mb-2">פרטים</label>
+                <BasicEditor
+                  content={formState.details}
+                  onChange={(html) => handleInputChange('details', html)}
+                  className="min-h-[100px]"
+                  align="right"
+                />
+              </div>
+
+              <div className="mt-4">
+                <label className="text-sm font-medium">משך בדקות</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={formState.duration}
+                  onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 5)}
+                  className="w-24"
+                />
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 mt-4">
               <Button onClick={handleClose} variant="outline">ביטול</Button>
               <Button onClick={handleSave} disabled={!hasChanges}>שמור</Button>
             </div>
@@ -226,24 +203,18 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
+            <AlertDialogTitle>לסגור בלי לשמור?</AlertDialogTitle>
             <AlertDialogDescription>
-              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני הסגירה?
+              יש שינויים שלא נשמרו. האם אתה בטוח שברצונך לסגור את החלון בלי לשמור?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowUnsavedDialog(false);
-              onOpenChange(false);
-            }}>
-              התעלם משינויים
+            <AlertDialogCancel onClick={() => setShowUnsavedDialog(false)}>
+              ביטול
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              handleSave();
-              setShowUnsavedDialog(false);
-            }}>
-              שמור שינויים
-            </AlertDialogAction>
+            <AlertDialogTrigger onClick={confirmClose} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
+              סגור בלי לשמור
+            </AlertDialogTrigger>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
