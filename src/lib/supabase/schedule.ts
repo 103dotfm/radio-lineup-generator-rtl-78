@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay } from 'date-fns';
@@ -200,28 +201,56 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
 export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean = false): Promise<void> => {
   console.log('Deleting schedule slot:', { id, isMasterSchedule });
 
-  const { data: slot } = await supabase
+  // Get the original slot and current week start
+  const { data: originalSlot } = await supabase
     .from('schedule_slots')
-    .select('is_recurring')
+    .select('*')
     .eq('id', id)
     .single();
 
-  if (slot?.is_recurring && !isMasterSchedule) {
-    const { error: updateError } = await supabase
+  if (!originalSlot) {
+    throw new Error('Slot not found');
+  }
+
+  // If it's master schedule, perform actual deletion
+  if (isMasterSchedule) {
+    const { error } = await supabase
       .from('schedule_slots')
-      .update({
-        is_modified: true,
-        is_recurring: false
-      })
+      .delete()
       .eq('id', id);
 
-    if (updateError) {
-      console.error('Error updating schedule slot:', updateError);
-      throw updateError;
+    if (error) {
+      console.error('Error deleting schedule slot:', error);
+      throw error;
     }
     return;
   }
 
+  // If it's a recurring slot in weekly view, create a "deleted" instance
+  if (originalSlot.is_recurring) {
+    // Create a new non-recurring slot marked as deleted for this specific week
+    const { error: insertError } = await supabase
+      .from('schedule_slots')
+      .insert({
+        day_of_week: originalSlot.day_of_week,
+        start_time: originalSlot.start_time,
+        end_time: originalSlot.end_time,
+        show_name: originalSlot.show_name,
+        host_name: originalSlot.host_name,
+        is_recurring: false,
+        is_modified: true,
+        is_deleted: true, // Mark as deleted for this week
+        created_at: new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error('Error creating deleted slot instance:', insertError);
+      throw insertError;
+    }
+    return;
+  }
+
+  // If it's already a non-recurring slot, just delete it
   const { error } = await supabase
     .from('schedule_slots')
     .delete()
