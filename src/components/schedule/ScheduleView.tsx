@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -41,6 +42,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Update the internal state when the external prop changes
   useEffect(() => {
     if (externalSelectedDate) {
       setSelectedDate(externalSelectedDate);
@@ -53,7 +55,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     data: scheduleSlots = [],
     isLoading
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
+    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
     queryFn: () => {
       console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
       return getScheduleSlots(selectedDate, isMasterSchedule);
@@ -65,9 +67,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       onError: (error: Error) => {
         console.error('Error fetching slots:', error);
       }
-    },
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: true
+    }
   });
 
   useEffect(() => {
