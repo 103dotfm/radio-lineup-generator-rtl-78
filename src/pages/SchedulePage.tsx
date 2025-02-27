@@ -133,7 +133,7 @@ const SchedulePage = () => {
   return (
     <div className="container mx-auto px-4 py-8" dir="rtl">
       <header className="mb-8">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103fm" className="topLogo">
+        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103fm" className="topLogo" />
         <h1 className="text-3xl font-bold mb-2">לוח שידורים שבועי</h1>
         
         <div className="flex items-center justify-between">
@@ -160,9 +160,9 @@ const SchedulePage = () => {
       <Tabs defaultValue="schedule" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
           <TabsTrigger value="schedule">לוח שידורים</TabsTrigger>
-          <TabsTrigger value="producers">סידור עבודה עורכים ומפיקים</TabsTrigger>
-          <TabsTrigger value="engineers">סידור עבודה טכנאים</TabsTrigger>
-          <TabsTrigger value="digital">סידור עבודה דיגיטל</TabsTrigger>
+          <TabsTrigger value="producers">מפיקים</TabsTrigger>
+          <TabsTrigger value="engineers">טכנאים</TabsTrigger>
+          <TabsTrigger value="digital">דיגיטל</TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
