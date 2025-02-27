@@ -22,6 +22,18 @@ interface ArrangementFile {
   week_start: string;
 }
 
+interface Database {
+  public: {
+    Tables: {
+      work_arrangements: {
+        Row: ArrangementFile;
+        Insert: Omit<ArrangementFile, 'id' | 'created_at'>;
+        Update: Partial<Omit<ArrangementFile, 'id' | 'created_at'>>;
+      };
+    };
+  };
+}
+
 const WorkArrangements = () => {
   const [producersFile, setProducersFile] = useState<File | null>(null);
   const [engineersFile, setEngineersFile] = useState<File | null>(null);
@@ -62,7 +74,8 @@ const WorkArrangements = () => {
     };
     
     data?.forEach(item => {
-      arrangementsRecord[item.type as ArrangementType] = item as ArrangementFile;
+      const arrangementItem = item as unknown as ArrangementFile;
+      arrangementsRecord[arrangementItem.type as ArrangementType] = arrangementItem;
     });
     
     setArrangements(arrangementsRecord);

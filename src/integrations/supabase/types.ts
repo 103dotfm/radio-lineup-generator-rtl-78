@@ -213,6 +213,36 @@ export type Database = {
         }
         Relationships: []
       }
+      work_arrangements: {
+        Row: {
+          created_at: string | null
+          filename: string
+          id: string
+          type: string
+          updated_at: string | null
+          url: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string | null
+          filename: string
+          id?: string
+          type: string
+          updated_at?: string | null
+          url: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string | null
+          filename?: string
+          id?: string
+          type?: string
+          updated_at?: string | null
+          url?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

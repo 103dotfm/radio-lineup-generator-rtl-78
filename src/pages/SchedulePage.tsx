@@ -17,6 +17,8 @@ interface ArrangementFile {
   url: string;
   type: ArrangementType;
   week_start: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const SchedulePage = () => {
@@ -69,7 +71,8 @@ const SchedulePage = () => {
     };
     
     data?.forEach(item => {
-      arrangementsRecord[item.type as ArrangementType] = item as ArrangementFile;
+      const arrangementItem = item as unknown as ArrangementFile;
+      arrangementsRecord[arrangementItem.type as ArrangementType] = arrangementItem;
     });
     
     setArrangements(arrangementsRecord);
