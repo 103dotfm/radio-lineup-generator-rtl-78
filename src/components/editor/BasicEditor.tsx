@@ -14,7 +14,7 @@ interface BasicEditorProps {
   align?: 'right' | 'center';
 }
 
-const BasicEditor = ({ content, onChange, className, placeholder = '', align = 'center' }: BasicEditorProps) => {
+const BasicEditor = ({ content, onChange, className, placeholder = '', align = 'right' }: BasicEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -28,19 +28,21 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
         class: `prose prose-sm focus:outline-none ${align === 'right' ? 'text-right' : 'text-center'} ${className || ''}`,
         placeholder,
       },
-     
     },
     onUpdate: ({ editor }) => {
       if (onChange) {
         onChange(editor.getHTML());
       }
     },
-  });
+  }, []);  // Empty dependency array removed to prevent editor recreation
 
-  // Update editor content when the content prop changes
+  // Update editor content when the content prop changes, but only if it's different
   React.useEffect(() => {
     if (editor && content !== editor.getHTML()) {
+      const selection = editor.state.selection;
       editor.commands.setContent(content);
+      // Restore cursor position
+      editor.commands.setTextSelection(selection.from);
     }
   }, [content, editor]);
 
