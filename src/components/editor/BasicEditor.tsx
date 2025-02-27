@@ -34,15 +34,12 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
         onChange(editor.getHTML());
       }
     },
-  }, []);  // Empty dependency array removed to prevent editor recreation
+  });  // Remove dependency array to prevent editor recreation
 
   // Update editor content when the content prop changes, but only if it's different
   React.useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      const selection = editor.state.selection;
       editor.commands.setContent(content);
-      // Restore cursor position
-      editor.commands.setTextSelection(selection.from);
     }
   }, [content, editor]);
 

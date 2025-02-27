@@ -33,27 +33,24 @@ interface EditItemDialogProps {
 }
 
 const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProps) => {
-  // Use refs to preserve state across re-renders from tab switching
-  const formStateRef = useRef({
-    name: '',
-    title: '',
-    phone: '',
-    duration: 0,
-    details: ''
+  // Store the form state in a ref to persist across tab switches
+  const formDataRef = useRef({
+    name: item?.name || '',
+    title: item?.title || '',
+    phone: item?.phone || '',
+    duration: item?.duration || 0,
+    details: item?.details || ''
   });
-  
-  // State for UI updates
-  const [formState, setFormState] = useState({ ...formStateRef.current });
+
+  // State for UI rendering
+  const [formState, setFormState] = useState(formDataRef.current);
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   
-  // Track if the dialog is mounted to prevent state updates after unmount
-  const isMounted = useRef(true);
-
   // Initialize form state when dialog opens or item changes
   useEffect(() => {
     if (open && item) {
-      const newState = {
+      const initialState = {
         name: item.name || '',
         title: item.title || '',
         phone: item.phone || '',
@@ -61,24 +58,16 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         details: item.details || ''
       };
       
-      formStateRef.current = newState;
-      setFormState(newState);
+      formDataRef.current = initialState;
+      setFormState(initialState);
       setHasChanges(false);
     }
-  }, [item, open]);
+  }, [open, item?.id]); // Only depend on open state and item ID
 
-  // Track mount status
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  // Check for changes (comparing to the initial state)
+  // Check for changes against the initial state
   useEffect(() => {
     if (!open) return;
-
+    
     const initialState = {
       name: item.name || '',
       title: item.title || '',
@@ -122,12 +111,16 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    // Update both state and ref to ensure persistence
-    setFormState(prev => {
-      const newState = { ...prev, [field]: value };
-      formStateRef.current = newState;
-      return newState;
-    });
+    // Update both the React state and the ref
+    formDataRef.current = {
+      ...formDataRef.current,
+      [field]: value
+    };
+    
+    setFormState(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
@@ -178,14 +171,14 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                         <Input 
                           value={interviewee.name} 
                           disabled
-                          className="bg-gray-50"
+                          className="bg-gray-50 text-right"
                         />
                       </td>
                       <td className="py-2 pr-4">
                         <Input 
                           value={interviewee.title} 
                           disabled
-                          className="bg-gray-50"
+                          className="bg-gray-50 text-right"
                         />
                       </td>
                     </tr>
