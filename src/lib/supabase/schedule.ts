@@ -135,10 +135,14 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   return finalSlots;
 };
 
-export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
-  console.log('Creating schedule slot:', { slot, isMasterSchedule });
+export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
+  console.log('Creating schedule slot:', { slot, isMasterSchedule, selectedDate });
   
-  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+  const currentWeekStart = selectedDate 
+    ? startOfWeek(selectedDate, { weekStartsOn: 0 })
+    : startOfWeek(new Date(), { weekStartsOn: 0 });
+  
+  console.log('Using week start date for creation:', format(currentWeekStart, 'yyyy-MM-dd'));
   
   // Check for existing slot at this time
   const { data: existingSlots } = await supabase
@@ -194,7 +198,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     ...slot,
     is_recurring: isMasterSchedule,
     is_modified: !isMasterSchedule,
-    created_at: new Date().toISOString()
+    created_at: new Date(currentWeekStart).toISOString() // Use the week start date
   };
 
   console.log('Inserting new slot with data:', slotData);
