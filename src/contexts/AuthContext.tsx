@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface User {
@@ -23,39 +24,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  
+  // Add cache timestamp ref
+  const lastUserCheckRef = useRef<number>(0);
+  const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-  useEffect(() => {
-    console.log('AuthProvider: Initializing');
+  const checkUserRole = async (userId: string, force: boolean = false) => {
+    const now = Date.now();
     
-    // Check current auth status
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthProvider: Initial session check', session);
-      if (session) {
-        setIsAuthenticated(true);
-        checkUserRole(session.user.id);
-      }
-    });
+    // Skip if we checked recently and it's not forced
+    if (!force && lastUserCheckRef.current && (now - lastUserCheckRef.current < CACHE_DURATION)) {
+      console.log('Using cached user data');
+      return;
+    }
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('AuthProvider: Auth state changed', event, session?.user?.id);
-      
-      if (event === 'SIGNED_IN' && session) {
-        setIsAuthenticated(true);
-        checkUserRole(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setUser(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const checkUserRole = async (userId: string) => {
     console.log('AuthProvider: Checking user role for', userId);
     try {
       const { data, error } = await supabase
@@ -73,11 +55,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data) {
         setUser(data);
         setIsAdmin(data.is_admin);
+        lastUserCheckRef.current = now;
       }
     } catch (error) {
       console.error('Error in checkUserRole:', error);
     }
   };
+
+  useEffect(() => {
+    console.log('AuthProvider: Initializing');
+    
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('AuthProvider: Initial session check', session);
+      if (session) {
+        setIsAuthenticated(true);
+        checkUserRole(session.user.id, true); // Force initial check
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('AuthProvider: Auth state changed', event, session?.user?.id);
+      
+      if (event === 'SIGNED_IN' && session) {
+        setIsAuthenticated(true);
+        checkUserRole(session.user.id, true); // Force check on sign in
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setUser(null);
+        lastUserCheckRef.current = 0; // Reset cache on sign out
+      }
+    });
+
+    // Add visibility change listener
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Only check if we have a current session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            checkUserRole(session.user.id); // Will use cache if recent
+          }
+        });
+      }
+    };
+
+    // Add with a longer debounce
+    let visibilityTimeout: NodeJS.Timeout;
+    document.addEventListener('visibilitychange', () => {
+      clearTimeout(visibilityTimeout);
+      visibilityTimeout = setTimeout(handleVisibilityChange, 1000);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearTimeout(visibilityTimeout);
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
     console.log('AuthProvider: Attempting login for', email);
@@ -94,7 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       console.log('AuthProvider: Login successful', data.user?.id);
       if (data.user) {
-        await checkUserRole(data.user.id);
+        await checkUserRole(data.user.id, true); // Force check on manual login
       }
 
       return { error: null };
@@ -111,6 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAuthenticated(false);
       setIsAdmin(false);
       setUser(null);
+      lastUserCheckRef.current = 0; // Reset cache on logout
     } catch (error) {
       console.error('Logout error:', error);
     }
