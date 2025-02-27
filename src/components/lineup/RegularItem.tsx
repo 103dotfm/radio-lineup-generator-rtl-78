@@ -85,9 +85,7 @@ const RegularItem = ({
   return <>
       <td className="py-2 px-4 bg-cell-regular w-1/5 relative">
         <div className="absolute top-2 left-2 flex gap-1 z-10">
-          <Button variant="ghost" size="icon" onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}>
-            <UserPlus className="h-4 w-4" />
-          </Button>
+          
           
           
         </div>
