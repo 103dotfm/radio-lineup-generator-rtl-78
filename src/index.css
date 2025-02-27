@@ -13,21 +13,34 @@ body {
   background-color: #f8fafc;
 }
 
-/* Cell background colors */
+/* Schedule cell states */
 .bg-cell-regular {
-  background-color: #F2FCE2;  /* Soft green for regular shows */
+  @apply bg-blue-50;  /* Light blue for regular shows */
 }
 
 .bg-cell-modified {
-  background-color: #F97316;  /* Orange for manually edited shows */
+  @apply bg-orange-50;  /* Light orange for modified shows */
 }
 
 .bg-cell-prerecorded {
-  background-color: #0EA5E9;  /* Ocean blue for pre-recorded shows */
+  @apply bg-purple-50;  /* Light purple for pre-recorded shows */
 }
 
 .bg-cell-collection {
-  background-color: #ea384c;  /* Red for collection archive */
+  @apply bg-red-50;  /* Light red for collection shows */
+}
+
+/* Schedule cell styles */
+.schedule-cell {
+  @apply border border-black relative p-2;
+}
+
+.schedule-cell .actions {
+  @apply absolute top-1 left-1 flex gap-1 z-10 opacity-0 transition-opacity;
+}
+
+.schedule-cell:hover .actions {
+  @apply opacity-100;
 }
 
 /* Component styles */
