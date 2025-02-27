@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
@@ -38,11 +39,11 @@ const LineupTable = ({
         {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
             <table className="w-full table-fixed border-collapse">
               <colgroup>
-                <col className="w-1/5" />
-                <col className="w-1/5" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
                 <col className="w-[30%]" />
-                {isAuthenticated && <col className="w-[10%]" />}
-                <col className="w-[10%]" />
+                {isAuthenticated && <col className="w-[6%]" />}
+                <col className="w-[10%] hidden" />
                 <col className="w-[10%]" />
               </colgroup>
               <thead>
@@ -51,7 +52,7 @@ const LineupTable = ({
                   <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
                   <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
                   {isAuthenticated && <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
-                  <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">דקות</th>
+                  <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200 hidden">דקות</th>
                   <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
                 </tr>
               </thead>

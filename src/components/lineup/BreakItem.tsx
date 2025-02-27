@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Edit2, Trash2, GripVertical } from "lucide-react";
 
 interface BreakItemProps {
   id: string;
@@ -20,39 +21,41 @@ const BreakItem = ({
   onDelete,
   onDurationChange,
   onBreakTextChange,
-  isAuthenticated,
+  isAuthenticated
 }: BreakItemProps) => {
   return (
     <>
-      <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200 text-center">
-        <div className="space-y-2">
-          <div className="font-semibold text-gray-700">הפסקה מסחרית</div>
-          <Input
-            value={name}
-            onChange={(e) => onBreakTextChange(id, e.target.value)}
-            className="w-full text-center"
-            placeholder="פרטי ההפסקה"
-          />
-        </div>
+      <td
+        colSpan={isAuthenticated ? 3 : 2}
+        className="py-2 px-4 border border-gray-200 bg-gray-50 align-top"
+      >
+        <Input
+          type="text"
+          value={name}
+          onChange={(e) => onBreakTextChange(id, e.target.value)}
+          className="bg-transparent border-0 focus-visible:ring-0 p-0 text-center font-bold"
+        />
       </td>
-      <td className="py-2 px-4 border border-gray-200 text-center">
+      {isAuthenticated && (
+        <td className="py-2 px-4 border border-gray-200 bg-gray-50"></td>
+      )}
+      <td className="py-2 px-4 border border-gray-200 bg-gray-50 hidden">
         <Input
           type="number"
           min="1"
           value={duration}
           onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-          className="w-20 mx-auto text-center"
+          className="w-20"
         />
       </td>
-      <td className="py-2 px-4 border border-gray-200">
-        <div className="flex gap-2 justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(id)}
-          >
+      <td className="py-2 px-4 border border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => onDelete(id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
+          <div className="cursor-move">
+            <GripVertical className="h-4 w-4 text-gray-400" />
+          </div>
         </div>
       </td>
     </>

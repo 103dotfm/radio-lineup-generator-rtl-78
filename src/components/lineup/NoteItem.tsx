@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor, EditorContent } from '@tiptap/react';
@@ -26,14 +27,14 @@ const NoteItem = ({
     <>
       <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200">
         {editor?.isEditable ? (
-          <div className="prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none text-center">
             {editor && <EditorContent editor={editor} />}
           </div>
         ) : (
-          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
+          <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
         )}
       </td>
-      <td className="py-2 px-4 border border-gray-200">
+      <td className="py-2 px-4 border border-gray-200 hidden">
         <Input
           type="number"
           min="0"
