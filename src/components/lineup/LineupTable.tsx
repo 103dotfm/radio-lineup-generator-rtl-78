@@ -51,12 +51,12 @@ const LineupTable = ({
               </colgroup>
               <thead>
                 <tr>
-                  <th className="py-2 px-4 text-right border border-gray-200 font-bold bg-slate-300 hover:bg-slate-200">שם</th>
-                  <th className="py-2 px-4 text-right border border-gray-200 font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
-                  <th className="py-2 px-4 text-right border border-gray-200 font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
-                  {isAuthenticated && <th className="py-2 px-4 text-right border border-gray-200 font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
-                  <th className="py-2 px-4 text-right border border-gray-200 font-bold bg-slate-300 hover:bg-slate-200">דקות</th>
-                  <th className="py-2 px-4 text-right border border-gray-200 font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
+                  <th className="py-2 px-4 text-right border border-black font-bold bg-slate-300 hover:bg-slate-200">שם</th>
+                  <th className="py-2 px-4 text-right border border-black font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
+                  <th className="py-2 px-4 text-right border border-black font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
+                  {isAuthenticated && <th className="py-2 px-4 text-right border border-black font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
+                  <th className="py-2 px-4 text-right border border-black font-bold bg-slate-300 hover:bg-slate-200">דקות</th>
+                  <th className="py-2 px-4 text-right border border-black font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
                 </tr>
               </thead>
               <tbody>
