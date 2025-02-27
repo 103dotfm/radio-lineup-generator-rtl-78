@@ -21,6 +21,7 @@ interface ScheduleViewProps {
   hideDateControls?: boolean;
   showAddButton?: boolean;
   hideHeaderDates?: boolean;
+  selectedDate?: Date;
 }
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -28,9 +29,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   isMasterSchedule = false,
   hideDateControls = false,
   showAddButton = true,
-  hideHeaderDates = false
+  hideHeaderDates = false,
+  selectedDate: externalSelectedDate
 }) => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(externalSelectedDate || new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSlotDialog, setShowSlotDialog] = useState(false);
@@ -39,6 +41,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Update the internal state when the external prop changes
+  useEffect(() => {
+    if (externalSelectedDate) {
+      setSelectedDate(externalSelectedDate);
+    }
+  }, [externalSelectedDate]);
 
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -186,6 +195,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
+    if (!isAdmin) return; // Only allow click actions for admin users
+    
     console.log('Clicked slot details:', {
       show_name: slot.show_name,
       host_name: slot.host_name,
@@ -253,14 +264,22 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       displayName,
       displayHost
     } = getShowDisplay(slot.show_name, slot.host_name);
-    return <div key={slot.id} onClick={() => handleSlotClick(slot)} className={`p-2 rounded cursor-pointer hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} style={{
-      height: getSlotHeight(slot),
-      position: 'absolute',
-      top: '0',
-      left: '0',
-      right: '0',
-      zIndex: 10
-    }}>
+    
+    const slotClickHandler = isAdmin ? () => handleSlotClick(slot) : undefined;
+    
+    return <div 
+      key={slot.id} 
+      onClick={slotClickHandler} 
+      className={`p-2 rounded ${isAdmin ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
+      style={{
+        height: getSlotHeight(slot),
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        right: '0',
+        zIndex: 10
+      }}
+    >
         <div className="flex justify-between items-start">
           <div className="font-bold">{displayName}</div>
           {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
@@ -295,9 +314,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         return [selectedDate];
       case 'weekly':
         {
-          const startOfCurrentWeek = startOfWeek(selectedDate, {
-            weekStartsOn: 0
-          });
+          const startOfCurrentWeek = startOfWeek(selectedDate, { weekStartsOn: 0 });
           return Array.from({
             length: 7
           }, (_, i) => addDays(startOfCurrentWeek, i));
@@ -452,12 +469,26 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         {renderGrid()}
       </div>
 
-      <EditModeDialog isOpen={showEditModeDialog} onClose={() => setShowEditModeDialog(false)} onEditCurrent={handleEditCurrent} onEditAll={handleEditAll} />
+      {isAdmin && (
+        <>
+          <EditModeDialog 
+            isOpen={showEditModeDialog} 
+            onClose={() => setShowEditModeDialog(false)} 
+            onEditCurrent={handleEditCurrent} 
+            onEditAll={handleEditAll} 
+          />
 
-      <ScheduleSlotDialog isOpen={showSlotDialog} onClose={() => {
-        setShowSlotDialog(false);
-        setEditingSlot(undefined);
-      }} onSave={handleSaveSlot} editingSlot={editingSlot} />
+          <ScheduleSlotDialog 
+            isOpen={showSlotDialog} 
+            onClose={() => {
+              setShowSlotDialog(false);
+              setEditingSlot(undefined);
+            }} 
+            onSave={handleSaveSlot} 
+            editingSlot={editingSlot} 
+          />
+        </>
+      )}
     </div>;
 };
 
