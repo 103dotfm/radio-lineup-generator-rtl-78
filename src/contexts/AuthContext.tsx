@@ -24,21 +24,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  
-  // Add cache timestamp ref
   const lastUserCheckRef = useRef<number>(0);
-  const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+  const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
   const checkUserRole = async (userId: string, force: boolean = false) => {
     const now = Date.now();
-    
-    // Skip if we checked recently and it's not forced
     if (!force && lastUserCheckRef.current && (now - lastUserCheckRef.current < CACHE_DURATION)) {
       console.log('Using cached user data');
       return;
     }
 
-    console.log('AuthProvider: Checking user role for', userId);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -51,7 +46,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      console.log('AuthProvider: User data fetched', data);
       if (data) {
         setUser(data);
         setIsAdmin(data.is_admin);
@@ -63,60 +57,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    console.log('AuthProvider: Initializing');
-    
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('AuthProvider: Initial session check', session);
       if (session) {
         setIsAuthenticated(true);
-        checkUserRole(session.user.id, true); // Force initial check
+        checkUserRole(session.user.id, true);
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('AuthProvider: Auth state changed', event, session?.user?.id);
-      
       if (event === 'SIGNED_IN' && session) {
         setIsAuthenticated(true);
-        checkUserRole(session.user.id, true); // Force check on sign in
+        checkUserRole(session.user.id, true);
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         setIsAdmin(false);
         setUser(null);
-        lastUserCheckRef.current = 0; // Reset cache on sign out
+        lastUserCheckRef.current = 0;
       }
     });
 
-    // Add visibility change listener
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // Only check if we have a current session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session) {
-            checkUserRole(session.user.id); // Will use cache if recent
-          }
-        });
-      }
-    };
-
-    // Add with a longer debounce
-    let visibilityTimeout: NodeJS.Timeout;
-    document.addEventListener('visibilitychange', () => {
-      clearTimeout(visibilityTimeout);
-      visibilityTimeout = setTimeout(handleVisibilityChange, 1000);
-    });
-
+    // Remove visibility change listener entirely since we're using caching
+    
     return () => {
       subscription.unsubscribe();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearTimeout(visibilityTimeout);
     };
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('AuthProvider: Attempting login for', email);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -128,9 +97,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
-      console.log('AuthProvider: Login successful', data.user?.id);
       if (data.user) {
-        await checkUserRole(data.user.id, true); // Force check on manual login
+        await checkUserRole(data.user.id, true);
       }
 
       return { error: null };
@@ -141,13 +109,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
-    console.log('AuthProvider: Logging out');
     try {
       await supabase.auth.signOut();
       setIsAuthenticated(false);
       setIsAdmin(false);
       setUser(null);
-      lastUserCheckRef.current = 0; // Reset cache on logout
+      lastUserCheckRef.current = 0;
     } catch (error) {
       console.error('Logout error:', error);
     }
