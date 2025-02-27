@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +30,8 @@ interface EditItemDialogProps {
     phone: string;
     duration: number;
     interviewees?: Interviewee[];
+    is_prerecorded?: boolean;
+    is_collection?: boolean;
   };
   onSave: (updatedItem: any) => void;
 }
@@ -38,7 +42,9 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     title: '',
     phone: '',
     duration: 0,
-    details: ''
+    details: '',
+    is_prerecorded: false,
+    is_collection: false
   });
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -50,7 +56,9 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
         title: item.title || '',
         phone: item.phone || '',
         duration: item.duration || 0,
-        details: item.details || ''
+        details: item.details || '',
+        is_prerecorded: item.is_prerecorded || false,
+        is_collection: item.is_collection || false
       });
       setHasChanges(false);
     }
@@ -64,7 +72,9 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       formState.title !== (item.title || '') ||
       formState.phone !== (item.phone || '') ||
       formState.duration !== (item.duration || 0) ||
-      formState.details !== (item.details || '');
+      formState.details !== (item.details || '') ||
+      formState.is_prerecorded !== (item.is_prerecorded || false) ||
+      formState.is_collection !== (item.is_collection || false);
     
     setHasChanges(hasEdits);
   }, [formState, item, open]);
@@ -85,7 +95,8 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       phone: formState.phone,
       duration: formState.duration,
       details: formState.details,
-      interviewees: item.interviewees || []
+      is_prerecorded: formState.is_prerecorded,
+      is_collection: formState.is_collection
     };
     
     onSave(updatedItem);
@@ -93,7 +104,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     onOpenChange(false);
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string | number | boolean) => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
@@ -157,6 +168,32 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                       </td>
                     </tr>
                   ))}
+                  <tr>
+                    <td colSpan={2} className="py-4">
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_prerecorded"
+                            checked={formState.is_prerecorded}
+                            onCheckedChange={(checked) => 
+                              handleInputChange('is_prerecorded', checked)
+                            }
+                          />
+                          <Label htmlFor="is_prerecorded">הוקלט מראש</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_collection"
+                            checked={formState.is_collection}
+                            onCheckedChange={(checked) => 
+                              handleInputChange('is_collection', checked)
+                            }
+                          />
+                          <Label htmlFor="is_collection">לקט</Label>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
                   <tr>
                     <td colSpan={2} className="py-2">
                       <label className="text-sm font-medium">פרטים</label>
