@@ -55,7 +55,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     data: scheduleSlots = [],
     isLoading
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
+    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
     queryFn: () => {
       console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
       return getScheduleSlots(selectedDate, isMasterSchedule);
@@ -365,12 +365,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
               )}
             </div>
-            {timeSlots.map(time => <React.Fragment key={time}>
+            {timeSlots.map(time => (
+                <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
                 {renderTimeCell(selectedDate.getDay(), time)}
-              </React.Fragment>)}
+              </React.Fragment>
+            ))}
           </div>;
       case 'weekly':
         return <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
@@ -385,14 +387,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                   </div>
                 )}
               </div>)}
-            {timeSlots.map(time => <React.Fragment key={time}>
+            {timeSlots.map(time => (
+                <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {Array.from({length: 7}).map((_, dayIndex) => <React.Fragment key={`${time}-${dayIndex}`}>
+                {Array.from({length: 7}).map((_, dayIndex) => (
+                    <React.Fragment key={dayIndex}>
                     {renderTimeCell(dayIndex, time)}
-                  </React.Fragment>)}
-              </React.Fragment>)}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            ))}
           </div>;
       case 'monthly':
         return <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
@@ -402,7 +408,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             {weekDays.map(day => <div key={day} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
                 {day}
               </div>)}
-            {timeSlots.map(time => <React.Fragment key={time}>
+            {timeSlots.map(time => (
+                <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
@@ -410,7 +417,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                   const isCurrentMonth = dates.some(date => date.getDay() === dayIndex && isSameMonth(date, selectedDate));
                   return renderTimeCell(dayIndex, time, isCurrentMonth);
                 })}
-              </React.Fragment>)}
+              </React.Fragment>
+            ))}
           </div>;
     }
   };

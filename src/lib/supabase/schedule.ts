@@ -55,11 +55,25 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching schedule slots:', error);
+    throw error;
+  }
 
   console.log('Retrieved all slots:', allSlots);
 
-  const processedSlots = allSlots?.reduce((acc: ScheduleSlot[], slot) => {
+  // Check if we have any data
+  if (!allSlots || allSlots.length === 0) {
+    console.log('No slots found in the database');
+    return [];
+  }
+
+  const processedSlots = allSlots.reduce((acc: ScheduleSlot[], slot) => {
+    if (!slot) {
+      console.log('Encountered undefined slot, skipping');
+      return acc;
+    }
+    
     const slotDate = addDays(startDate, slot.day_of_week);
     
     if (!slot.is_recurring) {
@@ -106,7 +120,17 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     }
 
     // Add the recurring slot if no modifications exist
-    if (isBefore(new Date(slot.created_at), addDays(startDate, 7))) {
+    try {
+      const slotCreatedAt = new Date(slot.created_at);
+      if (!isNaN(slotCreatedAt.getTime()) && isBefore(slotCreatedAt, addDays(startDate, 7))) {
+        acc.push({
+          ...slot,
+          is_modified: false
+        });
+      }
+    } catch (e) {
+      console.error('Error processing slot created_at date:', e);
+      // Still add the slot in case of date parsing issues
       acc.push({
         ...slot,
         is_modified: false
@@ -116,12 +140,25 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     return acc;
   }, []);
 
+  if (!processedSlots || processedSlots.length === 0) {
+    console.log('No processed slots to display after filtering');
+    return [];
+  }
+
   const finalSlots = processedSlots.map(slot => {
+    if (!slot.shows) {
+      return {
+        ...slot,
+        shows: [],
+        has_lineup: false
+      };
+    }
+
     const slotDate = addDays(startDate, slot.day_of_week);
-    const showsInWeek = slot.shows?.filter(show => {
-      if (!show.date) return false;
+    const showsInWeek = slot.shows.filter(show => {
+      if (!show || !show.date) return false;
       const showDate = new Date(show.date);
-      return isSameDay(showDate, slotDate);
+      return !isNaN(showDate.getTime()) && isSameDay(showDate, slotDate);
     }) || [];
 
     return {
