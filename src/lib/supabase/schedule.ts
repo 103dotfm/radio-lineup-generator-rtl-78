@@ -1,13 +1,13 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, startOfDay } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
   
   const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
   console.log('Using start date:', startDate);
-  const currentDate = new Date();
 
   if (isMasterSchedule) {
     console.log('Fetching master schedule slots...');
@@ -52,54 +52,55 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         slot_id
       )
     `)
-    .or(`is_recurring.eq.false,and(is_recurring.eq.true,created_at.lte.${startDate.toISOString()})`)
+    .or(`is_recurring.eq.false,is_recurring.eq.true`)
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
   if (error) throw error;
 
-  // Create a map of modified slots for the selected week
-  const modifiedSlots = new Map();
-  allSlots?.forEach(slot => {
-    if (!slot.is_recurring) {
-      const slotDate = addDays(startDate, slot.day_of_week);
-      if (isSameDay(slotDate, addDays(startDate, slot.day_of_week))) {
-        const slotKey = `${slotDate.toISOString()}-${slot.start_time}`;
-        modifiedSlots.set(slotKey, slot);
-      }
-    }
-  });
+  console.log('Retrieved all slots:', allSlots);
 
-  // Get base recurring slots that were created before or during this week
-  const recurringSlots = allSlots?.filter(slot => {
-    if (!slot.is_recurring) return false;
-    
-    // For recurring slots, only include them if they were created before or during this week
+  // Filter and process slots for the selected week
+  const processedSlots = allSlots?.reduce((acc: ScheduleSlot[], slot) => {
     const slotDate = addDays(startDate, slot.day_of_week);
-    return isAfter(slotDate, startOfDay(slot.created_at)) || isSameDay(slotDate, startOfDay(slot.created_at));
-  }) || [];
-
-  // Merge recurring and modified slots
-  const mergedSlots = recurringSlots.map(baseSlot => {
-    const slotDate = addDays(startDate, baseSlot.day_of_week);
-    const slotKey = `${slotDate.toISOString()}-${baseSlot.start_time}`;
-    const modifiedSlot = modifiedSlots.get(slotKey);
     
-    if (modifiedSlot) {
-      return {
-        ...modifiedSlot,
-        is_modified: true
-      };
+    // For non-recurring slots, only include if they match this exact week
+    if (!slot.is_recurring) {
+      const slotCreationDate = startOfWeek(new Date(slot.created_at), { weekStartsOn: 0 });
+      if (isSameDay(slotCreationDate, startDate)) {
+        acc.push({
+          ...slot,
+          is_modified: true
+        });
+      }
+      return acc;
     }
 
-    return {
-      ...baseSlot,
-      is_modified: false
-    };
-  });
+    // For recurring slots, include if they were created on or before this week
+    // Unless there's a non-recurring modification for this week
+    const nonRecurringVersion = allSlots.find(s => 
+      !s.is_recurring && 
+      s.day_of_week === slot.day_of_week && 
+      s.start_time === slot.start_time &&
+      isSameDay(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), startDate)
+    );
 
-  // Add any shows to the slots
-  const finalSlots = mergedSlots.map(slot => {
+    if (nonRecurringVersion) {
+      return acc;
+    }
+
+    if (isBefore(new Date(slot.created_at), addDays(startDate, 7))) {
+      acc.push({
+        ...slot,
+        is_modified: false
+      });
+    }
+
+    return acc;
+  }, []);
+
+  // Add shows to slots
+  const finalSlots = processedSlots.map(slot => {
     const slotDate = addDays(startDate, slot.day_of_week);
     const showsInWeek = slot.shows?.filter(show => {
       if (!show.date) return false;
