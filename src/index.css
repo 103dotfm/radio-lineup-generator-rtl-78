@@ -15,19 +15,19 @@ body {
 
 /* Schedule cell states */
 .bg-cell-regular {
-  @apply bg-blue-50;  /* Light blue for regular shows */
+  @apply bg-blue-50;
 }
 
 .bg-cell-modified {
-  @apply bg-orange-50;  /* Light orange for modified shows */
+  @apply bg-orange-50;
 }
 
 .bg-cell-prerecorded {
-  @apply bg-purple-50;  /* Light purple for pre-recorded shows */
+  @apply bg-purple-50;
 }
 
 .bg-cell-collection {
-  @apply bg-red-50;  /* Light red for collection shows */
+  @apply bg-red-50;
 }
 
 /* Schedule cell styles */
