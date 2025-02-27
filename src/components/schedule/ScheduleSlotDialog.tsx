@@ -17,7 +17,7 @@ interface ScheduleSlotDialogProps {
   onClose: () => void;
   onSave: (slotData: any) => void;
   editingSlot?: any;
-  isMasterSchedule?: boolean;  // Added this prop to the interface
+  isMasterSchedule?: boolean;
 }
 
 const weekDays = [
@@ -35,7 +35,7 @@ export default function ScheduleSlotDialog({
   onClose, 
   onSave, 
   editingSlot,
-  isMasterSchedule = false  // Added with default value
+  isMasterSchedule = false
 }: ScheduleSlotDialogProps) {
   const [showName, setShowName] = useState(editingSlot?.show_name || '');
   const [hostName, setHostName] = useState(editingSlot?.host_name || '');
@@ -44,11 +44,12 @@ export default function ScheduleSlotDialog({
   const [selectedDays, setSelectedDays] = useState<number[]>(
     editingSlot ? [editingSlot.day_of_week] : []
   );
+  const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
+  const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create a slot for each selected day
     selectedDays.forEach(dayOfWeek => {
       const slotData = {
         show_name: showName,
@@ -56,7 +57,9 @@ export default function ScheduleSlotDialog({
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
         day_of_week: dayOfWeek,
-        is_recurring: isMasterSchedule,  // Use the prop here
+        is_recurring: isMasterSchedule,
+        is_prerecorded: isPrerecorded,
+        is_collection: isCollection
       };
       onSave(slotData);
     });
@@ -118,6 +121,24 @@ export default function ScheduleSlotDialog({
                   onChange={(e) => setEndTime(e.target.value)}
                   required
                 />
+              </div>
+            </div>
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_prerecorded"
+                  checked={isPrerecorded}
+                  onCheckedChange={(checked) => setIsPrerecorded(!!checked)}
+                />
+                <Label htmlFor="is_prerecorded">הוקלט מראש</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_collection"
+                  checked={isCollection}
+                  onCheckedChange={(checked) => setIsCollection(!!checked)}
+                />
+                <Label htmlFor="is_collection">לקט</Label>
               </div>
             </div>
             <div className="grid gap-2">
