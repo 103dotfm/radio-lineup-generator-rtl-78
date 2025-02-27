@@ -4,9 +4,8 @@ import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth
 import { he } from 'date-fns/locale';
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ViewMode, ScheduleSlot } from '@/types/schedule';
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FileCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, FileCheck, CalendarDays, CalendarRange, Calendar as CalendarIcon } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +13,7 @@ import ScheduleSlotDialog from './ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
 import { getShowDisplay } from '@/utils/showDisplay';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -41,6 +41,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
 
   // Update the internal state when the external prop changes
   useEffect(() => {
@@ -195,7 +196,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    if (!isAdmin) return; // Only allow click actions for admin users
+    // Allow authenticated users (not just admins) to click on slots
+    if (!isAuthenticated) return; // Only require authentication
     
     console.log('Clicked slot details:', {
       show_name: slot.show_name,
@@ -265,12 +267,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
       displayHost
     } = getShowDisplay(slot.show_name, slot.host_name);
     
-    const slotClickHandler = isAdmin ? () => handleSlotClick(slot) : undefined;
+    const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
     
     return <div 
       key={slot.id} 
       onClick={slotClickHandler} 
-      className={`p-2 rounded ${isAdmin ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
+      className={`p-2 rounded ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
       style={{
         height: getSlotHeight(slot),
         position: 'absolute',
@@ -415,6 +417,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }
   };
 
+  // Get the week date range for the current view
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  const weekEnd = addDays(weekStart, 6);
+  const dateRangeDisplay = `${format(weekStart, 'dd/MM')} - ${format(weekEnd, 'dd/MM')}`;
+
   return <div className="space-y-4">
       {!hideDateControls && (
         <div className="flex items-center justify-between">
@@ -423,9 +430,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button variant="outline" onClick={() => setShowDatePicker(!showDatePicker)}>
-              {format(selectedDate, 'dd/MM/yyyy', {
-                locale: he
-              })}
+              {dateRangeDisplay}
             </Button>
             <Button variant="outline" size="icon" onClick={() => navigateDate('next')}>
               <ChevronLeft className="h-4 w-4" />
@@ -433,16 +438,36 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <Select value={viewMode} onValueChange={(value: ViewMode) => setViewMode(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">יומי</SelectItem>
-                <SelectItem value="weekly">שבועי</SelectItem>
-                <SelectItem value="monthly">חודשי</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Replace dropdown with buttons */}
+            <div className="flex gap-2 border rounded-md">
+              <Button 
+                variant={viewMode === 'daily' ? 'default' : 'ghost'} 
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => setViewMode('daily')}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span>יומי</span>
+              </Button>
+              <Button 
+                variant={viewMode === 'weekly' ? 'default' : 'ghost'} 
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => setViewMode('weekly')}
+              >
+                <CalendarDays className="h-4 w-4" />
+                <span>שבועי</span>
+              </Button>
+              <Button 
+                variant={viewMode === 'monthly' ? 'default' : 'ghost'} 
+                size="sm"
+                className="flex items-center gap-1"
+                onClick={() => setViewMode('monthly')}
+              >
+                <CalendarRange className="h-4 w-4" />
+                <span>חודשי</span>
+              </Button>
+            </div>
 
             {isAdmin && showAddButton && (
               <Button onClick={handleAddSlot} className="flex items-center gap-2">
