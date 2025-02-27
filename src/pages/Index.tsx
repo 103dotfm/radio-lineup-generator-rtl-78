@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -42,22 +43,17 @@ const Index = () => {
   // Initial setup effect for new shows ONLY
   useEffect(() => {
     if (isNewLineup && state) {
-      console.log('New lineup - Processing initial state:', state);
-      
       // Generate show name ONLY for new lineups
       let displayName;
       if (state.generatedShowName) {
-        console.log('Using pre-generated show name:', state.generatedShowName);
         displayName = state.generatedShowName;
       } else {
         // Fallback generation if somehow we don't have a pre-generated name
         displayName = state.showName === state.hostName
           ? state.hostName
           : `${state.showName} עם ${state.hostName}`;
-        console.log('Generated fallback show name:', displayName);
       }
       
-      console.log('Setting initial show name for new lineup:', displayName);
       setShowName(displayName);
       setShowTime(state.time || '');
       
@@ -124,9 +120,8 @@ const Index = () => {
     }
   }, [state, isNewLineup]);
 
-  const handleEdit = async (id: string, updatedItem: any) => {
-    console.log('Index: Handling edit for item:', id, updatedItem);
-    
+  // Use useCallback for all handler functions to prevent unnecessary re-renders
+  const handleEdit = useCallback(async (id: string, updatedItem: any) => {
     setItems(prevItems => 
       prevItems.map(item => 
         item.id === id 
@@ -139,9 +134,9 @@ const Index = () => {
       )
     );
     setHasUnsavedChanges(true);
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (isSaving) return;
     
     try {
@@ -164,8 +159,6 @@ const Index = () => {
         is_note: item.is_note || false,
         interviewees: item.interviewees || []
       }));
-
-      console.log('Saving items with interviewees:', itemsToSave);
 
       const savedShow = await saveShow(show, itemsToSave, showId);
       
@@ -193,9 +186,9 @@ const Index = () => {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [isSaving, showName, showTime, showDate, editor, items, state, showId, navigate]);
 
-  const handleAdd = (newItem) => {
+  const handleAdd = useCallback((newItem) => {
     if (editingItem) {
       setItems(items.map(item => 
         item.id === editingItem.id 
@@ -211,16 +204,16 @@ const Index = () => {
       setItems([...items, item]);
     }
     setHasUnsavedChanges(true);
-  };
+  }, [editingItem, items]);
 
-  const handleDetailsChange = (id: string, details: string) => {
+  const handleDetailsChange = useCallback((id: string, details: string) => {
     setItems(items.map(item => 
       item.id === id ? { ...item, details } : item
     ));
     setHasUnsavedChanges(true);
-  };
+  }, [items]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     try {
       const shareUrl = `${window.location.origin}/print/${showId}`;
       await navigator.clipboard.writeText(shareUrl);
@@ -229,17 +222,17 @@ const Index = () => {
       console.error('Error sharing:', error);
       toast.error('שגיאה בשיתוף הליינאפ');
     }
-  };
+  }, [showId]);
 
-  const handleBackToDashboard = () => {
+  const handleBackToDashboard = useCallback(() => {
     if (hasUnsavedChanges) {
       setShowUnsavedDialog(true);
     } else {
       navigate('/');
     }
-  };
+  }, [hasUnsavedChanges, navigate]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = useCallback(() => {
     if (!printRef.current) return;
     
     const element = printRef.current;
@@ -266,7 +259,51 @@ const Index = () => {
         console.error('Error generating PDF:', error);
         toast.error('שגיאה ביצירת ה־PDF');
       });
-  };
+  }, [printRef, showName, showDate]);
+
+  const handleNameChange = useCallback((name: string) => {
+    setShowName(name);
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleTimeChange = useCallback((time: string) => {
+    setShowTime(time);
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleDateChange = useCallback((date: Date | undefined) => {
+    setShowDate(date || new Date());
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleDelete = useCallback((id: string) => {
+    setItems(items.filter(item => item.id !== id));
+    setHasUnsavedChanges(true);
+    toast.success('פריט נמחק בהצלחה');
+  }, [items]);
+
+  const handleDurationChange = useCallback((id: string, duration: number) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, duration } : item
+    ));
+    setHasUnsavedChanges(true);
+  }, [items]);
+
+  const handleBreakTextChange = useCallback((id: string, text: string) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, name: text } : item
+    ));
+    setHasUnsavedChanges(true);
+  }, [items]);
+
+  const handleDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination) return;
+    const newItems = Array.from(items);
+    const [reorderedItem] = newItems.splice(result.source.index, 1);
+    newItems.splice(result.destination.index, 0, reorderedItem);
+    setItems(newItems);
+    setHasUnsavedChanges(true);
+  }, [items]);
 
   return (
     <>
@@ -278,50 +315,19 @@ const Index = () => {
           items={items}
           editor={editor}
           editingItem={editingItem}
-          onNameChange={(name) => {
-            console.log('Manual name change requested:', name);
-            setShowName(name);
-            setHasUnsavedChanges(true);
-          }}
-          onTimeChange={(time) => {
-            setShowTime(time);
-            setHasUnsavedChanges(true);
-          }}
-          onDateChange={(date) => {
-            setShowDate(date || new Date());
-            setHasUnsavedChanges(true);
-          }}
+          onNameChange={handleNameChange}
+          onTimeChange={handleTimeChange}
+          onDateChange={handleDateChange}
           onSave={handleSave}
           onShare={handleShare}
           onPrint={() => window.print()}
           onExportPDF={handleExportPDF}
           onAdd={handleAdd}
-          onDelete={(id) => {
-            setItems(items.filter(item => item.id !== id));
-            setHasUnsavedChanges(true);
-            toast.success('פריט נמחק בהצלחה');
-          }}
-          onDurationChange={(id, duration) => {
-            setItems(items.map(item => 
-              item.id === id ? { ...item, duration } : item
-            ));
-            setHasUnsavedChanges(true);
-          }}
+          onDelete={handleDelete}
+          onDurationChange={handleDurationChange}
           onEdit={handleEdit}
-          onBreakTextChange={(id, text) => {
-            setItems(items.map(item => 
-              item.id === id ? { ...item, name: text } : item
-            ));
-            setHasUnsavedChanges(true);
-          }}
-          onDragEnd={(result: DropResult) => {
-            if (!result.destination) return;
-            const newItems = Array.from(items);
-            const [reorderedItem] = newItems.splice(result.source.index, 1);
-            newItems.splice(result.destination.index, 0, reorderedItem);
-            setItems(newItems);
-            setHasUnsavedChanges(true);
-          }}
+          onBreakTextChange={handleBreakTextChange}
+          onDragEnd={handleDragEnd}
           handleNameLookup={async () => null}
           onBackToDashboard={handleBackToDashboard}
           onDetailsChange={handleDetailsChange}
