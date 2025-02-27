@@ -2,6 +2,7 @@
 import React from 'react';
 import UserManagement from '@/components/admin/UserManagement';
 import MasterSchedule from '@/components/schedule/MasterSchedule';
+import WorkArrangements from '@/components/admin/WorkArrangements';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,13 +32,18 @@ const Admin = () => {
       </div>
       
       <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="schedule">לוח שידורים ראשי</TabsTrigger>
+          <TabsTrigger value="arrangements">סידורי עבודה</TabsTrigger>
           <TabsTrigger value="users">ניהול משתמשים</TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
           <MasterSchedule />
+        </TabsContent>
+        
+        <TabsContent value="arrangements" className="mt-4">
+          <WorkArrangements />
         </TabsContent>
         
         <TabsContent value="users" className="mt-4">
