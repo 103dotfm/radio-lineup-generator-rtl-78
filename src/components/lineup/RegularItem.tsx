@@ -96,7 +96,6 @@ const RegularItem = ({
             <div>{displayName}</div>
             {interviewees.length > 0 && <FileCheck className="h-4 w-4 text-green-600" />}
           </div>
-          {displayHost}
           {interviewees.length > 0 && <IntervieweeList interviewees={interviewees} onEdit={handleEditInterviewee} onDelete={handleDeleteInterviewee} />}
         </div>
         
