@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,38 +33,66 @@ interface EditItemDialogProps {
 }
 
 const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProps) => {
-  const [formState, setFormState] = useState({
+  // Use refs to preserve state across re-renders from tab switching
+  const formStateRef = useRef({
     name: '',
     title: '',
     phone: '',
     duration: 0,
     details: ''
   });
+  
+  // State for UI updates
+  const [formState, setFormState] = useState({ ...formStateRef.current });
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  
+  // Track if the dialog is mounted to prevent state updates after unmount
+  const isMounted = useRef(true);
 
+  // Initialize form state when dialog opens or item changes
   useEffect(() => {
     if (open && item) {
-      setFormState({
+      const newState = {
         name: item.name || '',
         title: item.title || '',
         phone: item.phone || '',
         duration: item.duration || 0,
         details: item.details || ''
-      });
+      };
+      
+      formStateRef.current = newState;
+      setFormState(newState);
       setHasChanges(false);
     }
   }, [item, open]);
 
+  // Track mount status
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Check for changes (comparing to the initial state)
   useEffect(() => {
     if (!open) return;
 
+    const initialState = {
+      name: item.name || '',
+      title: item.title || '',
+      phone: item.phone || '',
+      duration: item.duration || 0,
+      details: item.details || ''
+    };
+
     const hasEdits = 
-      formState.name !== (item.name || '') ||
-      formState.title !== (item.title || '') ||
-      formState.phone !== (item.phone || '') ||
-      formState.duration !== (item.duration || 0) ||
-      formState.details !== (item.details || '');
+      formState.name !== initialState.name ||
+      formState.title !== initialState.title ||
+      formState.phone !== initialState.phone ||
+      formState.duration !== initialState.duration ||
+      formState.details !== initialState.details;
     
     setHasChanges(hasEdits);
   }, [formState, item, open]);
@@ -94,7 +122,12 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormState(prev => ({ ...prev, [field]: value }));
+    // Update both state and ref to ensure persistence
+    setFormState(prev => {
+      const newState = { ...prev, [field]: value };
+      formStateRef.current = newState;
+      return newState;
+    });
   };
 
   return (
@@ -159,11 +192,12 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                   ))}
                   <tr>
                     <td colSpan={2} className="py-2">
-                      <label className="text-sm font-medium">פרטים</label>
+                      <label className="text-sm font-medium text-right block">פרטים</label>
                       <BasicEditor
                         content={formState.details}
                         onChange={(html) => handleInputChange('details', html)}
                         className="min-h-[100px]"
+                        align="right"
                       />
                     </td>
                   </tr>
