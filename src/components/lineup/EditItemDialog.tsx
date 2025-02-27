@@ -1,58 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+
+import React, { useEffect, useState, useRef } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, X } from "lucide-react";
-import { BasicEditor } from '../editor/BasicEditor';
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Item } from '@/types/show';
+import { Input } from "@/components/ui/input";
+import { X, Edit2, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import BasicEditor from '../editor/BasicEditor';
+import { Interviewee } from '@/types/show';
 
 interface EditItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  item: Item;
+  item: {
+    id: string;
+    name: string;
+    title: string;
+    details: string;
+    phone: string;
+    duration: number;
+    interviewees?: Interviewee[];
+  };
   onSave: (updatedItem: any) => void;
 }
 
 const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProps) => {
-  const [formState, setFormState] = useState({
-    name: item.name,
-    title: item.title,
-    details: item.details,
-    phone: item.phone,
-    duration: item.duration,
+  // Store the form state in a ref to persist across tab switches
+  const formDataRef = useRef({
+    name: item?.name || '',
+    title: item?.title || '',
+    phone: item?.phone || '',
+    duration: item?.duration || 0,
+    details: item?.details || ''
   });
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+
+  // State for UI rendering
+  const [formState, setFormState] = useState(formDataRef.current);
   const [hasChanges, setHasChanges] = useState(false);
-
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  
+  // Initialize form state when dialog opens or item changes
   useEffect(() => {
-    setFormState({
-      name: item.name,
-      title: item.title,
-      details: item.details,
-      phone: item.phone,
-      duration: item.duration,
-    });
-    setHasChanges(false);
-  }, [item]);
+    if (open && item) {
+      const initialState = {
+        name: item.name || '',
+        title: item.title || '',
+        phone: item.phone || '',
+        duration: item.duration || 0,
+        details: item.details || ''
+      };
+      
+      formDataRef.current = initialState;
+      setFormState(initialState);
+      setHasChanges(false);
+    }
+  }, [open, item?.id]); // Only depend on open state and item ID
 
-  const handleInputChange = (key: string, value: any) => {
-    setFormState(prevState => ({
-      ...prevState,
-      [key]: value,
-    }));
-    setHasChanges(true);
-  };
+  // Check for changes against the initial state
+  useEffect(() => {
+    if (!open) return;
+    
+    const initialState = {
+      name: item.name || '',
+      title: item.title || '',
+      phone: item.phone || '',
+      duration: item.duration || 0,
+      details: item.details || ''
+    };
 
-  const handleSave = () => {
-    onSave(formState);
-    onOpenChange(false);
-  };
+    const hasEdits = 
+      formState.name !== initialState.name ||
+      formState.title !== initialState.title ||
+      formState.phone !== initialState.phone ||
+      formState.duration !== initialState.duration ||
+      formState.details !== initialState.details;
+    
+    setHasChanges(hasEdits);
+  }, [formState, item, open]);
 
   const handleClose = () => {
     if (hasChanges) {
@@ -62,17 +94,43 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     }
   };
 
-  const confirmClose = () => {
-    setShowUnsavedDialog(false);
+  const handleSave = () => {
+    const updatedItem = {
+      ...item,
+      name: formState.name,
+      title: formState.title,
+      phone: formState.phone,
+      duration: formState.duration,
+      details: formState.details,
+      interviewees: item.interviewees || []
+    };
+    
+    onSave(updatedItem);
+    setHasChanges(false);
     onOpenChange(false);
   };
 
-  const handleDeleteInterviewee = (intervieweeId: string) => {
-    // Placeholder for delete logic
+  const handleInputChange = (field: string, value: string | number) => {
+    // Update both the React state and the ref
+    formDataRef.current = {
+      ...formDataRef.current,
+      [field]: value
+    };
+    
+    setFormState(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleEditInterviewee = (intervieweeId: string, updatedData: Partial<any>) => {
-    // Placeholder for edit logic
+  const handleEditInterviewee = (intervieweeId: string, updatedData: Partial<Interviewee>) => {
+    // This is a placeholder function - actual implementation would be provided through props
+    console.log('Edit interviewee:', intervieweeId, updatedData);
+  };
+
+  const handleDeleteInterviewee = (intervieweeId: string) => {
+    // This is a placeholder function - actual implementation would be provided through props
+    console.log('Delete interviewee:', intervieweeId);
   };
 
   return (
@@ -148,7 +206,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => handleEditInterviewee?.(interviewee.id, {
+                            onClick={() => handleEditInterviewee(interviewee.id, {
                               name: prompt('שם חדש:', interviewee.name) || interviewee.name,
                               title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
                               phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
@@ -160,7 +218,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => handleDeleteInterviewee?.(interviewee.id)}
+                            onClick={() => handleDeleteInterviewee(interviewee.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -212,9 +270,12 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             <AlertDialogCancel onClick={() => setShowUnsavedDialog(false)}>
               ביטול
             </AlertDialogCancel>
-            <AlertDialogTrigger onClick={confirmClose} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
+            <AlertDialogAction onClick={() => {
+              setShowUnsavedDialog(false);
+              onOpenChange(false);
+            }} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
               סגור בלי לשמור
-            </AlertDialogTrigger>
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
