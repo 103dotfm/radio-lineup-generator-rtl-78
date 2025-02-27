@@ -13,36 +13,6 @@ body {
   background-color: #f8fafc;
 }
 
-/* Schedule cell states */
-.bg-cell-regular {
-  @apply bg-blue-50;
-}
-
-.bg-cell-modified {
-  @apply bg-orange-50;
-}
-
-.bg-cell-prerecorded {
-  @apply bg-purple-50;
-}
-
-.bg-cell-collection {
-  @apply bg-red-50;
-}
-
-/* Schedule cell styles */
-.schedule-cell {
-  @apply border border-black relative p-2;
-}
-
-.schedule-cell .actions {
-  @apply absolute top-1 left-1 flex gap-1 z-10 opacity-0 transition-opacity;
-}
-
-.schedule-cell:hover .actions {
-  @apply opacity-100;
-}
-
 /* Component styles */
 .lineup-item {
   transition: all 0.2s ease-in-out;
