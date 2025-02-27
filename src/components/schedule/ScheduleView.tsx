@@ -67,7 +67,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   const createSlotMutation = useMutation({
     mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      createScheduleSlot(slotData, isMasterSchedule),
+      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
