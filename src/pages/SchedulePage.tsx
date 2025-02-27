@@ -54,28 +54,39 @@ const SchedulePage = () => {
   const fetchArrangements = async () => {
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
     
-    const { data, error } = await supabase
-      .from('work_arrangements')
-      .select('*')
-      .eq('week_start', weekStartStr);
+    try {
+      const { data, error } = await supabase
+        .from('work_arrangements')
+        .select('*')
+        .eq('week_start', weekStartStr);
+        
+      if (error) {
+        console.error('Error fetching arrangements:', error);
+        return;
+      }
       
-    if (error) {
-      console.error('Error fetching arrangements:', error);
-      return;
+      const arrangementsRecord: Record<ArrangementType, ArrangementFile | null> = {
+        producers: null,
+        engineers: null,
+        digital: null
+      };
+      
+      if (data && data.length > 0) {
+        data.forEach(item => {
+          const arrangementItem = item as unknown as ArrangementFile;
+          if (arrangementItem.type === 'producers' || 
+              arrangementItem.type === 'engineers' || 
+              arrangementItem.type === 'digital') {
+            arrangementsRecord[arrangementItem.type] = arrangementItem;
+          }
+        });
+      }
+      
+      console.log('Fetched arrangements:', arrangementsRecord);
+      setArrangements(arrangementsRecord);
+    } catch (error) {
+      console.error('Error in fetchArrangements:', error);
     }
-    
-    const arrangementsRecord: Record<ArrangementType, ArrangementFile | null> = {
-      producers: null,
-      engineers: null,
-      digital: null
-    };
-    
-    data?.forEach(item => {
-      const arrangementItem = item as unknown as ArrangementFile;
-      arrangementsRecord[arrangementItem.type as ArrangementType] = arrangementItem;
-    });
-    
-    setArrangements(arrangementsRecord);
   };
   
   const navigateWeek = (direction: 'prev' | 'next') => {

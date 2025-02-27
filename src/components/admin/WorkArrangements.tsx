@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CopyIcon, CheckIcon, UploadIcon } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ArrangementType = 'producers' | 'engineers' | 'digital';
 
@@ -48,6 +49,7 @@ const WorkArrangements = () => {
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   
   // Load existing arrangements
   useEffect(() => {
@@ -112,30 +114,46 @@ const WorkArrangements = () => {
     if (!file) return null;
     
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-    const fileName = `${type}_${weekStartStr}_${file.name}`;
+    // Sanitize file name to prevent URL encoding issues
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const fileName = `${type}_${weekStartStr}_${sanitizedFileName}`;
     
     // Upload to Storage
-    const { data, error } = await supabase.storage
-      .from('arrangements')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
+    try {
+      const { data, error } = await supabase.storage
+        .from('arrangements')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (error) {
+        console.error('Error uploading file:', error);
+        throw error;
+      }
       
-    if (error) {
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('arrangements')
+        .getPublicUrl(fileName);
+        
+      return publicUrl;
+    } catch (error) {
       console.error('Error uploading file:', error);
       throw error;
     }
-    
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('arrangements')
-      .getPublicUrl(fileName);
-      
-    return publicUrl;
   };
   
   const handleUpload = async (type: ArrangementType) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "שגיאה",
+        description: "יש להתחבר למערכת כדי להעלות קבצים",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsUploading(true);
     
     try {
@@ -164,58 +182,77 @@ const WorkArrangements = () => {
       const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
       
       // Check if there's an existing record for this type and week
-      const { data: existingData } = await supabase
-        .from('work_arrangements')
-        .select('id')
-        .eq('type', type)
-        .eq('week_start', weekStartStr)
-        .single();
+      try {
+        const { data: existingData, error: queryError } = await supabase
+          .from('work_arrangements')
+          .select('id')
+          .eq('type', type)
+          .eq('week_start', weekStartStr)
+          .maybeSingle();
+          
+        if (queryError) {
+          console.error('Error querying existing record:', queryError);
+          throw queryError;
+        }
         
-      const url = await uploadFile(file, type);
-      
-      if (existingData?.id) {
-        // Update existing record
-        await supabase
-          .from('work_arrangements')
-          .update({
-            filename: file.name,
-            url: url,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id);
-      } else {
-        // Insert new record
-        await supabase
-          .from('work_arrangements')
-          .insert({
-            type: type,
-            filename: file.name,
-            url: url,
-            week_start: weekStartStr
-          });
+        const url = await uploadFile(file, type);
+        
+        if (existingData?.id) {
+          // Update existing record
+          const { error: updateError } = await supabase
+            .from('work_arrangements')
+            .update({
+              filename: file.name,
+              url: url,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingData.id);
+            
+          if (updateError) {
+            console.error('Error updating record:', updateError);
+            throw updateError;
+          }
+        } else {
+          // Insert new record
+          const { error: insertError } = await supabase
+            .from('work_arrangements')
+            .insert({
+              type: type,
+              filename: file.name,
+              url: url,
+              week_start: weekStartStr
+            });
+            
+          if (insertError) {
+            console.error('Error inserting record:', insertError);
+            throw insertError;
+          }
+        }
+        
+        toast({
+          title: "הקובץ הועלה בהצלחה",
+          description: `קובץ סידור עבודה ${getHebrewTypeName(type)} הועלה בהצלחה`,
+        });
+        
+        // Reset file state
+        switch (type) {
+          case 'producers':
+            setProducersFile(null);
+            break;
+          case 'engineers':
+            setEngineersFile(null);
+            break;
+          case 'digital':
+            setDigitalFile(null);
+            break;
+        }
+        
+        // Refresh arrangements
+        fetchArrangements();
+      } catch (error) {
+        console.error('Database operation error:', error);
+        throw error;
       }
-      
-      toast({
-        title: "הקובץ הועלה בהצלחה",
-        description: `קובץ סידור עבודה ${getHebrewTypeName(type)} הועלה בהצלחה`,
-      });
-      
-      // Reset file state
-      switch (type) {
-        case 'producers':
-          setProducersFile(null);
-          break;
-        case 'engineers':
-          setEngineersFile(null);
-          break;
-        case 'digital':
-          setDigitalFile(null);
-          break;
-      }
-      
-      // Refresh arrangements
-      fetchArrangements();
-      
     } catch (error) {
       console.error('Upload error:', error);
       toast({
