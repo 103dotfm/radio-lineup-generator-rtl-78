@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
@@ -7,11 +6,44 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
   
   const startDate = selectedDate ? startOfWeek(selectedDate, { weekStartsOn: 0 }) : startOfWeek(new Date(), { weekStartsOn: 0 });
-  console.log('Using start date:', startDate);
+  console.log('Using start date:', startDate, 'Formatted:', format(startDate, 'yyyy-MM-dd'));
 
   if (isMasterSchedule) {
     console.log('Fetching master schedule slots...');
-    const { data: slots, error } = await supabase
+    try {
+      const { data: slots, error } = await supabase
+        .from('schedule_slots')
+        .select(`
+          *,
+          shows (
+            id,
+            name,
+            time,
+            date,
+            notes,
+            created_at,
+            slot_id
+          )
+        `)
+        .eq('is_recurring', true)
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching master schedule:', error);
+        throw error;
+      }
+      console.log('Retrieved master schedule slots:', slots);
+      return slots || [];
+    } catch (err) {
+      console.error('Exception in fetching master schedule:', err);
+      return [];
+    }
+  }
+
+  try {
+    // First, get all recurring slots regardless of creation date
+    const { data: recurringSlots, error: recurringError } = await supabase
       .from('schedule_slots')
       .select(`
         *,
@@ -29,147 +61,177 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching master schedule:', error);
-      throw error;
+    if (recurringError) {
+      console.error('Error fetching recurring slots:', recurringError);
+      throw recurringError;
     }
-    console.log('Retrieved master schedule slots:', slots);
-    return slots || [];
-  }
 
-  const { data: allSlots, error } = await supabase
-    .from('schedule_slots')
-    .select(`
-      *,
-      shows (
-        id,
-        name,
-        time,
-        date,
-        notes,
-        created_at,
-        slot_id
-      )
-    `)
-    .or(`is_recurring.eq.false,is_recurring.eq.true`)
-    .order('day_of_week', { ascending: true })
-    .order('start_time', { ascending: true });
+    console.log('Retrieved recurring slots:', recurringSlots);
 
-  if (error) {
-    console.error('Error fetching schedule slots:', error);
-    throw error;
-  }
+    // Then, get all non-recurring slots/modifications for the current week
+    const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+    const formattedEndDate = format(addDays(startDate, 6), 'yyyy-MM-dd');
 
-  console.log('Retrieved all slots:', allSlots);
+    console.log(`Fetching slots for week: ${formattedStartDate} to ${formattedEndDate}`);
 
-  // Check if we have any data
-  if (!allSlots || allSlots.length === 0) {
-    console.log('No slots found in the database');
-    return [];
-  }
+    const { data: weeklyModifications, error: weeklyError } = await supabase
+      .from('schedule_slots')
+      .select(`
+        *,
+        shows (
+          id,
+          name,
+          time,
+          date,
+          notes,
+          created_at,
+          slot_id
+        )
+      `)
+      .eq('is_recurring', false)
+      .gte('created_at', formattedStartDate)
+      .lte('created_at', formattedEndDate + 'T23:59:59')
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
 
-  const processedSlots = allSlots.reduce((acc: ScheduleSlot[], slot) => {
-    if (!slot) {
-      console.log('Encountered undefined slot, skipping');
-      return acc;
+    if (weeklyError) {
+      console.error('Error fetching weekly modifications:', weeklyError);
+      throw weeklyError;
     }
-    
-    const slotDate = addDays(startDate, slot.day_of_week);
-    
-    if (!slot.is_recurring) {
-      // For non-recurring slots, we need to check if they belong to the current week
-      const slotCreationDate = startOfWeek(new Date(slot.created_at), { weekStartsOn: 0 });
-      console.log(`Comparing non-recurring slot creation date: ${format(slotCreationDate, 'yyyy-MM-dd')} with start date: ${format(startDate, 'yyyy-MM-dd')}`);
+
+    console.log('Retrieved weekly modifications:', weeklyModifications);
+
+    // Combine the results
+    const allSlots = [...(recurringSlots || []), ...(weeklyModifications || [])];
+    console.log('Combined slots:', allSlots);
+
+    // Check if we have any data
+    if (!allSlots || allSlots.length === 0) {
+      console.log('No slots found in the database after combining');
+      return [];
+    }
+
+    const processedSlots = allSlots.reduce((acc: ScheduleSlot[], slot) => {
+      if (!slot) {
+        console.log('Encountered undefined slot, skipping');
+        return acc;
+      }
       
-      // Check if this modification belongs to the current week we're viewing
-      if (isSameDay(slotCreationDate, startDate)) {
-        if (!slot.is_deleted) { // Only add non-deleted slots
+      const slotDate = addDays(startDate, slot.day_of_week);
+      
+      if (!slot.is_recurring) {
+        // For non-recurring slots, we need to check if they belong to the current week
+        try {
+          const slotCreationDate = new Date(slot.created_at);
+          const slotWeekStart = startOfWeek(slotCreationDate, { weekStartsOn: 0 });
+          
+          console.log(`Comparing non-recurring slot creation week: ${format(slotWeekStart, 'yyyy-MM-dd')} with current week start: ${format(startDate, 'yyyy-MM-dd')}`);
+          
+          // Check if this modification belongs to the current week we're viewing
+          const isSameWeek = format(slotWeekStart, 'yyyy-MM-dd') === format(startDate, 'yyyy-MM-dd');
+          
+          if (isSameWeek) {
+            if (!slot.is_deleted) { // Only add non-deleted slots
+              console.log(`Adding non-recurring slot to result: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
+              acc.push({
+                ...slot,
+                is_modified: true
+              });
+            } else {
+              console.log(`Skipping deleted slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
+            }
+          } else {
+            console.log(`Skipping non-recurring slot from different week: ${slot.show_name}`);
+          }
+        } catch (e) {
+          console.error('Error processing non-recurring slot date:', e);
+        }
+        return acc;
+      }
+
+      // For recurring slots, check if there's a modification in the current week
+      const weekModification = weeklyModifications?.find(s => 
+        s.day_of_week === slot.day_of_week && 
+        s.start_time === slot.start_time
+      );
+
+      if (weekModification) {
+        console.log(`Found modification for slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}, deleted: ${weekModification.is_deleted}`);
+        
+        // If there's a modification and it's not deleted, add the modified version
+        if (!weekModification.is_deleted) {
+          console.log(`Adding modified slot to result: ${weekModification.show_name}`);
           acc.push({
-            ...slot,
+            ...weekModification,
             is_modified: true
           });
         } else {
-          console.log(`Skipping deleted slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
+          console.log(`Skipping deleted recurring slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
         }
+        // If it's deleted, don't add anything
+        return acc;
       }
-      return acc;
-    }
 
-    // Check for modifications (including deletions) in the current week
-    const weekModification = allSlots.find(s => 
-      !s.is_recurring && 
-      s.day_of_week === slot.day_of_week && 
-      s.start_time === slot.start_time &&
-      isSameDay(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), startDate)
-    );
-
-    if (weekModification) {
-      console.log(`Found modification for slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}, deleted: ${weekModification.is_deleted}`);
-      
-      // If there's a modification and it's not deleted, add the modified version
-      if (!weekModification.is_deleted) {
-        acc.push({
-          ...weekModification,
-          is_modified: true
-        });
-      } else {
-        console.log(`Skipping deleted recurring slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
-      }
-      // If it's deleted, don't add anything
-      return acc;
-    }
-
-    // Add the recurring slot if no modifications exist
-    try {
-      const slotCreatedAt = new Date(slot.created_at);
-      if (!isNaN(slotCreatedAt.getTime()) && isBefore(slotCreatedAt, addDays(startDate, 7))) {
-        acc.push({
-          ...slot,
-          is_modified: false
-        });
-      }
-    } catch (e) {
-      console.error('Error processing slot created_at date:', e);
-      // Still add the slot in case of date parsing issues
+      // No modifications exist for this recurring slot, so add it
+      console.log(`Adding recurring slot to result: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
       acc.push({
         ...slot,
         is_modified: false
       });
+
+      return acc;
+    }, []);
+
+    if (!processedSlots || processedSlots.length === 0) {
+      console.log('No processed slots to display after filtering');
+      return [];
     }
 
-    return acc;
-  }, []);
+    console.log('Processed slots before final mapping:', processedSlots);
 
-  if (!processedSlots || processedSlots.length === 0) {
-    console.log('No processed slots to display after filtering');
-    return [];
-  }
+    const finalSlots = processedSlots.map(slot => {
+      if (!slot.shows) {
+        return {
+          ...slot,
+          shows: [],
+          has_lineup: false
+        };
+      }
 
-  const finalSlots = processedSlots.map(slot => {
-    if (!slot.shows) {
+      const slotDate = addDays(startDate, slot.day_of_week);
+      const formattedSlotDate = format(slotDate, 'yyyy-MM-dd');
+      
+      console.log(`Finding shows for date ${formattedSlotDate} for slot ${slot.show_name}`);
+      
+      const showsInWeek = slot.shows.filter(show => {
+        if (!show || !show.date) {
+          console.log('Show has no date, skipping', show);
+          return false;
+        }
+        const showDate = new Date(show.date);
+        const isValidDate = !isNaN(showDate.getTime());
+        const isSameDate = isValidDate && format(showDate, 'yyyy-MM-dd') === formattedSlotDate;
+        
+        if (isSameDate) {
+          console.log(`Found matching show for ${slot.show_name} on ${formattedSlotDate}:`, show);
+        }
+        
+        return isSameDate;
+      }) || [];
+
       return {
         ...slot,
-        shows: [],
-        has_lineup: false
+        shows: showsInWeek,
+        has_lineup: showsInWeek.length > 0
       };
-    }
+    });
 
-    const slotDate = addDays(startDate, slot.day_of_week);
-    const showsInWeek = slot.shows.filter(show => {
-      if (!show || !show.date) return false;
-      const showDate = new Date(show.date);
-      return !isNaN(showDate.getTime()) && isSameDay(showDate, slotDate);
-    }) || [];
-
-    return {
-      ...slot,
-      shows: showsInWeek,
-      has_lineup: showsInWeek.length > 0
-    };
-  });
-
-  console.log('Final processed slots:', finalSlots);
-  return finalSlots;
+    console.log('Final processed slots:', finalSlots);
+    return finalSlots;
+  } catch (err) {
+    console.error('Exception in getScheduleSlots:', err);
+    return [];
+  }
 };
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
