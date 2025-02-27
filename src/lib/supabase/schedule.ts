@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay } from 'date-fns';
@@ -37,7 +36,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     return slots || [];
   }
 
-  // For weekly schedule, get both recurring and non-recurring slots
   const { data: allSlots, error } = await supabase
     .from('schedule_slots')
     .select(`
@@ -60,11 +58,9 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 
   console.log('Retrieved all slots:', allSlots);
 
-  // Filter and process slots for the selected week
   const processedSlots = allSlots?.reduce((acc: ScheduleSlot[], slot) => {
     const slotDate = addDays(startDate, slot.day_of_week);
     
-    // For non-recurring slots, only include if they match this exact week
     if (!slot.is_recurring) {
       const slotCreationDate = startOfWeek(new Date(slot.created_at), { weekStartsOn: 0 });
       if (isSameDay(slotCreationDate, startDate)) {
@@ -76,8 +72,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       return acc;
     }
 
-    // For recurring slots, include if they were created on or before this week
-    // Unless there's a non-recurring modification for this week
     const nonRecurringVersion = allSlots.find(s => 
       !s.is_recurring && 
       s.day_of_week === slot.day_of_week && 
@@ -99,7 +93,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     return acc;
   }, []);
 
-  // Add shows to slots
   const finalSlots = processedSlots.map(slot => {
     const slotDate = addDays(startDate, slot.day_of_week);
     const showsInWeek = slot.shows?.filter(show => {
@@ -122,7 +115,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
   console.log('Creating schedule slot:', { slot, isMasterSchedule });
   
-  // Check if a slot already exists at this time
   const { data: existingSlots } = await supabase
     .from('schedule_slots')
     .select('*')
@@ -141,7 +133,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     ...slot,
     is_recurring: isMasterSchedule,
     is_modified: !isMasterSchedule,
-    created_at: new Date().toISOString() // Explicitly set creation date
+    created_at: new Date().toISOString()
   };
 
   console.log('Inserting new slot with data:', slotData);
@@ -164,7 +156,6 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
 export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSlot>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
   console.log('Updating schedule slot:', { id, updates, isMasterSchedule });
 
-  // If changing time, check for conflicts
   if (updates.start_time || updates.day_of_week) {
     const { data: existingSlots } = await supabase
       .from('schedule_slots')
@@ -179,7 +170,6 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     }
   }
 
-  // For master schedule updates
   if (isMasterSchedule) {
     const { data, error } = await supabase
       .from('schedule_slots')
@@ -192,26 +182,14 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     return data;
   }
 
-  // For weekly schedule updates - create a new non-recurring slot
-  const { data: originalSlot } = await supabase
-    .from('schedule_slots')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (!originalSlot) throw new Error('Original slot not found');
-
-  // Create a new non-recurring slot for this specific instance
   const { data, error } = await supabase
     .from('schedule_slots')
-    .insert({
-      ...originalSlot,
+    .update({
       ...updates,
-      id: undefined,
       is_recurring: false,
-      is_modified: true,
-      created_at: new Date().toISOString()
+      is_modified: true
     })
+    .eq('id', id)
     .select()
     .single();
 
@@ -219,8 +197,31 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   return data;
 };
 
-export const deleteScheduleSlot = async (id: string): Promise<void> => {
-  console.log('Deleting schedule slot:', id);
+export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean = false): Promise<void> => {
+  console.log('Deleting schedule slot:', { id, isMasterSchedule });
+
+  const { data: slot } = await supabase
+    .from('schedule_slots')
+    .select('is_recurring')
+    .eq('id', id)
+    .single();
+
+  if (slot?.is_recurring && !isMasterSchedule) {
+    const { error: updateError } = await supabase
+      .from('schedule_slots')
+      .update({
+        is_modified: true,
+        is_recurring: false
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating schedule slot:', updateError);
+      throw updateError;
+    }
+    return;
+  }
+
   const { error } = await supabase
     .from('schedule_slots')
     .delete()
