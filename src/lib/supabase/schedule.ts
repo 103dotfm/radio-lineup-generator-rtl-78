@@ -128,6 +128,28 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
   console.log('Creating schedule slot:', { slot, isMasterSchedule });
   
+  // Generate a deterministic ID for weekly slots
+  let slotId: string;
+  if (!isMasterSchedule) {
+    const startDate = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const weekDateCode = format(startDate, 'yyyyMMdd');
+    const timeCode = slot.start_time.replace(':', '');
+    slotId = `mod_${weekDateCode}_${slot.day_of_week}_${timeCode}`;
+    
+    // Check if slot already exists with this ID
+    const { data: existingSlot } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('id', slotId)
+      .maybeSingle();
+
+    if (existingSlot) {
+      console.error('Slot already exists for this time slot in this week');
+      throw new Error('משבצת שידור כבר קיימת בזמן זה');
+    }
+  }
+
+  // Check for time slot conflicts
   const { data: existingSlots } = await supabase
     .from('schedule_slots')
     .select('*')
@@ -144,6 +166,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
 
   const slotData = {
     ...slot,
+    ...(slotId ? { id: slotId } : {}),
     is_recurring: isMasterSchedule,
     is_modified: !isMasterSchedule,
     created_at: new Date().toISOString()
@@ -169,20 +192,6 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
 export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSlot>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
   console.log('Updating schedule slot:', { id, updates, isMasterSchedule });
 
-  if (updates.start_time || updates.day_of_week) {
-    const { data: existingSlots } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('day_of_week', updates.day_of_week || 0)
-      .eq('start_time', updates.start_time || '')
-      .eq('is_recurring', isMasterSchedule)
-      .neq('id', id);
-
-    if (existingSlots && existingSlots.length > 0) {
-      throw new Error('משבצת שידור כבר קיימת בזמן זה');
-    }
-  }
-
   // Get the original slot to check if it's recurring
   const { data: originalSlot } = await supabase
     .from('schedule_slots')
@@ -194,6 +203,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     throw new Error('Slot not found');
   }
 
+  // For master schedule updates
   if (isMasterSchedule) {
     const { data, error } = await supabase
       .from('schedule_slots')
@@ -206,21 +216,21 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     return data;
   }
 
-  // If this is a recurring slot in weekly view
-  if (originalSlot.is_recurring) {
-    const startDate = startOfWeek(new Date(), { weekStartsOn: 0 });
-    
-    // Generate a deterministic ID based on the week start date and time slot
-    const weekDateCode = format(startDate, 'yyyyMMdd');
-    const timeCode = originalSlot.start_time.replace(':', '');
-    const modificationId = `mod_${weekDateCode}_${originalSlot.day_of_week}_${timeCode}`;
+  // Generate deterministic ID for weekly modifications
+  const startDate = startOfWeek(new Date(), { weekStartsOn: 0 });
+  const weekDateCode = format(startDate, 'yyyyMMdd');
+  const timeCode = (updates.start_time || originalSlot.start_time).replace(':', '');
+  const dayOfWeek = updates.day_of_week ?? originalSlot.day_of_week;
+  const modificationId = `mod_${weekDateCode}_${dayOfWeek}_${timeCode}`;
 
+  // If this is a recurring slot being modified in weekly view
+  if (originalSlot.is_recurring) {
     // Check if there's already a modification for this week
     const { data: existingModification } = await supabase
       .from('schedule_slots')
       .select('*')
       .eq('id', modificationId)
-      .single();
+      .maybeSingle();
 
     if (existingModification) {
       // Update existing modification
@@ -249,14 +259,14 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_recurring: false,
         is_modified: true,
         created_at: new Date().toISOString(),
-        shows: undefined // Remove shows from insert as they're handled separately
+        shows: undefined
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // If the original slot had shows, update their slot_id to point to the modification
+    // Update show references to point to the new modification
     if (originalSlot.shows && originalSlot.shows.length > 0) {
       const { error: showUpdateError } = await supabase
         .from('shows')
@@ -270,7 +280,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     return data;
   }
 
-  // If it's already a non-recurring slot, just update it
+  // For non-recurring slots, just update the existing slot
   const { data, error } = await supabase
     .from('schedule_slots')
     .update({
