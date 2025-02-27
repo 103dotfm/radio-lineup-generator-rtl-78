@@ -63,13 +63,19 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     const slotDate = addDays(startDate, slot.day_of_week);
     
     if (!slot.is_recurring) {
+      // For non-recurring slots, we need to check if they belong to the current week
       const slotCreationDate = startOfWeek(new Date(slot.created_at), { weekStartsOn: 0 });
+      console.log(`Comparing non-recurring slot creation date: ${format(slotCreationDate, 'yyyy-MM-dd')} with start date: ${format(startDate, 'yyyy-MM-dd')}`);
+      
+      // Check if this modification belongs to the current week we're viewing
       if (isSameDay(slotCreationDate, startDate)) {
         if (!slot.is_deleted) { // Only add non-deleted slots
           acc.push({
             ...slot,
             is_modified: true
           });
+        } else {
+          console.log(`Skipping deleted slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
         }
       }
       return acc;
@@ -84,12 +90,16 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     );
 
     if (weekModification) {
+      console.log(`Found modification for slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}, deleted: ${weekModification.is_deleted}`);
+      
       // If there's a modification and it's not deleted, add the modified version
       if (!weekModification.is_deleted) {
         acc.push({
           ...weekModification,
           is_modified: true
         });
+      } else {
+        console.log(`Skipping deleted recurring slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
       }
       // If it's deleted, don't add anything
       return acc;
@@ -230,10 +240,10 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   return data;
 };
 
-export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean = false): Promise<void> => {
-  console.log('Deleting schedule slot:', { id, isMasterSchedule });
+export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<void> => {
+  console.log('Deleting schedule slot:', { id, isMasterSchedule, selectedDate });
 
-  // Get the original slot and current week start
+  // Get the original slot
   const { data: originalSlot } = await supabase
     .from('schedule_slots')
     .select('*')
@@ -243,6 +253,13 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
   if (!originalSlot) {
     throw new Error('Slot not found');
   }
+
+  // Calculate the start date of the week we're viewing
+  const currentWeekStart = selectedDate 
+    ? startOfWeek(selectedDate, { weekStartsOn: 0 }) 
+    : startOfWeek(new Date(), { weekStartsOn: 0 });
+  
+  console.log('Current week start:', format(currentWeekStart, 'yyyy-MM-dd'));
 
   // If it's master schedule, perform actual deletion
   if (isMasterSchedule) {
@@ -260,7 +277,24 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
 
   // If it's a recurring slot in weekly view, create a "deleted" instance for the current week
   if (originalSlot.is_recurring) {
-    // Create a new non-recurring slot marked as deleted for this specific week
+    console.log('Creating deletion marker for recurring slot');
+    
+    // Check if a deletion marker for this slot already exists for this week
+    const { data: existingDeletions } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('day_of_week', originalSlot.day_of_week)
+      .eq('start_time', originalSlot.start_time)
+      .eq('is_deleted', true)
+      .eq('is_recurring', false);
+      
+    console.log('Existing deletion markers:', existingDeletions);
+    
+    // If we already have a deletion marker for a different week, we need to 
+    // create a new one specifically for the current week
+    const weekStartString = format(currentWeekStart, 'yyyy-MM-dd');
+    
+    // Create a new deletion marker with the current week's start date
     const { error: insertError } = await supabase
       .from('schedule_slots')
       .insert({
@@ -271,14 +305,18 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         host_name: originalSlot.host_name,
         is_recurring: false,
         is_modified: true,
-        is_deleted: true, // Mark as deleted for this week
-        created_at: new Date().toISOString() // Use current date instead of inheriting from original
+        is_deleted: true,
+        is_prerecorded: originalSlot.is_prerecorded,
+        is_collection: originalSlot.is_collection,
+        // Store the week start date as part of the created_at timestamp
+        created_at: new Date(currentWeekStart).toISOString()
       });
 
     if (insertError) {
       console.error('Error creating deleted slot instance:', insertError);
       throw insertError;
     }
+    console.log('Successfully created deletion marker for week starting:', weekStartString);
     return;
   }
 
