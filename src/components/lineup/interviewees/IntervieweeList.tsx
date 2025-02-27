@@ -12,14 +12,14 @@ interface IntervieweeListProps {
 
 const IntervieweeList = ({ interviewees, onEdit, onDelete }: IntervieweeListProps) => {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1 mt-2 text-right">
       {interviewees.map((interviewee) => (
-        <div key={interviewee.id} className="flex items-center justify-between gap-2 py-1">
-          <span>{interviewee.name}</span>
+        <div key={interviewee.id} className="flex items-center justify-between gap-2 py-1 border-b border-gray-100 last:border-b-0">
           <div className="flex gap-1">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
+              className="h-6 w-6 p-0"
               onClick={() => onEdit(interviewee.id, {
                 name: prompt('שם חדש:', interviewee.name) || interviewee.name,
                 title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
@@ -30,12 +30,14 @@ const IntervieweeList = ({ interviewees, onEdit, onDelete }: IntervieweeListProp
             </Button>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
+              className="h-6 w-6 p-0"
               onClick={() => onDelete(interviewee.id)}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
+          <span className="font-medium">{interviewee.name}</span>
         </div>
       ))}
     </div>
