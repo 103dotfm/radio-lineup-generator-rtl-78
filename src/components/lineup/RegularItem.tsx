@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,9 @@ interface RegularItemProps {
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string, updatedItem: any) => void;
   isAuthenticated: boolean;
+  is_prerecorded?: boolean;
+  is_collection?: boolean;
+  is_modified?: boolean;
 }
 
 const RegularItem = ({
@@ -33,7 +37,10 @@ const RegularItem = ({
   onDelete,
   onDurationChange,
   onEdit,
-  isAuthenticated
+  isAuthenticated,
+  is_prerecorded = false,
+  is_collection = false,
+  is_modified = false
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
@@ -91,8 +98,15 @@ const RegularItem = ({
     onEdit(id, updatedItem);
   };
 
+  const getCellClass = () => {
+    if (is_collection) return 'bg-cell-collection';
+    if (is_prerecorded) return 'bg-cell-prerecorded';
+    if (is_modified) return 'bg-cell-modified';
+    return 'bg-cell-regular';
+  };
+
   return <>
-      <td className="py-2 px-4 border border-black bg-cell-regular w-1/5 relative">
+      <td className={`py-2 px-4 border border-black ${getCellClass()} w-1/5 relative`}>
         <div className="absolute top-2 left-2 flex gap-1 z-10">
           <Button variant="ghost" size="icon" onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}>
             <UserPlus className="h-4 w-4" />
@@ -105,7 +119,9 @@ const RegularItem = ({
               details,
               phone,
               duration,
-              interviewees
+              interviewees,
+              is_prerecorded,
+              is_collection
             });
             setShowEditDialog(true);
           }}>
@@ -128,7 +144,7 @@ const RegularItem = ({
             <IntervieweeForm itemId={id} duration={duration} onAdd={handleAddInterviewee} onClose={() => setShowIntervieweeInput(false)} />
           </div>}
       </td>
-      <td className="py-2 px-4 border border-gray-200 w-1/5">
+      <td className="py-2 px-4 border border-black w-1/5">
         <div className="flex flex-col gap-1">
           <div>{title}</div>
           {interviewees.length > 0 && <div className="space-y-2">
@@ -138,10 +154,10 @@ const RegularItem = ({
             </div>}
         </div>
       </td>
-      <td className="py-2 px-4 border border-gray-200 w-[30%] align-top" dangerouslySetInnerHTML={{
+      <td className="py-2 px-4 border border-black w-[30%] align-top" dangerouslySetInnerHTML={{
       __html: details
     }} />
-      {isAuthenticated && <td className="py-2 px-4 border border-gray-200 w-[10%]">
+      {isAuthenticated && <td className="py-2 px-4 border border-black w-[10%]">
           <div className="flex flex-col gap-1">
             <div>{phone}</div>
             {interviewees.length > 0 && <div className="space-y-2">
@@ -151,26 +167,26 @@ const RegularItem = ({
               </div>}
           </div>
         </td>}
-      <td className="py-2 px-4 border border-gray-200 w-[10%]">
+      <td className="py-2 px-4 border border-black w-[10%]">
         <Input type="number" min="1" value={duration} onChange={e => onDurationChange(id, parseInt(e.target.value) || 5)} className="w-20" />
       </td>
-      <td className="py-2 px-4 border border-gray-200 w-[10%]">
+      <td className="py-2 px-4 border border-black w-[10%]">
         <div className="flex gap-2">
           <Button variant="ghost" size="icon" onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}>
             <UserPlus className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => {
-          console.log('Opening edit dialog for item:', {
-            id,
-            name,
-            title,
-            details,
-            phone,
-            duration,
-            interviewees
-          });
-          setShowEditDialog(true);
-        }}>
+            console.log('Opening edit dialog for item:', {
+              id,
+              name,
+              title,
+              details,
+              phone,
+              duration,
+              interviewees
+            });
+            setShowEditDialog(true);
+          }}>
             <Edit2 className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => onDelete(id)}>
@@ -186,7 +202,9 @@ const RegularItem = ({
       details,
       phone,
       duration,
-      interviewees
+      interviewees,
+      is_prerecorded,
+      is_collection
     }} onSave={updatedItem => {
       const itemWithInterviewees = {
         ...updatedItem,

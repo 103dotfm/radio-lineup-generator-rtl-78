@@ -13,6 +13,23 @@ body {
   background-color: #f8fafc;
 }
 
+/* Cell background colors */
+.bg-cell-regular {
+  background-color: #F2FCE2;  /* Soft green for regular shows */
+}
+
+.bg-cell-modified {
+  background-color: #F97316;  /* Orange for manually edited shows */
+}
+
+.bg-cell-prerecorded {
+  background-color: #0EA5E9;  /* Ocean blue for pre-recorded shows */
+}
+
+.bg-cell-collection {
+  background-color: #ea384c;  /* Red for collection archive */
+}
+
 /* Component styles */
 .lineup-item {
   transition: all 0.2s ease-in-out;
