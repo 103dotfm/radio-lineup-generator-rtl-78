@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
@@ -12,6 +13,35 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   console.log('Fetching data for week:', formattedStartDate, 'to', formattedEndDate);
 
   try {
+    if (isMasterSchedule) {
+      // For master schedule, just get all recurring slots
+      const { data: recurringSlots, error: recurringError } = await supabase
+        .from('schedule_slots')
+        .select(`
+          *,
+          shows (
+            id,
+            name,
+            time,
+            date,
+            notes,
+            created_at,
+            slot_id
+          )
+        `)
+        .eq('is_recurring', true)
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (recurringError) {
+        console.error('Error fetching master schedule:', recurringError);
+        throw recurringError;
+      }
+
+      console.log('Retrieved master schedule slots:', recurringSlots?.length || 0);
+      return recurringSlots || [];
+    }
+
     // First, get all recurring slots
     const { data: recurringSlots, error: recurringError } = await supabase
       .from('schedule_slots')
@@ -36,7 +66,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       throw recurringError;
     }
 
-    console.log('Retrieved recurring slots:', recurringSlots);
+    console.log('Retrieved recurring slots:', recurringSlots?.length || 0);
 
     // Then, get all non-recurring slots/modifications for the current week
     const { data: weeklyModifications, error: weeklyError } = await supabase
@@ -64,28 +94,44 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       throw weeklyError;
     }
 
-    console.log('Retrieved weekly modifications:', weeklyModifications);
+    console.log('Retrieved weekly modifications:', weeklyModifications?.length || 0);
 
     // Combine and process the slots
     const allSlots = [...(recurringSlots || []), ...(weeklyModifications || [])];
-    console.log('Combined all slots:', allSlots);
+    console.log('Combined all slots:', allSlots.length);
+
+    if (allSlots.length === 0) {
+      console.log('No slots found for the selected week');
+      return [];
+    }
 
     const processedSlots = allSlots.reduce((acc: ScheduleSlot[], slot) => {
-      if (!slot) return acc;
+      if (!slot) {
+        console.log('Encountered null slot, skipping');
+        return acc;
+      }
       
       if (!slot.is_recurring) {
         // For non-recurring slots, check if they belong to this week
-        const slotCreationDate = new Date(slot.created_at);
-        const slotWeekStart = startOfWeek(slotCreationDate, { weekStartsOn: 0 });
-        
-        if (format(slotWeekStart, 'yyyy-MM-dd') === formattedStartDate) {
-          if (!slot.is_deleted) {
-            console.log(`Adding non-recurring slot: ${slot.show_name}`);
-            acc.push({
-              ...slot,
-              is_modified: true
-            });
+        try {
+          const slotCreationDate = new Date(slot.created_at);
+          const slotWeekStart = startOfWeek(slotCreationDate, { weekStartsOn: 0 });
+          
+          if (format(slotWeekStart, 'yyyy-MM-dd') === formattedStartDate) {
+            if (!slot.is_deleted) {
+              console.log(`Adding non-recurring slot: ${slot.show_name}`);
+              acc.push({
+                ...slot,
+                is_modified: true
+              });
+            } else {
+              console.log(`Skipping deleted non-recurring slot: ${slot.show_name}`);
+            }
+          } else {
+            console.log(`Skipping non-recurring slot from different week: ${slot.show_name}`);
           }
+        } catch (e) {
+          console.error('Error processing non-recurring slot:', e);
         }
         return acc;
       }
@@ -103,6 +149,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
             ...weekModification,
             is_modified: true
           });
+        } else {
+          console.log(`Skipping deleted recurring slot: ${slot.show_name}`);
         }
       } else {
         console.log(`Adding recurring slot: ${slot.show_name}`);
@@ -114,6 +162,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 
       return acc;
     }, []);
+
+    console.log('Processed slots count:', processedSlots.length);
 
     // Add show information
     const finalSlots = processedSlots.map(slot => {
@@ -133,7 +183,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       };
     });
 
-    console.log('Final processed slots:', finalSlots);
+    console.log('Final processed slots:', finalSlots.length);
     return finalSlots;
   } catch (err) {
     console.error('Error in getScheduleSlots:', err);
