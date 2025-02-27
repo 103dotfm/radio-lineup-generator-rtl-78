@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay } from 'date-fns';
@@ -182,6 +183,17 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     }
   }
 
+  // Get the original slot to check if it's recurring
+  const { data: originalSlot } = await supabase
+    .from('schedule_slots')
+    .select('*, shows(*)')
+    .eq('id', id)
+    .single();
+
+  if (!originalSlot) {
+    throw new Error('Slot not found');
+  }
+
   if (isMasterSchedule) {
     const { data, error } = await supabase
       .from('schedule_slots')
@@ -194,6 +206,54 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     return data;
   }
 
+  // If this is a recurring slot in weekly view
+  if (originalSlot.is_recurring) {
+    // Check if there's already a modification for this week
+    const startDate = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const { data: existingModification } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('day_of_week', originalSlot.day_of_week)
+      .eq('start_time', originalSlot.start_time)
+      .eq('is_recurring', false)
+      .single();
+
+    // If there's already a modification, update it
+    if (existingModification) {
+      const { data, error } = await supabase
+        .from('schedule_slots')
+        .update({
+          ...updates,
+          is_recurring: false,
+          is_modified: true
+        })
+        .eq('id', existingModification.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    // If no modification exists, create one while maintaining the original ID and shows
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .insert({
+        ...originalSlot,
+        ...updates,
+        is_recurring: false,
+        is_modified: true,
+        created_at: new Date().toISOString(),
+        shows: undefined // Remove shows from insert as they're handled separately
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // If it's already a non-recurring slot, just update it
   const { data, error } = await supabase
     .from('schedule_slots')
     .update({
