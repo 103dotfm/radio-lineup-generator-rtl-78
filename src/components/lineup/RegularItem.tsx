@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, UserPlus, FileCheck } from "lucide-react";
+import { Edit2, Trash2, UserPlus } from "lucide-react";
 import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { getInterviewees } from '@/lib/supabase/interviewees';
@@ -83,7 +84,7 @@ const RegularItem = ({
     onEdit(id, updatedItem);
   };
   return <>
-      <td className="py-2 px-4 bg-cell-regular w-1/5 relative">
+      <td className="py-2 px-4 bg-cell-regular w-[8%] relative">
         <div className="absolute top-2 left-2 flex gap-1 z-10">
           
           
@@ -92,7 +93,6 @@ const RegularItem = ({
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-start">
             <div>{displayName}</div>
-            {interviewees.length > 0 && <FileCheck className="h-4 w-4 text-green-600" />}
           </div>
           {interviewees.length > 0 && <IntervieweeList interviewees={interviewees} onEdit={handleEditInterviewee} onDelete={handleDeleteInterviewee} />}
         </div>
@@ -101,7 +101,7 @@ const RegularItem = ({
             <IntervieweeForm itemId={id} duration={duration} onAdd={handleAddInterviewee} onClose={() => setShowIntervieweeInput(false)} />
           </div>}
       </td>
-      <td className="py-2 px-4 border border-gray-200 w-1/5">
+      <td className="py-2 px-4 border border-gray-200 w-[8%]">
         <div className="flex flex-col gap-1">
           <div>{title}</div>
           {interviewees.length > 0 && <div className="space-y-2">
@@ -114,7 +114,7 @@ const RegularItem = ({
       <td className="py-2 px-4 border border-gray-200 w-[30%] align-top" dangerouslySetInnerHTML={{
       __html: details
     }} />
-      {isAuthenticated && <td className="py-2 px-4 border border-gray-200 w-[10%]">
+      {isAuthenticated && <td className="py-2 px-4 border border-gray-200 w-[6%]">
           <div className="flex flex-col gap-1">
             <div>{phone}</div>
             {interviewees.length > 0 && <div className="space-y-2">
@@ -124,7 +124,7 @@ const RegularItem = ({
               </div>}
           </div>
         </td>}
-      <td className="py-2 px-4 border border-gray-200 w-[10%]">
+      <td className="py-2 px-4 border border-gray-200 w-[10%] hidden">
         <Input type="number" min="1" value={duration} onChange={e => onDurationChange(id, parseInt(e.target.value) || 5)} className="w-20" />
       </td>
       <td className="py-2 px-4 border border-gray-200 w-[10%]">
