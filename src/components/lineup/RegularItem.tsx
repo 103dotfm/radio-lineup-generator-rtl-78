@@ -95,15 +95,37 @@ const RegularItem = ({
     <>
       <td className="py-2 px-4 bg-cell-regular relative">
         <div className="flex flex-col gap-1">
-          <div className="flex justify-between items-start">
-            <div>{displayName}</div>
-          </div>
+          <div className="text-right font-medium">{displayName}</div>
           {interviewees.length > 0 && (
-            <IntervieweeList 
-              interviewees={interviewees} 
-              onEdit={handleEditInterviewee} 
-              onDelete={handleDeleteInterviewee} 
-            />
+            <div className="space-y-0.5 mt-2">
+              {interviewees.map((interviewee) => (
+                <div key={interviewee.id} className="flex justify-end items-center gap-1 py-0.5">
+                  <div className="flex gap-1 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => handleEditInterviewee(interviewee.id, {
+                        name: prompt('שם חדש:', interviewee.name) || interviewee.name,
+                        title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
+                        phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
+                      })}
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={() => handleDeleteInterviewee(interviewee.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <span className="text-sm font-medium">{interviewee.name}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
         
@@ -120,11 +142,11 @@ const RegularItem = ({
       </td>
       <td className="py-2 px-4 border border-gray-200">
         <div className="flex flex-col gap-1">
-          <div>{title}</div>
+          <div className="text-right">{title}</div>
           {interviewees.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-0.5 mt-2">
               {interviewees.map(interviewee => (
-                <div key={interviewee.id} className="py-1">
+                <div key={interviewee.id} className="py-0.5 text-right text-sm">
                   {interviewee.title}
                 </div>
               ))}
@@ -136,11 +158,11 @@ const RegularItem = ({
       {isAuthenticated && (
         <td className="py-2 px-4 border border-gray-200">
           <div className="flex flex-col gap-1">
-            <div>{phone}</div>
+            <div className="text-right">{phone}</div>
             {interviewees.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-0.5 mt-2">
                 {interviewees.map(interviewee => (
-                  <div key={interviewee.id} className="py-1">
+                  <div key={interviewee.id} className="py-0.5 text-right text-sm">
                     {interviewee.phone}
                   </div>
                 ))}
