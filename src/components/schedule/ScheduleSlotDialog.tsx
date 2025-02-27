@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 
 interface ScheduleSlotDialogProps {
@@ -46,6 +46,19 @@ export default function ScheduleSlotDialog({
   );
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
+
+  // Update the form when editingSlot changes
+  useEffect(() => {
+    if (editingSlot) {
+      setShowName(editingSlot.show_name || '');
+      setHostName(editingSlot.host_name || '');
+      setStartTime(editingSlot.start_time?.slice(0, 5) || '');
+      setEndTime(editingSlot.end_time?.slice(0, 5) || '');
+      setSelectedDays(editingSlot.day_of_week !== undefined ? [editingSlot.day_of_week] : []);
+      setIsPrerecorded(editingSlot.is_prerecorded || false);
+      setIsCollection(editingSlot.is_collection || false);
+    }
+  }, [editingSlot]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
