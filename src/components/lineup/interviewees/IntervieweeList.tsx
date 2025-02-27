@@ -12,7 +12,7 @@ interface IntervieweeListProps {
 
 const IntervieweeList = ({ interviewees, onEdit, onDelete }: IntervieweeListProps) => {
   return (
-    <div className="space-y-1 mt-2 text-right">
+    <div className="space-y-1 mt-2">
       {interviewees.map((interviewee) => (
         <div key={interviewee.id} className="flex items-center justify-between gap-2 py-1 border-b border-gray-100 last:border-b-0">
           <div className="flex gap-1">
@@ -37,7 +37,7 @@ const IntervieweeList = ({ interviewees, onEdit, onDelete }: IntervieweeListProp
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
-          <span className="font-medium">{interviewee.name}</span>
+          <span className="font-medium text-right">{interviewee.name}</span>
         </div>
       ))}
     </div>
