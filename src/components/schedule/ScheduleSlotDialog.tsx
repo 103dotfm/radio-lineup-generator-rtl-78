@@ -17,6 +17,7 @@ interface ScheduleSlotDialogProps {
   onClose: () => void;
   onSave: (slotData: any) => void;
   editingSlot?: any;
+  isMasterSchedule?: boolean;  // Added this prop to the interface
 }
 
 const weekDays = [
@@ -29,7 +30,13 @@ const weekDays = [
   { id: 6, label: 'שבת' },
 ];
 
-export default function ScheduleSlotDialog({ isOpen, onClose, onSave, editingSlot }: ScheduleSlotDialogProps) {
+export default function ScheduleSlotDialog({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  editingSlot,
+  isMasterSchedule = false  // Added with default value
+}: ScheduleSlotDialogProps) {
   const [showName, setShowName] = useState(editingSlot?.show_name || '');
   const [hostName, setHostName] = useState(editingSlot?.host_name || '');
   const [startTime, setStartTime] = useState(editingSlot?.start_time?.slice(0, 5) || '');
@@ -49,6 +56,7 @@ export default function ScheduleSlotDialog({ isOpen, onClose, onSave, editingSlo
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
         day_of_week: dayOfWeek,
+        is_recurring: isMasterSchedule,  // Use the prop here
       };
       onSave(slotData);
     });
