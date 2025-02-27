@@ -138,19 +138,56 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
   console.log('Creating schedule slot:', { slot, isMasterSchedule });
   
+  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
+  
   // Check for existing slot at this time
   const { data: existingSlots } = await supabase
     .from('schedule_slots')
     .select('*')
     .eq('day_of_week', slot.day_of_week)
-    .eq('start_time', slot.start_time)
-    .eq('is_recurring', isMasterSchedule);
+    .eq('start_time', slot.start_time);
 
   console.log('Existing slots check:', existingSlots);
 
-  if (existingSlots && existingSlots.length > 0) {
-    console.error('Slot conflict found:', existingSlots);
-    throw new Error('משבצת שידור כבר קיימת בזמן זה');
+  // If we're in weekly view mode (not master schedule)
+  if (!isMasterSchedule) {
+    // Check if there's a deletion marker for this slot in the current week
+    const deletionMarker = existingSlots?.find(s => 
+      !s.is_recurring && 
+      s.is_deleted && 
+      isSameDay(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), currentWeekStart)
+    );
+    
+    // If there's a deletion marker, we can add a new slot
+    if (deletionMarker) {
+      console.log('Found deletion marker, allowing new slot creation');
+      
+      // Delete the deletion marker since we're adding a new slot
+      await supabase
+        .from('schedule_slots')
+        .delete()
+        .eq('id', deletionMarker.id);
+    } else {
+      // Check if there's a non-deleted existing slot for this time in this week
+      const existingWeeklySlot = existingSlots?.find(s => 
+        (s.is_recurring || 
+         (isSameDay(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), currentWeekStart))
+        ) && 
+        !s.is_deleted
+      );
+      
+      if (existingWeeklySlot) {
+        console.error('Slot conflict found for this week:', existingWeeklySlot);
+        throw new Error('משבצת שידור כבר קיימת בזמן זה');
+      }
+    }
+  } else {
+    // For master schedule, just check for recurring conflicts
+    const recurringConflict = existingSlots?.find(s => s.is_recurring);
+    if (recurringConflict) {
+      console.error('Recurring slot conflict found:', recurringConflict);
+      throw new Error('משבצת שידור כבר קיימת בזמן זה');
+    }
   }
 
   const slotData = {
