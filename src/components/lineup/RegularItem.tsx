@@ -45,12 +45,19 @@ const RegularItem = ({
     displayHost
   } = getShowDisplay(name, title);
   
-  // Determine min-height based on details length
+  // Determine min-height based on interviewees titles
   const getDetailsMinHeight = () => {
-    const length = details.length;
-    if (length <= 50) return 'min-h-[75px]';
-    if (length <= 80) return 'min-h-[100px]';
-    if (length <= 150) return 'min-h-[125px]';
+    // If no interviewees, use a default min-height
+    if (!interviewees || interviewees.length === 0) {
+      return 'min-h-[75px]';
+    }
+    
+    // Find the longest title among interviewees
+    const longestTitleLength = Math.max(...interviewees.map(i => (i.title || '').length));
+    
+    if (longestTitleLength <= 50) return 'min-h-[75px]';
+    if (longestTitleLength <= 80) return 'min-h-[100px]';
+    if (longestTitleLength <= 150) return 'min-h-[125px]';
     return 'min-h-[150px]';
   };
   
