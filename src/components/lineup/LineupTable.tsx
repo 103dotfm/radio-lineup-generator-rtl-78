@@ -77,7 +77,7 @@ const LineupTable = ({
                   <col className="w-[15%]" />
                   <col className="w-[35%]" />
                   {isAuthenticated && <col className="w-[15%]" />}
-                  {showMinutesLocal && <col className="w-[5%]" />}
+                  {showMinutesLocal && <col className="w-[6%]" />}
                   <col className="w-[10%]" />
                 </colgroup>
                 <thead>
@@ -86,7 +86,7 @@ const LineupTable = ({
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
                     {isAuthenticated && <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
-                    {showMinutesLocal && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-14">דק'</th>}
+                    {showMinutesLocal && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-16">דק'</th>}
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
                   </tr>
                 </thead>

@@ -44,7 +44,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
             {showMinutes && (
-              <th className="py-2 px-4 text-center border border-gray-200 text-base w-10">דק'</th>
+              <th className="py-2 px-4 text-center border border-gray-200 text-base w-16">דק'</th>
             )}
           </tr>
         </thead>
@@ -57,7 +57,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     {item.name}
                   </td>
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-16">
                       {item.duration}
                     </td>
                   )}
@@ -72,13 +72,15 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                   </td>
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-16">
                       {item.duration}
                     </td>
                   )}
                 </tr>
               );
             }
+
+            const intervieweeCount = item.interviewees?.length || 0;
 
             return (
               <>
@@ -90,7 +92,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     {item.title}
                   </td>
                   <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none" 
-                      rowSpan={(item.interviewees?.length || 0) + 1}
+                      rowSpan={intervieweeCount + 1}
                       dangerouslySetInnerHTML={{ __html: item.details }} />
                   {isAuthenticated && (
                     <td className="py-3 px-4 border border-gray-200 text-base">
@@ -98,7 +100,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     </td>
                   )}
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-16"
+                        rowSpan={intervieweeCount + 1}>
                       {item.duration}
                     </td>
                   )}
@@ -116,11 +119,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                         {interviewee.phone}
                       </td>
                     )}
-                    {showMinutes && (
-                      <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
-                        {interviewee.duration || '-'}
-                      </td>
-                    )}
+                    {/* No minutes column for interviewees since it's merged for the entire item */}
                   </tr>
                 ))}
               </>
@@ -133,7 +132,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
                 סה״כ דקות
               </td>
-              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-10">
+              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-16">
                 {calculateTotalMinutes()}
               </td>
             </tr>
