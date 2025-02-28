@@ -7,7 +7,6 @@ import EditItemDialog from './EditItemDialog';
 import { Interviewee } from '@/types/show';
 import { getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
-import IntervieweeList from './interviewees/IntervieweeList';
 import IntervieweeForm from './interviewees/IntervieweeForm';
 import { getShowDisplay } from '@/utils/showDisplay';
 
@@ -22,6 +21,7 @@ interface RegularItemProps {
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string, updatedItem: any) => void;
   isAuthenticated: boolean;
+  showMinutes?: boolean;
 }
 
 const RegularItem = ({
@@ -34,7 +34,8 @@ const RegularItem = ({
   onDelete,
   onDurationChange,
   onEdit,
-  isAuthenticated
+  isAuthenticated,
+  showMinutes = false
 }: RegularItemProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showIntervieweeInput, setShowIntervieweeInput] = useState(false);
@@ -94,40 +95,44 @@ const RegularItem = ({
   return (
     <>
       <td className="py-2 px-4 bg-cell-regular relative">
-        <div className="flex flex-col gap-1">
-          <div className="text-right font-medium">{displayName}</div>
-          {interviewees.length > 0 && (
-            <div className="space-y-0.5 mt-2">
+        <div className="text-right font-medium">{displayName}</div>
+        {interviewees.length > 0 && (
+          <table className="w-full mt-2 border-t border-gray-100">
+            <tbody>
               {interviewees.map((interviewee) => (
-                <div key={interviewee.id} className="flex justify-end items-center gap-1 py-0.5">
-                  <div className="flex gap-1 ml-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0"
-                      onClick={() => handleEditInterviewee(interviewee.id, {
-                        name: prompt('שם חדש:', interviewee.name) || interviewee.name,
-                        title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
-                        phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
-                      })}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0"
-                      onClick={() => handleDeleteInterviewee(interviewee.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <span className="text-sm font-medium">{interviewee.name}</span>
-                </div>
+                <tr key={interviewee.id}>
+                  <td className="py-1 text-right font-medium">
+                    {interviewee.name}
+                  </td>
+                  <td className="py-1">
+                    <div className="flex gap-1 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0"
+                        onClick={() => handleEditInterviewee(interviewee.id, {
+                          name: prompt('שם חדש:', interviewee.name) || interviewee.name,
+                          title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
+                          phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
+                        })}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0"
+                        onClick={() => handleDeleteInterviewee(interviewee.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
               ))}
-            </div>
-          )}
-        </div>
+            </tbody>
+          </table>
+        )}
         
         {showIntervieweeInput && (
           <div className="absolute top-full right-0 mt-2 bg-white shadow-lg rounded-md p-4 border z-10 min-w-[300px]">
@@ -141,45 +146,51 @@ const RegularItem = ({
         )}
       </td>
       <td className="py-2 px-4 border border-gray-200">
-        <div className="flex flex-col gap-1">
-          <div className="text-right">{title}</div>
-          {interviewees.length > 0 && (
-            <div className="space-y-0.5 mt-2">
+        <div className="text-right">{title}</div>
+        {interviewees.length > 0 && (
+          <table className="w-full mt-2 border-t border-gray-100">
+            <tbody>
               {interviewees.map(interviewee => (
-                <div key={interviewee.id} className="py-0.5 text-right text-sm">
-                  {interviewee.title}
-                </div>
+                <tr key={interviewee.id}>
+                  <td className="py-1 text-right">
+                    {interviewee.title}
+                  </td>
+                </tr>
               ))}
-            </div>
-          )}
-        </div>
+            </tbody>
+          </table>
+        )}
       </td>
       <td className="py-2 px-4 border border-gray-200 align-top" dangerouslySetInnerHTML={{ __html: details }} />
       {isAuthenticated && (
         <td className="py-2 px-4 border border-gray-200">
-          <div className="flex flex-col gap-1">
-            <div className="text-right">{phone}</div>
-            {interviewees.length > 0 && (
-              <div className="space-y-0.5 mt-2">
+          <div className="text-right">{phone}</div>
+          {interviewees.length > 0 && (
+            <table className="w-full mt-2 border-t border-gray-100">
+              <tbody>
                 {interviewees.map(interviewee => (
-                  <div key={interviewee.id} className="py-0.5 text-right text-sm">
-                    {interviewee.phone}
-                  </div>
+                  <tr key={interviewee.id}>
+                    <td className="py-1 text-right">
+                      {interviewee.phone}
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            )}
-          </div>
+              </tbody>
+            </table>
+          )}
         </td>
       )}
-      <td className="py-2 px-4 border border-gray-200 hidden">
-        <Input 
-          type="number" 
-          min="1" 
-          value={duration} 
-          onChange={e => onDurationChange(id, parseInt(e.target.value) || 5)} 
-          className="w-20" 
-        />
-      </td>
+      {showMinutes && (
+        <td className="py-2 px-4 border border-gray-200 w-14 text-center">
+          <Input 
+            type="number" 
+            min="1" 
+            value={duration} 
+            onChange={e => onDurationChange(id, parseInt(e.target.value) || 5)} 
+            className="w-14 text-center" 
+          />
+        </td>
+      )}
       <td className="py-2 px-4 border border-gray-200">
         <div className="flex gap-2">
           <Button variant="ghost" size="icon" onClick={() => setShowIntervieweeInput(!showIntervieweeInput)}>

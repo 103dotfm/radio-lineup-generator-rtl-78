@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, GripVertical } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Trash2, GripVertical } from "lucide-react";
 
 interface BreakItemProps {
   id: string;
@@ -12,6 +12,7 @@ interface BreakItemProps {
   onDurationChange: (id: string, duration: number) => void;
   onBreakTextChange: (id: string, text: string) => void;
   isAuthenticated: boolean;
+  showMinutes?: boolean;
 }
 
 const BreakItem = ({
@@ -21,36 +22,38 @@ const BreakItem = ({
   onDelete,
   onDurationChange,
   onBreakTextChange,
-  isAuthenticated
+  isAuthenticated,
+  showMinutes = false,
 }: BreakItemProps) => {
+  const colspan = isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2);
+  
   return (
     <>
-      <td
-        colSpan={isAuthenticated ? 3 : 2}
-        className="py-2 px-4 border border-gray-200 bg-gray-50 align-top"
-      >
+      <td colSpan={colspan} className="py-2 px-4 border border-gray-200 bg-black/10">
         <Input
-          type="text"
           value={name}
           onChange={(e) => onBreakTextChange(id, e.target.value)}
-          className="bg-transparent border-0 focus-visible:ring-0 p-0 text-center font-bold"
+          className="w-full text-center border-0 bg-transparent font-medium text-base"
         />
       </td>
-      {isAuthenticated && (
-        <td className="py-2 px-4 border border-gray-200 bg-gray-50"></td>
+      {showMinutes && (
+        <td className="py-2 px-4 border border-gray-200 bg-black/10 text-center w-14">
+          <Input
+            type="number"
+            min="0"
+            value={duration}
+            onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
+            className="w-14 text-center bg-transparent border-0"
+          />
+        </td>
       )}
-      <td className="py-2 px-4 border border-gray-200 bg-gray-50 hidden">
-        <Input
-          type="number"
-          min="1"
-          value={duration}
-          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 5)}
-          className="w-20"
-        />
-      </td>
-      <td className="py-2 px-4 border border-gray-200 bg-gray-50">
+      <td className="py-2 px-4 border border-gray-200 bg-black/10">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => onDelete(id)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(id)}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
           <div className="cursor-move">

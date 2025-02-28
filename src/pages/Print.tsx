@@ -1,12 +1,15 @@
+
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { getShowWithItems } from '@/lib/supabase/shows';
 import PrintPreview from '@/components/lineup/PrintPreview';
 
 const Print = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [show, setShow] = useState<any>(null);
   const [items, setItems] = useState([]);
+  const showMinutes = searchParams.get('minutes') === 'true';
 
   useEffect(() => {
     const loadShow = async () => {
@@ -38,6 +41,7 @@ const Print = () => {
         showDate={show.date ? new Date(show.date) : undefined}
         items={items}
         editorContent={show.notes || ''}
+        showMinutes={showMinutes}
       />
     </div>
   );
