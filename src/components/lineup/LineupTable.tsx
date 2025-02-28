@@ -78,7 +78,7 @@ const LineupTable = ({
                   <col className="w-[15%]" />
                   <col className="w-[35%]" />
                   {isAuthenticated && <col className="w-[15%]" />}
-                  {showMinutesLocal && <col className="w-[7%]" />}
+                  {showMinutesLocal && <col className="w-[8%]" />}
                   <col className="w-[10%]" />
                 </colgroup>
                 <thead>
