@@ -58,13 +58,14 @@ const LineupTable = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end items-center space-x-2">
+      <div className="flex justify-end items-center space-x-2 bg-slate-100 p-2 rounded">
         <Switch 
           id="show-minutes" 
           checked={showMinutesLocal} 
-          onCheckedChange={handleToggleMinutes} 
+          onCheckedChange={handleToggleMinutes}
+          className="data-[state=checked]:bg-blue-600" 
         />
-        <Label htmlFor="show-minutes" className="mr-2">הצגת זמן בדקות</Label>
+        <Label htmlFor="show-minutes" className="mr-2 font-medium">הצגת זמן בדקות</Label>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
@@ -77,7 +78,7 @@ const LineupTable = ({
                   <col className="w-[15%]" />
                   <col className="w-[35%]" />
                   {isAuthenticated && <col className="w-[15%]" />}
-                  {showMinutesLocal && <col className="w-[6%]" />}
+                  {showMinutesLocal && <col className="w-[7%]" />}
                   <col className="w-[10%]" />
                 </colgroup>
                 <thead>
@@ -86,7 +87,7 @@ const LineupTable = ({
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
                     {isAuthenticated && <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
-                    {showMinutesLocal && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-16">דק'</th>}
+                    {showMinutesLocal && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-20">דק'</th>}
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
                   </tr>
                 </thead>
