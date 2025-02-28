@@ -94,17 +94,18 @@ const RegularItem = ({
 
   return (
     <>
-      <td className="py-2 px-4 bg-cell-regular relative">
+      <td className="py-2 px-4 border border-gray-200">
+        {/* Main item name */}
         <div className="text-right font-medium">{displayName}</div>
+        
+        {/* Interviewees table */}
         {interviewees.length > 0 && (
           <table className="w-full mt-2 border-t border-gray-100">
             <tbody>
               {interviewees.map((interviewee) => (
-                <tr key={interviewee.id}>
-                  <td className="py-1 text-right font-medium">
-                    {interviewee.name}
-                  </td>
-                  <td className="py-1">
+                <tr key={interviewee.id} className="border-t border-gray-100">
+                  <td className="py-1 text-right font-medium">{interviewee.name}</td>
+                  <td className="py-1 w-14">
                     <div className="flex gap-1 justify-end">
                       <Button
                         variant="ghost"
@@ -134,6 +135,7 @@ const RegularItem = ({
           </table>
         )}
         
+        {/* Interviewee input form */}
         {showIntervieweeInput && (
           <div className="absolute top-full right-0 mt-2 bg-white shadow-lg rounded-md p-4 border z-10 min-w-[300px]">
             <IntervieweeForm 
@@ -146,15 +148,16 @@ const RegularItem = ({
         )}
       </td>
       <td className="py-2 px-4 border border-gray-200">
+        {/* Main item title */}
         <div className="text-right">{title}</div>
+        
+        {/* Interviewee titles */}
         {interviewees.length > 0 && (
           <table className="w-full mt-2 border-t border-gray-100">
             <tbody>
               {interviewees.map(interviewee => (
-                <tr key={interviewee.id}>
-                  <td className="py-1 text-right">
-                    {interviewee.title}
-                  </td>
+                <tr key={interviewee.id} className="border-t border-gray-100">
+                  <td className="py-1 text-right">{interviewee.title}</td>
                 </tr>
               ))}
             </tbody>
@@ -164,15 +167,16 @@ const RegularItem = ({
       <td className="py-2 px-4 border border-gray-200 align-top" dangerouslySetInnerHTML={{ __html: details }} />
       {isAuthenticated && (
         <td className="py-2 px-4 border border-gray-200">
+          {/* Main item phone */}
           <div className="text-right">{phone}</div>
+          
+          {/* Interviewee phones */}
           {interviewees.length > 0 && (
             <table className="w-full mt-2 border-t border-gray-100">
               <tbody>
                 {interviewees.map(interviewee => (
-                  <tr key={interviewee.id}>
-                    <td className="py-1 text-right">
-                      {interviewee.phone}
-                    </td>
+                  <tr key={interviewee.id} className="border-t border-gray-100">
+                    <td className="py-1 text-right">{interviewee.phone}</td>
                   </tr>
                 ))}
               </tbody>

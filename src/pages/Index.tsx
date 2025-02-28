@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -209,14 +210,15 @@ const Index = () => {
 
   const handleShare = useCallback(async () => {
     try {
-      const shareUrl = `${window.location.origin}/print/${showId}`;
+      // Include showMinutes parameter in the shared URL
+      const shareUrl = `${window.location.origin}/print/${showId}${showMinutes ? '?minutes=true' : ''}`;
       await navigator.clipboard.writeText(shareUrl);
       toast.success('קישור לליינאפ הועתק ללוח');
     } catch (error) {
       console.error('Error sharing:', error);
       toast.error('שגיאה בשיתוף הליינאפ');
     }
-  }, [showId]);
+  }, [showId, showMinutes]);
 
   const handleBackToDashboard = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -303,6 +305,10 @@ const Index = () => {
     setShowMinutes(show);
   }, []);
 
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -318,7 +324,7 @@ const Index = () => {
           onDateChange={handleDateChange}
           onSave={handleSave}
           onShare={handleShare}
-          onPrint={() => window.print()}
+          onPrint={handlePrint}
           onExportPDF={handleExportPDF}
           onAdd={handleAdd}
           onDelete={handleDelete}
@@ -329,8 +335,8 @@ const Index = () => {
           handleNameLookup={async () => null}
           onBackToDashboard={handleBackToDashboard}
           onDetailsChange={handleDetailsChange}
-          onToggleMinutes={handleToggleMinutes}
           showMinutes={showMinutes}
+          onToggleMinutes={handleToggleMinutes}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,6 +23,8 @@ interface LineupTableProps {
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange: (id: string, details: string) => void;
   onDragEnd: (result: DropResult) => void;
+  showMinutes?: boolean;
+  onToggleMinutes?: (show: boolean) => void;
 }
 
 const LineupTable = ({
@@ -32,10 +34,23 @@ const LineupTable = ({
   onEdit,
   onBreakTextChange,
   onDetailsChange,
-  onDragEnd
+  onDragEnd,
+  showMinutes = false,
+  onToggleMinutes
 }: LineupTableProps) => {
-  const [showMinutes, setShowMinutes] = useState(false);
+  const [showMinutesLocal, setShowMinutesLocal] = useState(showMinutes);
   const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    setShowMinutesLocal(showMinutes);
+  }, [showMinutes]);
+
+  const handleToggleMinutes = (checked: boolean) => {
+    setShowMinutesLocal(checked);
+    if (onToggleMinutes) {
+      onToggleMinutes(checked);
+    }
+  };
 
   const calculateTotalMinutes = () => {
     return items.reduce((total, item) => total + (item.duration || 0), 0);
@@ -46,8 +61,8 @@ const LineupTable = ({
       <div className="flex justify-end items-center space-x-2">
         <Switch 
           id="show-minutes" 
-          checked={showMinutes} 
-          onCheckedChange={setShowMinutes} 
+          checked={showMinutesLocal} 
+          onCheckedChange={handleToggleMinutes} 
         />
         <Label htmlFor="show-minutes" className="mr-2">הצגת זמן בדקות</Label>
       </div>
@@ -58,11 +73,11 @@ const LineupTable = ({
             <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
               <table className="w-full table-fixed border-collapse">
                 <colgroup>
-                  <col className="w-[8%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[30%]" />
-                  {isAuthenticated && <col className="w-[6%]" />}
-                  {showMinutes && <col className="w-[5%]" />}
+                  <col className="w-[20%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[35%]" />
+                  {isAuthenticated && <col className="w-[15%]" />}
+                  {showMinutesLocal && <col className="w-[5%]" />}
                   <col className="w-[10%]" />
                 </colgroup>
                 <thead>
@@ -71,7 +86,7 @@ const LineupTable = ({
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
                     {isAuthenticated && <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
-                    {showMinutes && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-14">דק'</th>}
+                    {showMinutesLocal && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-14">דק'</th>}
                     <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
                   </tr>
                 </thead>
@@ -86,16 +101,16 @@ const LineupTable = ({
                       onEdit={onEdit} 
                       onBreakTextChange={onBreakTextChange} 
                       onDetailsChange={onDetailsChange}
-                      showMinutes={showMinutes}
+                      showMinutes={showMinutesLocal}
                     />
                   ))}
                   {provided.placeholder}
                 </tbody>
-                {showMinutes && (
+                {showMinutesLocal && (
                   <tfoot>
                     <tr>
                       <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
-                        סה״כ
+                        סה״כ דקות
                       </td>
                       <td className="py-2 px-4 text-center font-bold border border-gray-200">
                         {calculateTotalMinutes()}

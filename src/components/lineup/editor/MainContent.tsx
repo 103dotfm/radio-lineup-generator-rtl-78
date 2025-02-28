@@ -93,6 +93,8 @@ const MainContent = memo(({
           onBreakTextChange={onBreakTextChange}
           onDetailsChange={onDetailsChange}
           onDragEnd={onDragEnd}
+          showMinutes={showMinutes}
+          onToggleMinutes={onToggleMinutes}
         />
       </div>
     </main>
