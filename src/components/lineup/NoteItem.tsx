@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor, EditorContent } from '@tiptap/react';
@@ -26,7 +25,7 @@ const NoteItem = ({
   showMinutes = false,
 }: NoteItemProps) => {
   // When minutes are not showing, we want the editor to span all columns except the actions column
-  const mainColspan = isAuthenticated ? 3 : 2; // name, title, details (and phone if authenticated)
+  const mainColspan = 4;  // This is what we need to change to 4
   const actionsColspan = 1;
   
   return (
@@ -34,7 +33,7 @@ const NoteItem = ({
       {showMinutes ? (
         // With minutes column visible
         <>
-          <td colSpan={mainColspan} className="py-2 px-4 border border-gray-200">
+          <td colSpan="4" className="py-2 px-4 border border-gray-200">
             {editor?.isEditable ? (
               <div className="prose prose-sm max-w-none text-center">
                 {editor && <EditorContent editor={editor} />}
@@ -70,7 +69,7 @@ const NoteItem = ({
       ) : (
         // Without minutes column
         <>
-          <td colSpan={mainColspan} className="py-2 px-4 border border-gray-200 text-center">
+          <td colSpan="4" className="py-2 px-4 border border-gray-200 text-center">
             {editor?.isEditable ? (
               <div className="prose prose-sm max-w-none text-center">
                 {editor && <EditorContent editor={editor} />}

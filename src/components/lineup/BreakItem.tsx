@@ -34,7 +34,7 @@ const BreakItem = ({
       {showMinutes ? (
         // With minutes column visible
         <>
-          <td colSpan={mainColspan} className="py-2 px-4 border border-gray-200 bg-black/10">
+          <td colSpan="4" className="py-2 px-4 border border-gray-200 bg-black/10">
             <Input
               value={name}
               onChange={(e) => onBreakTextChange(id, e.target.value)}
@@ -68,7 +68,7 @@ const BreakItem = ({
       ) : (
         // Without minutes column
         <>
-          <td colSpan={mainColspan} className="py-2 px-4 border border-gray-200 bg-black/10 text-center">
+          <td colSpan="4"className="py-2 px-4 border border-gray-200 bg-black/10 text-center">
             <Input
               value={name}
               onChange={(e) => onBreakTextChange(id, e.target.value)}
