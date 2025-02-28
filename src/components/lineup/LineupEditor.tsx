@@ -28,8 +28,6 @@ interface LineupEditorProps {
   handleNameLookup: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
   onDetailsChange: (id: string, details: string) => void;
-  showMinutes?: boolean;
-  onToggleMinutes?: (show: boolean) => void;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -56,8 +54,6 @@ const LineupEditor = memo(({
   handleNameLookup,
   onBackToDashboard,
   onDetailsChange,
-  showMinutes,
-  onToggleMinutes,
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden lineup-editor">
@@ -90,8 +86,6 @@ const LineupEditor = memo(({
         handleNameLookup={handleNameLookup}
         onBackToDashboard={onBackToDashboard}
         onDetailsChange={onDetailsChange}
-        showMinutes={showMinutes}
-        onToggleMinutes={onToggleMinutes}
       />
 
       <FooterSection />
