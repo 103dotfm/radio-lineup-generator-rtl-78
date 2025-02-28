@@ -12,10 +12,15 @@ interface PrintPreviewProps {
     interviewees?: Interviewee[];
   }>;
   editorContent: string;
+  showMinutes?: boolean;
 }
 
-const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: PrintPreviewProps) => {
+const PrintPreview = ({ showName, showTime, showDate, items, editorContent, showMinutes = false }: PrintPreviewProps) => {
   const { isAuthenticated } = useAuth();
+
+  const calculateTotalMinutes = () => {
+    return items.reduce((total, item) => total + (item.duration || 0), 0);
+  };
 
   return (
     <div className="print-content bg-white p-4">
@@ -38,6 +43,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             {isAuthenticated && (
               <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
+            {showMinutes && (
+              <th className="py-2 px-4 text-center border border-gray-200 text-base w-10">דק'</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -45,9 +53,14 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             if (item.is_break) {
               return (
                 <tr key={item.id} className="breakRow bg-black/10">
-                  <td colSpan={isAuthenticated ? 4 : 3} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
+                  <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
                     {item.name}
                   </td>
+                  {showMinutes && (
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                      {item.duration}
+                    </td>
+                  )}
                 </tr>
               );
             }
@@ -55,9 +68,14 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
             if (item.is_note) {
               return (
                 <tr key={item.id} className="noteRow">
-                  <td colSpan={isAuthenticated ? 4 : 3} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
+                  <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
                     <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                   </td>
+                  {showMinutes && (
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                      {item.duration}
+                    </td>
+                  )}
                 </tr>
               );
             }
@@ -79,6 +97,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                       {item.phone}
                     </td>
                   )}
+                  {showMinutes && (
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                      {item.duration}
+                    </td>
+                  )}
                 </tr>
                 {item.interviewees?.map((interviewee) => (
                   <tr key={interviewee.id}>
@@ -93,12 +116,29 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent }: Pr
                         {interviewee.phone}
                       </td>
                     )}
+                    {showMinutes && (
+                      <td className="py-3 px-4 text-center border border-gray-200 text-base w-10">
+                        {interviewee.duration || '-'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </>
             );
           })}
         </tbody>
+        {showMinutes && (
+          <tfoot>
+            <tr>
+              <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
+                סה״כ דקות
+              </td>
+              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-10">
+                {calculateTotalMinutes()}
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </table>
 
       {editorContent && (

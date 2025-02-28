@@ -29,6 +29,8 @@ interface MainContentProps {
   handleNameLookup: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
   onDetailsChange: (id: string, details: string) => void;
+  showMinutes?: boolean;
+  onToggleMinutes?: (show: boolean) => void;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -55,6 +57,8 @@ const MainContent = memo(({
   handleNameLookup,
   onBackToDashboard,
   onDetailsChange,
+  showMinutes,
+  onToggleMinutes
 }: MainContentProps) => {
   return (
     <main className="space-y-8">

@@ -13,6 +13,7 @@ interface NoteItemProps {
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string, updatedItem: any) => void;
   isAuthenticated: boolean;
+  showMinutes?: boolean;
 }
 
 const NoteItem = ({
@@ -22,10 +23,13 @@ const NoteItem = ({
   onDelete,
   onDurationChange,
   isAuthenticated,
+  showMinutes = false,
 }: NoteItemProps) => {
+  const colspan = isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2);
+  
   return (
     <>
-      <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 border border-gray-200">
+      <td colSpan={colspan} className="py-2 px-4 border border-gray-200">
         {editor?.isEditable ? (
           <div className="prose prose-sm max-w-none text-center">
             {editor && <EditorContent editor={editor} />}
@@ -34,15 +38,17 @@ const NoteItem = ({
           <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
         )}
       </td>
-      <td className="py-2 px-4 border border-gray-200 hidden">
-        <Input
-          type="number"
-          min="0"
-          value={duration}
-          onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
-          className="w-20"
-        />
-      </td>
+      {showMinutes && (
+        <td className="py-2 px-4 border border-gray-200 text-center w-14">
+          <Input
+            type="number"
+            min="0"
+            value={duration}
+            onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
+            className="w-14 text-center"
+          />
+        </td>
+      )}
       <td className="py-2 px-4 border border-gray-200">
         <div className="flex items-center gap-2">
           <Button

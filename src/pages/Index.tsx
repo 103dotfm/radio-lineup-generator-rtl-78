@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -25,6 +24,7 @@ const Index = () => {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [initialState, setInitialState] = useState(null);
+  const [showMinutes, setShowMinutes] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const isNewLineup = !showId;
 
@@ -40,15 +40,12 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
-  // Initial setup effect for new shows ONLY
   useEffect(() => {
     if (isNewLineup && state) {
-      // Generate show name ONLY for new lineups
       let displayName;
       if (state.generatedShowName) {
         displayName = state.generatedShowName;
       } else {
-        // Fallback generation if somehow we don't have a pre-generated name
         displayName = state.showName === state.hostName
           ? state.hostName
           : `${state.showName} עם ${state.hostName}`;
@@ -71,7 +68,6 @@ const Index = () => {
     }
   }, [isNewLineup, state]);
 
-  // Effect for loading existing shows - never overwrite form values for existing shows
   useEffect(() => {
     const loadShow = async () => {
       if (showId) {
@@ -113,14 +109,12 @@ const Index = () => {
     loadShow();
   }, [showId, editor, navigate]);
 
-  // Remove the effect that was using state directly to prevent overwriting
   useEffect(() => {
     if (state && isNewLineup) {
       setHasUnsavedChanges(false);
     }
   }, [state, isNewLineup]);
 
-  // Use useCallback for all handler functions to prevent unnecessary re-renders
   const handleEdit = useCallback(async (id: string, updatedItem: any) => {
     setItems(prevItems => 
       prevItems.map(item => 
@@ -305,6 +299,10 @@ const Index = () => {
     setHasUnsavedChanges(true);
   }, [items]);
 
+  const handleToggleMinutes = useCallback((show: boolean) => {
+    setShowMinutes(show);
+  }, []);
+
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -331,6 +329,8 @@ const Index = () => {
           handleNameLookup={async () => null}
           onBackToDashboard={handleBackToDashboard}
           onDetailsChange={handleDetailsChange}
+          onToggleMinutes={handleToggleMinutes}
+          showMinutes={showMinutes}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">
@@ -340,6 +340,7 @@ const Index = () => {
             showDate={showDate}
             items={items}
             editorContent={editor?.getHTML() || ''}
+            showMinutes={showMinutes}
           />
         </div>
       </div>

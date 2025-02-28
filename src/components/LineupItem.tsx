@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +23,7 @@ interface LineupItemProps {
   onEdit: (id: string, updatedItem: any) => Promise<void>;
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange?: (id: string, details: string) => void;
+  showMinutes?: boolean;
 }
 
 const LineupItem = ({
@@ -38,7 +40,8 @@ const LineupItem = ({
   onDurationChange,
   onEdit,
   onBreakTextChange,
-  onDetailsChange
+  onDetailsChange,
+  showMinutes = false
 }: LineupItemProps) => {
   const { isAuthenticated } = useAuth();
 
@@ -81,6 +84,7 @@ const LineupItem = ({
               onDurationChange={onDurationChange}
               onBreakTextChange={onBreakTextChange}
               isAuthenticated={isAuthenticated}
+              showMinutes={showMinutes}
             />
           ) : is_note ? (
             <NoteItem
@@ -91,6 +95,7 @@ const LineupItem = ({
               onDurationChange={onDurationChange}
               onEdit={onEdit}
               isAuthenticated={isAuthenticated}
+              showMinutes={showMinutes}
             />
           ) : (
             <RegularItem
@@ -104,6 +109,7 @@ const LineupItem = ({
               onDurationChange={onDurationChange}
               onEdit={onEdit}
               isAuthenticated={isAuthenticated}
+              showMinutes={showMinutes}
             />
           )}
         </tr>
