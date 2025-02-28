@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
 import { useAuth } from '../../contexts/AuthContext';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-
 interface LineupTableProps {
   items: Array<{
     id: string;
@@ -26,7 +24,6 @@ interface LineupTableProps {
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
 }
-
 const LineupTable = ({
   items,
   onDelete,
@@ -39,39 +36,30 @@ const LineupTable = ({
   onToggleMinutes
 }: LineupTableProps) => {
   const [showMinutesLocal, setShowMinutesLocal] = useState(showMinutes);
-  const { isAuthenticated } = useAuth();
-
+  const {
+    isAuthenticated
+  } = useAuth();
   useEffect(() => {
     setShowMinutesLocal(showMinutes);
   }, [showMinutes]);
-
   const handleToggleMinutes = (checked: boolean) => {
     setShowMinutesLocal(checked);
     if (onToggleMinutes) {
       onToggleMinutes(checked);
     }
   };
-
   const calculateTotalMinutes = () => {
     return items.reduce((total, item) => total + (item.duration || 0), 0);
   };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end items-center space-x-2 bg-slate-100 p-2 rounded">
-        <Switch 
-          id="show-minutes" 
-          checked={showMinutesLocal} 
-          onCheckedChange={handleToggleMinutes}
-          className="data-[state=checked]:bg-blue-600" 
-        />
+  return <div className="space-y-4">
+      <div className="flex justify-end items-center space-x-2 p-2 rounded">
+        <Switch id="show-minutes" checked={showMinutesLocal} onCheckedChange={handleToggleMinutes} className="bg-emerald-400 hover:bg-emerald-300" />
         <Label htmlFor="show-minutes" className="mr-2 font-medium">הצגת זמן בדקות</Label>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="lineup">
-          {provided => (
-            <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
+          {provided => <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
               <table className="w-full table-fixed border-collapse">
                 <colgroup>
                   <col className="w-[20%]" />
@@ -92,23 +80,10 @@ const LineupTable = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, index) => (
-                    <LineupItem 
-                      key={item.id} 
-                      {...item} 
-                      index={index} 
-                      onDelete={onDelete} 
-                      onDurationChange={onDurationChange} 
-                      onEdit={onEdit} 
-                      onBreakTextChange={onBreakTextChange} 
-                      onDetailsChange={onDetailsChange}
-                      showMinutes={showMinutesLocal}
-                    />
-                  ))}
+                  {items.map((item, index) => <LineupItem key={item.id} {...item} index={index} onDelete={onDelete} onDurationChange={onDurationChange} onEdit={onEdit} onBreakTextChange={onBreakTextChange} onDetailsChange={onDetailsChange} showMinutes={showMinutesLocal} />)}
                   {provided.placeholder}
                 </tbody>
-                {showMinutesLocal && (
-                  <tfoot>
+                {showMinutesLocal && <tfoot>
                     <tr>
                       <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
                         סה״כ דקות
@@ -118,15 +93,11 @@ const LineupTable = ({
                       </td>
                       <td className="py-2 px-4 border border-gray-200"></td>
                     </tr>
-                  </tfoot>
-                )}
+                  </tfoot>}
               </table>
-            </div>
-          )}
+            </div>}
         </Droppable>
       </DragDropContext>
-    </div>
-  );
+    </div>;
 };
-
 export default LineupTable;
