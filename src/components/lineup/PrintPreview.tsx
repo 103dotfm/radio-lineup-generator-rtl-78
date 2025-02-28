@@ -44,7 +44,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
             {showMinutes && (
-              <th className="py-2 px-4 text-center border border-gray-200 text-base w-16">דק'</th>
+              <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
             )}
           </tr>
         </thead>
@@ -57,7 +57,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     {item.name}
                   </td>
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-16">
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
                       {item.duration}
                     </td>
                   )}
@@ -72,7 +72,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                   </td>
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-16">
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
                       {item.duration}
                     </td>
                   )}
@@ -83,8 +83,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
             const intervieweeCount = item.interviewees?.length || 0;
 
             return (
-              <>
-                <tr key={item.id}>
+              <React.Fragment key={item.id}>
+                <tr>
                   <td className="py-3 px-4 border border-gray-200 font-medium text-base">
                     {item.name}
                   </td>
@@ -100,7 +100,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     </td>
                   )}
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-16"
+                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-20"
                         rowSpan={intervieweeCount + 1}>
                       {item.duration}
                     </td>
@@ -122,7 +122,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     {/* No minutes column for interviewees since it's merged for the entire item */}
                   </tr>
                 ))}
-              </>
+              </React.Fragment>
             );
           })}
         </tbody>
@@ -132,7 +132,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
                 סה״כ דקות
               </td>
-              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-16">
+              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
                 {calculateTotalMinutes()}
               </td>
             </tr>
