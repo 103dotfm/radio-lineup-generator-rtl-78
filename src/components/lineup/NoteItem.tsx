@@ -26,6 +26,7 @@ const NoteItem = ({
   showMinutes = false,
 }: NoteItemProps) => {
   const colspan = isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2);
+  const actionsColspan = 1;
   
   return (
     <>
@@ -39,17 +40,17 @@ const NoteItem = ({
         )}
       </td>
       {showMinutes && (
-        <td className="py-2 px-4 border border-gray-200 text-center w-16">
+        <td className="py-2 px-4 border border-gray-200 text-center w-20">
           <Input
             type="number"
             min="0"
             value={duration}
             onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
-            className="w-16 text-center mx-auto"
+            className="w-20 text-center mx-auto"
           />
         </td>
       )}
-      <td className="py-2 px-4 border border-gray-200">
+      <td className="py-2 px-4 border border-gray-200" colSpan={actionsColspan}>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

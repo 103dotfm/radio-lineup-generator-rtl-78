@@ -44,6 +44,17 @@ const RegularItem = ({
     displayName,
     displayHost
   } = getShowDisplay(name, title);
+  
+  // Determine min-height based on details length
+  const getDetailsMinHeight = () => {
+    const length = details.length;
+    if (length <= 50) return 'min-h-[75px]';
+    if (length <= 80) return 'min-h-[100px]';
+    if (length <= 150) return 'min-h-[125px]';
+    return 'min-h-[150px]';
+  };
+  
+  const minHeightClass = getDetailsMinHeight();
 
   useEffect(() => {
     loadInterviewees();
@@ -94,46 +105,48 @@ const RegularItem = ({
 
   return (
     <>
-      <td className="py-2 px-4 border border-gray-200">
+      <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>
         {/* Main item name */}
-        <div className="text-right font-medium">{displayName}</div>
-        
-        {/* Interviewees table */}
-        {interviewees.length > 0 && (
-          <table className="w-full mt-2 border-t border-gray-100">
-            <tbody>
-              {interviewees.map((interviewee) => (
-                <tr key={interviewee.id} className="border-t border-gray-100">
-                  <td className="py-1 text-right font-medium">{interviewee.name}</td>
-                  <td className="py-1 w-14">
-                    <div className="flex gap-1 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0"
-                        onClick={() => handleEditInterviewee(interviewee.id, {
-                          name: prompt('שם חדש:', interviewee.name) || interviewee.name,
-                          title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
-                          phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
-                        })}
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-5 w-5 p-0"
-                        onClick={() => handleDeleteInterviewee(interviewee.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <div className="text-right font-medium h-full flex flex-col">
+          <div className="flex-grow">{displayName}</div>
+          
+          {/* Interviewees table */}
+          {interviewees.length > 0 && (
+            <table className="w-full mt-2 border-t border-gray-100">
+              <tbody>
+                {interviewees.map((interviewee) => (
+                  <tr key={interviewee.id} className="border-t border-gray-100">
+                    <td className="py-1 text-right font-medium">{interviewee.name}</td>
+                    <td className="py-1 w-14">
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0"
+                          onClick={() => handleEditInterviewee(interviewee.id, {
+                            name: prompt('שם חדש:', interviewee.name) || interviewee.name,
+                            title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
+                            phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
+                          })}
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0"
+                          onClick={() => handleDeleteInterviewee(interviewee.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
         
         {/* Interviewee input form */}
         {showIntervieweeInput && (
@@ -147,51 +160,55 @@ const RegularItem = ({
           </div>
         )}
       </td>
-      <td className="py-2 px-4 border border-gray-200">
+      <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>
         {/* Main item title */}
-        <div className="text-right">{title}</div>
-        
-        {/* Interviewee titles */}
-        {interviewees.length > 0 && (
-          <table className="w-full mt-2 border-t border-gray-100">
-            <tbody>
-              {interviewees.map(interviewee => (
-                <tr key={interviewee.id} className="border-t border-gray-100">
-                  <td className="py-1 text-right">{interviewee.title}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </td>
-      <td className="py-2 px-4 border border-gray-200 align-top" dangerouslySetInnerHTML={{ __html: details }} />
-      {isAuthenticated && (
-        <td className="py-2 px-4 border border-gray-200">
-          {/* Main item phone */}
-          <div className="text-right">{phone}</div>
+        <div className="text-right h-full flex flex-col">
+          <div className="flex-grow">{title}</div>
           
-          {/* Interviewee phones */}
+          {/* Interviewee titles */}
           {interviewees.length > 0 && (
             <table className="w-full mt-2 border-t border-gray-100">
               <tbody>
                 {interviewees.map(interviewee => (
                   <tr key={interviewee.id} className="border-t border-gray-100">
-                    <td className="py-1 text-right">{interviewee.phone}</td>
+                    <td className="py-1 text-right">{interviewee.title}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+        </div>
+      </td>
+      <td className={`py-2 px-4 border border-gray-200 align-top ${minHeightClass}`} dangerouslySetInnerHTML={{ __html: details }} />
+      {isAuthenticated && (
+        <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>
+          {/* Main item phone */}
+          <div className="text-right h-full flex flex-col">
+            <div className="flex-grow">{phone}</div>
+            
+            {/* Interviewee phones */}
+            {interviewees.length > 0 && (
+              <table className="w-full mt-2 border-t border-gray-100">
+                <tbody>
+                  {interviewees.map(interviewee => (
+                    <tr key={interviewee.id} className="border-t border-gray-100">
+                      <td className="py-1 text-right">{interviewee.phone}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </td>
       )}
       {showMinutes && (
-        <td className="py-2 px-4 border border-gray-200 w-16 text-center">
+        <td className="py-2 px-4 border border-gray-200 w-20 text-center">
           <Input 
             type="number" 
             min="1" 
             value={duration} 
             onChange={e => onDurationChange(id, parseInt(e.target.value) || 5)} 
-            className="w-16 text-center mx-auto" 
+            className="w-20 text-center mx-auto" 
           />
         </td>
       )}
