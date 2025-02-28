@@ -185,13 +185,13 @@ const RegularItem = ({
         </td>
       )}
       {showMinutes && (
-        <td className="py-2 px-4 border border-gray-200 w-14 text-center">
+        <td className="py-2 px-4 border border-gray-200 w-16 text-center">
           <Input 
             type="number" 
             min="1" 
             value={duration} 
             onChange={e => onDurationChange(id, parseInt(e.target.value) || 5)} 
-            className="w-14 text-center" 
+            className="w-16 text-center mx-auto" 
           />
         </td>
       )}

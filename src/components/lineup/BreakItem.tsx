@@ -37,13 +37,13 @@ const BreakItem = ({
         />
       </td>
       {showMinutes && (
-        <td className="py-2 px-4 border border-gray-200 bg-black/10 text-center w-14">
+        <td className="py-2 px-4 border border-gray-200 bg-black/10 text-center w-16">
           <Input
             type="number"
             min="0"
             value={duration}
             onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
-            className="w-14 text-center bg-transparent border-0"
+            className="w-16 text-center bg-transparent border-0 mx-auto"
           />
         </td>
       )}

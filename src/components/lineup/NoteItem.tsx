@@ -39,13 +39,13 @@ const NoteItem = ({
         )}
       </td>
       {showMinutes && (
-        <td className="py-2 px-4 border border-gray-200 text-center w-14">
+        <td className="py-2 px-4 border border-gray-200 text-center w-16">
           <Input
             type="number"
             min="0"
             value={duration}
             onChange={(e) => onDurationChange(id, parseInt(e.target.value) || 0)}
-            className="w-14 text-center"
+            className="w-16 text-center mx-auto"
           />
         </td>
       )}
