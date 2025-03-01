@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -210,7 +209,6 @@ const Index = () => {
 
   const handleShare = useCallback(async () => {
     try {
-      // Include showMinutes parameter in the shared URL
       const shareUrl = `${window.location.origin}/print/${showId}${showMinutes ? '?minutes=true' : ''}`;
       await navigator.clipboard.writeText(shareUrl);
       toast.success('קישור לליינאפ הועתק ללוח');
@@ -309,6 +307,23 @@ const Index = () => {
     window.print();
   }, []);
 
+  const handleAddDivider = useCallback(() => {
+    const newDivider = {
+      id: crypto.randomUUID(),
+      name: "שעה שנייה",
+      position: items.length,
+      is_divider: true,
+      duration: 0,
+      details: '',
+      title: '',
+      phone: ''
+    };
+    
+    setItems([...items, newDivider]);
+    setHasUnsavedChanges(true);
+    toast.success('הפרדה נוספה בהצלחה');
+  }, [items]);
+
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -337,6 +352,7 @@ const Index = () => {
           onDetailsChange={handleDetailsChange}
           showMinutes={showMinutes}
           onToggleMinutes={handleToggleMinutes}
+          onDividerAdd={handleAddDivider}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">

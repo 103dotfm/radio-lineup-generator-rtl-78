@@ -31,6 +31,7 @@ interface MainContentProps {
   onDetailsChange: (id: string, details: string) => void;
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
+  onDividerAdd?: () => void;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -58,7 +59,8 @@ const MainContent = memo(({
   onBackToDashboard,
   onDetailsChange,
   showMinutes,
-  onToggleMinutes
+  onToggleMinutes,
+  onDividerAdd
 }: MainContentProps) => {
   return (
     <main className="space-y-8">
@@ -83,6 +85,9 @@ const MainContent = memo(({
           onNameChange={handleNameLookup}
           onBackToDashboard={onBackToDashboard}
           editingItem={editingItem}
+          onBreakAdd={() => {}} // This is handled elsewhere
+          onNoteAdd={() => {}}  // This is handled elsewhere
+          onDividerAdd={onDividerAdd}
         />
 
         <LineupTable

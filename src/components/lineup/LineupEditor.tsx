@@ -30,6 +30,7 @@ interface LineupEditorProps {
   onDetailsChange: (id: string, details: string) => void;
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
+  onDividerAdd?: () => void;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -58,6 +59,7 @@ const LineupEditor = memo(({
   onDetailsChange,
   showMinutes,
   onToggleMinutes,
+  onDividerAdd,
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden lineup-editor">
@@ -92,6 +94,7 @@ const LineupEditor = memo(({
         onDetailsChange={onDetailsChange}
         showMinutes={showMinutes}
         onToggleMinutes={onToggleMinutes}
+        onDividerAdd={onDividerAdd}
       />
 
       <FooterSection />

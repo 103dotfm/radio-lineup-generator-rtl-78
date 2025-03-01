@@ -22,6 +22,21 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
     return items.reduce((total, item) => total + (item.duration || 0), 0);
   };
 
+  // Group items by dividers - each divider starts a new group
+  const groupedItems = items.reduce((groups, item) => {
+    if (item.is_divider) {
+      // Start a new group with the divider
+      groups.push([item]);
+    } else if (groups.length === 0) {
+      // First group if no dividers yet
+      groups.push([item]);
+    } else {
+      // Add to current group
+      groups[groups.length - 1].push(item);
+    }
+    return groups;
+  }, [] as Array<Array<ShowItem & { interviewees?: Interviewee[] }>>);
+
   return (
     <div className="print-content bg-white p-4">
       <div className="flex flex-col items-center mb-4">
@@ -34,111 +49,125 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
         </div>
       </div>
 
-      <table className="w-full border-collapse border border-gray-200">
-        <thead>
-          <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
-            {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
-            )}
-            {showMinutes && (
-              <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => {
-            if (item.is_break) {
-              return (
-                <tr key={item.id} className="breakRow bg-black/10">
-                  <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
-                    {item.name}
-                  </td>
-                  {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
-                      {item.duration}
-                    </td>
-                  )}
-                </tr>
-              );
-            }
-            
-            if (item.is_note) {
-              return (
-                <tr key={item.id} className="noteRow">
-                  <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
-                    <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
-                  </td>
-                  {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
-                      {item.duration}
-                    </td>
-                  )}
-                </tr>
-              );
-            }
+      {groupedItems.map((group, groupIndex) => {
+        // Check if the first item in this group is a divider
+        const startsWithDivider = group[0]?.is_divider;
 
-            const intervieweeCount = item.interviewees?.length || 0;
+        return (
+          <div key={`print-group-${groupIndex}`} className="mb-6">
+            {/* Render the divider if this group starts with one */}
+            {startsWithDivider && (
+              <h2 className="text-xl font-bold my-4 text-center">{group[0].name}</h2>
+            )}
 
-            return (
-              <React.Fragment key={item.id}>
+            <table className="w-full border-collapse border border-gray-200 mb-4">
+              <thead>
                 <tr>
-                  <td className="py-3 px-4 border border-gray-200 font-medium text-base">
-                    {item.name}
-                  </td>
-                  <td className="py-3 px-4 border border-gray-200 text-base">
-                    {item.title}
-                  </td>
-                  <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none" 
-                      rowSpan={intervieweeCount + 1}
-                      dangerouslySetInnerHTML={{ __html: item.details }} />
+                  <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
+                  <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
+                  <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
                   {isAuthenticated && (
-                    <td className="py-3 px-4 border border-gray-200 text-base">
-                      {item.phone}
-                    </td>
+                    <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
                   )}
                   {showMinutes && (
-                    <td className="py-3 px-4 text-center border border-gray-200 text-base w-20"
-                        rowSpan={intervieweeCount + 1}>
-                      {item.duration}
-                    </td>
+                    <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
                   )}
                 </tr>
-                {item.interviewees?.map((interviewee) => (
-                  <tr key={interviewee.id}>
-                    <td className="py-3 px-4 border border-gray-200 text-base">
-                      {interviewee.name}
+              </thead>
+              <tbody>
+                {/* Skip the first item if it's a divider, as we've already rendered it */}
+                {group.slice(startsWithDivider ? 1 : 0).map((item) => {
+                  if (item.is_break) {
+                    return (
+                      <tr key={item.id} className="breakRow bg-black/10">
+                        <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
+                          {item.name}
+                        </td>
+                        {showMinutes && (
+                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
+                            {item.duration}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  }
+                  
+                  if (item.is_note) {
+                    return (
+                      <tr key={item.id} className="noteRow">
+                        <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
+                          <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
+                        </td>
+                        {showMinutes && (
+                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
+                            {item.duration}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  }
+
+                  const intervieweeCount = item.interviewees?.length || 0;
+
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr>
+                        <td className="py-3 px-4 border border-gray-200 font-medium text-base">
+                          {item.name}
+                        </td>
+                        <td className="py-3 px-4 border border-gray-200 text-base">
+                          {item.title}
+                        </td>
+                        <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none" 
+                            rowSpan={intervieweeCount + 1}
+                            dangerouslySetInnerHTML={{ __html: item.details }} />
+                        {isAuthenticated && (
+                          <td className="py-3 px-4 border border-gray-200 text-base">
+                            {item.phone}
+                          </td>
+                        )}
+                        {showMinutes && (
+                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20"
+                              rowSpan={intervieweeCount + 1}>
+                            {item.duration}
+                          </td>
+                        )}
+                      </tr>
+                      {item.interviewees?.map((interviewee) => (
+                        <tr key={interviewee.id}>
+                          <td className="py-3 px-4 border border-gray-200 text-base">
+                            {interviewee.name}
+                          </td>
+                          <td className="py-3 px-4 border border-gray-200 text-base">
+                            {interviewee.title}
+                          </td>
+                          {isAuthenticated && (
+                            <td className="py-3 px-4 border border-gray-200 text-base">
+                              {interviewee.phone}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+              {showMinutes && groupIndex === groupedItems.length - 1 && (
+                <tfoot>
+                  <tr>
+                    <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
+                      סה״כ דקות
                     </td>
-                    <td className="py-3 px-4 border border-gray-200 text-base">
-                      {interviewee.title}
+                    <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
+                      {calculateTotalMinutes()}
                     </td>
-                    {isAuthenticated && (
-                      <td className="py-3 px-4 border border-gray-200 text-base">
-                        {interviewee.phone}
-                      </td>
-                    )}
-                    {/* No minutes column for interviewees since it's merged for the entire item */}
                   </tr>
-                ))}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-        {showMinutes && (
-          <tfoot>
-            <tr>
-              <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
-                סה״כ דקות
-              </td>
-              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
-                {calculateTotalMinutes()}
-              </td>
-            </tr>
-          </tfoot>
-        )}
-      </table>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        );
+      })}
 
       {editorContent && (
         <div 
