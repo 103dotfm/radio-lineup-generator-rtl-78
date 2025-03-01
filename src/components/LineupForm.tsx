@@ -187,7 +187,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       </div>
       
       <FormActions
-        onSubmit={handleSubmit}
+        onSave={handleSubmit}
+        onCancel={onBackToDashboard}
         onBreakAdd={handleBreakAdd}
         onNoteAdd={handleNoteAdd}
         onDividerAdd={handleDividerAdd}
