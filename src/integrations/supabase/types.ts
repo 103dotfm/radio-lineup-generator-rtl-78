@@ -105,7 +105,6 @@ export type Database = {
           duration: number | null
           id: string
           is_break: boolean | null
-          is_divider: boolean | null
           is_note: boolean | null
           name: string
           phone: string | null
@@ -119,7 +118,6 @@ export type Database = {
           duration?: number | null
           id?: string
           is_break?: boolean | null
-          is_divider?: boolean | null
           is_note?: boolean | null
           name: string
           phone?: string | null
@@ -133,7 +131,6 @@ export type Database = {
           duration?: number | null
           id?: string
           is_break?: boolean | null
-          is_divider?: boolean | null
           is_note?: boolean | null
           name?: string
           phone?: string | null
@@ -295,7 +292,6 @@ export type Database = {
           duration: number | null
           id: string
           is_break: boolean | null
-          is_divider: boolean | null
           is_note: boolean | null
           name: string
           phone: string | null

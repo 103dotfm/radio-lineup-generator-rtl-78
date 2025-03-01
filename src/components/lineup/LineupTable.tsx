@@ -1,20 +1,30 @@
 
-import React, { useState } from 'react';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
-import { Button } from "@/components/ui/button";
-import { Clock, Eye, EyeOff } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
+import { useAuth } from '../../contexts/AuthContext';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import DividerItem from './DividerItem';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface LineupTableProps {
-  items: any[];
+  items: Array<{
+    id: string;
+    name: string;
+    title: string;
+    details: string;
+    phone: string;
+    duration: number;
+    is_break?: boolean;
+    is_note?: boolean;
+    is_divider?: boolean;
+  }>;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
   onEdit: (id: string, updatedItem: any) => Promise<void>;
-  onBreakTextChange?: (id: string, text: string) => void;
-  onDetailsChange?: (id: string, details: string) => void;
-  onDragEnd: (result: any) => void;
+  onBreakTextChange: (id: string, text: string) => void;
+  onDetailsChange: (id: string, details: string) => void;
+  onDragEnd: (result: DropResult) => void;
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
 }
@@ -30,118 +40,126 @@ const LineupTable = ({
   showMinutes = false,
   onToggleMinutes
 }: LineupTableProps) => {
+  const [showMinutesLocal, setShowMinutesLocal] = useState(showMinutes);
   const { isAuthenticated } = useAuth();
-  const [showItemDurations, setShowItemDurations] = useState(showMinutes);
-
-  const handleToggleMinutes = () => {
-    const newValue = !showItemDurations;
-    setShowItemDurations(newValue);
+  
+  useEffect(() => {
+    setShowMinutesLocal(showMinutes);
+  }, [showMinutes]);
+  
+  const handleToggleMinutes = (checked: boolean) => {
+    setShowMinutesLocal(checked);
     if (onToggleMinutes) {
-      onToggleMinutes(newValue);
+      onToggleMinutes(checked);
     }
   };
-
-  const calculateTotalDuration = () => {
-    return items
-      .filter(item => !item.is_divider) // Skip dividers in duration calculation
-      .reduce((total, item) => total + (item.duration || 0), 0);
+  
+  const calculateTotalMinutes = () => {
+    return items.reduce((total, item) => total + (item.duration || 0), 0);
   };
 
-  // Handle divider name changes
-  const handleDividerNameChange = (id: string, name: string) => {
-    onEdit(id, { name });
-  };
-
+  // Group items by dividers - each divider starts a new group
+  const groupedItems = items.reduce((groups, item, index) => {
+    if (item.is_divider) {
+      // Start a new group with the divider
+      groups.push([{...item, index}]);
+    } else if (groups.length === 0) {
+      // First group if no dividers yet
+      groups.push([{...item, index}]);
+    } else {
+      // Add to current group
+      groups[groups.length - 1].push({...item, index});
+    }
+    return groups;
+  }, [] as Array<Array<any>>);
+  
   return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-bold">פריטים בליינאפ</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleMinutes}
-            className="flex items-center gap-1"
-          >
-            <Clock className="h-4 w-4" />
-            {showItemDurations ? (
-              <>
-                <EyeOff className="h-4 w-4" />
-                <span>הסתר דקות</span>
-              </>
-            ) : (
-              <>
-                <Eye className="h-4 w-4" />
-                <span>הצג דקות</span>
-              </>
-            )}
-          </Button>
-          <div>סה״כ זמן: {calculateTotalDuration()} דקות</div>
-        </div>
+    <div className="space-y-4">
+      <div className="flex justify-end items-center space-x-2 p-2 rounded">
+        <Switch id="show-minutes" checked={showMinutesLocal} onCheckedChange={handleToggleMinutes} className="bg-emerald-400 hover:bg-emerald-300" />
+        <Label htmlFor="show-minutes" className="mr-2 font-medium">הצגת זמן בדקות</Label>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="lineup-items">
-          {(provided) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="border rounded-md overflow-hidden"
-            >
-              <table className="w-full border-collapse">
-                <thead className="bg-gray-100">
-                  <tr>
-                    {showItemDurations && <th className="p-2 text-right">דקות</th>}
-                    <th className="p-2 text-right">פריט</th>
-                    <th className="p-2 text-right w-24"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 ? (
-                    <tr>
-                      <td colSpan={showItemDurations ? 3 : 2} className="p-4 text-center text-gray-500">
-                        אין פריטים בליינאפ
-                      </td>
-                    </tr>
-                  ) : (
-                    items.map((item, index) => (
-                      item.is_divider ? (
-                        <tr key={item.id} className="divider-row">
-                          <DividerItem
-                            id={item.id}
-                            name={item.name}
-                            onDelete={onDelete}
-                            onNameChange={handleDividerNameChange}
-                            isAuthenticated={isAuthenticated}
-                            showMinutes={showItemDurations}
-                          />
+        <Droppable droppableId="lineup">
+          {provided => (
+            <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
+              {groupedItems.map((group, groupIndex) => {
+                // Check if the first item in this group is a divider
+                const startsWithDivider = group[0]?.is_divider;
+                
+                return (
+                  <div key={`group-${groupIndex}`} className="table-section">
+                    {/* Render the divider if this group starts with one */}
+                    {startsWithDivider && (
+                      <DividerItem 
+                        id={group[0].id}
+                        name={group[0].name}
+                        index={group[0].index}
+                        onDelete={onDelete}
+                        onEdit={onEdit}
+                        isAuthenticated={isAuthenticated}
+                        showMinutes={showMinutesLocal}
+                      />
+                    )}
+                    
+                    <table className="w-full table-fixed border-collapse">
+                      <colgroup>
+                        <col className="w-[20%]" />
+                        <col className="w-[15%]" />
+                        <col className="w-[35%]" />
+                        {isAuthenticated && <col className="w-[15%]" />}
+                        {showMinutesLocal && <col className="w-[8%]" />}
+                        <col className="w-[10%]" />
+                      </colgroup>
+                      
+                      <thead>
+                        <tr>
+                          <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">שם</th>
+                          <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">קרדיט</th>
+                          <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פרטים</th>
+                          {isAuthenticated && <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">טלפון</th>}
+                          {showMinutesLocal && <th className="py-2 px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 w-20">דק'</th>}
+                          <th className="py-2 px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200">פעולות</th>
                         </tr>
-                      ) : (
-                        <LineupItem
-                          key={item.id}
-                          id={item.id}
-                          name={item.name}
-                          title={item.title || ''}
-                          details={item.details || ''}
-                          phone={item.phone || ''}
-                          duration={item.duration || 0}
-                          is_break={item.is_break}
-                          is_note={item.is_note}
-                          is_divider={item.is_divider}
-                          index={index}
-                          onDelete={onDelete}
-                          onDurationChange={onDurationChange}
-                          onEdit={onEdit}
-                          onBreakTextChange={onBreakTextChange || (() => {})}
-                          onDetailsChange={onDetailsChange}
-                          showMinutes={showItemDurations}
-                        />
-                      )
-                    ))
-                  )}
-                  {provided.placeholder}
-                </tbody>
-              </table>
+                      </thead>
+                      
+                      <tbody>
+                        {/* Skip the first item if it's a divider, as we've already rendered it */}
+                        {group.slice(startsWithDivider ? 1 : 0).map((item) => (
+                          <LineupItem 
+                            key={item.id} 
+                            {...item} 
+                            index={item.index} 
+                            onDelete={onDelete} 
+                            onDurationChange={onDurationChange} 
+                            onEdit={onEdit} 
+                            onBreakTextChange={onBreakTextChange}
+                            onDetailsChange={onDetailsChange}
+                            showMinutes={showMinutesLocal} 
+                          />
+                        ))}
+                      </tbody>
+                      
+                      {showMinutesLocal && groupIndex === groupedItems.length - 1 && (
+                        <tfoot>
+                          <tr>
+                            <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
+                              סה״כ דקות
+                            </td>
+                            <td className="py-2 px-4 text-center font-bold border border-gray-200">
+                              {calculateTotalMinutes()}
+                            </td>
+                            <td className="py-2 px-4 border border-gray-200"></td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+                );
+              })}
+              
+              {provided.placeholder}
             </div>
           )}
         </Droppable>

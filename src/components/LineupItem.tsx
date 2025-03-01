@@ -17,7 +17,6 @@ interface LineupItemProps {
   duration: number;
   is_break?: boolean;
   is_note?: boolean;
-  is_divider?: boolean;
   index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -36,7 +35,6 @@ const LineupItem = ({
   duration,
   is_break,
   is_note,
-  is_divider,
   index,
   onDelete,
   onDurationChange,
@@ -67,11 +65,6 @@ const LineupItem = ({
       editor.commands.setContent(details);
     }
   }, [editor, details]);
-
-  // Skip rendering for divider items - they are handled separately in LineupTable
-  if (is_divider) {
-    return null;
-  }
 
   return (
     <Draggable draggableId={id} index={index}>
