@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor, EditorContent } from '@tiptap/react';
@@ -33,7 +34,7 @@ const NoteItem = ({
       {showMinutes ? (
         // With minutes column visible
         <>
-          <td colSpan="4" className="py-2 px-4 border border-gray-200">
+          <td colSpan={4} className="py-2 px-4 border border-gray-200">
             {editor?.isEditable ? (
               <div className="prose prose-sm max-w-none text-center">
                 {editor && <EditorContent editor={editor} />}
@@ -42,7 +43,7 @@ const NoteItem = ({
               <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
             )}
           </td>
-          <td className="py-2 px-4 border border-gray-200 text-center w-20">
+          <td className="py-2 px-4 border border-gray-200 text-center w-24">
             <Input
               type="number"
               min="0"
@@ -52,7 +53,7 @@ const NoteItem = ({
             />
           </td>
           <td className="py-2 px-4 border border-gray-200">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -69,7 +70,7 @@ const NoteItem = ({
       ) : (
         // Without minutes column
         <>
-          <td colSpan="4" className="py-2 px-4 border border-gray-200 text-center">
+          <td colSpan={4} className="py-2 px-4 border border-gray-200 text-center">
             {editor?.isEditable ? (
               <div className="prose prose-sm max-w-none text-center">
                 {editor && <EditorContent editor={editor} />}
@@ -79,7 +80,7 @@ const NoteItem = ({
             )}
           </td>
           <td className="py-2 px-4 border border-gray-200">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
