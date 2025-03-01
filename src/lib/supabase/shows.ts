@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -136,6 +137,7 @@ export const saveShow = async (
     duration?: number;
     is_break: boolean;
     is_note: boolean;
+    is_divider?: boolean;
     interviewees?: Array<{
       name: string;
       title?: string;
@@ -238,8 +240,8 @@ export const saveShow = async (
           const item = insertedItems[i];
           const itemInterviewees = items[i].interviewees;
           
-          if (itemInterviewees && itemInterviewees.length > 0) {
-            // Create interviewees for this item
+          if (itemInterviewees && itemInterviewees.length > 0 && !items[i].is_divider) {
+            // Create interviewees for this item (only for non-divider items)
             const intervieweesToInsert = itemInterviewees.map(interviewee => ({
               item_id: item.id,
               name: interviewee.name,
