@@ -17,6 +17,7 @@ interface LineupFormProps {
     duration: number;
     is_break?: boolean;
     is_note?: boolean;
+    is_divider?: boolean;
   }) => void;
   onNameChange: (name: string) => Promise<any>;
   onBackToDashboard: () => void;
@@ -28,6 +29,7 @@ interface LineupFormProps {
     duration: number;
     is_break?: boolean;
     is_note?: boolean;
+    is_divider?: boolean;
   } | null;
 }
 
@@ -68,7 +70,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       phone, 
       duration,
       is_break: false,
-      is_note: false
+      is_note: false,
+      is_divider: false
     };
     
     onAdd(newItem);
@@ -91,7 +94,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       phone: '',
       duration: duration,
       is_break: true,
-      is_note: false
+      is_note: false,
+      is_divider: false
     };
     onAdd(breakItem);
     setDuration(5);
@@ -105,9 +109,24 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
       phone: '',
       duration: 0,
       is_break: false,
-      is_note: true
+      is_note: true,
+      is_divider: false
     };
     onAdd(noteItem);
+  };
+
+  const handleDividerAdd = () => {
+    const dividerItem = {
+      name: 'שעה שנייה',
+      title: '',
+      details: '',
+      phone: '',
+      duration: 0,
+      is_break: false,
+      is_note: false,
+      is_divider: true
+    };
+    onAdd(dividerItem);
   };
 
   const handleGuestSelect = (guest: { name: string; title: string; phone: string }) => {
@@ -165,6 +184,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
         onSubmit={handleSubmit}
         onBreakAdd={handleBreakAdd}
         onNoteAdd={handleNoteAdd}
+        onDividerAdd={handleDividerAdd}
         isEditing={!!editingItem}
       />
     </form>

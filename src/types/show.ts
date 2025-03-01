@@ -1,3 +1,4 @@
+
 export interface Interviewee {
   id: string;
   item_id: string;
@@ -19,6 +20,7 @@ export interface ShowItem {
   duration?: number;
   is_break?: boolean;
   is_note?: boolean;
+  is_divider?: boolean;
   created_at?: string;
   interviewees?: Interviewee[];
 }

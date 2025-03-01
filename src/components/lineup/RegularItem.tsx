@@ -53,13 +53,13 @@ const RegularItem = ({
     }
     
     // Find the longest title among interviewees
-    const longestTitleLength = Math.max(...interviewees.map(i => (i.title || '').length));
+    const longestTitleLength = Math.max(...interviewees.map(i => (i.title || '').length), 0);
     
     // Apply different min-heights based on title length
-    if (longestTitleLength <= 50) return 'min-h-[75px]';
-    if (longestTitleLength <= 80) return 'min-h-[100px]';
-    if (longestTitleLength <= 150) return 'min-h-[125px]';
-    return 'min-h-[150px]';
+    if (longestTitleLength <= 50) return 'min-h-[85px]';
+    if (longestTitleLength <= 80) return 'min-h-[110px]';
+    if (longestTitleLength <= 150) return 'min-h-[135px]';
+    return 'min-h-[160px]';
   };
   
   const minHeightClass = getMinHeightClass();
