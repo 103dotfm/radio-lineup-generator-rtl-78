@@ -85,8 +85,6 @@ const MainContent = memo(({
           onNameChange={handleNameLookup}
           onBackToDashboard={onBackToDashboard}
           editingItem={editingItem}
-          onBreakAdd={() => {}} // This is handled elsewhere
-          onNoteAdd={() => {}}  // This is handled elsewhere
           onDividerAdd={onDividerAdd}
         />
 
