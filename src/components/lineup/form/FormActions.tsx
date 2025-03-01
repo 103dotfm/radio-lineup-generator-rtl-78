@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Coffee, FileText, Divide } from 'lucide-react';
 
 interface FormActionsProps {
-  onSave: () => void;
+  onSave: (e?: React.FormEvent) => void;
   onCancel: () => void;
   onBreakAdd?: () => void;
   onNoteAdd?: () => void;
@@ -28,7 +28,7 @@ const FormActions = ({
           className="bg-blue-600 hover:bg-blue-700"
           onClick={(e) => {
             e.preventDefault();
-            onSave();
+            onSave(e);
           }}
         >
           {isEditing ? 'עדכן פריט' : 'הוסף פריט'}
