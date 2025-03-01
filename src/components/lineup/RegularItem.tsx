@@ -63,6 +63,9 @@ const RegularItem = ({
   };
   
   const minHeightClass = getMinHeightClass();
+  
+  // Create a default min-height for items with multiple interviewees
+  const contentMinHeightClass = interviewees && interviewees.length > 1 ? 'min-h-[75px]' : '';
 
   useEffect(() => {
     loadInterviewees();
@@ -116,7 +119,7 @@ const RegularItem = ({
       <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>
         {/* Main item name */}
         <div className="text-right font-medium h-full flex flex-col">
-          <div className="flex-grow">{displayName}</div>
+          <div className={`flex-grow ${contentMinHeightClass}`}>{displayName}</div>
           
           {/* Interviewees table */}
           {interviewees.length > 0 && (
@@ -171,7 +174,7 @@ const RegularItem = ({
       <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>
         {/* Main item title */}
         <div className="text-right h-full flex flex-col">
-          <div className="flex-grow">{title}</div>
+          <div className={`flex-grow ${contentMinHeightClass}`}>{title}</div>
           
           {/* Interviewee titles */}
           {interviewees.length > 0 && (
@@ -187,12 +190,14 @@ const RegularItem = ({
           )}
         </div>
       </td>
-      <td className={`py-2 px-4 border border-gray-200 align-top ${minHeightClass}`} dangerouslySetInnerHTML={{ __html: details }} />
+      <td className={`py-2 px-4 border border-gray-200 align-top ${minHeightClass}`}>
+        <div className={`${contentMinHeightClass}`} dangerouslySetInnerHTML={{ __html: details }} />
+      </td>
       {isAuthenticated && (
         <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>
           {/* Main item phone */}
           <div className="text-right h-full flex flex-col">
-            <div className="flex-grow">{phone}</div>
+            <div className={`flex-grow ${contentMinHeightClass}`}>{phone}</div>
             
             {/* Interviewee phones */}
             {interviewees.length > 0 && (
