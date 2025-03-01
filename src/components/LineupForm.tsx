@@ -31,9 +31,10 @@ interface LineupFormProps {
     is_note?: boolean;
     is_divider?: boolean;
   } | null;
+  onDividerAdd?: () => void;
 }
 
-const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: LineupFormProps) => {
+const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDividerAdd }: LineupFormProps) => {
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [phone, setPhone] = useState('');
@@ -116,17 +117,22 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard }: Lin
   };
 
   const handleDividerAdd = () => {
-    const dividerItem = {
-      name: 'שעה שנייה',
-      title: '',
-      details: '',
-      phone: '',
-      duration: 0,
-      is_break: false,
-      is_note: false,
-      is_divider: true
-    };
-    onAdd(dividerItem);
+    if (onDividerAdd) {
+      onDividerAdd();
+    } else {
+      // Fallback implementation if onDividerAdd isn't provided
+      const dividerItem = {
+        name: 'שעה שנייה',
+        title: '',
+        details: '',
+        phone: '',
+        duration: 0,
+        is_break: false,
+        is_note: false,
+        is_divider: true
+      };
+      onAdd(dividerItem);
+    }
   };
 
   const handleGuestSelect = (guest: { name: string; title: string; phone: string }) => {
