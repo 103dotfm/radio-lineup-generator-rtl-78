@@ -1,40 +1,86 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { FileText, Coffee, Divide } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Coffee, FileText, Divide } from 'lucide-react';
 
 interface FormActionsProps {
-  onSubmit: (e: React.FormEvent) => Promise<void>;
-  onBreakAdd: () => void;
-  onNoteAdd: () => void;
-  onDividerAdd: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onBreakAdd?: () => void;
+  onNoteAdd?: () => void;
+  onDividerAdd?: () => void;
   isEditing: boolean;
 }
 
-const FormActions: React.FC<FormActionsProps> = ({
-  onSubmit,
+const FormActions = ({
+  onSave,
+  onCancel,
   onBreakAdd,
   onNoteAdd,
   onDividerAdd,
-  isEditing
-}) => {
-  return <div className="flex justify-end gap-2">
-      <Button type="button" onClick={onBreakAdd} variant="secondary" className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200">
-        <Coffee className="h-4 w-4" />
-        הוספת פרסומות
-      </Button>
-      <Button type="button" onClick={onNoteAdd} variant="secondary" className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200">
-        <FileText className="h-4 w-4" />
-        הוספת הערה
-      </Button>
-      <Button type="button" onClick={onDividerAdd} variant="secondary" className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200">
-        <Divide className="h-4 w-4" />
-        הוספת הפרדה
-      </Button>
-      <Button type="submit" onClick={e => onSubmit(e)} className="text-base font-medium px-[68px]">
-        {isEditing ? 'עדכון' : 'הוספה'}
-      </Button>
-    </div>;
+  isEditing,
+}: FormActionsProps) => {
+  return (
+    <div className="flex justify-between mt-4">
+      <div className="flex items-center gap-2">
+        <Button
+          type="submit"
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={(e) => {
+            e.preventDefault();
+            onSave();
+          }}
+        >
+          {isEditing ? 'עדכן פריט' : 'הוסף פריט'}
+        </Button>
+        <Button variant="outline" onClick={onCancel}>
+          <ArrowLeft className="ml-2 h-4 w-4" />
+          <span>בטל</span>
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        {onBreakAdd && (
+          <Button
+            variant="outline"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onBreakAdd();
+            }}
+          >
+            <Coffee className="ml-2 h-4 w-4" />
+            <span>הוסף הפסקה</span>
+          </Button>
+        )}
+        {onNoteAdd && (
+          <Button
+            variant="outline"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onNoteAdd();
+            }}
+          >
+            <FileText className="ml-2 h-4 w-4" />
+            <span>הוסף הערה</span>
+          </Button>
+        )}
+        {onDividerAdd && (
+          <Button
+            variant="outline"
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onDividerAdd();
+            }}
+          >
+            <Divide className="ml-2 h-4 w-4" />
+            <span>הוסף חלוקה</span>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default FormActions;
