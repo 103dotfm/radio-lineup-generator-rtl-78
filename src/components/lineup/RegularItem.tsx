@@ -46,8 +46,8 @@ const RegularItem = ({
   } = getShowDisplay(name, title);
   
   // Determine min-height based on interviewees titles
-  const getDetailsMinHeight = () => {
-    // If no interviewees or only one, use a default min-height
+  const getMinHeightClass = () => {
+    // Only apply min-height if we have multiple interviewees
     if (!interviewees || interviewees.length <= 1) {
       return '';
     }
@@ -55,13 +55,14 @@ const RegularItem = ({
     // Find the longest title among interviewees
     const longestTitleLength = Math.max(...interviewees.map(i => (i.title || '').length));
     
+    // Apply different min-heights based on title length
     if (longestTitleLength <= 50) return 'min-h-[75px]';
     if (longestTitleLength <= 80) return 'min-h-[100px]';
     if (longestTitleLength <= 150) return 'min-h-[125px]';
     return 'min-h-[150px]';
   };
   
-  const minHeightClass = getDetailsMinHeight();
+  const minHeightClass = getMinHeightClass();
 
   useEffect(() => {
     loadInterviewees();
