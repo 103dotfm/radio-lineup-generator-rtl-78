@@ -25,23 +25,22 @@ const BreakItem = ({
   isAuthenticated,
   showMinutes = false,
 }: BreakItemProps) => {
-  // When minutes are not showing, we want the text area to span all columns except the actions column
-  const mainColspan = isAuthenticated ? 3 : 2; // name, title, details (and phone if authenticated)
-  const actionsColspan = 1;
+  // Determine colspan based on authentication and minutes visibility
+  const mainColspan = isAuthenticated ? (showMinutes ? 4 : 4) : (showMinutes ? 3 : 3);
   
   return (
     <>
       {showMinutes ? (
         // With minutes column visible
         <>
-          <td colSpan="4" className="py-2 px-4 border border-gray-200 bg-black/10">
+          <td colSpan={mainColspan} className="py-2 px-4 border border-gray-200 bg-black/10">
             <Input
               value={name}
               onChange={(e) => onBreakTextChange(id, e.target.value)}
               className="w-full text-center border-0 bg-transparent font-medium text-base"
             />
           </td>
-          <td className="py-2 px-4 border border-gray-200 bg-black/10 text-center w-20">
+          <td className="py-2 px-4 border border-gray-200 bg-black/10 text-center w-24">
             <Input
               type="number"
               min="0"
@@ -51,7 +50,7 @@ const BreakItem = ({
             />
           </td>
           <td className="py-2 px-4 border border-gray-200 bg-black/10">
-            <div className="flex items-center gap-2">
+            <div className="flex justify-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -68,7 +67,7 @@ const BreakItem = ({
       ) : (
         // Without minutes column
         <>
-          <td colSpan="4"className="py-2 px-4 border border-gray-200 bg-black/10 text-center">
+          <td colSpan={mainColspan} className="py-2 px-4 border border-gray-200 bg-black/10 text-center">
             <Input
               value={name}
               onChange={(e) => onBreakTextChange(id, e.target.value)}
@@ -76,7 +75,7 @@ const BreakItem = ({
             />
           </td>
           <td className="py-2 px-4 border border-gray-200 bg-black/10">
-            <div className="flex items-center gap-2">
+            <div className="flex justify-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
