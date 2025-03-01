@@ -47,9 +47,9 @@ const RegularItem = ({
   
   // Determine min-height based on interviewees titles
   const getDetailsMinHeight = () => {
-    // If no interviewees, use a default min-height
-    if (!interviewees || interviewees.length === 0) {
-      return 'min-h-[75px]';
+    // If no interviewees or only one, use a default min-height
+    if (!interviewees || interviewees.length <= 1) {
+      return '';
     }
     
     // Find the longest title among interviewees
@@ -209,7 +209,7 @@ const RegularItem = ({
         </td>
       )}
       {showMinutes && (
-        <td className="py-2 px-4 border border-gray-200 w-20 text-center">
+        <td className="py-2 px-4 border border-gray-200 w-24 text-center">
           <Input 
             type="number" 
             min="1" 
