@@ -1,165 +1,337 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
- 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
- 
-    --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
- 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Rubik', sans-serif;
-  }
+:root {
+  direction: rtl;
 }
 
 body {
-  background-color: #f7f7f7;
+  font-family: 'Heebo', sans-serif;
+  background-color: #f8fafc;
 }
 
-/* RTL Support */
-[dir="rtl"] .schedTabs [role="tablist"] {
-  flex-direction: row-reverse;
+/* Component styles */
+.lineup-item {
+  transition: all 0.2s ease-in-out;
 }
 
-/* Fix for PDF and Print Views */
+.lineup-item:hover {
+  transform: translateX(-4px);
+}
+
+.rtl-grid {
+  direction: rtl;
+}
+
+.print-content {
+  direction: rtl;
+}
+
+/* Schedule cell styles */
+.schedule-cell {
+  border: 1px solid #000;
+  position: relative;
+}
+
+.schedule-cell .actions {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.schedule-cell:hover .actions {
+  opacity: 1;
+}
+
+/* Schedule cell background colors */
+.cell-regular {
+  background-color: #eff4ec;  /* Light green */
+}
+
+.cell-modified {
+  background-color: #FEF7CD;  /* Light yellow */
+}
+
+.cell-prerecorded {
+  background-color: #D3E4FD;  /* Light blue */
+}
+
+.cell-collection {
+  background-color: #F1F1F1;  /* Light gray */
+}
+
+/* Editor styles */
+.note-editor {
+  min-height: 100px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+  background-color: white;
+}
+
+.note-editor .ProseMirror {
+  min-height: 100px;
+  font-size: inherit;
+  line-height: inherit;
+  color: black;
+  outline: none;
+}
+
+.ProseMirror[placeholder]:before {
+  content: attr(placeholder);
+  color: #64748b;
+  pointer-events: none;
+}
+
+/* Print styles */
 @media print {
-  body, html {
-    margin: 0;
+  @page {
+    margin: 10mm;  /* Increased from 5mm to 10mm for better margins */
+    size: A4;
     padding: 0;
+  }
+  
+  body {
     background-color: white;
   }
-
-  /* Fix text cropping between pages by adding more space */
-  table {
-    margin-bottom: 20px; /* Add space between tables */
-    page-break-inside: auto; /* Allow tables to break across pages */
+  
+  .print-content {
+    font-size: 12px;
+    padding: 2mm;
+  }
+  
+  .print-content h1 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+  
+  .print-content h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .print-content table {
+    font-size: 12px;
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 1rem;
+    page-break-before: avoid !important;
+  }
+  
+  .print-content table td,
+  .print-content table th {
+    padding: 6px 8px;
+    font-size: 1rem !important;
+    border: 1px solid #e2e8f0;
+    vertical-align: top !important;
   }
 
-  tr {
-    page-break-inside: avoid; /* Keep rows together where possible */
-    page-break-after: auto;
+  .print-content tr.bg-black\/10 td {
+    color: black !important;
+    background-color: #f1f1f1 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .print-content .prose {
+    font-size: 1rem !important;
+    line-height: inherit !important;
+    max-width: none;
   }
 
-  tbody {
-    page-break-before: avoid; /* Don't start a tbody at the bottom of a page */
+  .print-content .prose * {
+    font-size: 1rem !important;
+  }
+  
+  .print-content .credits {
+    margin-top: 4rem;
+    padding: 2rem 0;
+    border-top: 1px solid #eee;
+    font-size: 1rem !important;
+    color: black !important;
+    text-align: center;
+    page-break-before: avoid;
+    page-break-inside: avoid;
   }
 
-  td, th {
-    padding: 8px !important; /* Ensure cells have enough padding */
+  /* Improved page break handling */
+  .print-container {
+    margin-bottom: 4rem;  /* Increased from 2rem to 4rem for more space at bottom */
   }
-
-  /* Divider styling for print/PDF */
+  
+  /* Changed divider styling to avoid page breaks */
+  .divider-text {
+    page-break-after: avoid;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    background-color: #f3f4f6 !important;
+    color: black !important;
+    padding: 10px;
+    border-radius: 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Allow content to flow naturally instead of forcing page breaks */
   .divider-heading {
-    display: block;
-    margin: 15px 0;
-    padding: 10px 0;
-    font-size: 1.5rem;
+    page-break-after: avoid;
     font-weight: bold;
-    page-break-after: avoid; /* Don't break page right after a divider */
+    font-size: 1.25rem !important;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    background-color: #f3f4f6 !important;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Add more space at bottom of page to prevent text being cut off */
+  .mb-6 {
+    margin-bottom: 2.5rem !important;  /* Increased from 2rem */
+  }
+  
+  /* Additional bottom padding for rows to prevent cropping */
+  tr td {
+    padding-bottom: 0.75rem !important;
   }
 
-  /* More spacing at bottom of page to prevent text cropping */
-  @page {
-    margin-bottom: 40mm; /* Increase bottom margin */
-    margin-top: 20mm;
-    margin-left: 15mm;
-    margin-right: 15mm;
-  }
-
-  /* Make sure all content has enough bottom margin */
-  .page-content, .print-page {
-    margin-bottom: 30px;
-    padding-bottom: 30px;
-  }
-
-  /* Add more space after each section to prevent text cut-off */
-  .lineup-section, .lineup-item, .divider-row {
-    margin-bottom: 15px;
-  }
-
-  /* Ensure notes and breaks use full width */
-  .note-item td, .break-item td {
-    padding: 10px !important;
+  [role="status"],
+  .toaster,
+  .sonner-toast-container {
+    display: none !important;
   }
 }
 
-/* Divider styling for all views */
-.lineup-divider-title {
-  color: #111827;
-  border-bottom: 2px solid #d1d5db;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+/* UI Components */
+#radix-:r1: {
+  background: white;
 }
 
-/* Make sure breaks and notes span full width */
-.break-item td[colspan], .note-item td[colspan] {
-  width: 100%;
+#radix,
+#radix h2,
+#radix p,
+#radix-:r2:,
+#radix-:r3: {
   text-align: right;
+}
+
+.loginLogo {
+  margin: 0px auto -10px;
+  position: relative;
+  left: 16px;
+}
+
+.bg-background {
+  background-color: #FFF;
+}
+
+.credit {
+  margin-top: -3em;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.credit a {
+  color: crimson;
+}
+
+.footer-logo {
+  margin: 0px -21px 0px 0px;
+}
+
+/* Theme colors */
+.bg-indigo-600 {
+  background-color: rgb(103 22 31);
+}
+
+.bg-indigo-700:hover {
+  background-color: rgb(68 14 20);
+}
+
+.bg-yellow-50 {
+  background-color: rgb(78 220 244 / 51%);
+}
+
+.bg-gray-50 {
+  background-color: rgb(191 191 191 / 34%);
+}
+
+.bg-primary {
+  background-color: rgb(94 14 28);
+}
+
+/* Toast styles */
+.toaster {
+  background: #FFF;
+}
+
+/* Dashboard styles */
+.dashboardTitle {
+  margin: -2em 0 0 0;
+  background: #3fc9c5;
+  padding: 2em 1em 1em 1em;
+}
+
+.z-50 .right-4 {
+  display: none;
+}
+
+/* Dialog styles */
+[role="alertdialog"] h2,
+[role="alertdialog"] p {
+  text-align: right;
+}
+
+[role="status"] {
+  background-color: white !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Responsive styles */
+@media (max-width: 1024px) {
+  .lineup-table-wrapper {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.showCredits {
+  text-align: center;
+  color: black;
+  font-size: inherit;
+}
+
+.showName {margin-top: 10px;}
+.noteRow {background-color: #b7b7b71a;}
+.detailsEditor {border: 1px solid #232323;}
+.additemH2 {font-size: 1.2em;margin: 30px 0 10px;font-weight: 900;}
+tbody {vertical-align: top;}
+.topLogo {background: #3fc9c5;padding: 1.5em 1em 1em 1em;margin: -44px auto 10px;}
+.flex-grow {min-height: 75px;}
+
+/* Divider styles */
+.divider-header {
+  background-color: #f3f4f6;
+  padding: 0.75rem 1rem;
+  margin: 2rem 0 1rem;
+  border-radius: 0.375rem;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.table-section {
+  margin-bottom: 3rem;
 }
