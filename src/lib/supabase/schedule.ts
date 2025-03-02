@@ -239,12 +239,15 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   
   // Prepare update data - keeping the original day_of_week to prevent conflicts
   const updateData = {
-    ...updates,
-    // DO NOT change these values to prevent conflicts
-    day_of_week: originalSlot.day_of_week,
-    is_recurring: originalSlot.is_recurring,
+    show_name: updates.show_name || originalSlot.show_name,
+    host_name: updates.host_name || originalSlot.host_name,
+    day_of_week: originalSlot.day_of_week, // Don't change day_of_week
     start_time: updates.start_time || originalSlot.start_time,
     end_time: updates.end_time || originalSlot.end_time,
+    is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
+    is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
+    is_recurring: originalSlot.is_recurring, // Don't change is_recurring
+    color: updates.color || originalSlot.color,
     updated_at: new Date().toISOString()
   };
   

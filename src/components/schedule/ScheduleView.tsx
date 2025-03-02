@@ -173,15 +173,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         console.log("Handling update for existing slot:", slotData.id);
         const { id, ...updates } = slotData;
         await updateSlotMutation.mutateAsync({ id, updates });
-        toast({
-          title: 'משבצת שידור עודכנה בהצלחה'
-        });
       } else {
         console.log("Creating new slot:", slotData);
         await createSlotMutation.mutateAsync(slotData);
-        toast({
-          title: 'משבצת שידור נוספה בהצלחה'
-        });
       }
       setShowSlotDialog(false);
     } catch (error) {
