@@ -96,7 +96,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const updateSlotMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => {
       console.log("Mutation updating slot:", { id, updates });
-      return updateScheduleSlot(id, updates, isMasterSchedule);
+      return updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -251,6 +251,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
+    if (slot.color) {
+      switch (slot.color) {
+        case 'green':
+          return 'cell-regular';
+        case 'yellow':
+          return 'cell-modified';
+        case 'blue':
+          return 'cell-prerecorded';
+        default:
+          return 'cell-regular';
+      }
+    }
+    
     if (slot.is_collection) return 'cell-collection';
     if (slot.is_prerecorded) return 'cell-prerecorded';
     if (slot.is_modified) return 'cell-modified';

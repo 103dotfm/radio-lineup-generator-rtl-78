@@ -217,8 +217,8 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
   return data;
 };
 
-export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSlot>, isMasterSchedule: boolean = false): Promise<ScheduleSlot> => {
-  console.log('Updating schedule slot:', { id, updates, isMasterSchedule });
+export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSlot>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
+  console.log('Updating schedule slot:', { id, updates, isMasterSchedule, selectedDate });
 
   // Get the original slot
   const { data: originalSlot, error: fetchError } = await supabase
@@ -234,10 +234,136 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
 
   console.log('Original slot to update:', originalSlot);
 
-  // For both master schedule and weekly view - directly update the existing slot
-  console.log('Directly updating slot with id:', id);
+  // For master schedule - directly update the existing slot
+  if (isMasterSchedule) {
+    console.log('Directly updating slot with id:', id);
+    
+    // Prepare update data - keeping the original day_of_week to prevent conflicts
+    const updateData = {
+      show_name: updates.show_name || originalSlot.show_name,
+      host_name: updates.host_name || originalSlot.host_name,
+      day_of_week: originalSlot.day_of_week, // Don't change day_of_week
+      start_time: updates.start_time || originalSlot.start_time,
+      end_time: updates.end_time || originalSlot.end_time,
+      is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
+      is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
+      is_recurring: originalSlot.is_recurring, // Don't change is_recurring
+      color: updates.color || originalSlot.color, // Use color from updates or fallback to original
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('Updating master slot with data:', updateData);
+    
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating master slot:', error);
+      throw error;
+    }
+    
+    console.log('Successfully updated master slot:', data);
+    return data;
+  }
   
-  // Prepare update data - keeping the original day_of_week to prevent conflicts
+  // For weekly view - we need to handle differently depending on whether it's a recurring slot or not
+  console.log('Handling weekly view update');
+  
+  // Calculate the start date of the week we're viewing
+  const currentWeekStart = selectedDate 
+    ? startOfWeek(selectedDate, { weekStartsOn: 0 }) 
+    : startOfWeek(new Date(), { weekStartsOn: 0 });
+  
+  console.log('Current week start:', format(currentWeekStart, 'yyyy-MM-dd'));
+
+  if (originalSlot.is_recurring) {
+    // For recurring slots in weekly view, we need to create a non-recurring copy for this week
+    console.log('Creating non-recurring copy of recurring slot for this week');
+    
+    // Check if a non-recurring instance already exists for this slot in this week
+    const { data: existingNonRecurring } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('day_of_week', originalSlot.day_of_week)
+      .eq('start_time', originalSlot.start_time)
+      .eq('is_recurring', false)
+      .filter('created_at', 'gte', new Date(currentWeekStart).toISOString())
+      .filter('created_at', 'lt', new Date(addDays(currentWeekStart, 7)).toISOString());
+    
+    console.log('Existing non-recurring instances:', existingNonRecurring);
+    
+    // If we found an existing non-recurring instance for this week, update it
+    if (existingNonRecurring && existingNonRecurring.length > 0) {
+      console.log('Updating existing non-recurring instance for this week');
+      
+      const updateData = {
+        show_name: updates.show_name || originalSlot.show_name,
+        host_name: updates.host_name || originalSlot.host_name,
+        day_of_week: originalSlot.day_of_week, // Don't change day_of_week
+        start_time: updates.start_time || originalSlot.start_time,
+        end_time: updates.end_time || originalSlot.end_time,
+        is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
+        is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
+        color: updates.color || originalSlot.color, // Use color from updates
+        is_modified: true,
+        updated_at: new Date().toISOString()
+      };
+      
+      const { data, error } = await supabase
+        .from('schedule_slots')
+        .update(updateData)
+        .eq('id', existingNonRecurring[0].id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating non-recurring instance:', error);
+        throw error;
+      }
+      
+      console.log('Successfully updated non-recurring instance:', data);
+      return data;
+    }
+    
+    // Create a new non-recurring instance for this week
+    console.log('Creating new non-recurring instance for this week');
+    
+    const newSlotData = {
+      show_name: updates.show_name || originalSlot.show_name,
+      host_name: updates.host_name || originalSlot.host_name,
+      day_of_week: originalSlot.day_of_week,
+      start_time: updates.start_time || originalSlot.start_time,
+      end_time: updates.end_time || originalSlot.end_time,
+      is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
+      is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
+      color: updates.color || originalSlot.color, // Use color from updates
+      is_recurring: false,
+      is_modified: true,
+      created_at: new Date(currentWeekStart).toISOString() // Use the week start date
+    };
+    
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .insert(newSlotData)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating non-recurring instance:', error);
+      throw error;
+    }
+    
+    console.log('Successfully created non-recurring instance:', data);
+    return data;
+  }
+  
+  // For already non-recurring slots, just update directly
+  console.log('Updating non-recurring slot');
+  
   const updateData = {
     show_name: updates.show_name || originalSlot.show_name,
     host_name: updates.host_name || originalSlot.host_name,
@@ -246,8 +372,8 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     end_time: updates.end_time || originalSlot.end_time,
     is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
     is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
-    is_recurring: originalSlot.is_recurring, // Don't change is_recurring
-    color: updates.color || originalSlot.color, // Use color from updates or fallback to original
+    color: updates.color || originalSlot.color, // Use color from updates
+    is_modified: true,
     updated_at: new Date().toISOString()
   };
   
@@ -259,13 +385,13 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     .eq('id', id)
     .select()
     .single();
-
+  
   if (error) {
-    console.error('Error updating slot:', error);
+    console.error('Error updating non-recurring slot:', error);
     throw error;
   }
   
-  console.log('Successfully updated slot:', data);
+  console.log('Successfully updated non-recurring slot:', data);
   return data;
 };
 
