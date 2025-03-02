@@ -116,17 +116,33 @@ const Index = () => {
   }, [state, isNewLineup]);
 
   const handleEdit = useCallback(async (id: string, updatedItem: any) => {
-    setItems(prevItems => 
-      prevItems.map(item => 
+    console.log(`Editing item ${id} with data:`, updatedItem);
+    
+    setItems(prevItems => {
+      const updatedItems = prevItems.map(item => 
         item.id === id 
           ? {
               ...item,
               ...updatedItem,
+              is_divider: updatedItem.is_divider === undefined ? item.is_divider : updatedItem.is_divider,
+              is_break: updatedItem.is_break === undefined ? item.is_break : updatedItem.is_break,
+              is_note: updatedItem.is_note === undefined ? item.is_note : updatedItem.is_note,
               interviewees: updatedItem.interviewees
             }
           : item
-      )
-    );
+      );
+      
+      console.log('After edit, items are:', updatedItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        is_divider: item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
+      
+      return updatedItems;
+    });
+    
     setHasUnsavedChanges(true);
   }, []);
 
@@ -135,6 +151,14 @@ const Index = () => {
     
     try {
       setIsSaving(true);
+      console.log('Items before saving:', items.map(item => ({
+        name: item.name,
+        is_divider: item.is_divider,
+        is_divider_type: typeof item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
+      
       const show = {
         name: showName,
         time: showTime,
@@ -143,16 +167,34 @@ const Index = () => {
         slot_id: state?.slotId
       };
 
-      const itemsToSave = items.map(({ id: itemId, ...item }) => ({
+      const itemsToSave = items.map(({ id: itemId, ...item }) => {
+        console.log(`Preparing item to save: ${item.name}`, {
+          is_divider: item.is_divider,
+          is_divider_type: typeof item.is_divider,
+          is_break: item.is_break,
+          is_note: item.is_note
+        });
+        
+        return {
+          name: item.name,
+          title: item.title,
+          details: item.details,
+          phone: item.phone,
+          duration: item.duration,
+          is_break: Boolean(item.is_break),
+          is_note: Boolean(item.is_note),
+          is_divider: Boolean(item.is_divider),
+          interviewees: item.interviewees || []
+        };
+      });
+      
+      console.log('Final items to save:', itemsToSave.map(item => ({
         name: item.name,
-        title: item.title,
-        details: item.details,
-        phone: item.phone,
-        duration: item.duration,
-        is_break: item.is_break || false,
-        is_note: item.is_note || false,
-        interviewees: item.interviewees || []
-      }));
+        is_divider: item.is_divider,
+        is_divider_type: typeof item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
 
       const savedShow = await saveShow(show, itemsToSave, showId);
       
@@ -162,6 +204,13 @@ const Index = () => {
       
       const result = await getShowWithItems(showId || savedShow.id);
       if (result) {
+        console.log('Items after reloading:', result.items.map(item => ({
+          name: item.name,
+          is_divider: item.is_divider,
+          is_break: item.is_break,
+          is_note: item.is_note
+        })));
+        
         setItems(result.items);
         setInitialState({
           name: showName,

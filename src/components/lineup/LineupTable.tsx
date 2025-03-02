@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, DropResult, Draggable } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
@@ -61,21 +60,29 @@ const LineupTable = ({
   // Debug - raw items before processing
   console.log('LineupTable raw items:', items);
 
-  // Debug - inspect for any string vs boolean issues
-  console.log('LineupTable items with types:', items.map(item => ({
-    id: item.id,
-    name: item.name,
-    is_divider: item.is_divider,
-    is_divider_type: typeof item.is_divider,
-    is_break: item.is_break,
-    is_break_type: typeof item.is_break,
-    is_note: item.is_note,
-    is_note_type: typeof item.is_note,
-    type: item.is_divider === true ? 'divider' : item.is_break === true ? 'break' : item.is_note === true ? 'note' : 'regular'
-  })));
+  // Debug - inspect for any string vs boolean issues with explicit type checking
+  console.log('LineupTable items with types:', items.map(item => {
+    // Explicitly check boolean values
+    const isDivider = item.is_divider === true;
+    const isBreak = item.is_break === true;
+    const isNote = item.is_note === true;
+
+    return {
+      id: item.id,
+      name: item.name,
+      is_divider: item.is_divider,
+      is_divider_type: typeof item.is_divider,
+      is_divider_explicit: isDivider,
+      is_break: item.is_break,
+      is_break_type: typeof item.is_break,
+      is_note: item.is_note,
+      is_note_type: typeof item.is_note,
+      type: isDivider ? 'divider' : isBreak ? 'break' : isNote ? 'note' : 'regular'
+    };
+  }));
 
   const groupedItems = items.reduce((groups, item, index) => {
-    // Convert flags to proper booleans to ensure consistent behavior
+    // CRITICAL: Explicitly check for boolean true with === true
     const isDivider = item.is_divider === true;
     const isBreak = item.is_break === true;
     const isNote = item.is_note === true;
@@ -90,6 +97,7 @@ const LineupTable = ({
     
     if (isDivider) {
       console.log(`Item ${item.name} is a divider, creating new group`);
+      // CRITICAL: We MUST set is_divider: true explicitly here
       groups.push([{...item, index, is_divider: true}]);
     } else if (groups.length === 0) {
       console.log(`Item ${item.name} is first item, creating first group`);
@@ -101,9 +109,12 @@ const LineupTable = ({
     return groups;
   }, [] as Array<Array<any>>);
   
-  console.log('Grouped items:', groupedItems.map((group, i) => 
-    `Group ${i}: ${group.map(item => `${item.name} (${item.is_divider === true ? 'divider' : 'regular'})`).join(', ')}`
-  ));
+  console.log('Grouped items:', groupedItems.map((group, i) => {
+    return `Group ${i}: ${group.map(item => {
+      const isDivider = item.is_divider === true;
+      return `${item.name} (${isDivider ? 'divider' : 'regular'})`;
+    }).join(', ')}`;
+  }));
   
   return (
     <div className="space-y-4">
@@ -117,7 +128,7 @@ const LineupTable = ({
           {provided => (
             <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
               {groupedItems.map((group, groupIndex) => {
-                // Ensure we explicitly cast to boolean to avoid any type issues
+                // CRITICAL: Strictly check for boolean true
                 const startsWithDivider = group[0]?.is_divider === true;
                 console.log(`Group ${groupIndex} starts with divider:`, startsWithDivider, 'Raw value:', group[0]?.is_divider, 'Type:', typeof group[0]?.is_divider);
                 

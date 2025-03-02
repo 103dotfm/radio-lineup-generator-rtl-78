@@ -69,26 +69,35 @@ const LineupItem = ({
     }
   }, [editor, details]);
 
-  // Debug: Log the exact values coming into the component 
+  // Debug: Explicitly check and convert the boolean flags
+  const isDivider = is_divider === true;
+  const isBreak = is_break === true; 
+  const isNote = is_note === true;
+
+  // Debug: Log the exact values coming into the component including explicit conversions
   console.log(`LineupItem ${id} (${name}) render - raw props:`, { 
     is_break, 
     is_note, 
     is_divider,
     is_break_type: typeof is_break,
     is_note_type: typeof is_note,
-    is_divider_type: typeof is_divider
+    is_divider_type: typeof is_divider,
+    // Explicit boolean conversions for comparison
+    isDivider,
+    isBreak,
+    isNote
   });
   
   // Debug: Log the item properties to help diagnose issues
   console.log(`LineupItem ${id} (${name}) render:`, { 
-    is_break: !!is_break, 
-    is_note: !!is_note, 
-    is_divider: !!is_divider,
-    item_type: !!is_divider ? 'divider' : !!is_break ? 'break' : !!is_note ? 'note' : 'regular'
+    is_break: isBreak, 
+    is_note: isNote, 
+    is_divider: isDivider,
+    item_type: isDivider ? 'divider' : isBreak ? 'break' : isNote ? 'note' : 'regular'
   });
 
-  // Ensure we check explicitly for is_divider === true
-  if (is_divider === true) {
+  // Ensure we check explicitly for is_divider === true - This is crucial!
+  if (isDivider) {
     console.log(`Item ${id} (${name}) identified as divider, returning null`);
     return null; // Dividers are handled separately in LineupTable
   }

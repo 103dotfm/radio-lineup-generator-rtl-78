@@ -29,6 +29,7 @@ const DividerItem = ({
   // Add debug logging to identify where the component is being rendered
   useEffect(() => {
     console.log(`DividerItem ${id} (${name}) mounted at index ${index}`);
+    console.log(`DividerItem props check - this MUST be a divider item`);
     
     return () => {
       console.log(`DividerItem ${id} (${name}) unmounted`);
@@ -42,13 +43,16 @@ const DividerItem = ({
   const handleSave = () => {
     console.log(`Saving divider ${id} with text "${dividerText}"`);
     
-    // Ensure we explicitly set is_divider to true when saving
-    onEdit(id, { 
+    // CRITICAL: Make sure we explicitly set is_divider to true when saving
+    const updateData = { 
       name: dividerText, 
       is_divider: true,
       is_break: false,
       is_note: false
-    });
+    };
+    
+    console.log(`Divider update data:`, updateData);
+    onEdit(id, updateData);
     
     console.log(`After save: explicitly set is_divider to true for item ${id}`);
     setIsEditing(false);
