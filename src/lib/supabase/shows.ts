@@ -219,6 +219,13 @@ export const saveShow = async (
       const itemsToInsert = items.map((item, index) => {
         // Keep track of interviewees but don't include them in the item insert
         const { interviewees, ...itemData } = item;
+        
+        // Explicitly ensure is_divider is properly passed as a boolean
+        const isDivider = itemData.is_divider === true;
+        
+        // Log for debugging
+        console.log(`Item ${index} (${itemData.name}): is_divider:`, isDivider);
+        
         return {
           show_id: finalShowId,
           position: index,
@@ -229,7 +236,7 @@ export const saveShow = async (
           duration: itemData.duration,
           is_break: itemData.is_break || false,
           is_note: itemData.is_note || false,
-          is_divider: itemData.is_divider || false // Ensure is_divider is saved correctly
+          is_divider: isDivider // Use the explicit boolean value
         };
       });
 
