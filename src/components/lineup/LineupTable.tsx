@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, DropResult, Draggable } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
@@ -58,16 +57,12 @@ const LineupTable = ({
     return items.reduce((total, item) => total + (item.duration || 0), 0);
   };
 
-  // Group items by dividers - each divider starts a new group
   const groupedItems = items.reduce((groups, item, index) => {
     if (item.is_divider) {
-      // Start a new group with the divider
       groups.push([{...item, index}]);
     } else if (groups.length === 0) {
-      // First group if no dividers yet
       groups.push([{...item, index}]);
     } else {
-      // Add to current group
       groups[groups.length - 1].push({...item, index});
     }
     return groups;
@@ -85,12 +80,10 @@ const LineupTable = ({
           {provided => (
             <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
               {groupedItems.map((group, groupIndex) => {
-                // Check if the first item in this group is a divider
                 const startsWithDivider = group[0]?.is_divider;
                 
                 return (
                   <div key={`group-${groupIndex}`} className="table-section mb-8">
-                    {/* Render the divider if this group starts with one */}
                     {startsWithDivider && (
                       <Draggable draggableId={group[0].id} index={group[0].index}>
                         {(dividerProvided) => (
@@ -138,7 +131,6 @@ const LineupTable = ({
                       </thead>
                       
                       <tbody>
-                        {/* Skip the first item if it's a divider, as we've already rendered it */}
                         {group.slice(startsWithDivider ? 1 : 0).map((item) => (
                           <LineupItem 
                             key={item.id} 
