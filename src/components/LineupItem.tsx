@@ -70,7 +70,12 @@ const LineupItem = ({
   }, [editor, details]);
 
   // Debug: Log the item properties to help diagnose issues
-  console.log(`LineupItem ${id} (${name}) render:`, { is_break, is_note, is_divider });
+  console.log(`LineupItem ${id} (${name}) render:`, { 
+    is_break, 
+    is_note, 
+    is_divider,
+    item_type: is_divider ? 'divider' : is_break ? 'break' : is_note ? 'note' : 'regular'
+  });
 
   // Ensure we check explicitly for is_divider === true
   if (is_divider === true) {
