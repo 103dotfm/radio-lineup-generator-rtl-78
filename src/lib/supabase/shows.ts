@@ -216,28 +216,41 @@ export const saveShow = async (
 
     // Insert new items
     if (items.length > 0) {
+      // Pre-process items to ensure correct boolean flags for special types
       const itemsToInsert = items.map((item, index) => {
         // Keep track of interviewees but don't include them in the item insert
         const { interviewees, ...itemData } = item;
         
-        // Explicitly ensure is_divider is properly passed as a boolean
-        const isDivider = itemData.is_divider === true;
+        // For debugging: Log the incoming data to see what's coming in
+        console.log(`Pre-processing item ${index} (${itemData.name}):`, {
+          is_break: itemData.is_break,
+          is_note: itemData.is_note,
+          is_divider: itemData.is_divider
+        });
         
-        // Log for debugging
-        console.log(`Item ${index} (${itemData.name}): is_divider:`, isDivider);
-        
-        return {
+        // Create a cleaned version of the item to insert
+        const cleanedItem = {
           show_id: finalShowId,
           position: index,
           name: itemData.name,
-          title: itemData.title,
-          details: itemData.details,
-          phone: itemData.phone,
-          duration: itemData.duration,
-          is_break: itemData.is_break || false,
-          is_note: itemData.is_note || false,
-          is_divider: isDivider // Use the explicit boolean value
+          title: itemData.title || null,
+          details: itemData.details || null,
+          phone: itemData.phone || null,
+          duration: itemData.duration || 0,
+          // Explicit boolean conversion for each flag
+          is_break: itemData.is_break === true,
+          is_note: itemData.is_note === true,
+          is_divider: itemData.is_divider === true
         };
+        
+        console.log(`Final item ${index} values:`, {
+          name: cleanedItem.name,
+          is_break: cleanedItem.is_break,
+          is_note: cleanedItem.is_note,
+          is_divider: cleanedItem.is_divider
+        });
+        
+        return cleanedItem;
       });
 
       console.log('Inserting items:', itemsToInsert);
@@ -246,7 +259,10 @@ export const saveShow = async (
         .insert(itemsToInsert)
         .select();
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Error inserting items:', itemsError);
+        throw itemsError;
+      }
 
       // Now that we have the inserted items with their new IDs, we can insert the interviewees
       if (insertedItems) {
