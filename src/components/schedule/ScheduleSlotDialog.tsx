@@ -72,26 +72,55 @@ export default function ScheduleSlotDialog({
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
       setSlotColor(editingSlot.color || 'green');
+    } else {
+      // Reset form when not editing
+      setShowName('');
+      setHostName('');
+      setStartTime('');
+      setEndTime('');
+      setSelectedDays([]);
+      setIsPrerecorded(false);
+      setIsCollection(false);
+      setSlotColor('green');
     }
-  }, [editingSlot]);
+  }, [editingSlot, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    selectedDays.forEach(dayOfWeek => {
+    // If we're editing, we need to maintain the original ID to update instead of create
+    if (editingSlot) {
+      console.log("Updating existing slot:", editingSlot.id);
       const slotData = {
+        id: editingSlot.id, // Keep the original ID for update
         show_name: showName,
         host_name: hostName,
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
-        day_of_week: dayOfWeek,
-        is_recurring: isMasterSchedule,
+        day_of_week: selectedDays[0],
+        is_recurring: isMasterSchedule, 
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
         color: slotColor
       };
       onSave(slotData);
-    });
+    } else {
+      // For new slots
+      selectedDays.forEach(dayOfWeek => {
+        const slotData = {
+          show_name: showName,
+          host_name: hostName,
+          start_time: `${startTime}:00`,
+          end_time: `${endTime}:00`,
+          day_of_week: dayOfWeek,
+          is_recurring: isMasterSchedule,
+          is_prerecorded: isPrerecorded,
+          is_collection: isCollection,
+          color: slotColor
+        };
+        onSave(slotData);
+      });
+    }
     
     onClose();
   };
@@ -194,6 +223,7 @@ export default function ScheduleSlotDialog({
                       id={`day-${day.id}`}
                       checked={selectedDays.includes(day.id)}
                       onCheckedChange={() => toggleDay(day.id)}
+                      disabled={editingSlot !== undefined} // Disable changing days when editing
                     />
                     <Label htmlFor={`day-${day.id}`}>{day.label}</Label>
                   </div>
@@ -208,4 +238,4 @@ export default function ScheduleSlotDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
