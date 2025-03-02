@@ -247,7 +247,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
     is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
     is_recurring: originalSlot.is_recurring, // Don't change is_recurring
-    color: updates.color || originalSlot.color,
+    color: updates.color || originalSlot.color, // Use color from updates or fallback to original
     updated_at: new Date().toISOString()
   };
   

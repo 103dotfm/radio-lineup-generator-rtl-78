@@ -1,3 +1,4 @@
+
 export type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleSlot {
@@ -12,6 +13,7 @@ export interface ScheduleSlot {
   is_collection?: boolean;
   has_lineup?: boolean;
   is_modified?: boolean;
+  color?: string;
   created_at?: string;
   updated_at?: string;
   shows?: Array<{
