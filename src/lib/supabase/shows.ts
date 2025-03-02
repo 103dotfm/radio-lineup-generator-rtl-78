@@ -221,14 +221,14 @@ export const saveShow = async (
         // Keep track of interviewees but don't include them in the item insert
         const { interviewees, ...itemData } = item;
         
-        // For debugging: Log the incoming data to see what's coming in
+        // Log incoming item data for debugging
         console.log(`Pre-processing item ${index} (${itemData.name}):`, {
-          is_break: itemData.is_break,
-          is_note: itemData.is_note,
-          is_divider: itemData.is_divider
+          is_break: !!itemData.is_break,
+          is_note: !!itemData.is_note,
+          is_divider: !!itemData.is_divider
         });
         
-        // Create a cleaned version of the item to insert
+        // Create a cleaned version of the item to insert with proper boolean values
         const cleanedItem = {
           show_id: finalShowId,
           position: index,
@@ -237,14 +237,14 @@ export const saveShow = async (
           details: itemData.details || null,
           phone: itemData.phone || null,
           duration: itemData.duration || 0,
-          // Explicit boolean conversion for each flag
+          // Force explicit boolean conversion for special types
           is_break: itemData.is_break === true,
           is_note: itemData.is_note === true,
           is_divider: itemData.is_divider === true
         };
         
-        console.log(`Final item ${index} values:`, {
-          name: cleanedItem.name,
+        // Log processed item for verification
+        console.log(`Final processed item ${index} (${cleanedItem.name}):`, {
           is_break: cleanedItem.is_break,
           is_note: cleanedItem.is_note,
           is_divider: cleanedItem.is_divider
@@ -253,7 +253,7 @@ export const saveShow = async (
         return cleanedItem;
       });
 
-      console.log('Inserting items:', itemsToInsert);
+      console.log('Inserting items to database:', itemsToInsert);
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
         .insert(itemsToInsert)

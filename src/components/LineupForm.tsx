@@ -120,7 +120,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
     if (onDividerAdd) {
       onDividerAdd();
     } else {
-      // Fallback implementation if onDividerAdd isn't provided
+      // Create a divider item with is_divider explicitly set to true
       const dividerItem = {
         name: 'שעה שנייה',
         title: '',
@@ -129,11 +129,15 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
         duration: 0,
         is_break: false,
         is_note: false,
-        is_divider: true  // This needs to be explicitly true
+        is_divider: true  // This MUST be true
       };
       
       // Debug: Log to make sure it's true before passing to onAdd
-      console.log('Adding divider item:', dividerItem);
+      console.log('Adding divider item with flags:', {
+        is_break: dividerItem.is_break,
+        is_note: dividerItem.is_note,
+        is_divider: dividerItem.is_divider
+      });
       
       onAdd(dividerItem);
     }
