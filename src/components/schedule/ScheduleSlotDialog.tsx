@@ -77,7 +77,8 @@ export default function ScheduleSlotDialog({
         id: editingSlot.id,
         show_name: editingSlot.show_name,
         day_of_week: editingSlot.day_of_week,
-        start_time: editingSlot.start_time
+        start_time: editingSlot.start_time,
+        color: editingSlot.color
       });
     } else {
       // Reset form when not editing
