@@ -100,21 +100,20 @@ export default function ScheduleSlotDialog({
       console.log("Updating existing slot:", editingSlot.id);
       
       // Maintain the original slot's ID and don't change day_of_week when editing
-      const slotData = {
+      const updateData = {
         id: editingSlot.id, // Keep the original ID for update
         show_name: showName,
         host_name: hostName,
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
         day_of_week: editingSlot.day_of_week, // Don't change day when editing
-        is_recurring: isMasterSchedule, 
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
         color: slotColor
       };
       
-      console.log("Updating slot with data:", slotData);
-      onSave(slotData);
+      console.log("Updating slot with data:", updateData);
+      onSave(updateData);
     } else {
       // For new slots
       selectedDays.forEach(dayOfWeek => {

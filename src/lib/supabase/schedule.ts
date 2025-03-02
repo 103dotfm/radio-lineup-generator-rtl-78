@@ -234,49 +234,17 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
 
   console.log('Original slot to update:', originalSlot);
 
-  // For master schedule updates - directly update the recurring slot
-  if (isMasterSchedule) {
-    console.log('Updating master schedule slot');
-    const { data, error } = await supabase
-      .from('schedule_slots')
-      .update({ 
-        ...updates, 
-        is_recurring: true, 
-        is_modified: false,
-        // Keep the same day_of_week to prevent conflicts
-        day_of_week: originalSlot.day_of_week,
-        // Keep the same time to prevent conflicts
-        start_time: updates.start_time || originalSlot.start_time,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating master schedule slot:', error);
-      throw error;
-    }
-    
-    console.log('Successfully updated master schedule slot:', data);
-    return data;
-  }
-
-  // Weekly view update - Update the slot directly without creating a new one
-  console.log('Updating weekly schedule slot');
+  // For both master schedule and weekly view - directly update the existing slot
+  console.log('Directly updating slot with id:', id);
   
+  // Prepare update data - keeping the original day_of_week to prevent conflicts
   const updateData = {
     ...updates,
-    // Critical! Keep the id the same
-    id: originalSlot.id,
-    // For weekly view, ensure it's not recurring
-    is_recurring: false,
-    is_modified: true,
-    // Keep the day_of_week the same to prevent conflicts
+    // DO NOT change these values to prevent conflicts
     day_of_week: originalSlot.day_of_week,
-    // Keep the start_time and created_at to prevent conflicts with other slots
+    is_recurring: originalSlot.is_recurring,
     start_time: updates.start_time || originalSlot.start_time,
-    created_at: originalSlot.created_at,
+    end_time: updates.end_time || originalSlot.end_time,
     updated_at: new Date().toISOString()
   };
   
@@ -290,11 +258,11 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     .single();
 
   if (error) {
-    console.error('Error updating weekly schedule slot:', error);
+    console.error('Error updating slot:', error);
     throw error;
   }
   
-  console.log('Successfully updated weekly schedule slot:', data);
+  console.log('Successfully updated slot:', data);
   return data;
 };
 
