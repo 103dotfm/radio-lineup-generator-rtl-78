@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -66,11 +67,6 @@ body {
 
 .cell-collection {
   background-color: #F1F1F1;  /* Light gray */
-}
-
-/* Allow custom colors to override default cell styling */
-.cell-custom-color {
-  /* No background color here as it will be set inline */
 }
 
 /* Editor styles */

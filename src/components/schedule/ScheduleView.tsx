@@ -251,10 +251,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const getSlotColor = (slot: ScheduleSlot) => {
-    if (slot.color) {
-      return `cell-custom-color`;
-    }
-    
     if (slot.is_collection) return 'cell-collection';
     if (slot.is_prerecorded) return 'cell-prerecorded';
     if (slot.is_modified) return 'cell-modified';
@@ -276,8 +272,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     
     const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
     
-    const customStyle = slot.color ? { backgroundColor: slot.color } : {};
-    
     return <div 
       key={slot.id} 
       onClick={slotClickHandler} 
@@ -288,8 +282,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         top: '0',
         left: '0',
         right: '0',
-        zIndex: 10,
-        ...customStyle
+        zIndex: 10
       }}
     >
         <div className="flex justify-between items-start">
