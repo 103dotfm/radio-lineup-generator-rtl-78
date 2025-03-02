@@ -72,6 +72,13 @@ export default function ScheduleSlotDialog({
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
       setSlotColor(editingSlot.color || 'green');
+      
+      console.log('Editing slot with data:', {
+        id: editingSlot.id,
+        show_name: editingSlot.show_name,
+        day_of_week: editingSlot.day_of_week,
+        start_time: editingSlot.start_time
+      });
     } else {
       // Reset form when not editing
       setShowName('');
@@ -88,21 +95,25 @@ export default function ScheduleSlotDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If we're editing, we need to maintain the original ID to update instead of create
+    // If we're editing an existing slot
     if (editingSlot) {
       console.log("Updating existing slot:", editingSlot.id);
+      
+      // Maintain the original slot's ID and don't change day_of_week when editing
       const slotData = {
         id: editingSlot.id, // Keep the original ID for update
         show_name: showName,
         host_name: hostName,
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
-        day_of_week: selectedDays[0],
+        day_of_week: editingSlot.day_of_week, // Don't change day when editing
         is_recurring: isMasterSchedule, 
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
         color: slotColor
       };
+      
+      console.log("Updating slot with data:", slotData);
       onSave(slotData);
     } else {
       // For new slots
