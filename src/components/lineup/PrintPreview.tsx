@@ -49,35 +49,43 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
         </div>
       </div>
 
-      {groupedItems.map((group, groupIndex) => {
-        // Check if the first item in this group is a divider
-        const startsWithDivider = group[0]?.is_divider;
-
-        return (
-          <div key={`print-group-${groupIndex}`} className="mb-6">
-            {/* Render the divider if this group starts with one */}
-            {startsWithDivider && (
-              <h2 className="text-xl font-bold my-4 text-center divider-text">{group[0].name}</h2>
+      {/* Unified table approach with dividers as headings */}
+      <table className="w-full border-collapse border border-gray-200 mb-4">
+        <thead>
+          <tr>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
+            {isAuthenticated && (
+              <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
             )}
-
-            <table className="w-full border-collapse border border-gray-200 mb-4">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
-                  <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
-                  <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
-                  {isAuthenticated && (
-                    <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
-                  )}
-                  {showMinutes && (
-                    <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {/* Skip the first item if it's a divider, as we've already rendered it */}
+            {showMinutes && (
+              <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {groupedItems.map((group, groupIndex) => {
+            // Check if the first item in this group is a divider
+            const startsWithDivider = group[0]?.is_divider;
+            
+            return (
+              <React.Fragment key={`print-group-${groupIndex}`}>
+                {/* Render the divider as a special row with className for styling */}
+                {startsWithDivider && (
+                  <tr className="divider-row">
+                    <td 
+                      colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
+                      className="py-2 px-4 border-0"
+                    >
+                      <h2 className="divider-heading text-xl font-bold">{group[0].name}</h2>
+                    </td>
+                  </tr>
+                )}
+                
+                {/* Render the rest of the items in the group */}
                 {group.slice(startsWithDivider ? 1 : 0).map((item) => {
-                  // Fixed: Calculate correct colspan based on authenticated status and showMinutes
+                  // Calculate correct colspan based on authenticated status and showMinutes
                   const breakNoteColspan = isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3);
                   
                   if (item.is_break) {
@@ -144,23 +152,23 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     </React.Fragment>
                   );
                 })}
-              </tbody>
-              {showMinutes && groupIndex === groupedItems.length - 1 && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
-                      סה״כ דקות
-                    </td>
-                    <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
-                      {calculateTotalMinutes()}
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        );
-      })}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+        {showMinutes && (
+          <tfoot>
+            <tr>
+              <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
+                סה״כ דקות
+              </td>
+              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
+                {calculateTotalMinutes()}
+              </td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
 
       {editorContent && (
         <div 

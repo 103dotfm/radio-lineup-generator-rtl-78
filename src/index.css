@@ -96,7 +96,7 @@ body {
 /* Print styles */
 @media print {
   @page {
-    margin: 5mm;
+    margin: 10mm;  /* Increased from 5mm to 10mm for better margins */
     size: A4;
     padding: 0;
   }
@@ -166,13 +166,14 @@ body {
 
   /* Improved page break handling */
   .print-container {
-    margin-bottom: 2rem;
+    margin-bottom: 4rem;  /* Increased from 2rem to 4rem for more space at bottom */
   }
   
+  /* Changed divider styling to avoid page breaks */
   .divider-text {
-    page-break-before: always;
     page-break-after: avoid;
     margin-top: 1.5rem;
+    margin-bottom: 1rem;
     background-color: #f3f4f6 !important;
     color: black !important;
     padding: 10px;
@@ -181,9 +182,28 @@ body {
     print-color-adjust: exact;
   }
   
+  /* Allow content to flow naturally instead of forcing page breaks */
+  .divider-heading {
+    page-break-after: avoid;
+    font-weight: bold;
+    font-size: 1.25rem !important;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    background-color: #f3f4f6 !important;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
   /* Add more space at bottom of page to prevent text being cut off */
   .mb-6 {
-    margin-bottom: 2rem !important;
+    margin-bottom: 2.5rem !important;  /* Increased from 2rem */
+  }
+  
+  /* Additional bottom padding for rows to prevent cropping */
+  tr td {
+    padding-bottom: 0.75rem !important;
   }
 
   [role="status"],
