@@ -69,9 +69,9 @@ const LineupItem = ({
     }
   }, [editor, details]);
 
-  // Return early if this is a divider item - it will be rendered differently
-  if (is_divider) {
-    return null; // Dividers are rendered separately in LineupTable
+  // Ensure we check explicitly for is_divider === true
+  if (is_divider === true) {
+    return null; // Dividers are handled separately in LineupTable
   }
 
   return (
