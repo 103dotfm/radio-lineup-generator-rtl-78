@@ -41,12 +41,16 @@ const DividerItem = ({
 
   const handleSave = () => {
     console.log(`Saving divider ${id} with text "${dividerText}"`);
+    
+    // Ensure we explicitly set is_divider to true when saving
     onEdit(id, { 
       name: dividerText, 
       is_divider: true,
       is_break: false,
       is_note: false
     });
+    
+    console.log(`After save: explicitly set is_divider to true for item ${id}`);
     setIsEditing(false);
   };
 

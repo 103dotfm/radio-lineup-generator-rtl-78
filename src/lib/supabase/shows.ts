@@ -226,23 +226,25 @@ export const saveShow = async (
     // Insert new items
     if (items.length > 0) {
       // CRITICAL FIX: Add debug logging before inserting and explicitly make sure is_divider is kept as a boolean
-      console.log('Items being saved:', items);
+      console.log('Items being saved:', JSON.stringify(items, null, 2));
       
       // Pre-process items to ensure correct boolean flags for special types
       const itemsToInsert = items.map((item, index) => {
         // Keep track of interviewees but don't include them in the item insert
         const { interviewees, ...itemData } = item;
         
-        // Force boolean conversion on all special types - CRITICAL FIX
-        const is_break = itemData.is_break === true;
-        const is_note = itemData.is_note === true;
-        const is_divider = itemData.is_divider === true;
+        // CRITICAL FIX: directly access is_divider property from the original item object
+        // and explicitly convert it to a boolean to ensure it's preserved
+        const is_break = Boolean(itemData.is_break);
+        const is_note = Boolean(itemData.is_note);
+        const is_divider = Boolean(itemData.is_divider);
         
         console.log(`Pre-processing item ${index} (${itemData.name}):`, {
-          is_break: is_break,
-          is_note: is_note,
-          is_divider: is_divider,
-          raw_is_divider: itemData.is_divider
+          is_break,
+          is_note,
+          is_divider,
+          raw_is_divider: itemData.is_divider,
+          raw_is_divider_type: typeof itemData.is_divider
         });
         
         // Create a cleaned version of the item to insert with explicit boolean values
@@ -255,9 +257,9 @@ export const saveShow = async (
           phone: itemData.phone || null,
           duration: itemData.duration || 0,
           // Force explicit boolean values
-          is_break: is_break,
-          is_note: is_note,
-          is_divider: is_divider
+          is_break,
+          is_note,
+          is_divider
         };
         
         console.log(`Final processed item ${index} (${cleanedItem.name}):`, {
@@ -270,9 +272,9 @@ export const saveShow = async (
         return cleanedItem;
       });
 
-      console.log('Items to insert:', itemsToInsert);
+      console.log('Items to insert:', JSON.stringify(itemsToInsert, null, 2));
       
-      // CRITICAL FIX: Direct SQL query to verify what's going into the database
+      // Generate SQL for logging purposes
       const insertRawSql = `
         INSERT INTO show_items(show_id, position, name, title, details, phone, duration, is_break, is_note, is_divider)
         VALUES ${itemsToInsert.map((item, i) => 
