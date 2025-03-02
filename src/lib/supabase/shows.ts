@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -41,20 +40,17 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    // Transform the results into Show objects
     const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
       if (!item.show) return acc;
       
       const showId = item.show.id;
       if (!acc[showId]) {
-        // Initialize show if we haven't seen it before
         acc[showId] = {
           ...item.show,
           items: []
         };
       }
       
-      // Add only the matching item to the show's items
       acc[showId].items = acc[showId].items || [];
       acc[showId].items.push({
         id: item.id,
@@ -115,7 +111,6 @@ export const getShowWithItems = async (showId: string) => {
     throw itemsError;
   }
 
-  // Debug logs for incoming data
   console.log('Retrieved items from database:', items?.map(item => ({
     id: item.id,
     name: item.name,
@@ -163,7 +158,6 @@ export const saveShow = async (
     console.log('Saving show. Is update?', isUpdate);
 
     if (isUpdate) {
-      // Update existing show
       const { error: showError } = await supabase
         .from('shows')
         .update({
@@ -177,7 +171,6 @@ export const saveShow = async (
 
       if (showError) throw showError;
       
-      // Get all existing items to later check which interviewees need to be deleted
       const { data: existingItems, error: fetchError } = await supabase
         .from('show_items')
         .select('id')
@@ -185,7 +178,6 @@ export const saveShow = async (
         
       if (fetchError) throw fetchError;
       
-      // Delete all existing items for this show - we'll recreate them
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
@@ -194,7 +186,6 @@ export const saveShow = async (
       if (deleteError) throw deleteError;
       
     } else {
-      // Creating new show
       const { data: newShow, error: createError } = await supabase
         .from('shows')
         .insert({
@@ -211,7 +202,6 @@ export const saveShow = async (
       finalShowId = newShow.id;
     }
 
-    // Update schedule slot to link with this show
     if (show.slot_id) {
       const { error: slotError } = await supabase
         .from('schedule_slots')
@@ -223,58 +213,61 @@ export const saveShow = async (
       if (slotError) throw slotError;
     }
 
-    // Insert new items
     if (items.length > 0) {
-      // CRITICAL FIX: Add debug logging before inserting and explicitly make sure is_divider is kept as a boolean
-      console.log('Items being saved:', JSON.stringify(items, null, 2));
-      
-      // Pre-process items to ensure correct boolean flags for special types
+      console.log('RAW ITEMS BEFORE PROCESSING:', items.map(item => ({
+        name: item.name,
+        is_divider: item.is_divider,
+        type: typeof item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
+
       const itemsToInsert = items.map((item, index) => {
-        // Keep track of interviewees but don't include them in the item insert
-        const { interviewees, ...itemData } = item;
+        const isDivider = Boolean(item.is_divider);
+        const isBreak = Boolean(item.is_break);
+        const isNote = Boolean(item.is_note);
         
-        // CRITICAL FIX: directly access is_divider property from the original item object
-        // and explicitly convert it to a boolean to ensure it's preserved
-        const is_break = Boolean(itemData.is_break);
-        const is_note = Boolean(itemData.is_note);
-        const is_divider = Boolean(itemData.is_divider);
-        
-        console.log(`Pre-processing item ${index} (${itemData.name}):`, {
-          is_break,
-          is_note,
-          is_divider,
-          raw_is_divider: itemData.is_divider,
-          raw_is_divider_type: typeof itemData.is_divider
+        console.log(`DIRECT ACCESS - Item ${index} (${item.name}):`, {
+          isDivider,
+          is_divider_value: item.is_divider,
+          is_divider_type: typeof item.is_divider
         });
         
-        // Create a cleaned version of the item to insert with explicit boolean values
+        const { interviewees, ...itemData } = item;
+        
         const cleanedItem = {
           show_id: finalShowId,
           position: index,
-          name: itemData.name,
-          title: itemData.title || null,
-          details: itemData.details || null,
-          phone: itemData.phone || null,
-          duration: itemData.duration || 0,
-          // Force explicit boolean values
-          is_break,
-          is_note,
-          is_divider
+          name: item.name,
+          title: item.title || null,
+          details: item.details || null,
+          phone: item.phone || null,
+          duration: item.duration || 0,
+          is_break: isBreak,
+          is_note: isNote,
+          is_divider: isDivider
         };
         
-        console.log(`Final processed item ${index} (${cleanedItem.name}):`, {
+        console.log(`Processed item ${index} (${cleanedItem.name}):`, {
           is_break: cleanedItem.is_break,
           is_note: cleanedItem.is_note,
           is_divider: cleanedItem.is_divider,
-          name: cleanedItem.name
+          preserved_is_divider: isDivider
         });
         
         return cleanedItem;
       });
 
-      console.log('Items to insert:', JSON.stringify(itemsToInsert, null, 2));
+      console.log('Original items before mapping:', JSON.stringify(items.map(item => ({
+        name: item.name,
+        is_divider: item.is_divider,
+        is_divider_type: typeof item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })), null, 2));
       
-      // Generate SQL for logging purposes
+      console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
+      
       const insertRawSql = `
         INSERT INTO show_items(show_id, position, name, title, details, phone, duration, is_break, is_note, is_divider)
         VALUES ${itemsToInsert.map((item, i) => 
@@ -295,16 +288,20 @@ export const saveShow = async (
         throw itemsError;
       }
 
-      console.log('Successfully inserted items:', insertedItems);
+      console.log('Successfully inserted items:', insertedItems?.map(item => ({
+        id: item.id,
+        name: item.name,
+        is_divider: item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
 
-      // Now that we have the inserted items with their new IDs, we can insert the interviewees
       if (insertedItems) {
         for (let i = 0; i < insertedItems.length; i++) {
           const item = insertedItems[i];
           const itemInterviewees = items[i].interviewees;
           
           if (itemInterviewees && itemInterviewees.length > 0) {
-            // Create interviewees for this item
             const intervieweesToInsert = itemInterviewees.map(interviewee => ({
               item_id: item.id,
               name: interviewee.name,
