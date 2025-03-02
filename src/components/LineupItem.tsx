@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import BreakItem from './lineup/BreakItem';
 import NoteItem from './lineup/NoteItem';
 import RegularItem from './lineup/RegularItem';
+import DividerItem from './lineup/DividerItem';
 
 interface LineupItemProps {
   id: string;
@@ -17,6 +18,7 @@ interface LineupItemProps {
   duration: number;
   is_break?: boolean;
   is_note?: boolean;
+  is_divider?: boolean;
   index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -35,6 +37,7 @@ const LineupItem = ({
   duration,
   is_break,
   is_note,
+  is_divider,
   index,
   onDelete,
   onDurationChange,
@@ -65,6 +68,11 @@ const LineupItem = ({
       editor.commands.setContent(details);
     }
   }, [editor, details]);
+
+  // Return early if this is a divider item - it will be rendered differently
+  if (is_divider) {
+    return null; // Dividers are rendered separately in LineupTable
+  }
 
   return (
     <Draggable draggableId={id} index={index}>

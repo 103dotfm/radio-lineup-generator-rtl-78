@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -136,6 +137,7 @@ export const saveShow = async (
     duration?: number;
     is_break: boolean;
     is_note: boolean;
+    is_divider?: boolean;
     interviewees?: Array<{
       name: string;
       title?: string;
@@ -220,7 +222,14 @@ export const saveShow = async (
         return {
           show_id: finalShowId,
           position: index,
-          ...itemData
+          name: itemData.name,
+          title: itemData.title,
+          details: itemData.details,
+          phone: itemData.phone,
+          duration: itemData.duration,
+          is_break: itemData.is_break || false,
+          is_note: itemData.is_note || false,
+          is_divider: itemData.is_divider || false
         };
       });
 
