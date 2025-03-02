@@ -225,7 +225,8 @@ export const saveShow = async (
         console.log(`Pre-processing item ${index} (${itemData.name}):`, {
           is_break: !!itemData.is_break,
           is_note: !!itemData.is_note,
-          is_divider: !!itemData.is_divider
+          is_divider: !!itemData.is_divider,
+          raw_is_divider: itemData.is_divider // Log the raw value to see what's coming in
         });
         
         // Create a cleaned version of the item to insert with proper boolean values
@@ -247,7 +248,8 @@ export const saveShow = async (
         console.log(`Final processed item ${index} (${cleanedItem.name}):`, {
           is_break: cleanedItem.is_break,
           is_note: cleanedItem.is_note,
-          is_divider: cleanedItem.is_divider
+          is_divider: cleanedItem.is_divider,
+          name: cleanedItem.name
         });
         
         return cleanedItem;
