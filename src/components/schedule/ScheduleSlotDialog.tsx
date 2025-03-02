@@ -11,6 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState, useEffect } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface ScheduleSlotDialogProps {
   isOpen: boolean;
@@ -30,6 +37,12 @@ const weekDays = [
   { id: 6, label: 'שבת' },
 ];
 
+const colorOptions = [
+  { value: 'green', label: 'ירוק', bgClass: 'bg-[#F2FCE2]' },
+  { value: 'yellow', label: 'צהוב', bgClass: 'bg-[#FEF7CD]' },
+  { value: 'blue', label: 'כחול', bgClass: 'bg-[#D3E4FD]' },
+];
+
 export default function ScheduleSlotDialog({ 
   isOpen, 
   onClose, 
@@ -46,6 +59,7 @@ export default function ScheduleSlotDialog({
   );
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
+  const [slotColor, setSlotColor] = useState(editingSlot?.color || 'green');
 
   // Update the form when editingSlot changes
   useEffect(() => {
@@ -57,6 +71,7 @@ export default function ScheduleSlotDialog({
       setSelectedDays(editingSlot.day_of_week !== undefined ? [editingSlot.day_of_week] : []);
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
+      setSlotColor(editingSlot.color || 'green');
     }
   }, [editingSlot]);
 
@@ -72,7 +87,8 @@ export default function ScheduleSlotDialog({
         day_of_week: dayOfWeek,
         is_recurring: isMasterSchedule,
         is_prerecorded: isPrerecorded,
-        is_collection: isCollection
+        is_collection: isCollection,
+        color: slotColor
       };
       onSave(slotData);
     });
@@ -135,6 +151,21 @@ export default function ScheduleSlotDialog({
                   required
                 />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="slot-color">צבע המשבצת</Label>
+              <Select value={slotColor} onValueChange={setSlotColor}>
+                <SelectTrigger id="slot-color" className="w-full">
+                  <SelectValue placeholder="בחר צבע" />
+                </SelectTrigger>
+                <SelectContent>
+                  {colorOptions.map((color) => (
+                    <SelectItem key={color.value} value={color.value} className={color.bgClass}>
+                      {color.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col space-y-2">
               <div className="flex items-center space-x-2">

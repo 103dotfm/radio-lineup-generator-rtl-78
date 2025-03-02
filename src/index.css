@@ -164,6 +164,28 @@ body {
     page-break-inside: avoid;
   }
 
+  /* Improved page break handling */
+  .print-container {
+    margin-bottom: 2rem;
+  }
+  
+  .divider-text {
+    page-break-before: always;
+    page-break-after: avoid;
+    margin-top: 1.5rem;
+    background-color: #f3f4f6 !important;
+    color: black !important;
+    padding: 10px;
+    border-radius: 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Add more space at bottom of page to prevent text being cut off */
+  .mb-6 {
+    margin-bottom: 2rem !important;
+  }
+
   [role="status"],
   .toaster,
   .sonner-toast-container {
@@ -293,4 +315,3 @@ tbody {vertical-align: top;}
 .table-section {
   margin-bottom: 3rem;
 }
-
