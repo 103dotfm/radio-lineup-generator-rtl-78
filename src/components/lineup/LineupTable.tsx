@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, DropResult, Draggable } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
@@ -57,16 +58,37 @@ const LineupTable = ({
     return items.reduce((total, item) => total + (item.duration || 0), 0);
   };
 
+  // Log items for debugging
+  console.log('LineupTable items:', items.map(item => ({
+    id: item.id,
+    name: item.name,
+    is_divider: item.is_divider,
+    type: item.is_divider ? 'divider' : item.is_break ? 'break' : item.is_note ? 'note' : 'regular'
+  })));
+
   const groupedItems = items.reduce((groups, item, index) => {
-    if (item.is_divider) {
+    console.log(`Processing item ${index} (${item.name}) for groups:`, {
+      is_divider: item.is_divider,
+      is_break: item.is_break,
+      is_note: item.is_note
+    });
+    
+    if (item.is_divider === true) {
+      console.log(`Item ${item.name} is a divider, creating new group`);
       groups.push([{...item, index}]);
     } else if (groups.length === 0) {
+      console.log(`Item ${item.name} is first item, creating first group`);
       groups.push([{...item, index}]);
     } else {
+      console.log(`Item ${item.name} added to existing group ${groups.length - 1}`);
       groups[groups.length - 1].push({...item, index});
     }
     return groups;
   }, [] as Array<Array<any>>);
+  
+  console.log('Grouped items:', groupedItems.map((group, i) => 
+    `Group ${i}: ${group.map(item => `${item.name} (${item.is_divider ? 'divider' : 'regular'})`).join(', ')}`
+  ));
   
   return (
     <div className="space-y-4">
@@ -80,7 +102,8 @@ const LineupTable = ({
           {provided => (
             <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px]">
               {groupedItems.map((group, groupIndex) => {
-                const startsWithDivider = group[0]?.is_divider;
+                const startsWithDivider = group[0]?.is_divider === true;
+                console.log(`Group ${groupIndex} starts with divider: ${startsWithDivider}`);
                 
                 return (
                   <div key={`group-${groupIndex}`} className="table-section mb-8">

@@ -79,7 +79,7 @@ const LineupItem = ({
 
   // Ensure we check explicitly for is_divider === true
   if (is_divider === true) {
-    console.log(`Item ${id} (${name}) identified as divider, not rendering as regular item`);
+    console.log(`Item ${id} (${name}) identified as divider, returning null`);
     return null; // Dividers are handled separately in LineupTable
   }
 

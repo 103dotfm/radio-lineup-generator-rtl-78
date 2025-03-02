@@ -313,12 +313,15 @@ const Index = () => {
       name: "שעה שנייה",
       position: items.length,
       is_divider: true,
+      is_break: false,
+      is_note: false,
       duration: 0,
       details: '',
       title: '',
       phone: ''
     };
     
+    console.log('Creating new divider with is_divider:', newDivider.is_divider);
     setItems([...items, newDivider]);
     setHasUnsavedChanges(true);
     toast.success('הפרדה נוספה בהצלחה');

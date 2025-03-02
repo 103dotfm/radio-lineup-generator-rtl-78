@@ -129,7 +129,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
         duration: 0,
         is_break: false,
         is_note: false,
-        is_divider: true  // This MUST be true
+        is_divider: true
       };
       
       // Debug: Log to make sure it's true before passing to onAdd
