@@ -222,54 +222,55 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   console.log('Updating schedule slot:', { id, updates, isMasterSchedule });
 
   // Get the original slot
-  const { data: originalSlot } = await supabase
+  const { data: originalSlot, error: fetchError } = await supabase
     .from('schedule_slots')
     .select('*, shows(*)')
     .eq('id', id)
     .single();
 
+  if (fetchError) {
+    console.error('Error fetching original slot:', fetchError);
+    throw new Error('Slot not found');
+  }
+
   if (!originalSlot) {
     throw new Error('Slot not found');
   }
 
+  console.log('Original slot found:', originalSlot);
+
   // For master schedule updates
   if (isMasterSchedule) {
+    console.log('Updating master schedule slot');
     const { data, error } = await supabase
       .from('schedule_slots')
-      .update({ ...updates, is_recurring: true, is_modified: false })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  // If this is a recurring slot being modified in weekly view
-  if (originalSlot.is_recurring) {
-    // For recurring slots in weekly view, mark the modification but keep the same ID
-    const { data, error } = await supabase
-      .from('schedule_slots')
-      .update({
-        ...updates,
-        is_recurring: false,
-        is_modified: true,
+      .update({ 
+        ...updates, 
+        is_recurring: true, 
+        is_modified: false,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating master schedule slot:', error);
+      throw error;
+    }
+    
+    console.log('Successfully updated master schedule slot:', data);
     return data;
   }
 
-  // For non-recurring slots, just update the existing slot
+  // For weekly view updates (both recurring and non-recurring slots)
+  // Direct update without checking for conflicts because we're updating an existing slot
+  console.log('Updating weekly slot with ID:', id);
   const { data, error } = await supabase
     .from('schedule_slots')
     .update({
       ...updates,
-      is_recurring: false,
+      is_recurring: originalSlot.is_recurring, // Preserve the recurring status
       is_modified: true,
       updated_at: new Date().toISOString()
     })
@@ -277,7 +278,12 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error updating weekly slot:', error);
+    throw error;
+  }
+
+  console.log('Successfully updated slot:', data);
   return data;
 };
 

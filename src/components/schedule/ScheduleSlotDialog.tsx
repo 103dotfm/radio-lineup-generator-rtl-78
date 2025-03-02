@@ -64,6 +64,7 @@ export default function ScheduleSlotDialog({
   // Update the form when editingSlot changes
   useEffect(() => {
     if (editingSlot) {
+      console.log('Editing slot with data:', editingSlot);
       setShowName(editingSlot.show_name || '');
       setHostName(editingSlot.host_name || '');
       setStartTime(editingSlot.start_time?.slice(0, 5) || '');
@@ -101,7 +102,10 @@ export default function ScheduleSlotDialog({
         is_recurring: isMasterSchedule, 
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
-        color: slotColor
+        color: slotColor,
+        // Very important for successful updates - maintain status flags for existing slot
+        is_modified: editingSlot.is_modified,
+        has_lineup: editingSlot.has_lineup
       };
       onSave(slotData);
     } else {
