@@ -69,12 +69,22 @@ const LineupItem = ({
     }
   }, [editor, details]);
 
-  // Debug: Log the item properties to help diagnose issues
-  console.log(`LineupItem ${id} (${name}) render:`, { 
+  // Debug: Log the exact values coming into the component 
+  console.log(`LineupItem ${id} (${name}) render - raw props:`, { 
     is_break, 
     is_note, 
     is_divider,
-    item_type: is_divider ? 'divider' : is_break ? 'break' : is_note ? 'note' : 'regular'
+    is_break_type: typeof is_break,
+    is_note_type: typeof is_note,
+    is_divider_type: typeof is_divider
+  });
+  
+  // Debug: Log the item properties to help diagnose issues
+  console.log(`LineupItem ${id} (${name}) render:`, { 
+    is_break: !!is_break, 
+    is_note: !!is_note, 
+    is_divider: !!is_divider,
+    item_type: !!is_divider ? 'divider' : !!is_break ? 'break' : !!is_note ? 'note' : 'regular'
   });
 
   // Ensure we check explicitly for is_divider === true

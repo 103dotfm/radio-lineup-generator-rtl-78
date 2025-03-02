@@ -75,6 +75,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       is_divider: false
     };
     
+    console.log('Adding regular item:', newItem);
     onAdd(newItem);
     clearForm();
   };
@@ -98,6 +99,12 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       is_note: false,
       is_divider: false
     };
+    console.log('Adding break item with flags:', {
+      is_break: breakItem.is_break,
+      is_note: breakItem.is_note,
+      is_divider: breakItem.is_divider
+    });
+    
     onAdd(breakItem);
     setDuration(5);
   };
@@ -113,11 +120,18 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       is_note: true,
       is_divider: false
     };
+    console.log('Adding note item with flags:', {
+      is_break: noteItem.is_break,
+      is_note: noteItem.is_note,
+      is_divider: noteItem.is_divider
+    });
+    
     onAdd(noteItem);
   };
 
   const handleDividerAdd = () => {
     if (onDividerAdd) {
+      console.log('Using parent onDividerAdd handler');
       onDividerAdd();
     } else {
       // Create a divider item with is_divider explicitly set to true

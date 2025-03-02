@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
@@ -26,18 +26,38 @@ const DividerItem = ({
   const [isEditing, setIsEditing] = useState(false);
   const [dividerText, setDividerText] = useState(name);
 
+  // Add debug logging to identify where the component is being rendered
+  useEffect(() => {
+    console.log(`DividerItem ${id} (${name}) mounted at index ${index}`);
+    
+    return () => {
+      console.log(`DividerItem ${id} (${name}) unmounted`);
+    };
+  }, [id, name, index]);
+
   const handleEdit = () => {
     setIsEditing(true);
   };
 
   const handleSave = () => {
-    onEdit(id, { name: dividerText, is_divider: true });
+    console.log(`Saving divider ${id} with text "${dividerText}"`);
+    onEdit(id, { 
+      name: dividerText, 
+      is_divider: true,
+      is_break: false,
+      is_note: false
+    });
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     setDividerText(name);
     setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    console.log(`Deleting divider ${id}`);
+    onDelete(id);
   };
 
   const colSpan = isAuthenticated ? (showMinutes ? 6 : 5) : (showMinutes ? 5 : 4);
@@ -64,7 +84,7 @@ const DividerItem = ({
                 <Button variant="ghost" size="icon" onClick={handleEdit}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => onDelete(id)}>
+                <Button variant="ghost" size="icon" onClick={handleDelete}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
