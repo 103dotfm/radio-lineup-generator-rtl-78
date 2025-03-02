@@ -89,18 +89,31 @@ const LineupTable = ({
                 const startsWithDivider = group[0]?.is_divider;
                 
                 return (
-                  <div key={`group-${groupIndex}`} className="table-section">
+                  <div key={`group-${groupIndex}`} className="table-section mb-8">
                     {/* Render the divider if this group starts with one */}
                     {startsWithDivider && (
-                      <DividerItem 
-                        id={group[0].id}
-                        name={group[0].name}
-                        index={group[0].index}
-                        onDelete={onDelete}
-                        onEdit={onEdit}
-                        isAuthenticated={isAuthenticated}
-                        showMinutes={showMinutesLocal}
-                      />
+                      <Draggable draggableId={group[0].id} index={group[0].index}>
+                        {(dividerProvided) => (
+                          <table 
+                            ref={dividerProvided.innerRef}
+                            {...dividerProvided.draggableProps}
+                            {...dividerProvided.dragHandleProps}
+                            className="w-full table-fixed border-collapse mb-2"
+                          >
+                            <tbody>
+                              <DividerItem 
+                                id={group[0].id}
+                                name={group[0].name}
+                                index={group[0].index}
+                                onDelete={onDelete}
+                                onEdit={onEdit}
+                                isAuthenticated={isAuthenticated}
+                                showMinutes={showMinutesLocal}
+                              />
+                            </tbody>
+                          </table>
+                        )}
+                      </Draggable>
                     )}
                     
                     <table className="w-full table-fixed border-collapse">

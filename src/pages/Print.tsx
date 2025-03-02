@@ -20,6 +20,7 @@ const Print = () => {
             setShow(loadedShow);
           }
           if (showItems) {
+            // Ensure items are correctly ordered
             setItems(showItems);
           }
         } catch (error) {
