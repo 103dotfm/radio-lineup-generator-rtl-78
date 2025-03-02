@@ -115,6 +115,15 @@ export const getShowWithItems = async (showId: string) => {
     throw itemsError;
   }
 
+  // Debug logs for incoming data
+  console.log('Retrieved items from database:', items?.map(item => ({
+    id: item.id,
+    name: item.name,
+    is_divider: item.is_divider,
+    is_break: item.is_break,
+    is_note: item.is_note
+  })));
+
   return {
     show,
     items: items || []
@@ -216,20 +225,27 @@ export const saveShow = async (
 
     // Insert new items
     if (items.length > 0) {
+      // CRITICAL FIX: Add debug logging before inserting and explicitly make sure is_divider is kept as a boolean
+      console.log('Items being saved:', items);
+      
       // Pre-process items to ensure correct boolean flags for special types
       const itemsToInsert = items.map((item, index) => {
         // Keep track of interviewees but don't include them in the item insert
         const { interviewees, ...itemData } = item;
         
-        // Log incoming item data for debugging
+        // Force boolean conversion on all special types - CRITICAL FIX
+        const is_break = itemData.is_break === true;
+        const is_note = itemData.is_note === true;
+        const is_divider = itemData.is_divider === true;
+        
         console.log(`Pre-processing item ${index} (${itemData.name}):`, {
-          is_break: !!itemData.is_break,
-          is_note: !!itemData.is_note,
-          is_divider: !!itemData.is_divider,
-          raw_is_divider: itemData.is_divider // Log the raw value to see what's coming in
+          is_break: is_break,
+          is_note: is_note,
+          is_divider: is_divider,
+          raw_is_divider: itemData.is_divider
         });
         
-        // Create a cleaned version of the item to insert with proper boolean values
+        // Create a cleaned version of the item to insert with explicit boolean values
         const cleanedItem = {
           show_id: finalShowId,
           position: index,
@@ -238,13 +254,12 @@ export const saveShow = async (
           details: itemData.details || null,
           phone: itemData.phone || null,
           duration: itemData.duration || 0,
-          // Force explicit boolean conversion for special types
-          is_break: itemData.is_break === true,
-          is_note: itemData.is_note === true,
-          is_divider: itemData.is_divider === true
+          // Force explicit boolean values
+          is_break: is_break,
+          is_note: is_note,
+          is_divider: is_divider
         };
         
-        // Log processed item for verification
         console.log(`Final processed item ${index} (${cleanedItem.name}):`, {
           is_break: cleanedItem.is_break,
           is_note: cleanedItem.is_note,
@@ -255,7 +270,19 @@ export const saveShow = async (
         return cleanedItem;
       });
 
-      console.log('Inserting items to database:', itemsToInsert);
+      console.log('Items to insert:', itemsToInsert);
+      
+      // CRITICAL FIX: Direct SQL query to verify what's going into the database
+      const insertRawSql = `
+        INSERT INTO show_items(show_id, position, name, title, details, phone, duration, is_break, is_note, is_divider)
+        VALUES ${itemsToInsert.map((item, i) => 
+          `('${item.show_id}', ${item.position}, '${item.name}', ${item.title ? `'${item.title}'` : 'NULL'}, ${item.details ? `'${item.details}'` : 'NULL'}, ${item.phone ? `'${item.phone}'` : 'NULL'}, ${item.duration}, ${item.is_break}, ${item.is_note}, ${item.is_divider})`
+        ).join(', ')}
+        RETURNING *
+      `;
+      
+      console.log('SQL to be executed:', insertRawSql);
+      
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
         .insert(itemsToInsert)
@@ -265,6 +292,8 @@ export const saveShow = async (
         console.error('Error inserting items:', itemsError);
         throw itemsError;
       }
+
+      console.log('Successfully inserted items:', insertedItems);
 
       // Now that we have the inserted items with their new IDs, we can insert the interviewees
       if (insertedItems) {

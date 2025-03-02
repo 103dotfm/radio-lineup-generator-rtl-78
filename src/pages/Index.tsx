@@ -322,7 +322,20 @@ const Index = () => {
     };
     
     console.log('Creating new divider with is_divider:', newDivider.is_divider);
-    setItems([...items, newDivider]);
+    console.log('Full divider object:', newDivider);
+    
+    setItems(prevItems => {
+      const updatedItems = [...prevItems, newDivider];
+      console.log('Updated items after adding divider:', updatedItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        is_divider: item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
+      return updatedItems;
+    });
+    
     setHasUnsavedChanges(true);
     toast.success('הפרדה נוספה בהצלחה');
   }, [items]);
