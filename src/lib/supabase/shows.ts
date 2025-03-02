@@ -229,7 +229,7 @@ export const saveShow = async (
           duration: itemData.duration,
           is_break: itemData.is_break || false,
           is_note: itemData.is_note || false,
-          is_divider: itemData.is_divider || false
+          is_divider: itemData.is_divider || false // Ensure is_divider is saved correctly
         };
       });
 
