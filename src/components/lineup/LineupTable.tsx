@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, DropResult, Draggable } from 'react-beautiful-dnd';
 import LineupItem from '../LineupItem';
 import { useAuth } from '../../contexts/AuthContext';
 import { Switch } from "@/components/ui/switch";
