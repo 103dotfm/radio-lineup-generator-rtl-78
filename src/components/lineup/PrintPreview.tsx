@@ -57,7 +57,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
           <div key={`print-group-${groupIndex}`} className="mb-6">
             {/* Render the divider if this group starts with one */}
             {startsWithDivider && (
-              <h2 className="text-xl font-bold my-4 text-center">{group[0].name}</h2>
+              <h2 className="text-xl font-bold my-4 text-center divider-text">{group[0].name}</h2>
             )}
 
             <table className="w-full border-collapse border border-gray-200 mb-4">
@@ -77,17 +77,15 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <tbody>
                 {/* Skip the first item if it's a divider, as we've already rendered it */}
                 {group.slice(startsWithDivider ? 1 : 0).map((item) => {
+                  // Fixed: Calculate correct colspan based on authenticated status and showMinutes
+                  const breakNoteColspan = isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3);
+                  
                   if (item.is_break) {
                     return (
                       <tr key={item.id} className="breakRow bg-black/10">
-                        <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
+                        <td colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
                           {item.name}
                         </td>
-                        {showMinutes && (
-                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
-                            {item.duration}
-                          </td>
-                        )}
                       </tr>
                     );
                   }
@@ -95,14 +93,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   if (item.is_note) {
                     return (
                       <tr key={item.id} className="noteRow">
-                        <td colSpan={isAuthenticated ? (showMinutes ? 4 : 3) : (showMinutes ? 3 : 2)} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
+                        <td colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
                           <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                         </td>
-                        {showMinutes && (
-                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20">
-                            {item.duration}
-                          </td>
-                        )}
                       </tr>
                     );
                   }

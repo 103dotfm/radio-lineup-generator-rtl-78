@@ -35,7 +35,7 @@ const Print = () => {
   if (!show) return null;
 
   return (
-    <div className="container mx-auto py-4 px-2">
+    <div className="container mx-auto py-4 px-2 print-container">
       <PrintPreview
         showName={show.name}
         showTime={show.time}

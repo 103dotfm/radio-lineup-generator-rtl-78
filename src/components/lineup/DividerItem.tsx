@@ -73,7 +73,7 @@ const DividerItem = ({
   return (
     <tr className="divider-row">
       <td colSpan={colSpan} className="divider-cell py-2 px-4 border-0">
-        <div className="divider-header">
+        <div className="divider-header divider-text">
           {isEditing ? (
             <div className="flex items-center gap-2">
               <Input
