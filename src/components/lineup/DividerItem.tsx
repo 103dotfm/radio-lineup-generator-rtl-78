@@ -87,7 +87,7 @@ const DividerItem = ({
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">{name}</h2>
+              <h2 className="text-xl font-bold lineup-divider-title">{name}</h2>
               <div className="flex gap-2">
                 <Button variant="ghost" size="icon" onClick={handleEdit}>
                   <Edit2 className="h-4 w-4" />
