@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -43,7 +42,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
 
-  // Update the internal state when the external prop changes
   useEffect(() => {
     if (externalSelectedDate) {
       setSelectedDate(externalSelectedDate);
@@ -96,8 +94,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   });
 
   const updateSlotMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => 
-      updateScheduleSlot(id, updates, isMasterSchedule),
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => {
+      console.log("Mutation updating slot:", { id, updates });
+      return updateScheduleSlot(id, updates, isMasterSchedule);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
@@ -167,17 +167,27 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     setShowSlotDialog(true);
   };
 
-  const handleSaveSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+  const handleSaveSlot = async (slotData: any) => {
     try {
-      await createSlotMutation.mutateAsync(slotData);
-      toast({
-        title: 'משבצת שידור נוספה בהצלחה'
-      });
+      if (slotData.id) {
+        console.log("Handling update for existing slot:", slotData.id);
+        const { id, ...updates } = slotData;
+        await updateSlotMutation.mutateAsync({ id, updates });
+        toast({
+          title: 'משבצת שידור עודכנה בהצלחה'
+        });
+      } else {
+        console.log("Creating new slot:", slotData);
+        await createSlotMutation.mutateAsync(slotData);
+        toast({
+          title: 'משבצת שידור נוספה בהצלחה'
+        });
+      }
       setShowSlotDialog(false);
     } catch (error) {
       console.error('Error saving slot:', error);
       toast({
-        title: 'שגיאה בהוספת משבצת שידור',
+        title: 'שגיאה בשמירת משבצת שידור',
         variant: 'destructive'
       });
     }
@@ -196,9 +206,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
   };
 
   const handleSlotClick = (slot: ScheduleSlot) => {
-    // Allow authenticated users (not just admins) to click on slots
-    if (!isAuthenticated) return; // Only require authentication
-    
+    if (!isAuthenticated) return;
+
     console.log('Clicked slot details:', {
       show_name: slot.show_name,
       host_name: slot.host_name,
@@ -417,7 +426,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }
   };
 
-  // Get the week date range for the current view
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const weekEnd = addDays(weekStart, 6);
   const dateRangeDisplay = `${format(weekStart, 'dd/MM')} - ${format(weekEnd, 'dd/MM')}`;
@@ -438,7 +446,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Replace dropdown with buttons */}
             <div className="flex gap-2 border rounded-md">
               <Button 
                 variant={viewMode === 'daily' ? 'default' : 'ghost'} 
@@ -511,6 +518,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }} 
             onSave={handleSaveSlot} 
             editingSlot={editingSlot} 
+            isMasterSchedule={isMasterSchedule}
           />
         </>
       )}

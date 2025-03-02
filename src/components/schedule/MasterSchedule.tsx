@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import ScheduleSlotDialog from './ScheduleSlotDialog';
 import { useQueryClient } from '@tanstack/react-query';
-import { createScheduleSlot } from '@/lib/supabase/schedule';
+import { createScheduleSlot, updateScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
+import { ScheduleSlot } from '@/types/schedule';
 
 const MasterSchedule = () => {
   const [showSlotDialog, setShowSlotDialog] = useState(false);
@@ -41,21 +42,30 @@ const MasterSchedule = () => {
         onSave={async (slotData) => {
           console.log('Attempting to save master schedule slot:', slotData);
           try {
-            await createScheduleSlot(slotData, true);
-            console.log('Master schedule slot created successfully');
+            // Check if this is an update or a new slot
+            if (slotData.id) {
+              console.log("Updating existing master slot:", slotData.id);
+              const { id, ...updates } = slotData;
+              await updateScheduleSlot(id, updates, true);
+              console.log('Master schedule slot updated successfully');
+            } else {
+              console.log("Creating new master slot");
+              await createScheduleSlot(slotData, true);
+              console.log('Master schedule slot created successfully');
+            }
             
             // Force refresh the schedule view
             await queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
             console.log('Query cache invalidated');
             
             toast({
-              title: "משבצת שידור נוספה בהצלחה"
+              title: slotData.id ? "משבצת שידור עודכנה בהצלחה" : "משבצת שידור נוספה בהצלחה"
             });
             setShowSlotDialog(false);
           } catch (error) {
             console.error('Error saving master schedule slot:', error);
             toast({
-              title: "שגיאה בהוספת משבצת שידור",
+              title: slotData.id ? "שגיאה בעדכון משבצת שידור" : "שגיאה בהוספת משבצת שידור",
               variant: "destructive"
             });
           }
