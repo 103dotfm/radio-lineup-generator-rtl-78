@@ -69,8 +69,12 @@ const LineupItem = ({
     }
   }, [editor, details]);
 
+  // Debug: Log the item properties to help diagnose issues
+  console.log(`LineupItem ${id} (${name}) render:`, { is_break, is_note, is_divider });
+
   // Ensure we check explicitly for is_divider === true
   if (is_divider === true) {
+    console.log(`Item ${id} (${name}) identified as divider, not rendering as regular item`);
     return null; // Dividers are handled separately in LineupTable
   }
 
