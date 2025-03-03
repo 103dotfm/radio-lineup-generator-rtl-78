@@ -250,10 +250,18 @@ export default function ScheduleView({
     return slotStartMinutes === currentTimeMinutes;
   };
 
-  // Updated function to get slot color based on priority rules
   const getSlotColor = (slot: ScheduleSlot) => {
+    console.log('Getting color for slot:', {
+      name: slot.show_name,
+      color: slot.color,
+      is_prerecorded: slot.is_prerecorded,
+      is_collection: slot.is_collection,
+      is_modified: slot.is_modified
+    });
+    
     // First priority: user-selected color (if explicitly set)
     if (slot.color) {
+      console.log('Using user-selected color:', slot.color);
       switch (slot.color) {
         case 'green':
           return 'bg-[#F2FCE2]';
@@ -268,15 +276,18 @@ export default function ScheduleView({
     
     // Second priority: prerecorded or collection (blue)
     if (slot.is_prerecorded || slot.is_collection) {
+      console.log('Using blue for prerecorded/collection');
       return 'bg-[#D3E4FD]';
     }
     
     // Third priority: modified from master schedule (yellow)
     if (slot.is_modified) {
+      console.log('Using yellow for modified slot');
       return 'bg-[#FEF7CD]';
     }
     
     // Default: regular programming (green)
+    console.log('Using default green color');
     return 'bg-[#F2FCE2]';
   };
 

@@ -59,7 +59,7 @@ export default function ScheduleSlotDialog({
   );
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
-  const [slotColor, setSlotColor] = useState(editingSlot?.color || 'default');
+  const [slotColor, setSlotColor] = useState('default');
 
   useEffect(() => {
     if (editingSlot) {
@@ -78,7 +78,10 @@ export default function ScheduleSlotDialog({
         day_of_week: editingSlot.day_of_week,
         start_time: editingSlot.start_time,
         color: editingSlot.color,
-        has_lineup: editingSlot.has_lineup
+        has_lineup: editingSlot.has_lineup,
+        is_prerecorded: editingSlot.is_prerecorded,
+        is_collection: editingSlot.is_collection,
+        is_modified: editingSlot.is_modified
       });
     } else {
       setShowName('');
