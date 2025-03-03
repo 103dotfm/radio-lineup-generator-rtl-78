@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -70,6 +71,7 @@ export default function ScheduleSlotDialog({
       setSelectedDays(editingSlot.day_of_week !== undefined ? [editingSlot.day_of_week] : []);
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
+      // Only set a specific color if it's explicitly defined in the slot
       setSlotColor(editingSlot.color || 'default');
       
       console.log('Editing slot with data:', {
@@ -250,3 +252,4 @@ export default function ScheduleSlotDialog({
     </Dialog>
   );
 };
+
