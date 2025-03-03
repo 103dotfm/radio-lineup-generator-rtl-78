@@ -23,14 +23,14 @@ interface ScheduleViewProps {
   selectedDate?: Date;
 }
 
-const ScheduleView: React.FC<ScheduleViewProps> = ({
+export default function ScheduleView({
   isAdmin = false,
   isMasterSchedule = false,
   hideDateControls = false,
   showAddButton = true,
   hideHeaderDates = false,
   selectedDate: externalSelectedDate
-}) => {
+}: ScheduleViewProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(externalSelectedDate || new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -254,20 +254,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     if (slot.color) {
       switch (slot.color) {
         case 'green':
-          return 'cell-regular';
+          return 'bg-[#F2FCE2]';
         case 'yellow':
-          return 'cell-modified';
+          return 'bg-[#FEF7CD]';
         case 'blue':
-          return 'cell-prerecorded';
+          return 'bg-[#D3E4FD]';
         default:
-          return 'cell-regular';
+          return 'bg-[#F2FCE2]';
       }
     }
     
-    if (slot.is_collection) return 'cell-collection';
-    if (slot.is_prerecorded) return 'cell-prerecorded';
-    if (slot.is_modified) return 'cell-modified';
-    return 'cell-regular';
+    if (slot.is_collection || slot.is_prerecorded) return 'bg-[#D3E4FD]';
+    if (slot.is_modified) return 'bg-[#FEF7CD]';
+    return 'bg-[#F2FCE2]';
   };
 
   const getSlotHeight = (slot: ScheduleSlot) => {
@@ -530,6 +529,4 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         </>
       )}
     </div>;
-};
-
-export default ScheduleView;
+}

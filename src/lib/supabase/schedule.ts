@@ -310,6 +310,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
         color: updates.color || originalSlot.color, // Use color from updates
         is_modified: true,
+        has_lineup: originalSlot.has_lineup, // Preserve the has_lineup flag
         updated_at: new Date().toISOString()
       };
       
@@ -329,7 +330,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       return data;
     }
     
-    // Create a new non-recurring instance for this week
+    // Create a new non-recurring instance for this week, but preserve has_lineup status
     console.log('Creating new non-recurring instance for this week');
     
     const newSlotData = {
@@ -343,6 +344,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       color: updates.color || originalSlot.color, // Use color from updates
       is_recurring: false,
       is_modified: true,
+      has_lineup: originalSlot.has_lineup, // Preserve the has_lineup flag
       created_at: new Date(currentWeekStart).toISOString() // Use the week start date
     };
     
@@ -358,6 +360,41 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     }
     
     console.log('Successfully created non-recurring instance:', data);
+    
+    // If the original slot had a lineup, we need to update any associated shows to point to the new slot
+    if (originalSlot.has_lineup) {
+      const weekStart = currentWeekStart;
+      const weekEnd = addDays(weekStart, 7);
+      
+      // Find shows in this week that are linked to the master slot
+      const { data: shows, error: showsError } = await supabase
+        .from('shows')
+        .select('id, slot_id, date')
+        .eq('slot_id', originalSlot.id)
+        .gte('date', weekStart.toISOString().split('T')[0])
+        .lt('date', weekEnd.toISOString().split('T')[0]);
+        
+      if (showsError) {
+        console.error('Error finding shows for slot:', showsError);
+      } else if (shows && shows.length > 0) {
+        console.log(`Found ${shows.length} shows to update with new slot ID:`, shows);
+        
+        // Update each show to link to the new slot ID
+        for (const show of shows) {
+          const { error: updateError } = await supabase
+            .from('shows')
+            .update({ slot_id: data.id })
+            .eq('id', show.id);
+            
+          if (updateError) {
+            console.error(`Error updating show ${show.id} to new slot:`, updateError);
+          } else {
+            console.log(`Updated show ${show.id} to link to new slot ${data.id}`);
+          }
+        }
+      }
+    }
+    
     return data;
   }
   
@@ -374,6 +411,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
     color: updates.color || originalSlot.color, // Use color from updates
     is_modified: true,
+    has_lineup: originalSlot.has_lineup, // Preserve the has_lineup flag
     updated_at: new Date().toISOString()
   };
   
