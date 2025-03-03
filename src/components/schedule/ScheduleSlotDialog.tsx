@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -62,7 +61,6 @@ export default function ScheduleSlotDialog({
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
   const [slotColor, setSlotColor] = useState(editingSlot?.color || 'default');
 
-  // Update the form when editingSlot changes
   useEffect(() => {
     if (editingSlot) {
       setShowName(editingSlot.show_name || '');
@@ -83,7 +81,6 @@ export default function ScheduleSlotDialog({
         has_lineup: editingSlot.has_lineup
       });
     } else {
-      // Reset form when not editing
       setShowName('');
       setHostName('');
       setStartTime('');
@@ -98,28 +95,25 @@ export default function ScheduleSlotDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // If we're editing an existing slot
     if (editingSlot) {
       console.log("Updating existing slot:", editingSlot.id);
       
-      // Maintain the original slot's ID and doesn't change day_of_week when editing
       const updateData = {
-        id: editingSlot.id, // Keep the original ID for update
+        id: editingSlot.id,
         show_name: showName,
         host_name: hostName,
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
-        day_of_week: editingSlot.day_of_week, // Don't change day when editing
+        day_of_week: editingSlot.day_of_week,
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
-        color: slotColor === 'default' ? null : slotColor, // Set to null if default is selected
-        has_lineup: editingSlot.has_lineup // Preserve the has_lineup status
+        color: slotColor === 'default' ? null : slotColor,
+        has_lineup: editingSlot.has_lineup
       };
       
       console.log("Updating slot with data:", updateData);
       onSave(updateData);
     } else {
-      // For new slots
       selectedDays.forEach(dayOfWeek => {
         const slotData = {
           show_name: showName,
@@ -130,7 +124,7 @@ export default function ScheduleSlotDialog({
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
-          color: slotColor === 'default' ? null : slotColor // Set to null if default is selected
+          color: slotColor === 'default' ? null : slotColor
         };
         onSave(slotData);
       });
@@ -237,7 +231,7 @@ export default function ScheduleSlotDialog({
                       id={`day-${day.id}`}
                       checked={selectedDays.includes(day.id)}
                       onCheckedChange={() => toggleDay(day.id)}
-                      disabled={editingSlot !== undefined} // Disable changing days when editing
+                      disabled={editingSlot !== undefined}
                     />
                     <Label htmlFor={`day-${day.id}`}>{day.label}</Label>
                   </div>
