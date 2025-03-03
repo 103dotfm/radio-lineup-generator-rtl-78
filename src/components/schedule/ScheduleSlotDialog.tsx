@@ -78,7 +78,8 @@ export default function ScheduleSlotDialog({
         show_name: editingSlot.show_name,
         day_of_week: editingSlot.day_of_week,
         start_time: editingSlot.start_time,
-        color: editingSlot.color
+        color: editingSlot.color,
+        has_lineup: editingSlot.has_lineup
       });
     } else {
       // Reset form when not editing
@@ -100,7 +101,7 @@ export default function ScheduleSlotDialog({
     if (editingSlot) {
       console.log("Updating existing slot:", editingSlot.id);
       
-      // Maintain the original slot's ID and don't change day_of_week when editing
+      // Maintain the original slot's ID and doesn't change day_of_week when editing
       const updateData = {
         id: editingSlot.id, // Keep the original ID for update
         show_name: showName,
@@ -110,7 +111,8 @@ export default function ScheduleSlotDialog({
         day_of_week: editingSlot.day_of_week, // Don't change day when editing
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
-        color: slotColor
+        color: slotColor,
+        has_lineup: editingSlot.has_lineup // Preserve the has_lineup status
       };
       
       console.log("Updating slot with data:", updateData);
