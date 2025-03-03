@@ -71,8 +71,10 @@ export default function ScheduleSlotDialog({
       setSelectedDays(editingSlot.day_of_week !== undefined ? [editingSlot.day_of_week] : []);
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
-      // Only set a specific color if it's explicitly defined in the slot
-      setSlotColor(editingSlot.color || 'default');
+      
+      // Important: Only set a specific color if it's explicitly defined in the slot
+      // color field can be null, undefined, or a specific color string
+      setSlotColor(editingSlot.color !== null && editingSlot.color !== undefined ? editingSlot.color : 'default');
       
       console.log('Editing slot with data:', {
         id: editingSlot.id,
@@ -93,7 +95,7 @@ export default function ScheduleSlotDialog({
       setSelectedDays([]);
       setIsPrerecorded(false);
       setIsCollection(false);
-      setSlotColor('default');
+      setSlotColor('default'); // Always start with 'default' for new slots
     }
   }, [editingSlot, isOpen]);
 
@@ -252,4 +254,3 @@ export default function ScheduleSlotDialog({
     </Dialog>
   );
 };
-
