@@ -38,6 +38,7 @@ const weekDays = [
 ];
 
 const colorOptions = [
+  { value: 'default', label: 'ללא שינוי', bgClass: 'bg-[#F1F1F1]' },
   { value: 'green', label: 'ירוק', bgClass: 'bg-[#F2FCE2]' },
   { value: 'yellow', label: 'צהוב', bgClass: 'bg-[#FEF7CD]' },
   { value: 'blue', label: 'כחול', bgClass: 'bg-[#D3E4FD]' },
@@ -59,7 +60,7 @@ export default function ScheduleSlotDialog({
   );
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
-  const [slotColor, setSlotColor] = useState(editingSlot?.color || 'green');
+  const [slotColor, setSlotColor] = useState(editingSlot?.color || 'default');
 
   // Update the form when editingSlot changes
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function ScheduleSlotDialog({
       setSelectedDays(editingSlot.day_of_week !== undefined ? [editingSlot.day_of_week] : []);
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
-      setSlotColor(editingSlot.color || 'green');
+      setSlotColor(editingSlot.color || 'default');
       
       console.log('Editing slot with data:', {
         id: editingSlot.id,
@@ -90,7 +91,7 @@ export default function ScheduleSlotDialog({
       setSelectedDays([]);
       setIsPrerecorded(false);
       setIsCollection(false);
-      setSlotColor('green');
+      setSlotColor('default');
     }
   }, [editingSlot, isOpen]);
 
@@ -111,7 +112,7 @@ export default function ScheduleSlotDialog({
         day_of_week: editingSlot.day_of_week, // Don't change day when editing
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
-        color: slotColor,
+        color: slotColor === 'default' ? null : slotColor, // Set to null if default is selected
         has_lineup: editingSlot.has_lineup // Preserve the has_lineup status
       };
       
@@ -129,7 +130,7 @@ export default function ScheduleSlotDialog({
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
-          color: slotColor
+          color: slotColor === 'default' ? null : slotColor // Set to null if default is selected
         };
         onSave(slotData);
       });
