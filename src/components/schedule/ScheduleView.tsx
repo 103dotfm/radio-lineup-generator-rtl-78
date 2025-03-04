@@ -141,6 +141,13 @@ export default function ScheduleView({
 
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Skip confirmation if CTRL key is pressed
+    if (e.ctrlKey) {
+      await deleteSlotMutation.mutateAsync(slot.id);
+      return;
+    }
+    
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       await deleteSlotMutation.mutateAsync(slot.id);
     }
@@ -264,13 +271,13 @@ export default function ScheduleView({
       console.log('Using user-selected color:', slot.color);
       switch (slot.color) {
         case 'green':
-          return 'bg-[#F2FCE2]';
+          return 'bg-[#eff4ec]';
         case 'yellow':
           return 'bg-[#FEF7CD]';
         case 'blue':
           return 'bg-[#D3E4FD]';
         default:
-          return 'bg-[#F2FCE2]';
+          return 'bg-[#eff4ec]';
       }
     }
     
@@ -288,7 +295,7 @@ export default function ScheduleView({
     
     // Default: regular programming (green)
     console.log('Using default green color');
-    return 'bg-[#F2FCE2]';
+    return 'bg-[#eff4ec]';
   };
 
   const getSlotHeight = (slot: ScheduleSlot) => {
@@ -446,7 +453,8 @@ export default function ScheduleView({
                   {time}
                 </div>
                 {weekDays.map((_, dayIndex) => {
-                  const isCurrentMonth = dates.some(date => date.getDay() === dayIndex && isSameMonth(date, selectedDate));
+                  const relevantDates = dates.filter(date => date.getDay() === dayIndex);
+                  const isCurrentMonth = relevantDates.length > 0;
                   return renderTimeCell(dayIndex, time, isCurrentMonth);
                 })}
               </React.Fragment>)}
