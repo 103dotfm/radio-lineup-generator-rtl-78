@@ -7,18 +7,20 @@ import { getShowDisplay } from '@/utils/showDisplay';
 
 interface ScheduleGridCellProps {
   slot: ScheduleSlot;
-  handleSlotClick: (slot: ScheduleSlot) => void;
-  handleEditSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
-  handleDeleteSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
+  date: Date;
+  onClick?: () => void;
+  onEdit: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
 }
 
 export default function ScheduleGridCell({
   slot,
-  handleSlotClick,
-  handleEditSlot,
-  handleDeleteSlot,
+  date,
+  onClick,
+  onEdit,
+  onDelete,
   isAdmin,
   isAuthenticated
 }: ScheduleGridCellProps) {
@@ -76,7 +78,7 @@ export default function ScheduleGridCell({
   };
 
   const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
-  const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
+  const slotClickHandler = isAuthenticated && onClick ? onClick : undefined;
 
   return (
     <div 
@@ -103,7 +105,7 @@ export default function ScheduleGridCell({
             variant="ghost" 
             size="sm" 
             className="p-1 h-8 w-8" 
-            onClick={e => handleEditSlot(slot, e)}
+            onClick={e => onEdit(e)}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -111,7 +113,7 @@ export default function ScheduleGridCell({
             variant="ghost" 
             size="sm" 
             className="p-1 h-8 w-8 hover:bg-red-100" 
-            onClick={e => handleDeleteSlot(slot, e)}
+            onClick={e => onDelete(e)}
           >
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
