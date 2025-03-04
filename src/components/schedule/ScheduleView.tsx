@@ -4,12 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { ViewMode, ScheduleSlot } from '@/types/schedule';
+import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
+import { getDayNotes } from '@/lib/supabase/dayNotes';
 import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import ScheduleHeader from './layout/ScheduleHeader';
 import ScheduleGrid from './layout/ScheduleGrid';
+import { format, addDays, startOfWeek, addWeeks } from 'date-fns';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -34,6 +36,7 @@ export default function ScheduleView({
   const [showSlotDialog, setShowSlotDialog] = useState(false);
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
+  const [dayNotes, setDayNotes] = useState<DayNote[]>([]);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,6 +48,19 @@ export default function ScheduleView({
       setSelectedDate(externalSelectedDate);
     }
   }, [externalSelectedDate]);
+
+  useEffect(() => {
+    fetchDayNotes();
+  }, [selectedDate, viewMode]);
+
+  const fetchDayNotes = async () => {
+    if (viewMode === 'weekly') {
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+      const weekEnd = addDays(weekStart, 6);
+      const notes = await getDayNotes(weekStart, weekEnd);
+      setDayNotes(notes);
+    }
+  };
 
   const {
     data: scheduleSlots = [],
@@ -269,6 +285,8 @@ export default function ScheduleView({
         isAdmin={isAdmin}
         isAuthenticated={isAuthenticated}
         hideHeaderDates={hideHeaderDates}
+        dayNotes={dayNotes}
+        onDayNoteChange={fetchDayNotes}
       />
 
       {isAdmin && (

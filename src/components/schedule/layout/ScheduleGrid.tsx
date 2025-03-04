@@ -1,11 +1,13 @@
 
-import React, { useMemo } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth } from 'date-fns';
-import { ViewMode, ScheduleSlot } from '@/types/schedule';
+import React, { useMemo, useState } from 'react';
+import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks } from 'date-fns';
+import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
 import { FileCheck, Pencil, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { getShowDisplay } from '@/utils/showDisplay';
 import ScheduleGridCell from './ScheduleGridCell';
+import DayNoteComponent from './DayNote';
+import { createDayNote, updateDayNote, deleteDayNote } from '@/lib/supabase/dayNotes';
 
 interface ScheduleGridProps {
   scheduleSlots: ScheduleSlot[];
@@ -17,6 +19,8 @@ interface ScheduleGridProps {
   isAdmin: boolean;
   isAuthenticated: boolean;
   hideHeaderDates: boolean;
+  dayNotes: DayNote[];
+  onDayNoteChange: () => void;
 }
 
 export default function ScheduleGrid({
@@ -28,7 +32,9 @@ export default function ScheduleGrid({
   handleDeleteSlot,
   isAdmin,
   isAuthenticated,
-  hideHeaderDates
+  hideHeaderDates,
+  dayNotes,
+  onDayNoteChange
 }: ScheduleGridProps) {
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -69,6 +75,33 @@ export default function ScheduleGrid({
     }
   }, [selectedDate, viewMode]);
 
+  const handleSaveDayNote = async (date: Date, noteText: string, noteId?: string) => {
+    try {
+      if (noteId) {
+        await updateDayNote(noteId, noteText);
+      } else {
+        await createDayNote(date, noteText);
+      }
+      onDayNoteChange();
+    } catch (error) {
+      console.error('Error saving day note:', error);
+    }
+  };
+
+  const handleDeleteDayNote = async (noteId: string) => {
+    try {
+      await deleteDayNote(noteId);
+      onDayNoteChange();
+    } catch (error) {
+      console.error('Error deleting day note:', error);
+    }
+  };
+
+  const getNoteForDate = (date: Date): DayNote | null => {
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    return dayNotes.find(note => note.date === formattedDate) || null;
+  };
+
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(
       slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time)
@@ -102,6 +135,30 @@ export default function ScheduleGrid({
     return hours * 60 + minutes;
   };
 
+  const renderDayHeader = (date: Date, index: number) => {
+    const dayNote = getNoteForDate(date);
+    
+    return (
+      <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100 group">
+        {weekDays[date.getDay()]}
+        {!hideHeaderDates && (
+          <>
+            <div className="text-sm text-gray-600">
+              {format(date, 'dd/MM')}
+            </div>
+            <DayNoteComponent
+              note={dayNote}
+              date={date}
+              onSave={handleSaveDayNote}
+              onDelete={handleDeleteDayNote}
+              isAdmin={isAdmin}
+            />
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderGrid = () => {
     switch (viewMode) {
       case 'daily':
@@ -110,14 +167,7 @@ export default function ScheduleGrid({
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
-              {weekDays[selectedDate.getDay()]}
-              {!hideHeaderDates && (
-                <div className="text-sm text-gray-600">
-                  {format(selectedDate, 'dd/MM')}
-                </div>
-              )}
-            </div>
+            {renderDayHeader(selectedDate, 0)}
             {timeSlots.map(time => (
               <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
@@ -135,16 +185,7 @@ export default function ScheduleGrid({
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            {dates.map((date, index) => (
-              <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
-                {weekDays[date.getDay()]}
-                {!hideHeaderDates && (
-                  <div className="text-sm text-gray-600">
-                    {format(date, 'dd/MM')}
-                  </div>
-                )}
-              </div>
-            ))}
+            {dates.map((date, index) => renderDayHeader(date, index))}
             {timeSlots.map(time => (
               <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
