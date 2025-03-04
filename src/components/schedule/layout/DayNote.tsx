@@ -1,114 +1,124 @@
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, X, CheckCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { DayNote as DayNoteType } from '@/types/schedule';
+import { Pencil, Trash2, Plus } from 'lucide-react';
+import { DayNote } from '@/types/schedule';
 
 interface DayNoteProps {
-  note: DayNoteType | null;
+  note: DayNote | null;
   date: Date;
-  onSave: (date: Date, noteText: string, noteId?: string) => Promise<void>;
-  onDelete: (noteId: string) => Promise<void>;
+  onSave: (date: Date, text: string, id?: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
   isAdmin: boolean;
 }
 
-const DayNote: React.FC<DayNoteProps> = ({ note, date, onSave, onDelete, isAdmin }) => {
+export default function DayNoteComponent({
+  note,
+  date,
+  onSave,
+  onDelete,
+  isAdmin
+}: DayNoteProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [noteText, setNoteText] = useState(note?.note || '');
+  const [text, setText] = useState(note?.text || '');
 
   const handleSave = async () => {
-    if (noteText.trim()) {
-      await onSave(date, noteText, note?.id);
+    if (text.trim()) {
+      await onSave(date, text, note?.id);
       setIsEditing(false);
     }
   };
 
   const handleDelete = async () => {
-    if (note?.id) {
-      if (window.confirm('האם אתה בטוח שברצונך למחוק הערה זו?')) {
-        await onDelete(note.id);
-      }
+    if (note && window.confirm('האם אתה בטוח שברצונך למחוק את ההערה?')) {
+      await onDelete(note.id);
+      setText('');
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
-      setIsEditing(false);
-      setNoteText(note?.note || '');
-    }
-  };
+  if (!isAdmin) {
+    return note ? (
+      <div className="day-note text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
+        {note.text}
+      </div>
+    ) : null;
+  }
 
-  if (!note && !isAdmin) return null;
+  if (isEditing) {
+    return (
+      <div className="day-note relative">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full text-sm p-1 border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          rows={2}
+          placeholder="הערה ליום זה..."
+          autoFocus
+        />
+        <div className="flex justify-end mt-1 gap-1">
+          <Button
+            onClick={() => setIsEditing(false)}
+            variant="outline"
+            size="sm"
+            className="py-0 h-6 text-xs"
+          >
+            ביטול
+          </Button>
+          <Button
+            onClick={handleSave}
+            variant="default"
+            size="sm"
+            className="py-0 h-6 text-xs"
+          >
+            שמור
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (note) {
+    return (
+      <div className="day-note relative text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
+        {note.text}
+        <div className="actions">
+          <Button
+            onClick={() => {
+              setText(note.text);
+              setIsEditing(true);
+            }}
+            variant="ghost"
+            size="sm"
+            className="p-0 h-6 w-6"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button
+            onClick={handleDelete}
+            variant="ghost"
+            size="sm"
+            className="p-0 h-6 w-6"
+          >
+            <Trash2 className="h-3 w-3 text-red-500" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-1 relative day-note">
-      {!isEditing ? (
-        <>
-          <div 
-            className="text-sm text-gray-200 bg-black/80 p-1 rounded min-h-[24px]"
-            onClick={() => isAdmin && setIsEditing(true)}
-          >
-            {note?.note || (isAdmin ? '+ הוסף הערה' : '')}
-          </div>
-          {isAdmin && note && (
-            <div className="absolute top-0 left-0 flex opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0" 
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0 hover:bg-red-100" 
-                onClick={handleDelete}
-              >
-                <Trash2 className="h-3 w-3 text-red-500" />
-              </Button>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="flex">
-          <textarea
-            className="text-sm p-1 rounded flex-1 min-h-[40px] bg-black/90 text-gray-200 focus:outline-none"
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            placeholder="הערה ליום זה..."
-          />
-          <div className="flex flex-col gap-1 mr-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 w-6 p-0 bg-black/20 hover:bg-green-100" 
-              onClick={handleSave}
-            >
-              <CheckCircle className="h-3 w-3 text-green-500" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 w-6 p-0 bg-black/20 hover:bg-red-100" 
-              onClick={() => {
-                setIsEditing(false);
-                setNoteText(note?.note || '');
-              }}
-            >
-              <X className="h-3 w-3 text-red-500" />
-            </Button>
-          </div>
-        </div>
-      )}
+    <div className="day-note relative min-h-6">
+      <Button
+        onClick={() => {
+          setText('');
+          setIsEditing(true);
+        }}
+        variant="ghost"
+        size="sm"
+        className="p-0 h-6 w-6 opacity-0 hover:opacity-100 transition-opacity"
+      >
+        <Plus className="h-3 w-3" />
+      </Button>
     </div>
   );
-};
-
-export default DayNote;
+}

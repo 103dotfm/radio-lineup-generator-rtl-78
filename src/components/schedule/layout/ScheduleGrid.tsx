@@ -52,7 +52,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         {/* Day headers */}
         {days.map((day) => {
           const date = addDays(weekStart, day);
-          const formattedDate = format(date, 'd', { locale: he });
+          const formattedDate = format(date, 'dd/MM', { locale: he });
           const dayName = format(date, 'EEEE', { locale: he });
           const isCurrentDay = isToday(date);
           
@@ -62,10 +62,10 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                 "text-base font-medium p-1 rounded",
                 isCurrentDay ? "bg-blue-100 text-blue-800" : ""
               )}>
+                <div className="font-bold">{dayName}</div>
                 {!hideHeaderDates && (
                   <div>{formattedDate}</div>
                 )}
-                <div className="font-bold">{dayName}</div>
                 
                 {onDayNoteChange && onDayNoteDelete && (
                   <DayNoteComponent
