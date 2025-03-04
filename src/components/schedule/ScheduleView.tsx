@@ -13,7 +13,6 @@ import EditModeDialog from './EditModeDialog';
 import { useNavigate } from 'react-router-dom';
 import { getShowDisplay } from '@/utils/showDisplay';
 import { useAuth } from '@/contexts/AuthContext';
-
 interface ScheduleViewProps {
   isAdmin?: boolean;
   isMasterSchedule?: boolean;
@@ -22,7 +21,6 @@ interface ScheduleViewProps {
   hideHeaderDates?: boolean;
   selectedDate?: Date;
 }
-
 export default function ScheduleView({
   isAdmin = false,
   isMasterSchedule = false,
@@ -38,25 +36,29 @@ export default function ScheduleView({
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
-
+  const {
+    isAuthenticated
+  } = useAuth();
   useEffect(() => {
     if (externalSelectedDate) {
       setSelectedDate(externalSelectedDate);
     }
   }, [externalSelectedDate]);
-
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-
   const {
     data: scheduleSlots = [],
     isLoading
   } = useQuery({
     queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
     queryFn: () => {
-      console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
+      console.log('Fetching slots with params:', {
+        selectedDate,
+        isMasterSchedule
+      });
       return getScheduleSlots(selectedDate, isMasterSchedule);
     },
     meta: {
@@ -68,14 +70,11 @@ export default function ScheduleView({
       }
     }
   });
-
   useEffect(() => {
     console.log('Schedule slots updated:', scheduleSlots);
   }, [scheduleSlots]);
-
   const createSlotMutation = useMutation({
-    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
+    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => createScheduleSlot(slotData, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
@@ -92,10 +91,18 @@ export default function ScheduleView({
       });
     }
   });
-
   const updateSlotMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => {
-      console.log("Mutation updating slot:", { id, updates });
+    mutationFn: ({
+      id,
+      updates
+    }: {
+      id: string;
+      updates: Partial<ScheduleSlot>;
+    }) => {
+      console.log("Mutation updating slot:", {
+        id,
+        updates
+      });
       return updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
     },
     onSuccess: () => {
@@ -114,7 +121,6 @@ export default function ScheduleView({
       });
     }
   });
-
   const deleteSlotMutation = useMutation({
     mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
     onSuccess: () => {
@@ -133,26 +139,22 @@ export default function ScheduleView({
       });
     }
   });
-
   const handleAddSlot = () => {
     setEditingSlot(undefined);
     setShowSlotDialog(true);
   };
-
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
       await deleteSlotMutation.mutateAsync(slot.id);
       return;
     }
-    
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       await deleteSlotMutation.mutateAsync(slot.id);
     }
   };
-
   const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isMasterSchedule) {
@@ -163,23 +165,26 @@ export default function ScheduleView({
       setShowEditModeDialog(true);
     }
   };
-
   const handleEditCurrent = () => {
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
-
   const handleEditAll = () => {
     setShowEditModeDialog(false);
     setShowSlotDialog(true);
   };
-
   const handleSaveSlot = async (slotData: any) => {
     try {
       if (slotData.id) {
         console.log("Handling update for existing slot:", slotData.id);
-        const { id, ...updates } = slotData;
-        await updateSlotMutation.mutateAsync({ id, updates });
+        const {
+          id,
+          ...updates
+        } = slotData;
+        await updateSlotMutation.mutateAsync({
+          id,
+          updates
+        });
       } else {
         console.log("Creating new slot:", slotData);
         await createSlotMutation.mutateAsync(slotData);
@@ -193,10 +198,12 @@ export default function ScheduleView({
       });
     }
   };
-
   const handleUpdateSlot = async (id: string, updates: Partial<ScheduleSlot>) => {
     try {
-      await updateSlotMutation.mutateAsync({ id, updates });
+      await updateSlotMutation.mutateAsync({
+        id,
+        updates
+      });
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
       });
@@ -205,10 +212,8 @@ export default function ScheduleView({
       throw error;
     }
   };
-
   const handleSlotClick = (slot: ScheduleSlot) => {
     if (!isAuthenticated) return;
-
     console.log('Clicked slot details:', {
       show_name: slot.show_name,
       host_name: slot.host_name,
@@ -216,21 +221,17 @@ export default function ScheduleView({
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection
     });
-
     if (slot.shows && slot.shows.length > 0) {
       const show = slot.shows[0];
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);
     } else {
-      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+      const weekStart = startOfWeek(selectedDate, {
+        weekStartsOn: 0
+      });
       const slotDate = addDays(weekStart, slot.day_of_week);
-      
-      const generatedShowName = slot.show_name === slot.host_name 
-        ? slot.host_name 
-        : `${slot.show_name} עם ${slot.host_name}`;
-
+      const generatedShowName = slot.show_name === slot.host_name ? slot.host_name : `${slot.show_name} עם ${slot.host_name}`;
       console.log('Navigating to new lineup with generated name:', generatedShowName);
-      
       navigate('/new', {
         state: {
           generatedShowName,
@@ -245,18 +246,15 @@ export default function ScheduleView({
       });
     }
   };
-
   const timeToMinutes = (time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes;
   };
-
   const isSlotStartTime = (slot: ScheduleSlot, timeSlot: string) => {
     const slotStartMinutes = timeToMinutes(slot.start_time);
     const currentTimeMinutes = timeToMinutes(timeSlot);
     return slotStartMinutes === currentTimeMinutes;
   };
-
   const getSlotColor = (slot: ScheduleSlot) => {
     console.log('Getting color for slot:', {
       name: slot.show_name,
@@ -265,7 +263,7 @@ export default function ScheduleView({
       is_collection: slot.is_collection,
       is_modified: slot.is_modified
     });
-    
+
     // First priority: user-selected color (if explicitly set)
     if (slot.color) {
       console.log('Using user-selected color:', slot.color);
@@ -280,52 +278,43 @@ export default function ScheduleView({
           return 'bg-[#eff4ec]';
       }
     }
-    
+
     // Second priority: prerecorded or collection (blue)
     if (slot.is_prerecorded || slot.is_collection) {
       console.log('Using blue for prerecorded/collection');
       return 'bg-[#D3E4FD]';
     }
-    
+
     // Third priority: modified from master schedule (yellow)
     if (slot.is_modified) {
       console.log('Using yellow for modified slot');
       return 'bg-[#FEF7CD]';
     }
-    
+
     // Default: regular programming (green)
     console.log('Using default green color');
     return 'bg-[#eff4ec]';
   };
-
   const getSlotHeight = (slot: ScheduleSlot) => {
     const start = timeToMinutes(slot.start_time);
     const end = timeToMinutes(slot.end_time);
     const hoursDiff = (end - start) / 60;
     return `${hoursDiff * 60}px`;
   };
-
   const renderSlot = (slot: ScheduleSlot) => {
     const {
       displayName,
       displayHost
     } = getShowDisplay(slot.show_name, slot.host_name);
-    
     const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
-    
-    return <div 
-      key={slot.id} 
-      onClick={slotClickHandler} 
-      className={`p-2 rounded ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
-      style={{
-        height: getSlotHeight(slot),
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        zIndex: 10
-      }}
-    >
+    return <div key={slot.id} onClick={slotClickHandler} className={`p-2 rounded ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} style={{
+      height: getSlotHeight(slot),
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      right: '0',
+      zIndex: 10
+    }}>
         <div className="flex justify-between items-start">
           <div className="font-bold">{displayName}</div>
           {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
@@ -342,7 +331,6 @@ export default function ScheduleView({
           </div>}
       </div>;
   };
-
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let i = 6; i <= 23; i++) {
@@ -353,14 +341,15 @@ export default function ScheduleView({
     }
     return slots;
   }, []);
-
   const dates = useMemo(() => {
     switch (viewMode) {
       case 'daily':
         return [selectedDate];
       case 'weekly':
         {
-          const startOfCurrentWeek = startOfWeek(selectedDate, { weekStartsOn: 0 });
+          const startOfCurrentWeek = startOfWeek(selectedDate, {
+            weekStartsOn: 0
+          });
           return Array.from({
             length: 7
           }, (_, i) => addDays(startOfCurrentWeek, i));
@@ -377,7 +366,6 @@ export default function ScheduleView({
         return [];
     }
   }, [selectedDate, viewMode]);
-
   const navigateDate = (direction: 'prev' | 'next') => {
     const days = viewMode === 'daily' ? 1 : viewMode === 'weekly' ? 7 : 30;
     const newDate = new Date(selectedDate);
@@ -388,14 +376,12 @@ export default function ScheduleView({
     }
     setSelectedDate(newDate);
   };
-
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time));
     return <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
         {isCurrentMonth && relevantSlots.map(renderSlot)}
       </div>;
   };
-
   const renderGrid = () => {
     switch (viewMode) {
       case 'daily':
@@ -405,11 +391,9 @@ export default function ScheduleView({
             </div>
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               {weekDays[selectedDate.getDay()]}
-              {!hideHeaderDates && (
-                <div className="text-sm text-gray-600">
+              {!hideHeaderDates && <div className="text-sm text-gray-600">
                   {format(selectedDate, 'dd/MM')}
-                </div>
-              )}
+                </div>}
             </div>
             {timeSlots.map(time => <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
@@ -425,17 +409,17 @@ export default function ScheduleView({
             </div>
             {dates.map((date, index) => <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
                 {weekDays[date.getDay()]}
-                {!hideHeaderDates && (
-                  <div className="text-sm text-gray-600">
+                {!hideHeaderDates && <div className="text-sm text-gray-600">
                     {format(date, 'dd/MM')}
-                  </div>
-                )}
+                  </div>}
               </div>)}
             {timeSlots.map(time => <React.Fragment key={time}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {Array.from({length: 7}).map((_, dayIndex) => <React.Fragment key={`${time}-${dayIndex}`}>
+                {Array.from({
+              length: 7
+            }).map((_, dayIndex) => <React.Fragment key={`${time}-${dayIndex}`}>
                     {renderTimeCell(dayIndex, time)}
                   </React.Fragment>)}
               </React.Fragment>)}
@@ -453,22 +437,21 @@ export default function ScheduleView({
                   {time}
                 </div>
                 {weekDays.map((_, dayIndex) => {
-                  const relevantDates = dates.filter(date => date.getDay() === dayIndex);
-                  const isCurrentMonth = relevantDates.length > 0;
-                  return renderTimeCell(dayIndex, time, isCurrentMonth);
-                })}
+              const relevantDates = dates.filter(date => date.getDay() === dayIndex);
+              const isCurrentMonth = relevantDates.length > 0;
+              return renderTimeCell(dayIndex, time, isCurrentMonth);
+            })}
               </React.Fragment>)}
           </div>;
     }
   };
-
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(selectedDate, {
+    weekStartsOn: 0
+  });
   const weekEnd = addDays(weekStart, 6);
   const dateRangeDisplay = `${format(weekStart, 'dd/MM')} - ${format(weekEnd, 'dd/MM')}`;
-
   return <div className="space-y-4">
-      {!hideDateControls && (
-        <div className="flex items-center justify-between">
+      {!hideDateControls && <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => navigateDate('prev')}>
               <ChevronRight className="h-4 w-4" />
@@ -483,80 +466,44 @@ export default function ScheduleView({
 
           <div className="flex items-center gap-2">
             <div className="flex gap-2 border rounded-md">
-              <Button 
-                variant={viewMode === 'daily' ? 'default' : 'ghost'} 
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => setViewMode('daily')}
-              >
+              <Button variant={viewMode === 'daily' ? 'default' : 'ghost'} size="sm" className="flex items-center gap-1" onClick={() => setViewMode('daily')}>
                 <CalendarIcon className="h-4 w-4" />
                 <span>יומי</span>
               </Button>
-              <Button 
-                variant={viewMode === 'weekly' ? 'default' : 'ghost'} 
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => setViewMode('weekly')}
-              >
+              <Button variant={viewMode === 'weekly' ? 'default' : 'ghost'} size="sm" className="flex items-center gap-1" onClick={() => setViewMode('weekly')}>
                 <CalendarDays className="h-4 w-4" />
                 <span>שבועי</span>
               </Button>
-              <Button 
-                variant={viewMode === 'monthly' ? 'default' : 'ghost'} 
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => setViewMode('monthly')}
-              >
-                <CalendarRange className="h-4 w-4" />
-                <span>חודשי</span>
-              </Button>
+              
             </div>
 
-            {isAdmin && showAddButton && (
-              <Button onClick={handleAddSlot} className="flex items-center gap-2">
+            {isAdmin && showAddButton && <Button onClick={handleAddSlot} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 הוסף משבצת
-              </Button>
-            )}
+              </Button>}
           </div>
-        </div>
-      )}
+        </div>}
 
-      {showDatePicker && !hideDateControls && (
-        <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
+      {showDatePicker && !hideDateControls && <div className="absolute z-50 bg-white border rounded-md shadow-lg p-2">
           <Calendar mode="single" selected={selectedDate} onSelect={date => {
-            if (date) {
-              setSelectedDate(date);
-              setShowDatePicker(false);
-            }
-          }} locale={he} />
-        </div>
-      )}
+        if (date) {
+          setSelectedDate(date);
+          setShowDatePicker(false);
+        }
+      }} locale={he} />
+        </div>}
 
       <div className="border rounded-lg overflow-hidden">
         {renderGrid()}
       </div>
 
-      {isAdmin && (
-        <>
-          <EditModeDialog 
-            isOpen={showEditModeDialog} 
-            onClose={() => setShowEditModeDialog(false)} 
-            onEditCurrent={handleEditCurrent} 
-            onEditAll={handleEditAll} 
-          />
+      {isAdmin && <>
+          <EditModeDialog isOpen={showEditModeDialog} onClose={() => setShowEditModeDialog(false)} onEditCurrent={handleEditCurrent} onEditAll={handleEditAll} />
 
-          <ScheduleSlotDialog 
-            isOpen={showSlotDialog} 
-            onClose={() => {
-              setShowSlotDialog(false);
-              setEditingSlot(undefined);
-            }} 
-            onSave={handleSaveSlot} 
-            editingSlot={editingSlot} 
-            isMasterSchedule={isMasterSchedule}
-          />
-        </>
-      )}
+          <ScheduleSlotDialog isOpen={showSlotDialog} onClose={() => {
+        setShowSlotDialog(false);
+        setEditingSlot(undefined);
+      }} onSave={handleSaveSlot} editingSlot={editingSlot} isMasterSchedule={isMasterSchedule} />
+        </>}
     </div>;
 }
