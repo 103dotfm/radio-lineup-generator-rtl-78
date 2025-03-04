@@ -197,7 +197,8 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     ...slot,
     is_recurring: isMasterSchedule,
     is_modified: !isMasterSchedule,
-    created_at: new Date(currentWeekStart).toISOString() // Use the week start date
+    created_at: new Date(currentWeekStart).toISOString(),
+    color: slot.color === 'default' || !slot.color ? null : slot.color
   };
 
   console.log('Inserting new slot with data:', slotData);
@@ -248,7 +249,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
       is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
       is_recurring: originalSlot.is_recurring, // Don't change is_recurring
-      color: updates.color !== undefined ? updates.color : originalSlot.color, // Use color from updates or fallback to original
+      color: updates.color === 'default' ? null : (updates.color !== undefined ? updates.color : originalSlot.color),
       updated_at: new Date().toISOString()
     };
     
@@ -308,7 +309,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         end_time: updates.end_time || originalSlot.end_time,
         is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
         is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
-        color: updates.color !== undefined ? updates.color : originalSlot.color, // Use color from updates
+        color: updates.color === 'default' ? null : (updates.color !== undefined ? updates.color : originalSlot.color),
         is_modified: true,
         has_lineup: originalSlot.has_lineup, // Preserve the has_lineup flag
         updated_at: new Date().toISOString()
@@ -341,7 +342,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       end_time: updates.end_time || originalSlot.end_time,
       is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
       is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
-      color: updates.color !== undefined ? updates.color : originalSlot.color, // Use color from updates
+      color: updates.color === 'default' ? null : (updates.color !== undefined ? updates.color : originalSlot.color),
       is_recurring: false,
       is_modified: true,
       has_lineup: originalSlot.has_lineup, // Preserve the has_lineup flag
@@ -409,7 +410,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     end_time: updates.end_time || originalSlot.end_time,
     is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
     is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
-    color: updates.color !== undefined ? updates.color : originalSlot.color, // Use color from updates
+    color: updates.color === 'default' ? null : (updates.color !== undefined ? updates.color : originalSlot.color),
     is_modified: true,
     has_lineup: originalSlot.has_lineup, // Preserve the has_lineup flag
     updated_at: new Date().toISOString()
