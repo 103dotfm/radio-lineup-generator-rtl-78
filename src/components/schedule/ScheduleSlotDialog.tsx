@@ -61,6 +61,7 @@ export default function ScheduleSlotDialog({
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
   const [slotColor, setSlotColor] = useState('default');
+  const [isColorOverrideEnabled, setIsColorOverrideEnabled] = useState(false);
 
   useEffect(() => {
     if (editingSlot) {
@@ -72,9 +73,10 @@ export default function ScheduleSlotDialog({
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
       
-      // Critical fix: For existing slots, we need to use explicit color values only
-      // When color is explicitly set by the user, use that value; otherwise use 'default'
-      setSlotColor(editingSlot.color !== null && editingSlot.color !== undefined ? editingSlot.color : 'default');
+      // Check if this slot has an explicitly set color
+      const hasExplicitColor = editingSlot.color !== null && editingSlot.color !== undefined;
+      setIsColorOverrideEnabled(hasExplicitColor);
+      setSlotColor(hasExplicitColor ? editingSlot.color : 'default');
       
       console.log('Editing slot with data:', {
         id: editingSlot.id,
@@ -95,7 +97,8 @@ export default function ScheduleSlotDialog({
       setSelectedDays([]);
       setIsPrerecorded(false);
       setIsCollection(false);
-      setSlotColor('default'); // Always start with 'default' for new slots
+      setSlotColor('default');
+      setIsColorOverrideEnabled(false);
     }
   }, [editingSlot, isOpen]);
 
@@ -114,8 +117,8 @@ export default function ScheduleSlotDialog({
         day_of_week: editingSlot.day_of_week,
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
-        // Important: Only set the color field if user specifically chose a non-default color
-        color: slotColor === 'default' ? null : slotColor,
+        // Only set color if override is enabled
+        color: isColorOverrideEnabled ? slotColor : null,
         has_lineup: editingSlot.has_lineup
       };
       
@@ -132,8 +135,8 @@ export default function ScheduleSlotDialog({
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
-          // Important: Only set the color field if user specifically chose a non-default color
-          color: slotColor === 'default' ? null : slotColor
+          // Only set color if override is enabled
+          color: isColorOverrideEnabled ? slotColor : null
         };
         onSave(slotData);
       });
@@ -198,22 +201,7 @@ export default function ScheduleSlotDialog({
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="slot-color">צבע המשבצת</Label>
-              <Select value={slotColor} onValueChange={setSlotColor}>
-                <SelectTrigger id="slot-color" className="w-full">
-                  <SelectValue placeholder="בחר צבע" />
-                </SelectTrigger>
-                <SelectContent>
-                  {colorOptions.map((color) => (
-                    <SelectItem key={color.value} value={color.value} className={color.bgClass}>
-                      {color.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col space-y-2">
+            <div className="flex flex-col space-y-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_prerecorded"
@@ -230,7 +218,36 @@ export default function ScheduleSlotDialog({
                 />
                 <Label htmlFor="is_collection">לקט</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="enable_color_override"
+                  checked={isColorOverrideEnabled}
+                  onCheckedChange={(checked) => setIsColorOverrideEnabled(!!checked)}
+                />
+                <Label htmlFor="enable_color_override">שנה צבע ידנית</Label>
+              </div>
             </div>
+            {isColorOverrideEnabled && (
+              <div className="grid gap-2">
+                <Label htmlFor="slot-color">צבע המשבצת</Label>
+                <Select 
+                  value={slotColor} 
+                  onValueChange={setSlotColor}
+                  disabled={!isColorOverrideEnabled}
+                >
+                  <SelectTrigger id="slot-color" className="w-full">
+                    <SelectValue placeholder="בחר צבע" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorOptions.map((color) => (
+                      <SelectItem key={color.value} value={color.value} className={color.bgClass}>
+                        {color.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid gap-2">
               <Label>ימים</Label>
               <div className="flex flex-wrap gap-4">
