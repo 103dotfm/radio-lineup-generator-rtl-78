@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import ScheduleView from './ScheduleView';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import ScheduleSlotDialog from './ScheduleSlotDialog';
+import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { createScheduleSlot, updateScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
