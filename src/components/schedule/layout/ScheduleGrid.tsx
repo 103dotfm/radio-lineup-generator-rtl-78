@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { format, addDays, startOfWeek, isToday } from 'date-fns';
+import { format, addDays, startOfWeek, isToday, addWeeks } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ScheduleSlot, DayNote, ViewMode } from '@/types/schedule';
