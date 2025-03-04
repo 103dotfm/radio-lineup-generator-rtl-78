@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 interface ScheduleSlotDialogProps {
   isOpen: boolean;
@@ -73,9 +73,10 @@ export default function ScheduleSlotDialog({
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
       
-      // Check if this slot has an explicitly set color
       const hasExplicitColor = editingSlot.color !== null && editingSlot.color !== undefined;
-      setIsColorOverrideEnabled(hasExplicitColor);
+      
+      setIsColorOverrideEnabled(false);
+      
       setSlotColor(hasExplicitColor ? editingSlot.color : 'default');
       
       console.log('Editing slot with data:', {
@@ -117,7 +118,6 @@ export default function ScheduleSlotDialog({
         day_of_week: editingSlot.day_of_week,
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
-        // Only set color if override is enabled
         color: isColorOverrideEnabled ? slotColor : null,
         has_lineup: editingSlot.has_lineup
       };
@@ -135,7 +135,6 @@ export default function ScheduleSlotDialog({
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
-          // Only set color if override is enabled
           color: isColorOverrideEnabled ? slotColor : null
         };
         onSave(slotData);
