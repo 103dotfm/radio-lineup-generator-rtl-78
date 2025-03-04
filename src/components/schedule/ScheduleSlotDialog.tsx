@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -39,7 +40,7 @@ const weekDays = [
 
 const colorOptions = [
   { value: 'default', label: 'ללא שינוי', bgClass: 'bg-[#F1F1F1]' },
-  { value: 'green', label: 'ירוק', bgClass: 'bg-[#F2FCE2]' },
+  { value: 'green', label: 'ירוק', bgClass: 'bg-[#eff4ec]' },
   { value: 'yellow', label: 'צהוב', bgClass: 'bg-[#FEF7CD]' },
   { value: 'blue', label: 'כחול', bgClass: 'bg-[#D3E4FD]' },
 ];
