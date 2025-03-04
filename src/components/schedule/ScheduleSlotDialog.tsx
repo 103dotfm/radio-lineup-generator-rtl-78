@@ -72,8 +72,8 @@ export default function ScheduleSlotDialog({
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
       
-      // Important: Only set a specific color if it's explicitly defined in the slot
-      // color field can be null, undefined, or a specific color string
+      // Critical fix: For existing slots, we need to use explicit color values only
+      // When color is explicitly set by the user, use that value; otherwise use 'default'
       setSlotColor(editingSlot.color !== null && editingSlot.color !== undefined ? editingSlot.color : 'default');
       
       console.log('Editing slot with data:', {
@@ -114,6 +114,7 @@ export default function ScheduleSlotDialog({
         day_of_week: editingSlot.day_of_week,
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
+        // Important: Only set the color field if user specifically chose a non-default color
         color: slotColor === 'default' ? null : slotColor,
         has_lineup: editingSlot.has_lineup
       };
@@ -131,6 +132,7 @@ export default function ScheduleSlotDialog({
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
+          // Important: Only set the color field if user specifically chose a non-default color
           color: slotColor === 'default' ? null : slotColor
         };
         onSave(slotData);
