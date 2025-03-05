@@ -7,7 +7,6 @@ import { getShowDisplay } from '@/utils/showDisplay';
 
 interface ScheduleGridCellProps {
   slot: ScheduleSlot;
-  date: Date;
   onClick?: () => void;
   onEdit: (e: React.MouseEvent) => void;
   onDelete: (e: React.MouseEvent) => void;
@@ -17,7 +16,6 @@ interface ScheduleGridCellProps {
 
 export default function ScheduleGridCell({
   slot,
-  date,
   onClick,
   onEdit,
   onDelete,
@@ -25,17 +23,8 @@ export default function ScheduleGridCell({
   isAuthenticated
 }: ScheduleGridCellProps) {
   const getSlotColor = (slot: ScheduleSlot) => {
-    console.log('Getting color for slot:', {
-      name: slot.show_name,
-      color: slot.color,
-      is_prerecorded: slot.is_prerecorded,
-      is_collection: slot.is_collection,
-      is_modified: slot.is_modified
-    });
-
     // First priority: user-selected color (if explicitly set)
     if (slot.color) {
-      console.log('Using user-selected color:', slot.color);
       switch (slot.color) {
         case 'green':
           return 'bg-[#eff4ec]';
@@ -50,26 +39,24 @@ export default function ScheduleGridCell({
 
     // Second priority: prerecorded or collection (blue)
     if (slot.is_prerecorded || slot.is_collection) {
-      console.log('Using blue for prerecorded/collection');
       return 'bg-[#D3E4FD]';
     }
 
     // Third priority: modified from master schedule (yellow)
     if (slot.is_modified) {
-      console.log('Using yellow for modified slot');
       return 'bg-[#FEF7CD]';
     }
 
     // Default: regular programming (green)
-    console.log('Using default green color');
     return 'bg-[#eff4ec]';
   };
 
   const getSlotHeight = (slot: ScheduleSlot) => {
     const start = timeToMinutes(slot.start_time);
     const end = timeToMinutes(slot.end_time);
-    const hoursDiff = (end - start) / 60;
-    return `${hoursDiff * 60}px`;
+    const durationMinutes = end - start;
+    // Set a minimum height
+    return `${Math.max(durationMinutes / 3, 40)}px`;
   };
 
   const timeToMinutes = (time: string) => {
@@ -83,39 +70,34 @@ export default function ScheduleGridCell({
   return (
     <div 
       onClick={slotClickHandler} 
-      className={`p-2 rounded ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
+      className={`p-2 rounded mb-1 ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
       style={{
         height: getSlotHeight(slot),
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        zIndex: 10
       }}
     >
       <div className="flex justify-between items-start">
-        <div className="font-bold">{displayName}</div>
-        {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
+        <div className="font-bold text-sm truncate">{displayName}</div>
+        {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600 shrink-0" />}
       </div>
-      {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
+      {displayHost && <div className="text-xs opacity-75 truncate">{displayHost}</div>}
       
       {isAdmin && (
-        <div className="actions">
+        <div className="actions opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1">
           <Button 
             variant="ghost" 
             size="sm" 
-            className="p-1 h-8 w-8" 
+            className="p-1 h-6 w-6" 
             onClick={e => onEdit(e)}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-3 w-3" />
           </Button>
           <Button 
             variant="ghost" 
             size="sm" 
-            className="p-1 h-8 w-8 hover:bg-red-100" 
+            className="p-1 h-6 w-6 hover:bg-red-100" 
             onClick={e => onDelete(e)}
           >
-            <Trash2 className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-3 w-3 text-red-500" />
           </Button>
         </div>
       )}
