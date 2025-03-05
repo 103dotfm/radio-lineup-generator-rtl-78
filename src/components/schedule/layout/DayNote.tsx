@@ -81,7 +81,7 @@ export default function DayNoteComponent({
     return (
       <div className="day-note relative text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
         {note.note}
-        <div className="actions">
+        <div className="actions opacity-0 hover:opacity-100 transition-opacity">
           <Button
             onClick={() => {
               setText(note.note);
@@ -115,7 +115,7 @@ export default function DayNoteComponent({
         }}
         variant="ghost"
         size="sm"
-        className="p-0 h-6 w-6 opacity-0 hover:opacity-100 transition-opacity"
+        className="p-0 h-6 w-6"
       >
         <Plus className="h-3 w-3" />
       </Button>

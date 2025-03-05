@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format, addDays, startOfWeek, isToday, addWeeks } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,8 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   onDayNoteChange,
   onDayNoteDelete
 }) => {
+  const [activeNoteDay, setActiveNoteDay] = useState<number | null>(null);
+
   // Helper function to get day note for a specific date
   const getDayNote = (date: Date): DayNote | null => {
     const formattedDate = format(date, 'yyyy-MM-dd');
@@ -57,7 +59,11 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
           const isCurrentDay = isToday(date);
           
           return (
-            <div key={day} className="text-center mb-1">
+            <div 
+              key={day} 
+              className="text-center mb-1"
+              onClick={() => setActiveNoteDay(activeNoteDay === day ? null : day)}
+            >
               <div className={cn(
                 "text-base font-medium p-1 rounded",
                 isCurrentDay ? "bg-blue-100 text-blue-800" : ""
@@ -67,14 +73,22 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
                   <div>{formattedDate}</div>
                 )}
                 
-                {onDayNoteChange && onDayNoteDelete && (
-                  <DayNoteComponent
-                    note={getDayNote(date)}
-                    date={date}
-                    onSave={onDayNoteChange}
-                    onDelete={onDayNoteDelete}
-                    isAdmin={isAdmin}
-                  />
+                {onDayNoteChange && onDayNoteDelete && isAdmin && (
+                  <div className={activeNoteDay === day ? '' : 'hidden'}>
+                    <DayNoteComponent
+                      note={getDayNote(date)}
+                      date={date}
+                      onSave={onDayNoteChange}
+                      onDelete={onDayNoteDelete}
+                      isAdmin={isAdmin}
+                    />
+                  </div>
+                )}
+                
+                {!isAdmin && getDayNote(date) && (
+                  <div className="text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
+                    {getDayNote(date)?.note}
+                  </div>
                 )}
               </div>
             </div>
@@ -82,30 +96,51 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
         })}
 
         {/* Time slots */}
-        {days.map((day) => {
-          const date = addDays(weekStart, day);
-          return (
-            <div key={day} className="relative group">
-              {scheduleSlots
-                .filter(slot => slot.day_of_week === day)
-                .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                .map(slot => (
-                  <ScheduleGridCell
-                    key={slot.id}
-                    slot={slot}
-                    date={date}
-                    onClick={() => handleSlotClick(slot)}
-                    onEdit={(e) => handleEditSlot(slot, e)}
-                    onDelete={(e) => handleDeleteSlot(slot, e)}
-                    isAdmin={isAdmin}
-                    isAuthenticated={isAuthenticated}
-                  />
-                ))}
-            </div>
-          );
-        })}
+        <div className="col-span-7 grid grid-cols-7 gap-1">
+          {days.map((day) => {
+            const date = addDays(weekStart, day);
+            
+            // Find all slots for this day and sort them by start time
+            const daySlots = scheduleSlots
+              .filter(slot => slot.day_of_week === day)
+              .sort((a, b) => a.start_time.localeCompare(b.start_time));
+              
+            return (
+              <div key={day} className="relative min-h-[400px]">
+                {daySlots.map((slot, index) => {
+                  // Calculate position based on time
+                  const startMinutes = timeToMinutes(slot.start_time);
+                  const top = `${startMinutes / 5}px`; // 1 minute = 0.2px
+                  
+                  return (
+                    <div 
+                      key={slot.id} 
+                      className="absolute w-full" 
+                      style={{ top }}
+                    >
+                      <ScheduleGridCell
+                        slot={slot}
+                        onClick={() => handleSlotClick(slot)}
+                        onEdit={(e) => handleEditSlot(slot, e)}
+                        onDelete={(e) => handleDeleteSlot(slot, e)}
+                        isAdmin={isAdmin}
+                        isAuthenticated={isAuthenticated}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
+  };
+
+  // Helper function to convert time string to minutes
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
   };
 
   // Daily view rendering
@@ -123,7 +158,6 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
               <ScheduleGridCell
                 key={slot.id}
                 slot={slot}
-                date={selectedDate}
                 onClick={() => handleSlotClick(slot)}
                 onEdit={(e) => handleEditSlot(slot, e)}
                 onDelete={(e) => handleDeleteSlot(slot, e)}
@@ -140,7 +174,7 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   const renderMonthlyView = () => {
     const monthStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
     const monthEnd = addDays(addWeeks(monthStart, 5), 6);
-    const currentDate = monthStart;
+    const currentDate = new Date(monthStart);
     const calendar = [];
 
     while (currentDate <= monthEnd) {
