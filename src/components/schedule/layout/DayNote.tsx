@@ -20,7 +20,7 @@ export default function DayNoteComponent({
   isAdmin
 }: DayNoteProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [text, setText] = useState(note?.text || '');
+  const [text, setText] = useState(note?.note || '');
 
   const handleSave = async () => {
     if (text.trim()) {
@@ -39,7 +39,7 @@ export default function DayNoteComponent({
   if (!isAdmin) {
     return note ? (
       <div className="day-note text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
-        {note.text}
+        {note.note}
       </div>
     ) : null;
   }
@@ -80,11 +80,11 @@ export default function DayNoteComponent({
   if (note) {
     return (
       <div className="day-note relative text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
-        {note.text}
+        {note.note}
         <div className="actions">
           <Button
             onClick={() => {
-              setText(note.text);
+              setText(note.note);
               setIsEditing(true);
             }}
             variant="ghost"
