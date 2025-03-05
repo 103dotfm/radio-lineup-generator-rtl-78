@@ -1,9 +1,8 @@
-
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { format, startOfWeek, addDays } from 'date-fns'
 import { he } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, CalendarIcon, CalendarDays, CalendarRange } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarIcon, CalendarDays } from 'lucide-react'
 import { ViewMode } from '@/types/schedule'
 
 interface ScheduleHeaderProps {
@@ -82,15 +81,6 @@ export default function ScheduleHeader({
           >
             <CalendarDays className="h-4 w-4" />
             <span>שבועי</span>
-          </Button>
-          <Button 
-            variant={viewMode === 'monthly' ? 'default' : 'ghost'} 
-            size="sm" 
-            className="flex items-center gap-1" 
-            onClick={() => setViewMode('monthly')}
-          >
-            <CalendarRange className="h-4 w-4" />
-            <span>חודשי</span>
           </Button>
         </div>
 
