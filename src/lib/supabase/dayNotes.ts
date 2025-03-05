@@ -20,7 +20,7 @@ export const getDayNotes = async (startDate: Date, endDate: Date): Promise<DayNo
     return [];
   }
   
-  return data || [];
+  return data as DayNote[];
 };
 
 export const createDayNote = async (date: Date, note: string): Promise<DayNote | null> => {
@@ -40,7 +40,7 @@ export const createDayNote = async (date: Date, note: string): Promise<DayNote |
     return null;
   }
   
-  return data;
+  return data as DayNote;
 };
 
 export const updateDayNote = async (id: string, note: string): Promise<DayNote | null> => {
@@ -56,7 +56,7 @@ export const updateDayNote = async (id: string, note: string): Promise<DayNote |
     return null;
   }
   
-  return data;
+  return data as DayNote;
 };
 
 export const deleteDayNote = async (id: string): Promise<boolean> => {
