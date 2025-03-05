@@ -105,7 +105,10 @@ export default function ScheduleGrid({
 
   const handleDayHeaderClick = (date: Date) => {
     if (isAdmin) {
-      setEditingNoteDate(date);
+      console.log("Day header clicked for date:", date);
+      setEditingNoteDate(prev => 
+        prev && prev.getTime() === date.getTime() ? null : date
+      );
     }
   };
 
@@ -161,11 +164,12 @@ export default function ScheduleGrid({
               {format(date, 'dd/MM')}
             </div>
             <DayNoteComponent
-              note={dayNote}
+              note={isCurrentlyEditing ? { id: dayNote?.id || '', date: format(date, 'yyyy-MM-dd'), note: dayNote?.note || '' } : dayNote}
               date={date}
               onSave={handleSaveDayNote}
               onDelete={handleDeleteDayNote}
               isAdmin={isAdmin}
+              isEditing={isCurrentlyEditing}
             />
           </>
         )}

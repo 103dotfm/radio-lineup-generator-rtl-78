@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, X, CheckCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { DayNote as DayNoteType } from '@/types/schedule';
@@ -10,11 +10,22 @@ interface DayNoteProps {
   onSave: (date: Date, noteText: string, noteId?: string) => Promise<void>;
   onDelete: (noteId: string) => Promise<void>;
   isAdmin: boolean;
+  isEditing?: boolean;
 }
 
-const DayNote: React.FC<DayNoteProps> = ({ note, date, onSave, onDelete, isAdmin }) => {
+const DayNote: React.FC<DayNoteProps> = ({ note, date, onSave, onDelete, isAdmin, isEditing: externalIsEditing }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [noteText, setNoteText] = useState(note?.note || '');
+
+  useEffect(() => {
+    if (externalIsEditing !== undefined) {
+      setIsEditing(externalIsEditing);
+    }
+  }, [externalIsEditing]);
+
+  useEffect(() => {
+    setNoteText(note?.note || '');
+  }, [note]);
 
   const handleSave = async () => {
     if (noteText.trim()) {
