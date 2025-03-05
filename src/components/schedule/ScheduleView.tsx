@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -5,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
-import { getDayNotes, createDayNote, updateDayNote, deleteDayNote } from '@/lib/supabase/dayNotes';
+import { getDayNotes } from '@/lib/supabase/dayNotes';
 import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
 import EditModeDialog from './EditModeDialog';
 import ScheduleHeader from './layout/ScheduleHeader';
@@ -259,51 +260,6 @@ export default function ScheduleView({
     }
   };
 
-  const handleDayNoteSave = async (date: Date, noteText: string, noteId?: string) => {
-    try {
-      if (noteId) {
-        const updated = await updateDayNote(noteId, noteText);
-        if (updated) {
-          toast({
-            title: 'הערה עודכנה בהצלחה'
-          });
-        }
-      } else {
-        const created = await createDayNote(date, noteText);
-        if (created) {
-          toast({
-            title: 'הערה נוספה בהצלחה'
-          });
-        }
-      }
-      await fetchDayNotes();
-    } catch (error) {
-      console.error('Error saving day note:', error);
-      toast({
-        title: 'שגיאה בשמירת הערה',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleDayNoteDelete = async (noteId: string) => {
-    try {
-      const success = await deleteDayNote(noteId);
-      if (success) {
-        toast({
-          title: 'הערה נמחקה בהצלחה'
-        });
-        await fetchDayNotes();
-      }
-    } catch (error) {
-      console.error('Error deleting day note:', error);
-      toast({
-        title: 'שגיאה במחיקת הערה',
-        variant: 'destructive'
-      });
-    }
-  };
-
   return (
     <div className="space-y-4">
       <ScheduleHeader 
@@ -330,8 +286,7 @@ export default function ScheduleView({
         isAuthenticated={isAuthenticated}
         hideHeaderDates={hideHeaderDates}
         dayNotes={dayNotes}
-        onDayNoteChange={handleDayNoteSave}
-        onDayNoteDelete={handleDayNoteDelete}
+        onDayNoteChange={fetchDayNotes}
       />
 
       {isAdmin && (

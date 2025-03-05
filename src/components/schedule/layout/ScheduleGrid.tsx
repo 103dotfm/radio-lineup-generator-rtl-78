@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
-import { format, addDays, startOfWeek, isToday, addWeeks } from 'date-fns';
-import { he } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
-import { ScheduleSlot, DayNote, ViewMode } from '@/types/schedule';
+import React, { useMemo, useState } from 'react';
+import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks } from 'date-fns';
+import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
+import { FileCheck, Pencil, Trash2 } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { getShowDisplay } from '@/utils/showDisplay';
 import ScheduleGridCell from './ScheduleGridCell';
 import DayNoteComponent from './DayNote';
+import { createDayNote, updateDayNote, deleteDayNote } from '@/lib/supabase/dayNotes';
 
 interface ScheduleGridProps {
   scheduleSlots: ScheduleSlot[];
@@ -16,13 +18,12 @@ interface ScheduleGridProps {
   handleDeleteSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
-  hideHeaderDates?: boolean;
-  dayNotes?: DayNote[];
-  onDayNoteChange?: (date: Date, noteText: string, noteId?: string) => Promise<void>;
-  onDayNoteDelete?: (noteId: string) => Promise<void>;
+  hideHeaderDates: boolean;
+  dayNotes: DayNote[];
+  onDayNoteChange: () => void;
 }
 
-const ScheduleGrid: React.FC<ScheduleGridProps> = ({
+export default function ScheduleGrid({
   scheduleSlots,
   selectedDate,
   viewMode,
@@ -31,189 +32,206 @@ const ScheduleGrid: React.FC<ScheduleGridProps> = ({
   handleDeleteSlot,
   isAdmin,
   isAuthenticated,
-  hideHeaderDates = false,
-  dayNotes = [],
-  onDayNoteChange,
-  onDayNoteDelete
-}) => {
-  const [activeNoteDay, setActiveNoteDay] = useState<number | null>(null);
+  hideHeaderDates,
+  dayNotes,
+  onDayNoteChange
+}: ScheduleGridProps) {
+  const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-  // Helper function to get day note for a specific date
-  const getDayNote = (date: Date): DayNote | null => {
+  const timeSlots = useMemo(() => {
+    const slots = [];
+    for (let i = 6; i <= 23; i++) {
+      slots.push(`${i.toString().padStart(2, '0')}:00`);
+    }
+    for (let i = 0; i <= 2; i++) {
+      slots.push(`${i.toString().padStart(2, '0')}:00`);
+    }
+    return slots;
+  }, []);
+
+  const dates = useMemo(() => {
+    switch (viewMode) {
+      case 'daily':
+        return [selectedDate];
+      case 'weekly':
+        {
+          const startOfCurrentWeek = startOfWeek(selectedDate, {
+            weekStartsOn: 0
+          });
+          return Array.from({
+            length: 7
+          }, (_, i) => addDays(startOfCurrentWeek, i));
+        }
+      case 'monthly':
+        {
+          const monthStart = startOfMonth(selectedDate);
+          const daysInMonth = getDaysInMonth(selectedDate);
+          return Array.from({
+            length: daysInMonth
+          }, (_, i) => addDays(monthStart, i));
+        }
+      default:
+        return [];
+    }
+  }, [selectedDate, viewMode]);
+
+  const handleSaveDayNote = async (date: Date, noteText: string, noteId?: string) => {
+    try {
+      if (noteId) {
+        await updateDayNote(noteId, noteText);
+      } else {
+        await createDayNote(date, noteText);
+      }
+      onDayNoteChange();
+    } catch (error) {
+      console.error('Error saving day note:', error);
+    }
+  };
+
+  const handleDeleteDayNote = async (noteId: string) => {
+    try {
+      await deleteDayNote(noteId);
+      onDayNoteChange();
+    } catch (error) {
+      console.error('Error deleting day note:', error);
+    }
+  };
+
+  const getNoteForDate = (date: Date): DayNote | null => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return dayNotes.find(note => note.date === formattedDate) || null;
   };
 
-  // Weekly view rendering
-  const renderWeeklyView = () => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    const days = [0, 1, 2, 3, 4, 5, 6]; // Days of the week
-
-    return (
-      <div className="grid grid-cols-7 gap-1 mt-4">
-        {/* Day headers */}
-        {days.map((day) => {
-          const date = addDays(weekStart, day);
-          const formattedDate = format(date, 'dd/MM', { locale: he });
-          const dayName = format(date, 'EEEE', { locale: he });
-          const isCurrentDay = isToday(date);
-          
-          return (
-            <div 
-              key={day} 
-              className="text-center mb-1"
-              onClick={() => setActiveNoteDay(activeNoteDay === day ? null : day)}
-            >
-              <div className={cn(
-                "text-base font-medium p-1 rounded",
-                isCurrentDay ? "bg-blue-100 text-blue-800" : ""
-              )}>
-                <div className="font-bold">{dayName}</div>
-                {!hideHeaderDates && (
-                  <div>{formattedDate}</div>
-                )}
-                
-                {onDayNoteChange && onDayNoteDelete && isAdmin && (
-                  <div className={activeNoteDay === day ? '' : 'hidden'}>
-                    <DayNoteComponent
-                      note={getDayNote(date)}
-                      date={date}
-                      onSave={onDayNoteChange}
-                      onDelete={onDayNoteDelete}
-                      isAdmin={isAdmin}
-                    />
-                  </div>
-                )}
-                
-                {!isAdmin && getDayNote(date) && (
-                  <div className="text-sm text-gray-700 mt-1 p-1 bg-gray-100 rounded">
-                    {getDayNote(date)?.note}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Time slots */}
-        <div className="col-span-7 grid grid-cols-7 gap-1">
-          {days.map((day) => {
-            const date = addDays(weekStart, day);
-            
-            // Find all slots for this day and sort them by start time
-            const daySlots = scheduleSlots
-              .filter(slot => slot.day_of_week === day)
-              .sort((a, b) => a.start_time.localeCompare(b.start_time));
-              
-            return (
-              <div key={day} className="relative min-h-[400px]">
-                {daySlots.map((slot, index) => {
-                  // Calculate position based on time
-                  const startMinutes = timeToMinutes(slot.start_time);
-                  const top = `${startMinutes / 5}px`; // 1 minute = 0.2px
-                  
-                  return (
-                    <div 
-                      key={slot.id} 
-                      className="absolute w-full" 
-                      style={{ top }}
-                    >
-                      <ScheduleGridCell
-                        slot={slot}
-                        onClick={() => handleSlotClick(slot)}
-                        onEdit={(e) => handleEditSlot(slot, e)}
-                        onDelete={(e) => handleDeleteSlot(slot, e)}
-                        isAdmin={isAdmin}
-                        isAuthenticated={isAuthenticated}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+  const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
+    const relevantSlots = scheduleSlots.filter(
+      slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time)
     );
-  };
-
-  // Helper function to convert time string to minutes
-  const timeToMinutes = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
-  };
-
-  // Daily view rendering
-  const renderDailyView = () => {
-    const formattedDate = format(selectedDate, 'EEEE, d MMMM', { locale: he });
-
+    
     return (
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-center">{formattedDate}</h2>
-        <div>
-          {scheduleSlots
-            .filter(slot => format(selectedDate, 'yyyy-MM-dd') === format(addDays(startOfWeek(selectedDate, { weekStartsOn: 0 }), slot.day_of_week), 'yyyy-MM-dd'))
-            .sort((a, b) => a.start_time.localeCompare(b.start_time))
-            .map(slot => (
-              <ScheduleGridCell
-                key={slot.id}
-                slot={slot}
-                onClick={() => handleSlotClick(slot)}
-                onEdit={(e) => handleEditSlot(slot, e)}
-                onDelete={(e) => handleDeleteSlot(slot, e)}
-                isAdmin={isAdmin}
-                isAuthenticated={isAuthenticated}
-              />
-            ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Monthly view rendering
-  const renderMonthlyView = () => {
-    const monthStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    const monthEnd = addDays(addWeeks(monthStart, 5), 6);
-    const currentDate = new Date(monthStart);
-    const calendar = [];
-
-    while (currentDate <= monthEnd) {
-      const week = [];
-      for (let i = 0; i < 7; i++) {
-        week.push(addDays(currentDate, i));
-      }
-      calendar.push(week);
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-
-    return (
-      <div className="space-y-4">
-        {calendar.map((week, index) => (
-          <div key={index} className="flex justify-between">
-            {week.map(date => {
-              const formattedDate = format(date, 'd', { locale: he });
-              return (
-                <div key={date.toISOString()} className="w-1/7 text-center">
-                  {formattedDate}
-                </div>
-              );
-            })}
-          </div>
+      <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
+        {isCurrentMonth && relevantSlots.map(slot => (
+          <ScheduleGridCell 
+            key={slot.id}
+            slot={slot}
+            handleSlotClick={handleSlotClick}
+            handleEditSlot={handleEditSlot}
+            handleDeleteSlot={handleDeleteSlot}
+            isAdmin={isAdmin}
+            isAuthenticated={isAuthenticated}
+          />
         ))}
       </div>
     );
   };
 
-  // Determine which view to render
-  switch (viewMode) {
-    case 'daily':
-      return renderDailyView();
-    case 'monthly':
-      return renderMonthlyView();
-    case 'weekly':
-    default:
-      return renderWeeklyView();
-  }
-};
+  const isSlotStartTime = (slot: ScheduleSlot, timeSlot: string) => {
+    const slotStartMinutes = timeToMinutes(slot.start_time);
+    const currentTimeMinutes = timeToMinutes(timeSlot);
+    return slotStartMinutes === currentTimeMinutes;
+  };
 
-export default ScheduleGrid;
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const renderDayHeader = (date: Date, index: number) => {
+    const dayNote = getNoteForDate(date);
+    
+    return (
+      <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100 group">
+        {weekDays[date.getDay()]}
+        {!hideHeaderDates && (
+          <>
+            <div className="text-sm text-gray-600">
+              {format(date, 'dd/MM')}
+            </div>
+            <DayNoteComponent
+              note={dayNote}
+              date={date}
+              onSave={handleSaveDayNote}
+              onDelete={handleDeleteDayNote}
+              isAdmin={isAdmin}
+            />
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderGrid = () => {
+    switch (viewMode) {
+      case 'daily':
+        return (
+          <div className="grid grid-cols-[auto,1fr]" dir="rtl">
+            <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
+              שעה
+            </div>
+            {renderDayHeader(selectedDate, 0)}
+            {timeSlots.map(time => (
+              <React.Fragment key={time}>
+                <div className="p-2 text-center border-b border-r bg-gray-50">
+                  {time}
+                </div>
+                {renderTimeCell(selectedDate.getDay(), time)}
+              </React.Fragment>
+            ))}
+          </div>
+        );
+        
+      case 'weekly':
+        return (
+          <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
+            <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
+              שעה
+            </div>
+            {dates.map((date, index) => renderDayHeader(date, index))}
+            {timeSlots.map(time => (
+              <React.Fragment key={time}>
+                <div className="p-2 text-center border-b border-r bg-gray-50">
+                  {time}
+                </div>
+                {Array.from({length: 7}).map((_, dayIndex) => (
+                  <React.Fragment key={`${time}-${dayIndex}`}>
+                    {renderTimeCell(dayIndex, time)}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        );
+        
+      case 'monthly':
+        return (
+          <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
+            <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
+              שעה
+            </div>
+            {weekDays.map(day => (
+              <div key={day} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
+                {day}
+              </div>
+            ))}
+            {timeSlots.map(time => (
+              <React.Fragment key={time}>
+                <div className="p-2 text-center border-b border-r bg-gray-50">
+                  {time}
+                </div>
+                {weekDays.map((_, dayIndex) => {
+                  const relevantDates = dates.filter(date => date.getDay() === dayIndex);
+                  const isCurrentMonth = relevantDates.length > 0;
+                  return renderTimeCell(dayIndex, time, isCurrentMonth);
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      {renderGrid()}
+    </div>
+  );
+}
