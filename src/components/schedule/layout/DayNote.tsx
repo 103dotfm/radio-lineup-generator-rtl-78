@@ -41,7 +41,7 @@ const DayNote: React.FC<DayNoteProps> = ({ note, date, onSave, onDelete, isAdmin
     }
   };
 
-  if (!note && !isAdmin) return null;
+  if (!note && !isEditing) return null;
 
   return (
     <div className="mt-1 relative day-note">
