@@ -1,6 +1,5 @@
-
 import React, { useMemo, useState } from 'react';
-import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks } from 'date-fns';
+import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
 import { FileCheck, Pencil, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,7 @@ export default function ScheduleGrid({
   onDayNoteChange
 }: ScheduleGridProps) {
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  const [editingNoteDate, setEditingNoteDate] = useState<Date | null>(null);
 
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -83,6 +83,7 @@ export default function ScheduleGrid({
         await createDayNote(date, noteText);
       }
       onDayNoteChange();
+      setEditingNoteDate(null);
     } catch (error) {
       console.error('Error saving day note:', error);
     }
@@ -100,6 +101,14 @@ export default function ScheduleGrid({
   const getNoteForDate = (date: Date): DayNote | null => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return dayNotes.find(note => note.date === formattedDate) || null;
+  };
+
+  const handleDayHeaderClick = (date: Date) => {
+    if (isAdmin) {
+      setEditingNoteDate(prev => 
+        prev && prev.getTime() === date.getTime() ? null : date
+      );
+    }
   };
 
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
@@ -137,22 +146,31 @@ export default function ScheduleGrid({
 
   const renderDayHeader = (date: Date, index: number) => {
     const dayNote = getNoteForDate(date);
+    const isCurrentlyEditing = editingNoteDate && 
+      editingNoteDate.getTime() === date.getTime();
+    const todayHighlight = isToday(date) ? 'bg-yellow-100 border-yellow-400 border-2' : 'bg-gray-100';
     
     return (
-      <div key={index} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100 group">
+      <div 
+        key={index} 
+        className={`p-2 font-bold text-center border-b border-r last:border-r-0 ${todayHighlight} group cursor-pointer`}
+        onClick={() => handleDayHeaderClick(date)}
+      >
         {weekDays[date.getDay()]}
         {!hideHeaderDates && (
           <>
             <div className="text-sm text-gray-600">
               {format(date, 'dd/MM')}
             </div>
-            <DayNoteComponent
-              note={dayNote}
-              date={date}
-              onSave={handleSaveDayNote}
-              onDelete={handleDeleteDayNote}
-              isAdmin={isAdmin}
-            />
+            {(dayNote || isCurrentlyEditing) && (
+              <DayNoteComponent
+                note={dayNote}
+                date={date}
+                onSave={handleSaveDayNote}
+                onDelete={handleDeleteDayNote}
+                isAdmin={isAdmin}
+              />
+            )}
           </>
         )}
       </div>
