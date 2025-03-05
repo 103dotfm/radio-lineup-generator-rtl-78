@@ -47,12 +47,14 @@ const DayNote: React.FC<DayNoteProps> = ({ note, date, onSave, onDelete, isAdmin
     <div className="mt-1 relative day-note">
       {!isEditing ? (
         <>
-          <div 
-            className="text-sm text-gray-200 bg-black/80 p-1 rounded min-h-[24px]"
-            onClick={() => isAdmin && setIsEditing(true)}
-          >
-            {note?.note || (isAdmin ? '+ הוסף הערה' : '')}
-          </div>
+          {note && (
+            <div 
+              className="text-sm text-gray-200 bg-black/80 p-1 rounded min-h-[24px]"
+              onClick={() => isAdmin && setIsEditing(true)}
+            >
+              {note.note}
+            </div>
+          )}
           {isAdmin && note && (
             <div className="absolute top-0 left-0 flex opacity-0 group-hover:opacity-100 transition-opacity">
               <Button 
