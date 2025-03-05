@@ -105,9 +105,7 @@ export default function ScheduleGrid({
 
   const handleDayHeaderClick = (date: Date) => {
     if (isAdmin) {
-      setEditingNoteDate(prev => 
-        prev && prev.getTime() === date.getTime() ? null : date
-      );
+      setEditingNoteDate(date);
     }
   };
 
@@ -148,12 +146,12 @@ export default function ScheduleGrid({
     const dayNote = getNoteForDate(date);
     const isCurrentlyEditing = editingNoteDate && 
       editingNoteDate.getTime() === date.getTime();
-    const todayHighlight = isToday(date) ? 'bg-yellow-100 border-yellow-400 border-2' : 'bg-gray-100';
+    const todayClass = isToday(date) ? 'bg-[#59c9c6]' : 'bg-gray-100';
     
     return (
       <div 
         key={index} 
-        className={`p-2 font-bold text-center border-b border-r last:border-r-0 ${todayHighlight} group cursor-pointer`}
+        className={`p-2 font-bold text-center border-b border-r last:border-r-0 ${todayClass} group cursor-pointer`}
         onClick={() => handleDayHeaderClick(date)}
       >
         {weekDays[date.getDay()]}
@@ -162,15 +160,13 @@ export default function ScheduleGrid({
             <div className="text-sm text-gray-600">
               {format(date, 'dd/MM')}
             </div>
-            {(dayNote || isCurrentlyEditing) && (
-              <DayNoteComponent
-                note={dayNote}
-                date={date}
-                onSave={handleSaveDayNote}
-                onDelete={handleDeleteDayNote}
-                isAdmin={isAdmin}
-              />
-            )}
+            <DayNoteComponent
+              note={dayNote}
+              date={date}
+              onSave={handleSaveDayNote}
+              onDelete={handleDeleteDayNote}
+              isAdmin={isAdmin}
+            />
           </>
         )}
       </div>
