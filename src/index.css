@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -87,11 +88,6 @@ body {
   background-color: #F1F1F1;  /* Light gray */
 }
 
-.cell-today {
-  background-color: #59c9c6 !important;
-  border: none !important;
-}
-
 /* Editor styles */
 .note-editor {
   min-height: 100px;
@@ -119,8 +115,7 @@ body {
 /* Mobile Schedule Styles */
 @media (max-width: 768px) {
   .schedule-page .topLogo {
-    max-width: 50%;
-    margin: -20px auto 10px;
+    max-width: 100%;
   }
   
   .schedule-content {
@@ -129,45 +124,19 @@ body {
   
   .schedule-content table {
     min-width: 600px;
-    font-size: 12px;
-  }
-
-  .schedule-page h1 {
-    text-align: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .date-display {
-    text-align: center;
-    width: 100%;
-    justify-content: center;
-    margin-bottom: 1rem;
-  }
-
-  .week-navigation {
-    justify-content: center;
-    width: 100%;
-  }
-
-  [role="combobox"] {
-    background-color: white !important;
-    text-align: center;
   }
 }
 
 /* Print styles */
 @media print {
   @page {
+    margin: 10mm;  /* Increased from 5mm to 10mm for better margins */
     size: landscape;
-    margin: 5mm;
+    padding: 0;
   }
   
   body {
-    background-color: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    background-color: white;
   }
   
   .container {
@@ -177,127 +146,139 @@ body {
     margin: 0 !important;
   }
   
-  /* Hide all elements by default */
-  body * {
+  .schedule-page header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  .schedule-page .topLogo {
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 200px;
+  }
+  
+  .schedule-page header button, 
+  .schedule-page select,
+  .schedule-page [role="tablist"] {
     display: none !important;
   }
   
-  /* Selectively show only the elements we want to print */
-  .print-container,
-  .print-container *,
-  .print-content,
-  .print-content *,
-  .print-header,
-  .print-header *,
-  .print-table,
-  .print-table * {
-    display: block !important;
+  .schedule-page h1 {
+    font-size: 1.5rem !important;
+    margin: 0.5rem 0 !important;
   }
   
-  /* Table-specific display rules */
-  .print-table tr {
-    display: table-row !important;
-  }
-  
-  .print-table td, 
-  .print-table th {
-    display: table-cell !important;
-  }
-  
-  /* Layout adjustments */
-  .print-content {
-    font-size: 10px !important;
-    line-height: 1.2 !important;
+  .schedule-content {
+    border: none !important;
     padding: 0 !important;
-    margin: 0 !important;
   }
   
-  .print-header {
-    text-align: center !important;
-    margin-bottom: 5px !important;
+  .print-content {
+    font-size: 12px;
+    padding: 2mm;
   }
   
-  .print-header h1 {
-    font-size: 16px !important;
-    margin: 0 !important;
+  .print-content h1 {
+    font-size: 20px;
+    margin-bottom: 8px;
   }
   
-  .print-header h2 {
-    font-size: 12px !important;
-    margin: 0 !important;
+  .print-content h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
   }
   
-  .print-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 9px !important;
+  .print-content table {
+    font-size: 12px;
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 1rem;
+    page-break-before: avoid !important;
   }
   
-  .print-table th,
-  .print-table td {
-    padding: 2px 4px !important;
-    border: 0.5px solid #ddd !important;
-    font-size: 9px !important;
-    line-height: 1.1 !important;
-    max-width: 150px !important;
-    white-space: normal !important;
-    word-break: break-word !important;
+  .print-content table td,
+  .print-content table th {
+    padding: 6px 8px;
+    font-size: 1rem !important;
+    border: 1px solid #e2e8f0;
+    vertical-align: top !important;
+  }
+
+  .print-content tr.bg-black\/10 td {
+    color: black !important;
+    background-color: #f1f1f1 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
-  /* Specific display adjustments for schedule page */
-  .schedule-page .print-header,
-  .schedule-content,
-  .schedule-content * {
-    display: block !important;
+  .print-content .prose {
+    font-size: 1rem !important;
+    line-height: inherit !important;
+    max-width: none;
+  }
+
+  .print-content .prose * {
+    font-size: 1rem !important;
   }
   
-  /* Schedule page styles for printing */
-  .schedule-page::before {
-    content: attr(data-print-header);
-    font-size: 16px !important;
-    font-weight: bold !important;
-    display: block !important;
-    text-align: center !important;
-    margin-bottom: 5px !important;
-    margin-top: 0 !important;
+  .print-content .credits {
+    margin-top: 4rem;
+    padding: 2rem 0;
+    border-top: 1px solid #eee;
+    font-size: 1rem !important;
+    color: black !important;
+    text-align: center;
+    page-break-before: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Improved page break handling */
+  .print-container {
+    margin-bottom: 4rem;  /* Increased from 2rem to 4rem for more space at bottom */
   }
   
-  /* Background colors in print */
-  .cell-regular,
-  .cell-modified,
-  .cell-prerecorded,
-  .cell-collection,
-  .cell-today {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  /* Changed divider styling to avoid page breaks */
+  .divider-text {
+    page-break-after: avoid;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    background-color: #f3f4f6 !important;
+    color: black !important;
+    padding: 10px;
+    border-radius: 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
-  /* Hide UI elements during print */
+  /* Allow content to flow naturally instead of forcing page breaks */
+  .divider-heading {
+    page-break-after: avoid;
+    font-weight: bold;
+    font-size: 1.25rem !important;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    background-color: #f3f4f6 !important;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Add more space at bottom of page to prevent text being cut off */
+  .mb-6 {
+    margin-bottom: 2.5rem !important;  /* Increased from 2rem */
+  }
+  
+  /* Additional bottom padding for rows to prevent cropping */
+  tr td {
+    padding-bottom: 0.75rem !important;
+  }
+
   [role="status"],
   .toaster,
-  .sonner-toast-container,
-  button,
-  .schedule-page [role="tablist"],
-  .schedule-page select,
-  .schedule-page [role="combobox"],
-  .schedule-page .date-controls {
+  .sonner-toast-container {
     display: none !important;
-  }
-  
-  /* Other cleanup */
-  img {
-    display: none !important;
-  }
-  
-  .prose * {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  .credits {
-    font-size: 8px !important;
-    margin-top: 3px !important;
-    padding-top: 2px !important;
   }
 }
 
@@ -434,50 +415,4 @@ tbody {vertical-align: top;}
   .logo-container .topLogo {
     width: 100%;
   }
-  
-  .schedule-page h1 {
-    text-align: center;
-  }
-  
-  .select-container {
-    text-align: center;
-  }
-  
-  [role="combobox"] {
-    background-color: white !important;
-  }
-}
-
-/* Print-specific table styles */
-.print-table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-.print-table th:nth-child(1),
-.print-table td:nth-child(1) {
-  width: 15%;
-}
-
-.print-table th:nth-child(2),
-.print-table td:nth-child(2) {
-  width: 15%;
-}
-
-.print-table th:nth-child(3),
-.print-table td:nth-child(3) {
-  width: 60%;
-}
-
-.print-table th:nth-child(4),
-.print-table td:nth-child(4) {
-  width: 10%;
-}
-
-/* Make sure inline elements are properly displayed in print */
-.print-table span,
-.print-table a,
-.print-table strong,
-.print-table em {
-  display: inline !important;
 }
