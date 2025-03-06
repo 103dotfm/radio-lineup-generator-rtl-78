@@ -138,10 +138,10 @@ const SchedulePage = () => {
       
       <Tabs defaultValue="schedule" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8 schedTabs" dir="rtl">
-          <TabsTrigger value="schedule" className="font-extrabold bg-slate-300 hover:bg-slate-200">לוח שידורים</TabsTrigger>
-          <TabsTrigger value="producers">סידור עבודה עורכים ומפיקים</TabsTrigger>
-          <TabsTrigger value="engineers">סידור עבודה טכנאים</TabsTrigger>
-          <TabsTrigger value="digital">סידור עבודה דיגיטל</TabsTrigger>
+          <TabsTrigger value="schedule" className="font-extrabold bg-slate-300 hover:bg-slate-200 mx-[15px]">לוח שידורים</TabsTrigger>
+          <TabsTrigger value="producers" className="font-extrabold bg-blue-200 hover:bg-blue-100 mx-[15px]">סידור עבודה עורכים ומפיקים</TabsTrigger>
+          <TabsTrigger value="engineers" className="bg-slate-300 hover:bg-slate-200 text-sm font-extrabold mx-[15px]">סידור עבודה טכנאים</TabsTrigger>
+          <TabsTrigger value="digital" className="bg-blue-200 hover:bg-blue-100 font-extrabold mx-[15px]">סידור עבודה דיגיטל</TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
