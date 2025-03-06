@@ -130,7 +130,7 @@ body {
 /* Print styles - Separate for lineup and schedule */
 @media print {
   @page {
-    /* size: portrait; */
+    size: portrait;
     margin: 5mm 5mm 13mm 10mm;
     padding: 0;
   }
