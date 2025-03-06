@@ -33,7 +33,7 @@ export default function ScheduleHeader({
 }: ScheduleHeaderProps) {
   
   const navigateDate = (direction: 'prev' | 'next') => {
-    const days = viewMode === 'daily' ? 1 : 7;
+    const days = viewMode === 'daily' ? 1 : viewMode === 'weekly' ? 7 : 30;
     const newDate = new Date(selectedDate);
     if (direction === 'prev') {
       newDate.setDate(newDate.getDate() - days);
