@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -88,6 +87,11 @@ body {
   background-color: #F1F1F1;  /* Light gray */
 }
 
+.cell-today {
+  background-color: #59c9c6 !important;
+  border: none !important;
+}
+
 /* Editor styles */
 .note-editor {
   min-height: 100px;
@@ -130,13 +134,15 @@ body {
 /* Print styles */
 @media print {
   @page {
-    margin: 10mm;  /* Increased from 5mm to 10mm for better margins */
+    margin: 5mm;
     size: landscape;
     padding: 0;
   }
   
   body {
     background-color: white;
+    margin: 0;
+    padding: 0;
   }
   
   .container {
@@ -146,133 +152,74 @@ body {
     margin: 0 !important;
   }
   
-  .schedule-page header {
+  .schedule-page * {
+    display: none;
+  }
+  
+  .schedule-page h1,
+  .schedule-content,
+  .schedule-content *,
+  .print-header {
+    display: block !important;
+  }
+  
+  .schedule-page::before {
+    content: attr(data-print-header);
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 10px;
+    margin-top: 10px;
   }
   
   .schedule-page .topLogo {
-    background: none !important;
-    padding: 0 !important;
-    margin: 0 auto !important;
-    max-width: 200px;
-  }
-  
-  .schedule-page header button, 
-  .schedule-page select,
-  .schedule-page [role="tablist"] {
     display: none !important;
   }
   
-  .schedule-page h1 {
-    font-size: 1.5rem !important;
-    margin: 0.5rem 0 !important;
+  .schedule-page button,
+  .schedule-page [role="tablist"],
+  .schedule-page select,
+  .schedule-page [role="combobox"],
+  .schedule-page .date-controls {
+    display: none !important;
   }
   
   .schedule-content {
     border: none !important;
     padding: 0 !important;
-  }
-  
-  .print-content {
-    font-size: 12px;
-    padding: 2mm;
-  }
-  
-  .print-content h1 {
-    font-size: 20px;
-    margin-bottom: 8px;
-  }
-  
-  .print-content h2 {
-    font-size: 16px;
-    margin-bottom: 16px;
-  }
-  
-  .print-content table {
-    font-size: 12px;
-    border-collapse: collapse;
-    width: 100%;
-    margin-top: 1rem;
-    page-break-before: avoid !important;
-  }
-  
-  .print-content table td,
-  .print-content table th {
-    padding: 6px 8px;
-    font-size: 1rem !important;
-    border: 1px solid #e2e8f0;
-    vertical-align: top !important;
-  }
-
-  .print-content tr.bg-black\/10 td {
-    color: black !important;
-    background-color: #f1f1f1 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  
-  .print-content .prose {
-    font-size: 1rem !important;
-    line-height: inherit !important;
-    max-width: none;
-  }
-
-  .print-content .prose * {
-    font-size: 1rem !important;
-  }
-  
-  .print-content .credits {
-    margin-top: 4rem;
-    padding: 2rem 0;
-    border-top: 1px solid #eee;
-    font-size: 1rem !important;
-    color: black !important;
-    text-align: center;
-    page-break-before: avoid;
+    margin: 0 !important;
+    width: 100% !important;
     page-break-inside: avoid;
   }
-
-  /* Improved page break handling */
-  .print-container {
-    margin-bottom: 4rem;  /* Increased from 2rem to 4rem for more space at bottom */
+  
+  .schedule-content table {
+    width: 100% !important;
+    border-collapse: collapse;
+    font-size: 10px !important;
+    margin: 0 !important;
   }
   
-  /* Changed divider styling to avoid page breaks */
-  .divider-text {
-    page-break-after: avoid;
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
-    background-color: #f3f4f6 !important;
-    color: black !important;
-    padding: 10px;
-    border-radius: 4px;
+  .schedule-content th,
+  .schedule-content td {
+    padding: 2px !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    border: 1px solid #ddd;
+  }
+  
+  .cell-regular,
+  .cell-modified,
+  .cell-prerecorded,
+  .cell-collection,
+  .cell-today {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   
-  /* Allow content to flow naturally instead of forcing page breaks */
-  .divider-heading {
-    page-break-after: avoid;
-    font-weight: bold;
-    font-size: 1.25rem !important;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-    background-color: #f3f4f6 !important;
-    padding: 0.75rem;
-    border-radius: 0.375rem;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  
-  /* Add more space at bottom of page to prevent text being cut off */
-  .mb-6 {
-    margin-bottom: 2.5rem !important;  /* Increased from 2rem */
-  }
-  
-  /* Additional bottom padding for rows to prevent cropping */
-  tr td {
-    padding-bottom: 0.75rem !important;
+  .schedule-content {
+    transform-origin: top left;
+    transform: scale(0.95);
   }
 
   [role="status"],
@@ -414,5 +361,17 @@ tbody {vertical-align: top;}
 @media (max-width: 768px) {
   .logo-container .topLogo {
     width: 100%;
+  }
+  
+  .schedule-page h1 {
+    text-align: center;
+  }
+  
+  .select-container {
+    text-align: center;
+  }
+  
+  [role="combobox"] {
+    background-color: white !important;
   }
 }

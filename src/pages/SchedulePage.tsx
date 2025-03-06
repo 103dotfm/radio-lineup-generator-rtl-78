@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
@@ -54,7 +53,6 @@ const SchedulePage = () => {
   }, [currentWeek]);
 
   useEffect(() => {
-    // Update URL when week changes
     const formattedDate = format(currentWeek, 'yyyy-MM-dd');
     if (weekDate !== formattedDate) {
       navigate(`/schedule/${formattedDate}`, {
@@ -132,10 +130,11 @@ const SchedulePage = () => {
         <div className="logo-container mx-auto md:mx-0 md:w-auto w-1/2">
           <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103fm" className="topLogo" />
         </div>
-        <h1 className="text-3xl font-bold mb-2 text-center md:text-right">לוח שידורים שבועי</h1>
+
+        <h1 className="text-3xl font-bold mb-4 text-center">לוח שידורים שבועי</h1>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-          <div className="flex items-center space-x-4 space-x-reverse md:mb-0 mb-2 text-center w-full md:w-auto">
+          <div className="flex items-center space-x-4 space-x-reverse mb-4 text-center w-full justify-center">
             <Calendar className="h-5 w-5 ml-1" />
             <span>
               {weekStart} - {weekEnd}
@@ -198,14 +197,14 @@ const SchedulePage = () => {
       <div className="block md:hidden">
         <div className="mb-4">
           <Select value={selectedTab} onValueChange={setSelectedTab}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full text-right bg-white">
               <SelectValue placeholder="בחר תצוגה" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="schedule">לוח שידורים</SelectItem>
-              <SelectItem value="producers">סידור עבודה עורכים ומפיקים</SelectItem>
-              <SelectItem value="engineers">סידור עבודה טכנאים</SelectItem>
-              <SelectItem value="digital">סידור עבודה דיגיטל</SelectItem>
+            <SelectContent dir="rtl" className="bg-white">
+              <SelectItem value="schedule" className="text-right">לוח שידורים</SelectItem>
+              <SelectItem value="producers" className="text-right">סידור עבודה עורכים ומפיקים</SelectItem>
+              <SelectItem value="engineers" className="text-right">סידור עבודה טכנאים</SelectItem>
+              <SelectItem value="digital" className="text-right">סידור עבודה דיגיטל</SelectItem>
             </SelectContent>
           </Select>
         </div>
