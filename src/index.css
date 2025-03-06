@@ -127,11 +127,10 @@ body {
   }
 }
 
-/* Print styles */
+/* Print styles - Separate for lineup and schedule */
 @media print {
   @page {
-    margin: 10mm;  /* Increased from 5mm to 10mm for better margins */
-    size: landscape;
+    margin: 5mm;
     padding: 0;
   }
   
@@ -145,35 +144,57 @@ body {
     padding: 0 !important;
     margin: 0 !important;
   }
+
+  /* Lineup-specific print styles - PORTRAIT */
+  .lineup-print {
+    padding: 5mm !important;
+  }
+  
+  /* Schedule-specific print styles - LANDSCAPE */
+  .schedule-page {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  @page {
+    size: landscape;
+  }
   
   .schedule-page header {
-    text-align: center;
-    margin-bottom: 1rem;
-  }
-  
-  .schedule-page .topLogo {
-    background: none !important;
-    padding: 0 !important;
-    margin: 0 auto !important;
-    max-width: 200px;
-  }
-  
-  .schedule-page header button, 
-  .schedule-page select,
-  .schedule-page [role="tablist"] {
     display: none !important;
   }
   
-  .schedule-page h1 {
-    font-size: 1.5rem !important;
-    margin: 0.5rem 0 !important;
+  .schedule-page [role="tablist"],
+  .schedule-page .hidden.md\:block h1,
+  .schedule-page .hidden.md\:block > *:not(.schedule-content),
+  .schedule-page .schedTabs {
+    display: none !important;
   }
   
-  .schedule-content {
+  .schedule-page .schedule-cell .actions,
+  .schedule-page .day-note .actions,
+  .schedule-page button {
+    display: none !important;
+  }
+  
+  .schedule-page .schedule-content {
     border: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .schedule-page .schedule-content table {
+    font-size: 8px !important;
+    width: 100% !important;
   }
   
+  .schedule-page .schedule-content table th,
+  .schedule-page .schedule-content table td {
+    padding: 2px 4px !important;
+    font-size: 8px !important;
+  }
+  
+  /* Common print styles */
   .print-content {
     font-size: 12px;
     padding: 2mm;
@@ -279,6 +300,15 @@ body {
   .toaster,
   .sonner-toast-container {
     display: none !important;
+  }
+  
+  /* Only show the schedule table title when printing */
+  .print-schedule-header {
+    display: block !important;
+    margin: 0 auto 10px auto !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
   }
 }
 
@@ -415,4 +445,14 @@ tbody {vertical-align: top;}
   .logo-container .topLogo {
     width: 100%;
   }
+}
+
+/* Fix for mobile dropdowns */
+.bg-white .bg-popover {
+  background-color: white !important;
+}
+
+/* Print Header for Schedule */
+.print-schedule-header {
+  display: none;
 }

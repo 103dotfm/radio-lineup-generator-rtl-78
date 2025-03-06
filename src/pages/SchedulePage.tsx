@@ -134,8 +134,19 @@ const SchedulePage = () => {
         </div>
         <h1 className="text-3xl font-bold mb-2 text-center md:text-right">לוח שידורים שבועי</h1>
         
+        {/* Mobile Date Range - Centered */}
+        <div className="md:hidden flex justify-center mb-4">
+          <div className="flex items-center">
+            <Calendar className="h-5 w-5 ml-1" />
+            <span>
+              {weekStart} - {weekEnd}
+            </span>
+          </div>
+        </div>
+        
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-          <div className="flex items-center space-x-4 space-x-reverse md:mb-0 mb-2 text-center w-full md:w-auto">
+          {/* Desktop Date Range - Left */}
+          <div className="hidden md:flex items-center space-x-4 space-x-reverse md:mb-0 mb-2 text-center w-full md:w-auto">
             <Calendar className="h-5 w-5 ml-1" />
             <span>
               {weekStart} - {weekEnd}
@@ -198,16 +209,28 @@ const SchedulePage = () => {
       <div className="block md:hidden">
         <div className="mb-4">
           <Select value={selectedTab} onValueChange={setSelectedTab}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="בחר תצוגה" />
+            <SelectTrigger className="w-full bg-white text-right">
+              <SelectValue placeholder="בחר תצוגה" className="text-right" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent dir="rtl" className="bg-white">
               <SelectItem value="schedule">לוח שידורים</SelectItem>
               <SelectItem value="producers">סידור עבודה עורכים ומפיקים</SelectItem>
               <SelectItem value="engineers">סידור עבודה טכנאים</SelectItem>
               <SelectItem value="digital">סידור עבודה דיגיטל</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        
+        <div className="flex justify-center mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handlePrint} 
+            className="flex md:hidden items-center"
+          >
+            <Printer className="h-4 w-4 ml-1" />
+            הדפסת הלוח
+          </Button>
         </div>
         
         <div className="mt-4">

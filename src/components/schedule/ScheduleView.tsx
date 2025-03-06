@@ -43,6 +43,11 @@ export default function ScheduleView({
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
 
+  // Format the date range for print header
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  const weekEnd = addDays(weekStart, 6);
+  const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
+
   useEffect(() => {
     if (externalSelectedDate) {
       setSelectedDate(externalSelectedDate);
@@ -262,6 +267,11 @@ export default function ScheduleView({
 
   return (
     <div className="space-y-4">
+      {/* Print Header - Only visible when printing */}
+      <div className="print-schedule-header">
+        לוח שידורים שבועי 103fm - {dateRangeDisplay}
+      </div>
+      
       <ScheduleHeader 
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
