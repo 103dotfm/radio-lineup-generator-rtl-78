@@ -9,15 +9,20 @@ const Print = () => {
   const [searchParams] = useSearchParams();
   const [show, setShow] = useState<any>(null);
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const showMinutes = searchParams.get('minutes') === 'true';
 
   useEffect(() => {
     const loadShow = async () => {
       if (id) {
         try {
+          setLoading(true);
           const { show: loadedShow, items: showItems } = await getShowWithItems(id);
           if (loadedShow) {
             setShow(loadedShow);
+          } else {
+            setError('לא נמצאה תוכנית');
           }
           if (showItems) {
             // Ensure items are correctly ordered
@@ -25,6 +30,9 @@ const Print = () => {
           }
         } catch (error) {
           console.error('Error loading show:', error);
+          setError('שגיאה בטעינת התוכנית');
+        } finally {
+          setLoading(false);
         }
       }
     };
@@ -32,10 +40,12 @@ const Print = () => {
     loadShow();
   }, [id]);
 
-  if (!show) return null;
+  if (loading) return <div className="container mx-auto py-8 px-2 text-center">טוען...</div>;
+  if (error) return <div className="container mx-auto py-8 px-2 text-center">{error}</div>;
+  if (!show) return <div className="container mx-auto py-8 px-2 text-center">לא נמצאה תוכנית</div>;
 
   return (
-    <div className="container mx-auto py-8 px-2 print-container">
+    <div className="container mx-auto py-8 px-2 print-container lineup-print">
       <PrintPreview
         showName={show.name}
         showTime={show.time}
