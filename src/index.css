@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -111,16 +112,66 @@ body {
   pointer-events: none;
 }
 
+/* Mobile Schedule Styles */
+@media (max-width: 768px) {
+  .schedule-page .topLogo {
+    max-width: 100%;
+  }
+  
+  .schedule-content {
+    overflow-x: auto;
+  }
+  
+  .schedule-content table {
+    min-width: 600px;
+  }
+}
+
 /* Print styles */
 @media print {
   @page {
     margin: 10mm;  /* Increased from 5mm to 10mm for better margins */
-    size: A4;
+    size: landscape;
     padding: 0;
   }
   
   body {
     background-color: white;
+  }
+  
+  .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .schedule-page header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  .schedule-page .topLogo {
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 200px;
+  }
+  
+  .schedule-page header button, 
+  .schedule-page select,
+  .schedule-page [role="tablist"] {
+    display: none !important;
+  }
+  
+  .schedule-page h1 {
+    font-size: 1.5rem !important;
+    margin: 0.5rem 0 !important;
+  }
+  
+  .schedule-content {
+    border: none !important;
+    padding: 0 !important;
   }
   
   .print-content {
@@ -352,4 +403,16 @@ tbody {vertical-align: top;}
 
 .table-section {
   margin-bottom: 3rem;
+}
+
+/* Updated Schedule Page styles */
+.logo-container {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .logo-container .topLogo {
+    width: 100%;
+  }
 }
