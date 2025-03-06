@@ -37,30 +37,31 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
     return groups;
   }, [] as Array<Array<ShowItem & { interviewees?: Interviewee[] }>>);
 
+  const formattedDate = showDate ? format(showDate, 'dd/MM/yyyy') : '';
+
   return (
-    <div className="print-content bg-white p-4">
-      <div className="flex flex-col items-center mb-4">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-16" />
-        <div className="text-center mt-2">
-          <h1 className="text-2xl font-bold showName">{showName}</h1>
-          <h2 className="text-lg text-gray-600">
-            {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
+    <div className="print-content bg-white p-2">
+      <div className="flex flex-col items-center mb-2 print-header">
+        <div className="text-center">
+          <h1 className="text-xl font-bold">{showName}</h1>
+          <h2 className="text-base text-gray-600">
+            {showTime} {formattedDate}
           </h2>
         </div>
       </div>
 
-      {/* Unified table approach with dividers as headings */}
-      <table className="w-full border-collapse border border-gray-200 mb-4">
+      {/* Compact table for print */}
+      <table className="w-full border-collapse border border-gray-200 print-table">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
+            <th className="py-1 px-2 text-right border border-gray-200 text-sm">שם</th>
+            <th className="py-1 px-2 text-right border border-gray-200 text-sm">קרדיט</th>
+            <th className="py-1 px-2 text-right border border-gray-200 text-sm">פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
+              <th className="py-1 px-2 text-right border border-gray-200 text-sm">טלפון</th>
             )}
             {showMinutes && (
-              <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
+              <th className="py-1 px-2 text-center border border-gray-200 text-sm w-14">דק'</th>
             )}
           </tr>
         </thead>
@@ -76,9 +77,9 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   <tr className="divider-row">
                     <td 
                       colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
-                      className="py-2 px-4 border-0"
+                      className="py-1 px-2 border-0 bg-gray-100"
                     >
-                      <h2 className="divider-heading text-xl font-bold">{group[0].name}</h2>
+                      <h2 className="divider-heading text-base font-bold">{group[0].name}</h2>
                     </td>
                   </tr>
                 )}
@@ -91,7 +92,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   if (item.is_break) {
                     return (
                       <tr key={item.id} className="breakRow bg-black/10">
-                        <td colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
+                        <td colSpan={breakNoteColspan} className="py-1 px-2 text-center border border-gray-200 font-medium text-sm">
                           {item.name}
                         </td>
                       </tr>
@@ -101,7 +102,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   if (item.is_note) {
                     return (
                       <tr key={item.id} className="noteRow">
-                        <td colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
+                        <td colSpan={breakNoteColspan} className="py-1 px-2 text-center border border-gray-200 text-black text-sm">
                           <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                         </td>
                       </tr>
@@ -113,22 +114,22 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   return (
                     <React.Fragment key={item.id}>
                       <tr>
-                        <td className="py-3 px-4 border border-gray-200 font-medium text-base">
+                        <td className="py-1 px-2 border border-gray-200 font-medium text-sm">
                           {item.name}
                         </td>
-                        <td className="py-3 px-4 border border-gray-200 text-base">
+                        <td className="py-1 px-2 border border-gray-200 text-sm">
                           {item.title}
                         </td>
-                        <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none" 
+                        <td className="py-1 px-2 border border-gray-200 text-sm prose prose-sm max-w-none" 
                             rowSpan={intervieweeCount + 1}
                             dangerouslySetInnerHTML={{ __html: item.details }} />
                         {isAuthenticated && (
-                          <td className="py-3 px-4 border border-gray-200 text-base">
+                          <td className="py-1 px-2 border border-gray-200 text-sm">
                             {item.phone}
                           </td>
                         )}
                         {showMinutes && (
-                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20"
+                          <td className="py-1 px-2 text-center border border-gray-200 text-sm w-14"
                               rowSpan={intervieweeCount + 1}>
                             {item.duration}
                           </td>
@@ -136,14 +137,14 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                       </tr>
                       {item.interviewees?.map((interviewee) => (
                         <tr key={interviewee.id}>
-                          <td className="py-3 px-4 border border-gray-200 text-base">
+                          <td className="py-1 px-2 border border-gray-200 text-sm">
                             {interviewee.name}
                           </td>
-                          <td className="py-3 px-4 border border-gray-200 text-base">
+                          <td className="py-1 px-2 border border-gray-200 text-sm">
                             {interviewee.title}
                           </td>
                           {isAuthenticated && (
-                            <td className="py-3 px-4 border border-gray-200 text-base">
+                            <td className="py-1 px-2 border border-gray-200 text-sm">
                               {interviewee.phone}
                             </td>
                           )}
@@ -159,10 +160,10 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
         {showMinutes && (
           <tfoot>
             <tr>
-              <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
+              <td colSpan={isAuthenticated ? 4 : 3} className="py-1 px-2 text-right font-bold border border-gray-200 text-sm">
                 סה״כ דקות
               </td>
-              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
+              <td className="py-1 px-2 text-center font-bold border border-gray-200 w-14 text-sm">
                 {calculateTotalMinutes()}
               </td>
             </tr>
@@ -172,7 +173,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
 
       {editorContent && (
         <div 
-          className="credits mt-8 pt-4 border-t border-gray-200 text-base text-black text-center"
+          className="credits mt-4 pt-2 border-t border-gray-200 text-sm text-black text-center"
           dangerouslySetInnerHTML={{ __html: editorContent }}
         />
       )}
