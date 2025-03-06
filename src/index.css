@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -135,90 +134,55 @@ body {
 /* Print styles */
 @media print {
   @page {
+    margin: 5mm;
     size: landscape;
-    margin: 0.5cm;
+    padding: 0;
   }
   
   body {
     background-color: white;
     margin: 0;
     padding: 0;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
   
-  .print-container {
+  .container {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
   }
   
-  .print-content {
-    padding: 0 !important;
-    margin: 0 !important;
-    font-size: 10px !important;
-  }
-  
-  .print-content h1 {
-    font-size: 16px !important;
-    margin-top: 0 !important;
-  }
-  
-  .print-content h2 {
-    font-size: 12px !important;
-    margin-bottom: 8px !important;
-  }
-  
-  .print-content img {
-    height: 40px !important;
-    margin-bottom: 4px !important;
-  }
-  
-  .print-content table {
-    font-size: 9px !important;
-    width: 100% !important;
-    border-collapse: collapse !important;
-    table-layout: fixed !important;
-  }
-  
-  .print-content td,
-  .print-content th {
-    padding: 2px 4px !important;
-    font-size: 9px !important;
-    line-height: 1.2 !important;
-    border: 0.5px solid #ddd !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-  
-  .print-content .divider-heading {
-    font-size: 10px !important;
-    margin: 1px 0 !important;
-  }
-  
-  .print-content .credits {
-    font-size: 8px !important;
-    margin-top: 2px !important;
-  }
-  
-  /* Schedule print styles */
   .schedule-page * {
     display: none;
   }
   
-  .schedule-page .print-header,
+  .schedule-page h1,
   .schedule-content,
-  .schedule-content * {
+  .schedule-content *,
+  .print-header {
     display: block !important;
   }
   
-  .schedule-page .print-header {
-    text-align: center;
-    font-size: 16px;
+  .schedule-page::before {
+    content: attr(data-print-header);
+    font-size: 18px;
     font-weight: bold;
-    margin-bottom: 8px;
+    display: block;
+    text-align: center;
+    margin-bottom: 10px;
+    margin-top: 10px;
+  }
+  
+  .schedule-page .topLogo {
+    display: none !important;
+  }
+  
+  .schedule-page button,
+  .schedule-page [role="tablist"],
+  .schedule-page select,
+  .schedule-page [role="combobox"],
+  .schedule-page .date-controls {
+    display: none !important;
   }
   
   .schedule-content {
@@ -232,20 +196,16 @@ body {
   .schedule-content table {
     width: 100% !important;
     border-collapse: collapse;
-    font-size: 9px !important;
+    font-size: 10px !important;
     margin: 0 !important;
-    table-layout: fixed !important;
   }
   
   .schedule-content th,
   .schedule-content td {
     padding: 2px !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
     line-height: 1.2 !important;
-    border: 0.5px solid #ddd !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
+    border: 1px solid #ddd;
   }
   
   .cell-regular,
@@ -253,8 +213,8 @@ body {
   .cell-prerecorded,
   .cell-collection,
   .cell-today {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .schedule-content {
@@ -264,12 +224,7 @@ body {
 
   [role="status"],
   .toaster,
-  .sonner-toast-container,
-  button,
-  select,
-  .date-controls,
-  [role="combobox"],
-  [role="tablist"] {
+  .sonner-toast-container {
     display: none !important;
   }
 }
