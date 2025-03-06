@@ -156,7 +156,7 @@ body {
 
   /* Lineup-specific print styles - PORTRAIT */
   .lineup-print {
-    padding: 10mm !important;
+    padding: 5mm !important;
   }
   
   /* Schedule-specific print styles - LANDSCAPE */
@@ -205,8 +205,8 @@ body {
   
   /* Common print styles */
   .print-content {
-    font-size: 12px;
-    padding: 2mm;
+    font-size: 11px;
+    padding: 1.5mm;
   }
   
   .print-content h1 {
@@ -220,7 +220,7 @@ body {
   }
   
   .print-content table {
-    font-size: 12px;
+    font-size: 11px;
     border-collapse: collapse;
     width: 100%;
     margin-top: 1rem;
