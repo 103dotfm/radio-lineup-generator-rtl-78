@@ -150,10 +150,13 @@ body {
     font-size: 0.95rem;
     line-height: 1.3rem;
 }
+  .px-4 {
+    min-width: 128px;
+}
 
   /* Lineup-specific print styles - PORTRAIT */
   .lineup-print {
-    padding: 5mm !important;
+    padding: 10mm !important;
   }
   
   /* Schedule-specific print styles - LANDSCAPE */
