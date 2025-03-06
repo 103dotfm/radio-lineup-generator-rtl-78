@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -47,6 +48,7 @@ const SchedulePage = () => {
     digital: null
   });
   const [selectedTab, setSelectedTab] = useState("schedule");
+  const schedulePageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchArrangements();
@@ -85,7 +87,6 @@ const SchedulePage = () => {
           }
         });
       }
-      console.log('Fetched arrangements:', arrangementsRecord);
       setArrangements(arrangementsRecord);
     } catch (error) {
       console.error('Error in fetchArrangements:', error);
@@ -104,6 +105,10 @@ const SchedulePage = () => {
   });
 
   const handlePrint = () => {
+    // Set a print header with date range before printing
+    if (schedulePageRef.current) {
+      schedulePageRef.current.setAttribute('data-print-header', `לוח שידורים שבועי 103fm - ${weekStart} - ${weekEnd}`);
+    }
     window.print();
   };
 
@@ -125,7 +130,7 @@ const SchedulePage = () => {
       </div>;
   };
 
-  return <div className="container mx-auto px-4 py-8 schedule-page" dir="rtl">
+  return <div className="container mx-auto px-4 py-8 schedule-page" dir="rtl" ref={schedulePageRef}>
       <header className="mb-8">
         <div className="logo-container mx-auto md:mx-0 md:w-auto w-1/2">
           <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103fm" className="topLogo" />
@@ -134,14 +139,14 @@ const SchedulePage = () => {
         <h1 className="text-3xl font-bold mb-4 text-center">לוח שידורים שבועי</h1>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-          <div className="flex items-center space-x-4 space-x-reverse mb-4 text-center w-full justify-center">
+          <div className="flex items-center space-x-4 space-x-reverse mb-4 date-display">
             <Calendar className="h-5 w-5 ml-1" />
             <span>
               {weekStart} - {weekEnd}
             </span>
           </div>
           
-          <div className="flex items-center space-x-2 space-x-reverse justify-center w-full md:w-auto">
+          <div className="flex items-center space-x-2 space-x-reverse justify-center w-full md:w-auto week-navigation">
             <Button variant="outline" size="sm" onClick={() => navigateWeek('prev')}>
               <ChevronRight className="h-4 w-4 ml-1" />
               שבוע קודם
@@ -173,7 +178,7 @@ const SchedulePage = () => {
             <TabsTrigger value="digital" className="bg-blue-200 hover:bg-blue-100 font-extrabold mx-[15px]">סידור עבודה דיגיטל</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="schedule" className="mt-4 schedule-content">
+          <TabsContent value="schedule" className="mt-4 schedule-content print-header">
             <div className="border rounded-lg overflow-hidden bg-white p-4">
               <ScheduleView selectedDate={currentWeek} hideDateControls hideHeaderDates={false} />
             </div>
@@ -211,7 +216,7 @@ const SchedulePage = () => {
         
         <div className="mt-4">
           {selectedTab === "schedule" && (
-            <div className="border rounded-lg overflow-hidden bg-white p-2 schedule-content">
+            <div className="border rounded-lg overflow-hidden bg-white p-2 schedule-content print-header">
               <ScheduleView selectedDate={currentWeek} hideDateControls hideHeaderDates={false} />
             </div>
           )}
