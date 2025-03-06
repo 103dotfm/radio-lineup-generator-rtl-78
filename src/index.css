@@ -131,7 +131,7 @@ body {
 @media print {
   @page {
     /* size: portrait; */
-    margin: 5mm 5mm 13mm 5mm;
+    margin: 5mm 5mm 13mm 10mm;
     padding: 0;
   }
   
@@ -145,6 +145,11 @@ body {
     padding: 0 !important;
     margin: 0 !important;
   }
+ 
+  .text-base {
+    font-size: 0.95rem;
+    line-height: 1.3rem;
+}
 
   /* Lineup-specific print styles - PORTRAIT */
   .lineup-print {
