@@ -42,8 +42,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <div className="flex flex-col items-center mb-2">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12" />
         <div className="text-center mt-1">
-          <h1 className="text-2xl font-bold showName">{showName}</h1>
-          <h2 className="text-lg text-gray-600 mt-0">
+          <h1 className="text-2xl font-bold showName showNamePrint">{showName}</h1>
+          <h2 className="text-lg text-gray-600 mt-0 showTimePrint">
             {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
           </h2>
         </div>
@@ -53,11 +53,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <table className="w-full border-collapse border border-gray-200 mb-4">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '16%' }}>שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '16%' }}>קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '56%' }}>פרטים</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '12%' }}>שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '14%' }}>קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '63%' }}>פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '12%' }}>טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '11%' }}>טלפון</th>
             )}
             {showMinutes && (
               <th className="py-2 px-4 text-center border border-gray-200 text-base" style={{ width: '48px' }}>דק'</th>
