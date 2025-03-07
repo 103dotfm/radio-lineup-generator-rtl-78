@@ -53,11 +53,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <table className="w-full border-collapse border border-gray-200 mb-4">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '18%' }}>שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '18%' }}>קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '50%' }}>פרטים</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '16%' }}>שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '16%' }}>קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '56%' }}>פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '14%' }}>טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '12%' }}>טלפון</th>
             )}
             {showMinutes && (
               <th className="py-2 px-4 text-center border border-gray-200 text-base" style={{ width: '48px' }}>דק'</th>
@@ -76,8 +76,8 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   <tr className="divider-row">
                     <td 
                       colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
-                      className="py-0 border-0"
-                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px' }}
+                      className="py-0 border-t border-b border-gray-200"
+                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px', borderLeft: 'none', borderRight: 'none' }}
                     >
                       <h2 className="divider-heading text-xl font-bold mt-10 mb-4">{group[0].name}</h2>
                     </td>
@@ -120,7 +120,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                         <td className="py-3 px-4 border border-gray-200 text-base">
                           {item.title}
                         </td>
-                        <td className="py-3 px-4 border border-gray-200 text-base prose prose-sm max-w-none" 
+                        <td className="py-3 px-4 border border-gray-200 details-column prose prose-sm max-w-none" 
                             rowSpan={intervieweeCount + 1}
                             dangerouslySetInnerHTML={{ __html: item.details }} />
                         {isAuthenticated && (
