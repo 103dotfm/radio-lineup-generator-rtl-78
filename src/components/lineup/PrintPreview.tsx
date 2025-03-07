@@ -53,11 +53,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <table className="w-full border-collapse border border-gray-200 mb-4">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '10%' }}>שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '12%' }}>קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '73%' }}>פרטים</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base printHeaderName">שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base printHeaderTitle">קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base printHeaderDetails">פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '5%' }}>טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200 text-base printHeaderPhone">טלפון</th>
             )}
             {showMinutes && (
               <th className="py-2 px-4 text-center border border-gray-200 text-base" style={{ width: '48px' }}>דק'</th>
@@ -77,7 +77,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     <td 
                       colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
                       className="py-0 border-t border-b border-gray-200"
-                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px', borderLeft: 'none', borderRight: 'none' }}
+                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px', borderLeft: '0px white', borderRight: '0px white' }}
                     >
                       <h2 className="divider-heading text-xl font-bold mt-10 mb-4">{group[0].name}</h2>
                     </td>
