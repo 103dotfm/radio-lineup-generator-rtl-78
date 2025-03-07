@@ -137,7 +137,9 @@ body {
   body {
     background-color: white;
   }
-.py-2 {width: 11%;}
+  .showNamePrint {margin-top: -10px;}
+  .showTimePrint {margin-top: -10px;}
+
   .container {
     width: 100% !important;
     max-width: 100% !important;
