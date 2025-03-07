@@ -252,6 +252,7 @@ body {
     padding: 0 !important;
     margin-top: 40px !important;
     margin-bottom: 15px !important;
+    border-style: hidden !important;
   }
   
   .divider-heading {
@@ -287,11 +288,11 @@ body {
   }
   
   .print-content .details-column {
-    font-size: 0.95rem !important;
+    font-size: 0.92rem !important;
     line-height: 1.3 !important;
   }
 
-  .print-content .details-column p {margin-bottom: 4px;}
+  .print-content .details-column p {margin-bottom: 10px !important;}
 
   .print-content .credits {
     margin-top: 4rem;
