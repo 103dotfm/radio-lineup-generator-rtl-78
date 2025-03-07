@@ -366,9 +366,9 @@ body {
   .col-print-name,
   th.col-print-name,
   td.col-print-name {
-    width: 16% !important;  /* Name column width */
-    min-width: 16% !important;
-    max-width: 16% !important;
+    width: 14% !important;  /* Name column width */
+    min-width: 14% !important;
+    max-width: 14% !important;
   }
   
   .col-print-title,
@@ -382,9 +382,9 @@ body {
   .col-print-details,
   th.col-print-details,
   td.col-print-details {
-    width: 56% !important;  /* Details column width */
-    min-width: 56% !important;
-    max-width: 56% !important;
+    width: 58% !important;  /* Details column width */
+    min-width: 58% !important;
+    max-width: 58% !important;
   }
   
   .col-print-phone,
