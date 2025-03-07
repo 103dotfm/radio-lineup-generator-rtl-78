@@ -77,7 +77,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     <td 
                       colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
                       className="py-0 border-t border-b border-gray-200"
-                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px', borderLeft: '0px white', borderRight: '0px white' }}
+                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px', borderstyle: 'hidden' }}
                     >
                       <h2 className="divider-heading text-xl font-bold mt-10 mb-4">{group[0].name}</h2>
                     </td>
