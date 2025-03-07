@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -149,10 +148,11 @@ body {
   .text-base {
     font-size: 0.95rem;
     line-height: 1.3rem;
-}
+  }
+  
   .px-4 {
     min-width: 128px;
-}
+  }
 
   /* Lineup-specific print styles - PORTRAIT */
   .lineup-print {
@@ -165,8 +165,8 @@ body {
     margin: 0 !important;
   }
 
-  @page {
-    /* size: landscape; */
+  .schedule-page @page {
+    size: landscape;
   }
   
   .schedule-page header {
@@ -210,13 +210,13 @@ body {
   }
   
   .print-content h1 {
-    font-size: 20px;
-    margin-bottom: 8px;
+    font-size: 18px;
+    margin-bottom: 4px;
   }
   
   .print-content h2 {
-    font-size: 16px;
-    margin-bottom: 16px;
+    font-size: 14px;
+    margin-bottom: 8px;
   }
   
   .print-content table {
@@ -233,6 +233,28 @@ body {
     font-size: 1rem !important;
     border: 1px solid #e2e8f0;
     vertical-align: top !important;
+  }
+
+  /* Divider row styling for print */
+  .divider-row td {
+    border-left: 0 !important;
+    border-right: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .divider-heading {
+    margin-top: 40px !important;
+    margin-bottom: 15px !important;
+    padding: 0.75rem !important;
+    border-radius: 0.375rem;
+    background-color: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Make phone numbers stay on one line */
+  .print-content td.whitespace-nowrap {
+    white-space: nowrap !important;
   }
 
   .print-content tr.bg-black\/10 td {
