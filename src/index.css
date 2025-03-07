@@ -137,10 +137,10 @@ body {
   body {
     background-color: white;
   }
-  .printHeaderName {width: 10%}
-  .printHeaderTitle {width: 14%}
-  .printHeaderDetails {width: 68%}
-  .printHeaderPhone {width: 8%}
+  .printHeaderName {width: 10% !important;}
+  .printHeaderTitle {width: 14% !important;}
+  .printHeaderDetails {width: 68% !important;}
+  .printHeaderPhone {width: 8% !important;}
   .container {
     width: 100% !important;
     max-width: 100% !important;
