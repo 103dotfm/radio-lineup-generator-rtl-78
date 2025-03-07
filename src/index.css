@@ -281,6 +281,8 @@ body {
     line-height: 1.25 !important;
   }
 
+  .print-content .details-column p {margin-bottom: 4px;}
+
   .print-content .credits {
     margin-top: 4rem;
     padding: 2rem 0;
