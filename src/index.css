@@ -137,10 +137,7 @@ body {
   body {
     background-color: white;
   }
-  .printHeaderName {width: 10% !important;}
-  .printHeaderTitle {width: 14% !important;}
-  .printHeaderDetails {width: 68% !important;}
-  .printHeaderPhone {width: 8% !important;}
+.py-2 {width: 11%;}
   .container {
     width: 100% !important;
     max-width: 100% !important;
