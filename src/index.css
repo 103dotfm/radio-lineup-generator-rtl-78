@@ -275,13 +275,13 @@ body {
   }
   
   .print-content .details-column {
-    font-size: 0.9rem !important;
-    line-height: 1.2 !important;
+    font-size: 0.95rem !important;
+    line-height: 1.3 !important;
   }
 
   .print-content .details-column * {
-    font-size: 0.9rem !important;
-    line-height: 1.2 !important;
+    font-size: 0.95rem !important;
+    line-height: 1.3 !important;
   }
   
   .print-content .credits {
