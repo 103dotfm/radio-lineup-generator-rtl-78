@@ -53,11 +53,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <table className="w-full border-collapse border border-gray-200 mb-4">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '12%' }}>שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '14%' }}>קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '63%' }}>פרטים</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '10%' }}>שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '12%' }}>קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '73%' }}>פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '11%' }}>טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '5%' }}>טלפון</th>
             )}
             {showMinutes && (
               <th className="py-2 px-4 text-center border border-gray-200 text-base" style={{ width: '48px' }}>דק'</th>
