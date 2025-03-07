@@ -40,6 +40,53 @@ const Print = () => {
     loadShow();
   }, [id]);
 
+  // Add inline script to ensure column width CSS works with print
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        .col-print-name, th.col-print-name, td.col-print-name { 
+          width: 16% !important; 
+          min-width: 16% !important; 
+          max-width: 16% !important; 
+        }
+        .col-print-title, th.col-print-title, td.col-print-title { 
+          width: 16% !important; 
+          min-width: 16% !important; 
+          max-width: 16% !important; 
+        }
+        .col-print-details, th.col-print-details, td.col-print-details { 
+          width: 56% !important; 
+          min-width: 56% !important; 
+          max-width: 56% !important; 
+        }
+        .col-print-phone, th.col-print-phone, td.col-print-phone { 
+          width: 12% !important; 
+          min-width: 12% !important; 
+          max-width: 12% !important; 
+        }
+        .col-print-minutes, th.col-print-minutes, td.col-print-minutes { 
+          width: 48px !important; 
+          min-width: 48px !important; 
+          max-width: 48px !important; 
+        }
+        .details-column { 
+          font-size: 0.95rem !important; 
+          line-height: 1.3 !important; 
+        }
+        .print-divider-cell {
+          border-left: 0 !important;
+          border-right: 0 !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   if (loading) return <div className="container mx-auto py-8 px-2 text-center">טוען...</div>;
   if (error) return <div className="container mx-auto py-8 px-2 text-center">{error}</div>;
   if (!show) return <div className="container mx-auto py-8 px-2 text-center">לא נמצאה תוכנית</div>;
