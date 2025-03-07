@@ -362,36 +362,47 @@ body {
   }
   
   /* BEGIN: Column width styles for print view - ADJUST THESE VALUES AS NEEDED */
+  /* THESE ARE THE COLUMN WIDTH SETTINGS - START */
   .col-print-name,
   th.col-print-name,
   td.col-print-name {
-    width: 11% !important;  /* Name column width */
+    width: 16% !important;  /* Name column width */
+    min-width: 16% !important;
+    max-width: 16% !important;
   }
   
   .col-print-title,
   th.col-print-title,
   td.col-print-title {
-    width: 12% !important;  /* Title/Credit column width */
+    width: 16% !important;  /* Title/Credit column width */
+    min-width: 16% !important;
+    max-width: 16% !important;
   }
   
   .col-print-details,
   th.col-print-details,
   td.col-print-details {
-    width: 67% !important;  /* Details column width */
+    width: 56% !important;  /* Details column width */
+    min-width: 56% !important;
+    max-width: 56% !important;
   }
   
   .col-print-phone,
   th.col-print-phone,
   td.col-print-phone {
-    width: 10% !important;  /* Phone column width */
+    width: 12% !important;  /* Phone column width */
+    min-width: 12% !important;
+    max-width: 12% !important;
   }
   
   .col-print-minutes,
   th.col-print-minutes,
   td.col-print-minutes {
     width: 48px !important;  /* Minutes column width */
+    min-width: 48px !important;
+    max-width: 48px !important;
   }
-  /* END: Column width styles for print view */
+  /* THESE ARE THE COLUMN WIDTH SETTINGS - END */
 }
 
 /* UI Components */

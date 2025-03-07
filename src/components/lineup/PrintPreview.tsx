@@ -60,7 +60,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-phone">טלפון</th>
             )}
             {showMinutes && (
-              <th className="py-2 px-4 text-center border border-gray-200 text-base col-print-minutes" style={{ width: '48px' }}>דק'</th>
+              <th className="py-2 px-4 text-center border border-gray-200 text-base col-print-minutes">דק'</th>
             )}
           </tr>
         </thead>
