@@ -365,25 +365,25 @@ body {
   .col-print-name,
   th.col-print-name,
   td.col-print-name {
-    width: 16% !important;  /* Name column width */
+    width: 11% !important;  /* Name column width */
   }
   
   .col-print-title,
   th.col-print-title,
   td.col-print-title {
-    width: 16% !important;  /* Title/Credit column width */
+    width: 12% !important;  /* Title/Credit column width */
   }
   
   .col-print-details,
   th.col-print-details,
   td.col-print-details {
-    width: 56% !important;  /* Details column width */
+    width: 67% !important;  /* Details column width */
   }
   
   .col-print-phone,
   th.col-print-phone,
   td.col-print-phone {
-    width: 12% !important;  /* Phone column width */
+    width: 10% !important;  /* Phone column width */
   }
   
   .col-print-minutes,
