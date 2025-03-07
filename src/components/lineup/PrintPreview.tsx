@@ -39,11 +39,11 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
 
   return (
     <div className="print-content bg-white p-4">
-      <div className="flex flex-col items-center mb-4">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-16" />
-        <div className="text-center mt-2">
+      <div className="flex flex-col items-center mb-2">
+        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12" />
+        <div className="text-center mt-1">
           <h1 className="text-2xl font-bold showName">{showName}</h1>
-          <h2 className="text-lg text-gray-600">
+          <h2 className="text-lg text-gray-600 mt-0">
             {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
           </h2>
         </div>
@@ -53,14 +53,14 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <table className="w-full border-collapse border border-gray-200 mb-4">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">קרדיט</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base">פרטים</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '18%' }}>שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '18%' }}>קרדיט</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '50%' }}>פרטים</th>
             {isAuthenticated && (
-              <th className="py-2 px-4 text-right border border-gray-200 text-base">טלפון</th>
+              <th className="py-2 px-4 text-right border border-gray-200 text-base" style={{ width: '14%' }}>טלפון</th>
             )}
             {showMinutes && (
-              <th className="py-2 px-4 text-center border border-gray-200 text-base w-20">דק'</th>
+              <th className="py-2 px-4 text-center border border-gray-200 text-base" style={{ width: '48px' }}>דק'</th>
             )}
           </tr>
         </thead>
@@ -76,9 +76,10 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   <tr className="divider-row">
                     <td 
                       colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
-                      className="py-2 px-4 border-0"
+                      className="py-0 border-0"
+                      style={{ paddingLeft: 0, paddingRight: 0, marginTop: '40px', marginBottom: '15px' }}
                     >
-                      <h2 className="divider-heading text-xl font-bold">{group[0].name}</h2>
+                      <h2 className="divider-heading text-xl font-bold mt-10 mb-4">{group[0].name}</h2>
                     </td>
                   </tr>
                 )}
@@ -123,12 +124,12 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                             rowSpan={intervieweeCount + 1}
                             dangerouslySetInnerHTML={{ __html: item.details }} />
                         {isAuthenticated && (
-                          <td className="py-3 px-4 border border-gray-200 text-base">
+                          <td className="py-3 px-4 border border-gray-200 text-base whitespace-nowrap">
                             {item.phone}
                           </td>
                         )}
                         {showMinutes && (
-                          <td className="py-3 px-4 text-center border border-gray-200 text-base w-20"
+                          <td className="py-3 px-4 text-center border border-gray-200 text-base"
                               rowSpan={intervieweeCount + 1}>
                             {item.duration}
                           </td>
@@ -143,7 +144,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                             {interviewee.title}
                           </td>
                           {isAuthenticated && (
-                            <td className="py-3 px-4 border border-gray-200 text-base">
+                            <td className="py-3 px-4 border border-gray-200 text-base whitespace-nowrap">
                               {interviewee.phone}
                             </td>
                           )}
@@ -162,7 +163,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <td colSpan={isAuthenticated ? 4 : 3} className="py-2 px-4 text-right font-bold border border-gray-200">
                 סה״כ דקות
               </td>
-              <td className="py-2 px-4 text-center font-bold border border-gray-200 w-20">
+              <td className="py-2 px-4 text-center font-bold border border-gray-200">
                 {calculateTotalMinutes()}
               </td>
             </tr>
@@ -181,4 +182,3 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
 };
 
 export default PrintPreview;
-
