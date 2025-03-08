@@ -33,6 +33,66 @@ export type Database = {
         }
         Relationships: []
       }
+      email_recipients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      email_settings: {
+        Row: {
+          body_template: string
+          created_at: string
+          id: string
+          sender_email: string
+          sender_name: string
+          smtp_host: string
+          smtp_password: string
+          smtp_port: number
+          smtp_user: string
+          subject_template: string
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          id?: string
+          sender_email: string
+          sender_name: string
+          smtp_host: string
+          smtp_password: string
+          smtp_port: number
+          smtp_user: string
+          subject_template?: string
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          id?: string
+          sender_email?: string
+          sender_name?: string
+          smtp_host?: string
+          smtp_password?: string
+          smtp_port?: number
+          smtp_user?: string
+          subject_template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       interviewees: {
         Row: {
           created_at: string | null
@@ -124,6 +184,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      show_email_logs: {
+        Row: {
+          error_message: string | null
+          id: string
+          sent_at: string
+          show_id: string
+          success: boolean
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          sent_at?: string
+          show_id: string
+          success: boolean
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          sent_at?: string
+          show_id?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "show_email_logs_show_id_fkey"
+            columns: ["show_id"]
+            isOneToOne: true
+            referencedRelation: "shows"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       show_items: {
         Row: {
