@@ -30,6 +30,7 @@ const EmailSettings: React.FC = () => {
   const [recipients, setRecipients] = useState<Array<{id: string, email: string}>>([]);
   const [newEmail, setNewEmail] = useState('');
   const [latestShow, setLatestShow] = useState<any>(null);
+  const [testEmailAddress, setTestEmailAddress] = useState('yaniv@103.fm');
 
   useEffect(() => {
     loadSettings();
@@ -222,7 +223,7 @@ const EmailSettings: React.FC = () => {
           },
           body: JSON.stringify({ 
             showId: latestShow.id,
-            testEmail: 'yaniv@103.fm'  
+            testEmail: testEmailAddress  
           })
         }
       );
@@ -242,7 +243,7 @@ const EmailSettings: React.FC = () => {
       
       toast({
         title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
-        description: "נשלח לכתובת yaniv@103.fm",
+        description: `נשלח לכתובת ${testEmailAddress}`,
         variant: "default"
       });
     } catch (error) {
@@ -391,7 +392,7 @@ const EmailSettings: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sender_email">כתובת השולח</Label>
+                    <Label htmlFor="sender_email">כתובת דואר אלקטרוני השולח</Label>
                     <Input
                       id="sender_email"
                       dir="ltr"
