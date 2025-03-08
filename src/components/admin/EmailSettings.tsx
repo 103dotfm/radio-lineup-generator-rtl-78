@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,6 +227,7 @@ const EmailSettings: React.FC = () => {
       const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lineup-email`;
       console.log("Function URL:", functionUrl);
       
+      // Use fetch with explicit mode and credentials settings
       const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
@@ -237,7 +237,9 @@ const EmailSettings: React.FC = () => {
         body: JSON.stringify({ 
           showId: latestShow.id,
           testEmail: testEmailAddress  
-        })
+        }),
+        mode: 'cors',
+        credentials: 'omit' // Don't send cookies
       });
       
       // Store the raw response text first
