@@ -3,6 +3,7 @@ import React from 'react';
 import UserManagement from '@/components/admin/UserManagement';
 import MasterSchedule from '@/components/schedule/MasterSchedule';
 import WorkArrangements from '@/components/admin/WorkArrangements';
+import EmailSettings from '@/components/admin/EmailSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,10 +33,11 @@ const Admin = () => {
       </div>
       
       <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
+        <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="schedule">לוח שידורים ראשי</TabsTrigger>
           <TabsTrigger value="arrangements">סידורי עבודה</TabsTrigger>
           <TabsTrigger value="users">ניהול משתמשים</TabsTrigger>
+          <TabsTrigger value="email">דואר אלקטרוני</TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
@@ -48,6 +50,10 @@ const Admin = () => {
         
         <TabsContent value="users" className="mt-4">
           <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="email" className="mt-4">
+          <EmailSettings />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,1 +1,8 @@
+
 project_id = "yyrmodgbnzqbmatlypuc"
+
+[functions.send-lineup-email]
+verify_jwt = false
+
+[functions.schedule-lineup-emails]
+verify_jwt = false
