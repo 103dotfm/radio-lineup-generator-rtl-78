@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -257,7 +256,7 @@ const EmailSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">הגדרות דוא&quot;ל</h2>
+        <h2 className="text-2xl font-bold">הגדרות דואר אלקטרוני</h2>
       </div>
       
       <Tabs defaultValue="recipients" className="w-full">
