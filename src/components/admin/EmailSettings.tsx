@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ const EmailSettings: React.FC = () => {
   const [latestShow, setLatestShow] = useState<any>(null);
   const [testEmailAddress, setTestEmailAddress] = useState('yaniv@103.fm');
   const [errorDetails, setErrorDetails] = useState<any>(null);
+  const [rawResponse, setRawResponse] = useState<string>('');
   
   useEffect(() => {
     loadSettings();
@@ -218,30 +220,43 @@ const EmailSettings: React.FC = () => {
     try {
       setSendingTest(true);
       setErrorDetails(null);
+      setRawResponse('');
       
       console.log(`Sending test email for show: ${latestShow.id} to: ${testEmailAddress}`);
       
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lineup-email`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({ 
-            showId: latestShow.id,
-            testEmail: testEmailAddress  
-          })
-        }
-      );
+      // Construct the full URL for the edge function
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lineup-email`;
+      console.log("Function URL:", functionUrl);
       
-      const result = await response.json();
-      console.log('Test email response:', result);
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ 
+          showId: latestShow.id,
+          testEmail: testEmailAddress  
+        })
+      });
+      
+      // Store the raw response text first
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+      setRawResponse(responseText);
+      
+      // Try to parse the JSON
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('Test email response:', result);
+      } catch (parseError) {
+        console.error("Failed to parse response as JSON:", parseError);
+        throw new Error(`Server returned invalid JSON. Response: ${responseText.substring(0, 100)}...`);
+      }
       
       if (!response.ok) {
         setErrorDetails(result.details || { message: result.error || "שגיאה לא ידועה" });
-        
         throw new Error(result.error || "שגיאה בשליחת דואר אלקטרוני");
       }
       
@@ -360,6 +375,17 @@ const EmailSettings: React.FC = () => {
                       {errorDetails.responseCode && <p><strong>קוד תגובה:</strong> {errorDetails.responseCode}</p>}
                       {errorDetails.response && <p><strong>תגובה:</strong> {errorDetails.response}</p>}
                       {errorDetails.command && <p><strong>פקודה:</strong> {errorDetails.command}</p>}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {rawResponse && !errorDetails && (
+                <Alert className="mt-4">
+                  <AlertTitle>תגובה מהשרת (גולמית)</AlertTitle>
+                  <AlertDescription>
+                    <div className="text-xs mt-2 overflow-auto max-h-40 p-2 bg-gray-100 rounded">
+                      <pre dir="ltr">{rawResponse}</pre>
                     </div>
                   </AlertDescription>
                 </Alert>
