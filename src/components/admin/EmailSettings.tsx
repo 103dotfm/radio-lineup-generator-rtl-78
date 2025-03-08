@@ -230,7 +230,7 @@ const EmailSettings = () => {
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.error || 'שגיאה בשליחת דוא"ל');
+        throw new Error(result.error || "שגיאה בשליחת דוא\"ל");
       }
       
       toast({
@@ -324,7 +324,7 @@ const EmailSettings = () => {
                 disabled={sendingTest}
               >
                 <Send className="h-4 w-4" />
-                {sendingTest ? 'שולח...' : 'שלח דוא"ל לדוגמה (ל-yaniv@103.fm)'}
+                {sendingTest ? "שולח..." : "שלח דוא\"ל לדוגמה (ל-yaniv@103.fm)"}
               </Button>
             </CardFooter>
           </Card>
@@ -408,7 +408,7 @@ const EmailSettings = () => {
                 onClick={saveSettings} 
                 disabled={saving}
               >
-                {saving ? 'שומר...' : 'שמור הגדרות'}
+                {saving ? "שומר..." : "שמור הגדרות"}
               </Button>
             </CardFooter>
           </Card>
@@ -450,7 +450,7 @@ const EmailSettings = () => {
                 onClick={saveSettings} 
                 disabled={saving}
               >
-                {saving ? 'שומר...' : 'שמור תבנית'}
+                {saving ? "שומר..." : "שמור תבנית"}
               </Button>
             </CardFooter>
           </Card>
