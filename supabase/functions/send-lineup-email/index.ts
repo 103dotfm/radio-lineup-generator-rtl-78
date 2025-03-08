@@ -4,9 +4,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { format } from "https://deno.land/std@0.178.0/datetime/mod.ts";
 import nodemailer from "npm:nodemailer@6.9.9";
 
+// Very important for browser requests - use explicit CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json"
 };
 
 interface ShowData {
@@ -63,19 +66,42 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Parse request body
-    const requestBody = await req.text();
     let requestData;
     
     try {
-      requestData = JSON.parse(requestBody);
-    } catch (parseError) {
-      const errorLog = createErrorLog("REQUEST_PARSING", parseError);
-      console.error("Raw body:", requestBody);
+      const requestBody = await req.text();
+      console.log("Raw request body:", requestBody);
+      
+      if (!requestBody || requestBody.trim() === '') {
+        return new Response(
+          JSON.stringify({ error: "Empty request body" }),
+          { 
+            status: 400, 
+            headers: corsHeaders 
+          }
+        );
+      }
+      
+      try {
+        requestData = JSON.parse(requestBody);
+      } catch (parseError) {
+        const errorLog = createErrorLog("REQUEST_PARSING", parseError);
+        console.error("Raw body:", requestBody);
+        return new Response(
+          JSON.stringify({ error: "Invalid JSON in request body", details: errorLog }),
+          { 
+            status: 400, 
+            headers: corsHeaders 
+          }
+        );
+      }
+    } catch (bodyReadError) {
+      const errorLog = createErrorLog("REQUEST_BODY_READING", bodyReadError);
       return new Response(
-        JSON.stringify({ error: "Invalid JSON in request body", details: errorLog }),
+        JSON.stringify({ error: "Failed to read request body", details: errorLog }),
         { 
           status: 400, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
+          headers: corsHeaders 
         }
       );
     }
@@ -87,7 +113,7 @@ serve(async (req) => {
         JSON.stringify({ error: "Show ID is required" }),
         { 
           status: 400, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
+          headers: corsHeaders 
         }
       );
     }
@@ -123,7 +149,7 @@ serve(async (req) => {
           JSON.stringify({ error: "Failed to fetch show", details: errorLog }),
           { 
             status: 500, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
+            headers: corsHeaders 
           }
         );
       }
@@ -133,7 +159,7 @@ serve(async (req) => {
           JSON.stringify({ error: "Show not found" }),
           { 
             status: 404, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
+            headers: corsHeaders 
           }
         );
       }
@@ -154,7 +180,7 @@ serve(async (req) => {
           JSON.stringify({ error: "Failed to fetch email settings", details: errorLog }),
           { 
             status: 500, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
+            headers: corsHeaders 
           }
         );
       }
@@ -180,7 +206,7 @@ serve(async (req) => {
           }),
           { 
             status: 500, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
+            headers: corsHeaders 
           }
         );
       }
@@ -202,7 +228,7 @@ serve(async (req) => {
               JSON.stringify({ error: "Failed to fetch recipients", details: errorLog }),
               { 
                 status: 500, 
-                headers: { "Content-Type": "application/json", ...corsHeaders } 
+                headers: corsHeaders 
               }
             );
           }
@@ -214,7 +240,7 @@ serve(async (req) => {
             JSON.stringify({ error: "Error processing recipients", details: errorLog }),
             { 
               status: 500, 
-              headers: { "Content-Type": "application/json", ...corsHeaders } 
+              headers: corsHeaders 
             }
           );
         }
@@ -225,7 +251,7 @@ serve(async (req) => {
           JSON.stringify({ error: "No recipient emails found" }),
           { 
             status: 400, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
+            headers: corsHeaders 
           }
         );
       }
@@ -238,8 +264,17 @@ serve(async (req) => {
       // Format date for display
       const formattedDate = show.date ? new Date(show.date).toLocaleDateString('he-IL') : "";
       
-      // Create lineup link
-      const lineupLink = `${supabaseUrl.replace('.supabase.co', '.app')}/print/${show.id}?minutes=false`;
+      // Create lineup link - ensure we're using the right URL format
+      let lineupLink = "";
+      try {
+        // Extract the base URL dynamically - this helps avoid using HTML site URL
+        const baseUrl = new URL(supabaseUrl).origin.replace('.supabase.co', '.app');
+        lineupLink = `${baseUrl}/print/${show.id}?minutes=false`;
+        console.log("Generated lineup link:", lineupLink);
+      } catch (urlError) {
+        console.error("Error creating lineup link:", urlError);
+        lineupLink = `${supabaseUrl.replace('.supabase.co', '.app')}/print/${show.id}?minutes=false`;
+      }
       
       // Generate interviewees list
       let intervieweesList = "<ul>";
@@ -323,7 +358,7 @@ serve(async (req) => {
             JSON.stringify({ error: `SMTP configuration error`, details: errorLog }),
             { 
               status: 500, 
-              headers: { "Content-Type": "application/json", ...corsHeaders } 
+              headers: corsHeaders 
             }
           );
         }
@@ -376,7 +411,7 @@ serve(async (req) => {
             }),
             { 
               status: 200, 
-              headers: { "Content-Type": "application/json", ...corsHeaders } 
+              headers: corsHeaders 
             }
           );
         } catch (emailError) {
@@ -397,7 +432,7 @@ serve(async (req) => {
             JSON.stringify({ error: `Failed to send email`, details: errorLog }),
             { 
               status: 500, 
-              headers: { "Content-Type": "application/json", ...corsHeaders } 
+              headers: corsHeaders 
             }
           );
         }
@@ -407,7 +442,7 @@ serve(async (req) => {
           JSON.stringify({ error: `Failed to configure email transport`, details: errorLog }),
           { 
             status: 500, 
-            headers: { "Content-Type": "application/json", ...corsHeaders } 
+            headers: corsHeaders 
           }
         );
       }
@@ -417,7 +452,7 @@ serve(async (req) => {
         JSON.stringify({ error: `Error processing show data`, details: errorLog }),
         { 
           status: 500, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
+          headers: corsHeaders 
         }
       );
     }
@@ -427,7 +462,7 @@ serve(async (req) => {
       JSON.stringify({ error: `Unexpected error in send-lineup-email function`, details: errorLog }),
       { 
         status: 500, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: corsHeaders 
       }
     );
   }
