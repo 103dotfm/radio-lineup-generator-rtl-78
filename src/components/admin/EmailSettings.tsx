@@ -53,7 +53,7 @@ const EmailSettings = () => {
     } catch (error) {
       console.error('Error loading email settings:', error);
       toast({
-        title: "שגיאה בטעינת הגדרות דוא\"ל",
+        title: "שגיאה בטעינת הגדרות דואר אלקטרוני",
         description: error.message,
         variant: "destructive"
       });
@@ -124,13 +124,13 @@ const EmailSettings = () => {
       if (error) throw error;
       
       toast({
-        title: "הגדרות דוא\"ל נשמרו בהצלחה",
+        title: "הגדרות דואר אלקטרוני נשמרו בהצלחה",
         variant: "default"
       });
     } catch (error) {
       console.error('Error saving email settings:', error);
       toast({
-        title: "שגיאה בשמירת הגדרות דוא\"ל",
+        title: "שגיאה בשמירת הגדרות דואר אלקטרוני",
         description: error.message,
         variant: "destructive"
       });
@@ -142,8 +142,8 @@ const EmailSettings = () => {
   const addRecipient = async () => {
     if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
       toast({
-        title: "כתובת דוא\"ל לא תקינה",
-        description: "אנא הכנס כתובת דוא\"ל תקינה",
+        title: "כתובת דואר אלקטרוני לא תקינה",
+        description: "אנא הכנס כתובת דואר אלקטרוני תקינה",
         variant: "destructive"
       });
       return;
@@ -230,18 +230,18 @@ const EmailSettings = () => {
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.error || "שגיאה בשליחת דוא\"ל");
+        throw new Error(result.error || "שגיאה בשליחת דואר אלקטרוני");
       }
       
       toast({
-        title: "דוא\"ל לדוגמה נשלח בהצלחה",
+        title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
         description: "נשלח לכתובת yaniv@103.fm",
         variant: "default"
       });
     } catch (error) {
       console.error('Error sending test email:', error);
       toast({
-        title: "שגיאה בשליחת דוא\"ל לדוגמה",
+        title: "שגיאה בשליחת דואר אלקטרוני לדוגמה",
         description: error.message,
         variant: "destructive"
       });
@@ -281,7 +281,7 @@ const EmailSettings = () => {
                   <Input
                     dir="ltr"
                     className="flex-grow ml-4"
-                    placeholder="כתובת דוא\"ל חדשה"
+                    placeholder="כתובת דואר אלקטרוני חדשה"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                   />
@@ -324,7 +324,7 @@ const EmailSettings = () => {
                 disabled={sendingTest}
               >
                 <Send className="h-4 w-4" />
-                {sendingTest ? "שולח..." : "שלח דוא\"ל לדוגמה (ל-yaniv@103.fm)"}
+                {sendingTest ? "שולח..." : "שלח דואר אלקטרוני לדוגמה (ל-yaniv@103.fm)"}
               </Button>
             </CardFooter>
           </Card>
@@ -439,7 +439,7 @@ const EmailSettings = () => {
                     <BasicEditor
                       content={settings.body_template}
                       onChange={(html) => setSettings({...settings, body_template: html})}
-                      placeholder="תוכן הודעת הדוא\"ל..."
+                      placeholder="תוכן הודעת הדואר אלקטרוני..."
                     />
                   </div>
                 </div>
