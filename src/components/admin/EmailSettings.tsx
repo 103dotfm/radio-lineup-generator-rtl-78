@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Trash, Plus, Send } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import BasicEditor from "../editor/BasicEditor";
 
-const EmailSettings = () => {
+const EmailSettings: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +53,7 @@ const EmailSettings = () => {
     } catch (error) {
       console.error('Error loading email settings:', error);
       toast({
-        title: "שגיאה בטעינת הגדרות דואר אלקטרוני",
+        title: "שגיאה בטעינת הגדרות דוא\"ל",
         description: error.message,
         variant: "destructive"
       });
@@ -123,13 +124,13 @@ const EmailSettings = () => {
       if (error) throw error;
       
       toast({
-        title: "הגדרות דואר אלקטרוני נשמרו בהצלחה",
+        title: "הגדרות דוא\"ל נשמרו בהצלחה",
         variant: "default"
       });
     } catch (error) {
       console.error('Error saving email settings:', error);
       toast({
-        title: "שגיאה בשמירת הגדרות דואר אלקטרוני",
+        title: "שגיאה בשמירת הגדרות דוא\"ל",
         description: error.message,
         variant: "destructive"
       });
@@ -141,8 +142,8 @@ const EmailSettings = () => {
   const addRecipient = async () => {
     if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
       toast({
-        title: "כתובת דואר אלקטרוני לא תקינה",
-        description: "אנא הכנס כתובת דואר אלקטרוני תקינה",
+        title: "כתובת דוא\"ל לא תקינה",
+        description: "אנא הכנס כתובת דוא\"ל תקינה",
         variant: "destructive"
       });
       return;
@@ -226,21 +227,28 @@ const EmailSettings = () => {
         }
       );
       
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || "שגיאה בשליחת דואר אלקטרוני");
+        let errorMessage = "שגיאה בשליחת דוא\"ל";
+        try {
+          const result = await response.json();
+          if (result.error) {
+            errorMessage = result.error;
+          }
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
+        throw new Error(errorMessage);
       }
       
       toast({
-        title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
+        title: "דוא\"ל לדוגמה נשלח בהצלחה",
         description: "נשלח לכתובת yaniv@103.fm",
         variant: "default"
       });
     } catch (error) {
       console.error('Error sending test email:', error);
       toast({
-        title: "שגיאה בשליחת דואר אלקטרוני לדוגמה",
+        title: "שגיאה בשליחת דוא\"ל לדוגמה",
         description: error.message,
         variant: "destructive"
       });
@@ -256,7 +264,7 @@ const EmailSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">הגדרות דואר אלקטרוני</h2>
+        <h2 className="text-2xl font-bold">הגדרות דוא&quot;ל</h2>
       </div>
       
       <Tabs defaultValue="recipients" className="w-full">
@@ -280,7 +288,7 @@ const EmailSettings = () => {
                   <Input
                     dir="ltr"
                     className="flex-grow ml-4"
-                    placeholder="כתובת דואר אלקטרוני חדשה"
+                    placeholder="כתובת דוא\"ל חדשה"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                   />
@@ -323,7 +331,7 @@ const EmailSettings = () => {
                 disabled={sendingTest}
               >
                 <Send className="h-4 w-4" />
-                {sendingTest ? "שולח..." : "שלח דואר אלקטרוני לדוגמה (ל-yaniv@103.fm)"}
+                {sendingTest ? "שולח..." : "שלח דוא\"ל לדוגמה (ל-yaniv@103.fm)"}
               </Button>
             </CardFooter>
           </Card>
@@ -438,7 +446,7 @@ const EmailSettings = () => {
                     <BasicEditor
                       content={settings.body_template}
                       onChange={(html) => setSettings({...settings, body_template: html})}
-                      placeholder="תוכן הודעת הדואר אלקטרוני..."
+                      placeholder="תוכן הודעת הדוא\"ל..."
                     />
                   </div>
                 </div>
