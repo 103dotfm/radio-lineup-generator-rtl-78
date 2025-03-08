@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +6,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Trash, Plus, Send } from "lucide-react";
+import { Trash, Plus, Send, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import BasicEditor from "../editor/BasicEditor";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 
 const EmailSettings: React.FC = () => {
   const { toast } = useToast();
@@ -31,7 +35,8 @@ const EmailSettings: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [latestShow, setLatestShow] = useState<any>(null);
   const [testEmailAddress, setTestEmailAddress] = useState('yaniv@103.fm');
-
+  const [errorDetails, setErrorDetails] = useState<any>(null);
+  
   useEffect(() => {
     loadSettings();
     loadRecipients();
@@ -212,6 +217,9 @@ const EmailSettings: React.FC = () => {
 
     try {
       setSendingTest(true);
+      setErrorDetails(null);
+      
+      console.log(`Sending test email for show: ${latestShow.id} to: ${testEmailAddress}`);
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lineup-email`,
@@ -228,17 +236,13 @@ const EmailSettings: React.FC = () => {
         }
       );
       
+      const result = await response.json();
+      console.log('Test email response:', result);
+      
       if (!response.ok) {
-        let errorMessage = "שגיאה בשליחת דואר אלקטרוני";
-        try {
-          const result = await response.json();
-          if (result.error) {
-            errorMessage = result.error;
-          }
-        } catch (e) {
-          console.error("Failed to parse error response:", e);
-        }
-        throw new Error(errorMessage);
+        setErrorDetails(result.details || { message: result.error || "שגיאה לא ידועה" });
+        
+        throw new Error(result.error || "שגיאה בשליחת דואר אלקטרוני");
       }
       
       toast({
@@ -247,7 +251,7 @@ const EmailSettings: React.FC = () => {
         variant: "default"
       });
     } catch (error) {
-      console.error('Error sending test email:', error);
+      console.error('Error sending test email:', error, errorDetails);
       toast({
         title: "שגיאה בשליחת דואר אלקטרוני לדוגמה",
         description: error.message,
@@ -324,16 +328,42 @@ const EmailSettings: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button 
-                onClick={sendTestEmail} 
-                variant="outline" 
-                className="flex items-center gap-2"
-                disabled={sendingTest}
-              >
-                <Send className="h-4 w-4" />
-                {sendingTest ? "שולח..." : "שלח דואר אלקטרוני לדוגמה (ל-yaniv@103.fm)"}
-              </Button>
+            <CardFooter className="flex flex-col gap-4 w-full">
+              <div className="flex w-full gap-4 items-center">
+                <Input
+                  dir="ltr"
+                  value={testEmailAddress}
+                  onChange={(e) => setTestEmailAddress(e.target.value)}
+                  placeholder="כתובת למשלוח דואר אלקטרוני לדוגמה"
+                  className="flex-grow"
+                />
+                <Button 
+                  onClick={sendTestEmail} 
+                  variant="outline" 
+                  className="flex items-center gap-2 whitespace-nowrap"
+                  disabled={sendingTest}
+                >
+                  <Send className="h-4 w-4" />
+                  {sendingTest ? "שולח..." : "שלח דואר אלקטרוני לדוגמה"}
+                </Button>
+              </div>
+              
+              {errorDetails && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>שגיאה בשליחת דואר אלקטרוני</AlertTitle>
+                  <AlertDescription>
+                    <div className="text-sm mt-2">
+                      <p><strong>שלב:</strong> {errorDetails.stage || 'לא ידוע'}</p>
+                      <p><strong>הודעה:</strong> {errorDetails.message || 'לא ידוע'}</p>
+                      {errorDetails.code && <p><strong>קוד שגיאה:</strong> {errorDetails.code}</p>}
+                      {errorDetails.responseCode && <p><strong>קוד תגובה:</strong> {errorDetails.responseCode}</p>}
+                      {errorDetails.response && <p><strong>תגובה:</strong> {errorDetails.response}</p>}
+                      {errorDetails.command && <p><strong>פקודה:</strong> {errorDetails.command}</p>}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardFooter>
           </Card>
         </TabsContent>
