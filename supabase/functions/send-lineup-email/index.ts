@@ -39,7 +39,24 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { showId, testEmail } = await req.json();
+    // Parse request body
+    const requestBody = await req.text();
+    let requestData;
+    
+    try {
+      requestData = JSON.parse(requestBody);
+    } catch (parseError) {
+      console.error("Error parsing JSON request:", parseError, "Raw body:", requestBody);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { 
+          status: 400, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+    
+    const { showId, testEmail } = requestData;
     
     if (!showId) {
       return new Response(
@@ -50,6 +67,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log(`Processing request for show ${showId}, test email: ${testEmail || 'none'}`);
 
     // Get show details
     const { data: show, error: showError } = await supabase
@@ -83,6 +102,8 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Show found: ${show.name}`);
+
     // Get email settings
     const { data: emailSettings, error: settingsError } = await supabase
       .from("email_settings")
@@ -100,6 +121,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log(`Email settings found with SMTP host: ${emailSettings.smtp_host}`);
 
     // Get recipient emails if not a test
     let recipientEmails: string[] = [];
@@ -133,6 +156,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log(`Recipients: ${recipientEmails.join(', ')}`);
 
     // Format date for display
     const formattedDate = show.date ? new Date(show.date).toLocaleDateString('he-IL') : "";
@@ -180,6 +205,9 @@ serve(async (req) => {
       .replace(/{{interviewees_list}}/g, intervieweesList)
       .replace(/{{lineup_link}}/g, lineupLink);
 
+    console.log(`Email prepared - Subject: ${subject}`);
+    console.log(`Using SMTP: ${emailSettings.smtp_host}:${emailSettings.smtp_port}`);
+
     // Configure email transport
     const transporter = nodemailer.createTransport({
       host: emailSettings.smtp_host,
@@ -189,7 +217,26 @@ serve(async (req) => {
         user: emailSettings.smtp_user,
         pass: emailSettings.smtp_password,
       },
+      tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false
+      }
     });
+
+    // Verify SMTP connection configuration
+    try {
+      await transporter.verify();
+      console.log("SMTP connection verified successfully");
+    } catch (verifyError) {
+      console.error("SMTP connection verification failed:", verifyError);
+      return new Response(
+        JSON.stringify({ error: `SMTP configuration error: ${verifyError.message}` }),
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
 
     // Send email
     try {
