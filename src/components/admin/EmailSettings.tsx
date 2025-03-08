@@ -257,7 +257,7 @@ const EmailSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">הגדרות דוא&quot;ל</h2>
+        <h2 className="text-2xl font-bold">הגדרות דוא״ל</h2>
       </div>
       
       <Tabs defaultValue="recipients" className="w-full">
@@ -272,7 +272,7 @@ const EmailSettings = () => {
             <CardHeader>
               <CardTitle>רשימת נמענים</CardTitle>
               <CardDescription>
-                כתובות דוא&quot;ל אלו יקבלו באופן אוטומטי את ליינאפ התוכנית דקה לאחר תחילתה
+                כתובות דוא״ל אלו יקבלו באופן אוטומטי את ליינאפ התוכנית דקה לאחר תחילתה
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -335,7 +335,7 @@ const EmailSettings = () => {
             <CardHeader>
               <CardTitle>הגדרות שרת SMTP</CardTitle>
               <CardDescription>
-                הגדרות אלו ישמשו לשליחת דוא&quot;ל של ליינאפ התוכנית
+                הגדרות אלו ישמשו לשליחת דוא״ל של ליינאפ התוכנית
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -384,7 +384,7 @@ const EmailSettings = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sender_email">כתובת דוא&quot;ל השולח</Label>
+                    <Label htmlFor="sender_email">כתובת דוא״ל השולח</Label>
                     <Input
                       id="sender_email"
                       dir="ltr"
@@ -419,7 +419,7 @@ const EmailSettings = () => {
             <CardHeader>
               <CardTitle>תבנית הודעה</CardTitle>
               <CardDescription>
-                עיצוב והגדרות למבנה הודעת הדוא&quot;ל. ניתן להשתמש בתגים הבאים: <br />
+                עיצוב והגדרות למבנה הודעת הדוא״ל. ניתן להשתמש בתגים הבאים: <br />
                 <code>{`{{show_name}}`}</code> - שם התוכנית, <code>{`{{show_date}}`}</code> - תאריך התוכנית, <code>{`{{show_time}}`}</code> - שעת התוכנית, <code>{`{{interviewees_list}}`}</code> - רשימת המרואיינים, <code>{`{{lineup_link}}`}</code> - קישור לליינאפ
               </CardDescription>
             </CardHeader>
