@@ -53,7 +53,7 @@ const EmailSettings: React.FC = () => {
     } catch (error) {
       console.error('Error loading email settings:', error);
       toast({
-        title: "שגיאה בטעינת הגדרות דוא\"ל",
+        title: "שגיאה בטעינת הגדרות דואר אלקטרוני",
         description: error.message,
         variant: "destructive"
       });
@@ -124,13 +124,13 @@ const EmailSettings: React.FC = () => {
       if (error) throw error;
       
       toast({
-        title: "הגדרות דוא\"ל נשמרו בהצלחה",
+        title: "הגדרות דואר אלקטרוני נשמרו בהצלחה",
         variant: "default"
       });
     } catch (error) {
       console.error('Error saving email settings:', error);
       toast({
-        title: "שגיאה בשמירת הגדרות דוא\"ל",
+        title: "שגיאה בשמירת הגדרות דואר אלקטרוני",
         description: error.message,
         variant: "destructive"
       });
@@ -142,8 +142,8 @@ const EmailSettings: React.FC = () => {
   const addRecipient = async () => {
     if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
       toast({
-        title: "כתובת דוא\"ל לא תקינה",
-        description: "אנא הכנס כתובת דוא\"ל תקינה",
+        title: "כתובת דואר אלקטרוני לא תקינה",
+        description: "אנא הכנס כתובת דואר אלקטרוני תקינה",
         variant: "destructive"
       });
       return;
@@ -228,7 +228,7 @@ const EmailSettings: React.FC = () => {
       );
       
       if (!response.ok) {
-        let errorMessage = "שגיאה בשליחת דוא\"ל";
+        let errorMessage = "שגיאה בשליחת דואר אלקטרוני";
         try {
           const result = await response.json();
           if (result.error) {
@@ -241,14 +241,14 @@ const EmailSettings: React.FC = () => {
       }
       
       toast({
-        title: "דוא\"ל לדוגמה נשלח בהצלחה",
+        title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
         description: "נשלח לכתובת yaniv@103.fm",
         variant: "default"
       });
     } catch (error) {
       console.error('Error sending test email:', error);
       toast({
-        title: "שגיאה בשליחת דוא\"ל לדוגמה",
+        title: "שגיאה בשליחת דואר אלקטרוני לדוגמה",
         description: error.message,
         variant: "destructive"
       });
@@ -264,7 +264,7 @@ const EmailSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">הגדרות דוא&quot;ל</h2>
+        <h2 className="text-2xl font-bold">הגדרות דואר אלקטרוני</h2>
       </div>
       
       <Tabs defaultValue="recipients" className="w-full">
@@ -279,7 +279,7 @@ const EmailSettings: React.FC = () => {
             <CardHeader>
               <CardTitle>רשימת נמענים</CardTitle>
               <CardDescription>
-                כתובות דוא&quot;ל אלו יקבלו באופן אוטומטי את ליינאפ התוכנית דקה לאחר תחילתה
+                כתובות דואר אלקטרוני אלו יקבלו באופן אוטומטי את ליינאפ התוכנית דקה לאחר תחילתה
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -288,7 +288,7 @@ const EmailSettings: React.FC = () => {
                   <Input
                     dir="ltr"
                     className="flex-grow ml-4"
-                    placeholder="כתובת דוא\"ל חדשה"
+                    placeholder="כתובת דואר אלקטרוני חדשה"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                   />
@@ -331,7 +331,7 @@ const EmailSettings: React.FC = () => {
                 disabled={sendingTest}
               >
                 <Send className="h-4 w-4" />
-                {sendingTest ? "שולח..." : "שלח דוא\"ל לדוגמה (ל-yaniv@103.fm)"}
+                {sendingTest ? "שולח..." : "שלח דואר אלקטרוני לדוגמה (ל-yaniv@103.fm)"}
               </Button>
             </CardFooter>
           </Card>
@@ -342,7 +342,7 @@ const EmailSettings: React.FC = () => {
             <CardHeader>
               <CardTitle>הגדרות שרת SMTP</CardTitle>
               <CardDescription>
-                הגדרות אלו ישמשו לשליחת דוא&quot;ל של ליינאפ התוכנית
+                הגדרות אלו ישמשו לשליחת דואר אלקטרוני של ליינאפ התוכנית
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -391,7 +391,7 @@ const EmailSettings: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="sender_email">כתובת דוא&quot;ל השולח</Label>
+                    <Label htmlFor="sender_email">כתובת השולח</Label>
                     <Input
                       id="sender_email"
                       dir="ltr"
@@ -426,7 +426,7 @@ const EmailSettings: React.FC = () => {
             <CardHeader>
               <CardTitle>תבנית הודעה</CardTitle>
               <CardDescription>
-                עיצוב והגדרות למבנה הודעת הדוא&quot;ל. ניתן להשתמש בתגים הבאים: <br />
+                עיצוב והגדרות למבנה הודעת הדואר אלקטרוני. ניתן להשתמש בתגים הבאים: <br />
                 <code>{`{{show_name}}`}</code> - שם התוכנית, <code>{`{{show_date}}`}</code> - תאריך התוכנית, <code>{`{{show_time}}`}</code> - שעת התוכנית, <code>{`{{interviewees_list}}`}</code> - רשימת המרואיינים, <code>{`{{lineup_link}}`}</code> - קישור לליינאפ
               </CardDescription>
             </CardHeader>
@@ -446,7 +446,7 @@ const EmailSettings: React.FC = () => {
                     <BasicEditor
                       content={settings.body_template}
                       onChange={(html) => setSettings({...settings, body_template: html})}
-                      placeholder="תוכן הודעת הדוא\"ל..."
+                      placeholder="תוכן הודעת הדואר אלקטרוני..."
                     />
                   </div>
                 </div>
