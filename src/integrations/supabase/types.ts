@@ -55,11 +55,6 @@ export type Database = {
         Row: {
           body_template: string
           created_at: string
-          email_method: string | null
-          gmail_client_id: string | null
-          gmail_client_secret: string | null
-          gmail_redirect_uri: string | null
-          gmail_refresh_token: string | null
           id: string
           sender_email: string
           sender_name: string
@@ -73,11 +68,6 @@ export type Database = {
         Insert: {
           body_template: string
           created_at?: string
-          email_method?: string | null
-          gmail_client_id?: string | null
-          gmail_client_secret?: string | null
-          gmail_redirect_uri?: string | null
-          gmail_refresh_token?: string | null
           id?: string
           sender_email: string
           sender_name: string
@@ -91,11 +81,6 @@ export type Database = {
         Update: {
           body_template?: string
           created_at?: string
-          email_method?: string | null
-          gmail_client_id?: string | null
-          gmail_client_secret?: string | null
-          gmail_redirect_uri?: string | null
-          gmail_refresh_token?: string | null
           id?: string
           sender_email?: string
           sender_name?: string

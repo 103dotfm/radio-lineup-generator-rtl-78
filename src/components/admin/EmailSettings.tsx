@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
-import { Trash, Plus, Send, AlertCircle, ExternalLink, Copy } from "lucide-react";
+import { Trash, Plus, Send, AlertCircle, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import BasicEditor from "../editor/BasicEditor";
 import {
@@ -17,32 +16,12 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 
-interface EmailSettingsType {
-  id: string;
-  smtp_host: string;
-  smtp_port: number;
-  smtp_user: string;
-  smtp_password: string;
-  sender_email: string;
-  sender_name: string;
-  subject_template: string;
-  body_template: string;
-  created_at: string;
-  updated_at: string;
-  email_method: string; // 'smtp' or 'gmail'
-  gmail_client_id: string;
-  gmail_client_secret: string;
-  gmail_refresh_token: string;
-  gmail_redirect_uri: string;
-  gmail_authorized?: boolean;
-}
-
 const EmailSettings: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
-  const [settings, setSettings] = useState<EmailSettingsType>({
+  const [settings, setSettings] = useState({
     id: '',
     smtp_host: '',
     smtp_port: 587,
@@ -51,15 +30,7 @@ const EmailSettings: React.FC = () => {
     sender_email: '',
     sender_name: '',
     subject_template: '',
-    body_template: '',
-    created_at: '',
-    updated_at: '',
-    email_method: 'smtp', // 'smtp' or 'gmail'
-    gmail_client_id: '',
-    gmail_client_secret: '',
-    gmail_refresh_token: '',
-    gmail_redirect_uri: '',
-    gmail_authorized: false
+    body_template: ''
   });
   const [recipients, setRecipients] = useState<Array<{id: string, email: string}>>([]);
   const [newEmail, setNewEmail] = useState('');
@@ -67,8 +38,6 @@ const EmailSettings: React.FC = () => {
   const [testEmailAddress, setTestEmailAddress] = useState('yaniv@103.fm');
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [rawResponse, setRawResponse] = useState<string>('');
-  const [authUrl, setAuthUrl] = useState<string>('');
-  const [oauthCode, setOauthCode] = useState<string>('');
   
   useEffect(() => {
     loadSettings();
@@ -87,19 +56,7 @@ const EmailSettings: React.FC = () => {
       if (error) throw error;
       
       if (data) {
-        const dbData = data as any;
-        
-        const updatedData: EmailSettingsType = {
-          ...dbData,
-          email_method: dbData.email_method || 'smtp',
-          gmail_client_id: dbData.gmail_client_id || '',
-          gmail_client_secret: dbData.gmail_client_secret || '',
-          gmail_refresh_token: dbData.gmail_refresh_token || '',
-          gmail_redirect_uri: dbData.gmail_redirect_uri || window.location.origin + '/admin',
-          gmail_authorized: !!dbData.gmail_refresh_token
-        };
-        
-        setSettings(updatedData);
+        setSettings(data);
       }
     } catch (error) {
       console.error('Error loading email settings:', error);
@@ -158,26 +115,19 @@ const EmailSettings: React.FC = () => {
     try {
       setSaving(true);
       
-      const settingsToUpdate = {
-        id: settings.id,
-        smtp_host: settings.smtp_host,
-        smtp_port: settings.smtp_port,
-        smtp_user: settings.smtp_user,
-        smtp_password: settings.smtp_password,
-        sender_email: settings.sender_email,
-        sender_name: settings.sender_name,
-        subject_template: settings.subject_template,
-        body_template: settings.body_template,
-        email_method: settings.email_method,
-        gmail_client_id: settings.gmail_client_id,
-        gmail_client_secret: settings.gmail_client_secret,
-        gmail_refresh_token: settings.gmail_refresh_token,
-        gmail_redirect_uri: settings.gmail_redirect_uri
-      };
-
       const { error } = await supabase
         .from('email_settings')
-        .upsert(settingsToUpdate);
+        .upsert({
+          id: settings.id,
+          smtp_host: settings.smtp_host,
+          smtp_port: settings.smtp_port,
+          smtp_user: settings.smtp_user,
+          smtp_password: settings.smtp_password,
+          sender_email: settings.sender_email,
+          sender_name: settings.sender_name,
+          subject_template: settings.subject_template,
+          body_template: settings.body_template
+        });
 
       if (error) throw error;
       
@@ -277,8 +227,7 @@ const EmailSettings: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('send-lineup-email', {
         body: { 
           showId: latestShow.id,
-          testEmail: testEmailAddress,
-          emailMethod: settings.email_method 
+          testEmail: testEmailAddress  
         }
       });
       
@@ -315,126 +264,25 @@ const EmailSettings: React.FC = () => {
     }
   };
 
-  const generateGmailAuthUrl = async () => {
-    try {
-      if (!settings.gmail_client_id || !settings.gmail_redirect_uri) {
-        toast({
-          title: "נדרש מזהה לקוח ו-URI להפניה מחדש",
-          description: "אנא הזן את כל פרטי הקישור של Gmail API",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('generate-gmail-auth-url', {
-        body: { 
-          clientId: settings.gmail_client_id,
-          redirectUri: settings.gmail_redirect_uri
-        }
-      });
-      
-      if (error) throw error;
-      
-      setAuthUrl(data.authUrl);
-      
-      toast({
-        title: "קישור אימות נוצר בהצלחה",
-        description: "עקוב אחר הקישור לאישור הגישה",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error generating Gmail auth URL:', error);
-      toast({
-        title: "שגיאה ביצירת קישור אימות",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const exchangeCodeForToken = async () => {
-    try {
-      if (!oauthCode) {
-        toast({
-          title: "נדרש קוד אימות",
-          description: "אנא הזן את קוד האימות שקיבלת מ-Google",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('exchange-oauth-code', {
-        body: { 
-          code: oauthCode,
-          clientId: settings.gmail_client_id,
-          clientSecret: settings.gmail_client_secret,
-          redirectUri: settings.gmail_redirect_uri
-        }
-      });
-      
-      if (error) throw error;
-      
-      if (data.refresh_token) {
-        setSettings({
-          ...settings,
-          gmail_refresh_token: data.refresh_token,
-          gmail_authorized: true
-        });
-        
-        await supabase
-          .from('email_settings')
-          .upsert({
-            id: settings.id,
-            gmail_refresh_token: data.refresh_token
-          });
-      
-        toast({
-          title: "אימות Gmail בוצע בהצלחה",
-          description: "האפליקציה מחוברת כעת לחשבון ה-Gmail שלך",
-          variant: "default"
-        });
-
-        setOauthCode('');
-      } else {
-        throw new Error("לא התקבל token רענון. נסה שוב את תהליך האימות.");
-      }
-    } catch (error) {
-      console.error('Error exchanging code for token:', error);
-      toast({
-        title: "שגיאה בהחלפת קוד אימות",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "הועתק ללוח",
-      variant: "default"
-    });
-  };
-
+  // Helper function to check if the error is related to Outlook SMTP authentication
   const isOutlookAuthError = (details: any) => {
     return details?.message?.includes('SmtpClientAuthentication is disabled for the Tenant') ||
            details?.response?.includes('SmtpClientAuthentication is disabled');
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center p-8" dir="rtl">טוען...</div>;
+    return <div className="flex justify-center items-center p-8">טוען...</div>;
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">הגדרות דואר אלקטרוני</h2>
       </div>
       
       <Tabs defaultValue="recipients" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="recipients">נמענים</TabsTrigger>
-          <TabsTrigger value="email-method">שיטת שליחה</TabsTrigger>
           <TabsTrigger value="smtp">הגדרות SMTP</TabsTrigger>
           <TabsTrigger value="template">תבנית הודעה</TabsTrigger>
         </TabsList>
@@ -560,178 +408,6 @@ const EmailSettings: React.FC = () => {
             </CardFooter>
           </Card>
         </TabsContent>
-
-        <TabsContent value="email-method">
-          <Card>
-            <CardHeader>
-              <CardTitle>שיטת שליחת דואר אלקטרוני</CardTitle>
-              <CardDescription>
-                בחר את השיטה המועדפת לשליחת דואר אלקטרוני
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup
-                value={settings.email_method}
-                onValueChange={(value) => setSettings({...settings, email_method: value})}
-                className="space-y-4"
-              >
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <RadioGroupItem value="smtp" id="smtp" />
-                  <Label htmlFor="smtp" className="mr-2">שרת SMTP</Label>
-                  <p className="text-sm text-muted-foreground mr-2">
-                    שימוש בשרת SMTP רגיל לשליחת הודעות
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <RadioGroupItem value="gmail" id="gmail" />
-                  <Label htmlFor="gmail" className="mr-2">Gmail API</Label>
-                  <p className="text-sm text-muted-foreground mr-2">
-                    שימוש ב-Gmail API לשליחת הודעות (מומלץ לחשבונות Outlook/Microsoft שאינם מאפשרים SMTP)
-                  </p>
-                </div>
-              </RadioGroup>
-
-              {settings.email_method === 'gmail' && (
-                <div className="mt-6 space-y-4 border p-4 rounded-md">
-                  <h3 className="text-lg font-medium">הגדרות Gmail API</h3>
-                  
-                  <Alert className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>הוראות להגדרת Gmail API</AlertTitle>
-                    <AlertDescription>
-                      <ol className="list-decimal list-inside mt-2 space-y-2">
-                        <li>צור פרויקט ב-<a href="https://console.developers.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google Cloud Console</a></li>
-                        <li>הפעל את Gmail API</li>
-                        <li>צור אישורי OAuth (מסוג Web Application)</li>
-                        <li>הגדר את כתובת ההפניה המחדש (URI להפניה מחדש) לכתובת הבאה:</li>
-                      </ol>
-                      <div className="flex items-center gap-2 mt-2 p-2 bg-gray-100 rounded">
-                        <code dir="ltr">{settings.gmail_redirect_uri || window.location.origin + '/admin'}</code>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => copyToClipboard(settings.gmail_redirect_uri || window.location.origin + '/admin')}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="gmail_client_id">מזהה לקוח</Label>
-                        <Input
-                          id="gmail_client_id"
-                          dir="ltr"
-                          value={settings.gmail_client_id}
-                          onChange={(e) => setSettings({...settings, gmail_client_id: e.target.value})}
-                          placeholder="הזן את מזהה הלקוח מ-Google Cloud Console"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="gmail_client_secret">סוד לקוח</Label>
-                        <Input
-                          id="gmail_client_secret"
-                          dir="ltr"
-                          type="password"
-                          value={settings.gmail_client_secret}
-                          onChange={(e) => setSettings({...settings, gmail_client_secret: e.target.value})}
-                          placeholder="הזן את סוד הלקוח מ-Google Cloud Console"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="gmail_redirect_uri">URI להפניה מחדש</Label>
-                      <Input
-                        id="gmail_redirect_uri"
-                        dir="ltr"
-                        value={settings.gmail_redirect_uri}
-                        onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
-                        placeholder="URL לפני מחדש לאחר אימות"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        זו הכתובת שתופנה אליה לאחר אימות מול Google. חייבת להיות תואמת בדיוק לכתובת שהגדרת ב-Google Cloud Console.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>סטטוס אימות Gmail</Label>
-                        <span className={`text-sm ${settings.gmail_authorized ? 'text-green-600' : 'text-red-600'}`}>
-                          {settings.gmail_authorized ? 'מחובר' : 'לא מחובר'}
-                        </span>
-                      </div>
-                      
-                      {!settings.gmail_authorized ? (
-                        <>
-                          <Button 
-                            onClick={generateGmailAuthUrl} 
-                            className="w-full"
-                            disabled={!settings.gmail_client_id || !settings.gmail_client_secret || !settings.gmail_redirect_uri}
-                          >
-                            צור קישור אימות
-                          </Button>
-                          
-                          {authUrl && (
-                            <div className="mt-4">
-                              <Alert>
-                                <AlertTitle>גש לקישור הבא לאימות:</AlertTitle>
-                                <AlertDescription>
-                                  <div className="mt-2">
-                                    <a 
-                                      href={authUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:underline break-all"
-                                    >
-                                      {authUrl}
-                                    </a>
-                                  </div>
-                                </AlertDescription>
-                              </Alert>
-                              
-                              <div className="mt-4 space-y-2">
-                                <Label htmlFor="oauth_code">קוד אימות שהתקבל</Label>
-                                <div className="flex gap-2">
-                                  <Input
-                                    id="oauth_code"
-                                    dir="ltr"
-                                    value={oauthCode}
-                                    onChange={(e) => setOauthCode(e.target.value)}
-                                    placeholder="הזן את קוד האימות שהתקבל מ-Google"
-                                  />
-                                  <Button onClick={exchangeCodeForToken}>אמת</Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <Button 
-                          onClick={() => setSettings({...settings, gmail_refresh_token: '', gmail_authorized: false})}
-                          variant="outline"
-                        >
-                          נתק חשבון
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={saveSettings} 
-                disabled={saving}
-              >
-                {saving ? "שומר..." : "שמור הגדרות שיטה"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
         
         <TabsContent value="smtp">
           <Card>
@@ -752,7 +428,6 @@ const EmailSettings: React.FC = () => {
                       <li>הפעל אימות SMTP בחשבון Outlook שלך</li>
                       <li>השתמש בשרת SMTP אחר (כמו Gmail)</li>
                       <li>צור חשבון Outlook חדש עם אימות SMTP מופעל</li>
-                      <li>השתמש בשיטת Gmail API במקום</li>
                     </ol>
                     <a 
                       href="https://aka.ms/smtp_auth_disabled" 
@@ -865,7 +540,6 @@ const EmailSettings: React.FC = () => {
                       content={settings.body_template}
                       onChange={(html) => setSettings({...settings, body_template: html})}
                       placeholder="תוכן הודעת הדואר אלקטרוני..."
-                      rtl={true}
                     />
                   </div>
                 </div>
