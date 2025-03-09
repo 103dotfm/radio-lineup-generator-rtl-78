@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { format } from "https://deno.land/std@0.178.0/datetime/mod.ts";
@@ -387,16 +386,34 @@ serve(async (req) => {
       // Create lineup link - ensure we're using the right URL format
       let lineupLink = "";
       try {
-        // Use the full URL from the request or default to supabase project
-        const appUrl = req.headers.get('Origin') || req.headers.get('Referer')?.split('/').slice(0, 3).join('/');
-        lineupLink = appUrl 
-          ? `${appUrl}/print/${show.id}?minutes=false`
-          : `https://${supabaseUrl.split('://')[1].split('.')[0]}.vercel.app/print/${show.id}?minutes=false`;
+        // Use the Origin or Referer header to determine the app URL
+        const origin = req.headers.get('Origin');
+        const referer = req.headers.get('Referer');
         
-        console.log("Generated lineup link:", lineupLink);
+        // Use origin, or extract the base URL from the referer, or use the current domain
+        const appUrl = origin || (referer ? new URL(referer).origin : null);
+        
+        if (appUrl) {
+          lineupLink = `${appUrl}/print/${show.id}?minutes=false`;
+          console.log("Generated lineup link from request headers:", lineupLink);
+        } else {
+          // Fallback - use the hostname from the current request
+          const host = req.headers.get('host');
+          if (host) {
+            const protocol = host.includes('localhost') ? 'http://' : 'https://';
+            lineupLink = `${protocol}${host}/print/${show.id}?minutes=false`;
+            console.log("Generated lineup link from host header:", lineupLink);
+          } else {
+            // Last resort fallback
+            lineupLink = `https://${supabaseUrl.split('://')[1].split('.')[0]}.vercel.app/print/${show.id}?minutes=false`;
+            console.log("Generated fallback lineup link after error:", lineupLink);
+          }
+        }
       } catch (urlError) {
         console.error("Error creating lineup link:", urlError);
+        // Fallback option
         lineupLink = `https://${supabaseUrl.split('://')[1].split('.')[0]}.vercel.app/print/${show.id}?minutes=false`;
+        console.log("Generated fallback lineup link after error:", lineupLink);
       }
       
       // Generate interviewees list

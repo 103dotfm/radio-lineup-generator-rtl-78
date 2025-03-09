@@ -1,54 +1,44 @@
 
-import React from 'react';
-import { Editor, EditorContent, useEditor } from '@tiptap/react';
+import React, { useEffect, useState } from 'react';
+import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
-import { Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { 
+  Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon, 
+  AlignLeft, AlignCenter, AlignRight 
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface BasicEditorProps {
   content: string;
-  onChange?: (html: string) => void;
-  className?: string;
+  onChange: (html: string) => void;
   placeholder?: string;
-  align?: 'right' | 'center';
   rtl?: boolean;
 }
 
-const BasicEditor = ({ 
+const BasicEditor: React.FC<BasicEditorProps> = ({ 
   content, 
   onChange, 
-  className, 
-  placeholder = '', 
-  align = 'right',
-  rtl = true 
-}: BasicEditorProps) => {
-  const [linkUrl, setLinkUrl] = React.useState('');
-  const [linkOpen, setLinkOpen] = React.useState(false);
+  placeholder = 'כתוב כאן...',
+  rtl = false 
+}) => {
+  const [linkUrl, setLinkUrl] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        heading: false,
-      }),
+      StarterKit,
       Underline,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          rel: 'noopener noreferrer',
-          target: '_blank',
+          class: 'text-blue-500 underline',
         },
       }),
       TextAlign.configure({
-        types: ['paragraph'],
+        types: ['heading', 'paragraph'],
         alignments: ['left', 'center', 'right'],
         defaultAlignment: rtl ? 'right' : 'left',
       }),
@@ -56,145 +46,236 @@ const BasicEditor = ({
     content,
     editorProps: {
       attributes: {
-        class: `prose prose-sm focus:outline-none ${rtl ? 'text-right' : 'text-left'} dir-${rtl ? 'rtl' : 'ltr'} ${className || ''}`,
-        placeholder,
+        class: `prose prose-sm focus:outline-none w-full p-4 ${rtl ? 'text-right' : 'text-left'}`,
         dir: rtl ? 'rtl' : 'ltr',
       },
     },
     onUpdate: ({ editor }) => {
-      if (onChange) {
-        onChange(editor.getHTML());
-      }
+      onChange(editor.getHTML());
     },
   });
 
-  // Update editor content when the content prop changes, but only if it's different
-  React.useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && editor.getHTML() !== content) {
       editor.commands.setContent(content);
     }
   }, [content, editor]);
 
-  // Set link
-  const setLink = React.useCallback(() => {
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      editor.setOptions({
+        editorProps: {
+          attributes: {
+            class: `prose prose-sm focus:outline-none w-full p-4 ${rtl ? 'text-right' : 'text-left'}`,
+            dir: rtl ? 'rtl' : 'ltr',
+          },
+        },
+      });
+
+      // Set default text alignment based on RTL
+      const defaultAlign = rtl ? 'right' : 'left';
+      editor.chain().focus().setTextAlign(defaultAlign).run();
+    }
+  }, [rtl, editor]);
+
+  const setLink = () => {
+    if (!editor) return;
+    
+    const previousUrl = editor.getAttributes('link').href;
+    setLinkUrl(previousUrl || '');
+    setShowLinkInput(true);
+  };
+
+  const confirmLink = () => {
     if (!editor) return;
     
     if (linkUrl === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
+      editor.chain().focus().unsetLink().run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .setLink({ href: linkUrl, target: '_blank' })
+        .run();
     }
-
-    editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
-    setLinkUrl('');
-    setLinkOpen(false);
-  }, [editor, linkUrl]);
+    
+    setShowLinkInput(false);
+  };
 
   if (!editor) {
     return null;
   }
 
   return (
-    <div className="border rounded-md bg-white detailsEditor" dir={rtl ? 'rtl' : 'ltr'}>
-      <div className="border-b p-2 flex gap-1 bg-muted/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          data-active={editor.isActive('bold')}
-          className={editor.isActive('bold') ? 'bg-muted' : ''}
-        >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          data-active={editor.isActive('italic')}
-          className={editor.isActive('italic') ? 'bg-muted' : ''}
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          data-active={editor.isActive('underline')}
-          className={editor.isActive('underline') ? 'bg-muted' : ''}
-        >
-          <UnderlineIcon className="h-4 w-4" />
-        </Button>
-        
-        <Popover open={linkOpen} onOpenChange={setLinkOpen}>
-          <PopoverTrigger asChild>
+    <div className="border rounded-md relative" dir={rtl ? 'rtl' : 'ltr'}>
+      {editor && (
+        <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+          <div className="flex items-center bg-white shadow rounded border p-1">
             <Button
-              variant="ghost"
+              type="button"
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              variant={editor.isActive('bold') ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setLinkOpen(true)}
-              data-active={editor.isActive('link')}
-              className={editor.isActive('link') ? 'bg-muted' : ''}
+              className="h-8 w-8 p-0"
+            >
+              <Bold className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              variant={editor.isActive('italic') ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <Italic className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              variant={editor.isActive('underline') ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <UnderlineIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={setLink}
+              variant={editor.isActive('link') ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
             >
               <LinkIcon className="h-4 w-4" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" side="bottom" align="start">
-            <div className="flex flex-col gap-2">
-              <Input
-                type="url"
-                placeholder="https://example.com"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    setLink();
-                  }
-                }}
-              />
-              <div className="flex justify-between">
-                <Button variant="ghost" size="sm" onClick={() => setLinkOpen(false)}>
-                  ביטול
-                </Button>
-                <Button variant="default" size="sm" onClick={setLink}>
-                  {editor.isActive('link') ? 'עדכן קישור' : 'הוסף קישור'}
-                </Button>
-              </div>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign('left').run()}
+              variant={editor.isActive({ textAlign: 'left' }) ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <AlignLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign('center').run()}
+              variant={editor.isActive({ textAlign: 'center' }) ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <AlignCenter className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign('right').run()}
+              variant={editor.isActive({ textAlign: 'right' }) ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <AlignRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </BubbleMenu>
+      )}
+
+      {showLinkInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded shadow max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">הכנס קישור</h3>
+            <input
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com"
+              className="border rounded p-2 w-full mb-4"
+              autoFocus
+            />
+            <div className="flex justify-end space-x-2 space-x-reverse">
+              <Button
+                type="button"
+                onClick={() => setShowLinkInput(false)}
+                variant="outline"
+              >
+                ביטול
+              </Button>
+              <Button type="button" onClick={confirmLink}>
+                אישור
+              </Button>
             </div>
-          </PopoverContent>
-        </Popover>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          data-active={editor.isActive({ textAlign: 'left' })}
-          className={editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}
-        >
-          <AlignLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          data-active={editor.isActive({ textAlign: 'center' })}
-          className={editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}
-        >
-          <AlignCenter className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          data-active={editor.isActive({ textAlign: 'right' })}
-          className={editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}
-        >
-          <AlignRight className="h-4 w-4" />
-        </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white">
+        <div className="flex border-b p-2">
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            variant={editor.isActive('bold') ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <Bold className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            variant={editor.isActive('italic') ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 w-8 p-0 mr-1"
+          >
+            <Italic className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            variant={editor.isActive('underline') ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 w-8 p-0 mr-1"
+          >
+            <UnderlineIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={setLink}
+            variant={editor.isActive('link') ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 w-8 p-0 mr-1"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </Button>
+          <div className="ml-auto flex">
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign('left').run()}
+              variant={editor.isActive({ textAlign: 'left' }) ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <AlignLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign('center').run()}
+              variant={editor.isActive({ textAlign: 'center' }) ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <AlignCenter className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              onClick={() => editor.chain().focus().setTextAlign('right').run()}
+              variant={editor.isActive({ textAlign: 'right' }) ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 w-8 p-0 ml-1"
+            >
+              <AlignRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <EditorContent editor={editor} />
       </div>
-      <EditorContent 
-        editor={editor} 
-        className="p-4" 
-        dir={rtl ? 'rtl' : 'ltr'} 
-      />
     </div>
   );
 };

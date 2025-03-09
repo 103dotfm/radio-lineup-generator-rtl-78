@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +17,32 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 
+interface EmailSettingsType {
+  id: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_password: string;
+  sender_email: string;
+  sender_name: string;
+  subject_template: string;
+  body_template: string;
+  created_at: string;
+  updated_at: string;
+  email_method: string; // 'smtp' or 'gmail'
+  gmail_client_id: string;
+  gmail_client_secret: string;
+  gmail_refresh_token: string;
+  gmail_redirect_uri: string;
+  gmail_authorized?: boolean;
+}
+
 const EmailSettings: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<EmailSettingsType>({
     id: '',
     smtp_host: '',
     smtp_port: 587,
@@ -33,6 +52,8 @@ const EmailSettings: React.FC = () => {
     sender_name: '',
     subject_template: '',
     body_template: '',
+    created_at: '',
+    updated_at: '',
     email_method: 'smtp', // 'smtp' or 'gmail'
     gmail_client_id: '',
     gmail_client_secret: '',
@@ -66,15 +87,16 @@ const EmailSettings: React.FC = () => {
       if (error) throw error;
       
       if (data) {
-        // Set default email_method to 'smtp' if not present
-        const updatedData = {
-          ...data,
-          email_method: data.email_method || 'smtp',
-          gmail_client_id: data.gmail_client_id || '',
-          gmail_client_secret: data.gmail_client_secret || '',
-          gmail_refresh_token: data.gmail_refresh_token || '',
-          gmail_redirect_uri: data.gmail_redirect_uri || window.location.origin + '/admin',
-          gmail_authorized: !!data.gmail_refresh_token
+        const dbData = data as any;
+        
+        const updatedData: EmailSettingsType = {
+          ...dbData,
+          email_method: dbData.email_method || 'smtp',
+          gmail_client_id: dbData.gmail_client_id || '',
+          gmail_client_secret: dbData.gmail_client_secret || '',
+          gmail_refresh_token: dbData.gmail_refresh_token || '',
+          gmail_redirect_uri: dbData.gmail_redirect_uri || window.location.origin + '/admin',
+          gmail_authorized: !!dbData.gmail_refresh_token
         };
         
         setSettings(updatedData);
@@ -136,24 +158,26 @@ const EmailSettings: React.FC = () => {
     try {
       setSaving(true);
       
+      const settingsToUpdate = {
+        id: settings.id,
+        smtp_host: settings.smtp_host,
+        smtp_port: settings.smtp_port,
+        smtp_user: settings.smtp_user,
+        smtp_password: settings.smtp_password,
+        sender_email: settings.sender_email,
+        sender_name: settings.sender_name,
+        subject_template: settings.subject_template,
+        body_template: settings.body_template,
+        email_method: settings.email_method,
+        gmail_client_id: settings.gmail_client_id,
+        gmail_client_secret: settings.gmail_client_secret,
+        gmail_refresh_token: settings.gmail_refresh_token,
+        gmail_redirect_uri: settings.gmail_redirect_uri
+      };
+
       const { error } = await supabase
         .from('email_settings')
-        .upsert({
-          id: settings.id,
-          smtp_host: settings.smtp_host,
-          smtp_port: settings.smtp_port,
-          smtp_user: settings.smtp_user,
-          smtp_password: settings.smtp_password,
-          sender_email: settings.sender_email,
-          sender_name: settings.sender_name,
-          subject_template: settings.subject_template,
-          body_template: settings.body_template,
-          email_method: settings.email_method,
-          gmail_client_id: settings.gmail_client_id,
-          gmail_client_secret: settings.gmail_client_secret,
-          gmail_refresh_token: settings.gmail_refresh_token,
-          gmail_redirect_uri: settings.gmail_redirect_uri
-        });
+        .upsert(settingsToUpdate);
 
       if (error) throw error;
       
@@ -357,7 +381,6 @@ const EmailSettings: React.FC = () => {
           gmail_authorized: true
         });
         
-        // Save the refresh token to the database
         await supabase
           .from('email_settings')
           .upsert({
@@ -393,7 +416,6 @@ const EmailSettings: React.FC = () => {
     });
   };
 
-  // Helper function to check if the error is related to Outlook SMTP authentication
   const isOutlookAuthError = (details: any) => {
     return details?.message?.includes('SmtpClientAuthentication is disabled for the Tenant') ||
            details?.response?.includes('SmtpClientAuthentication is disabled');
