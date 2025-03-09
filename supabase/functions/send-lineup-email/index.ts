@@ -47,6 +47,27 @@ const createErrorLog = (stage: string, error: any) => {
   return errorDetails;
 };
 
+// Helper function to check if the error is an Outlook SMTP authentication error
+const isOutlookAuthError = (error: any): boolean => {
+  const errorMsg = error?.message || '';
+  const errorResponse = error?.response || '';
+  
+  return (
+    errorMsg.includes('SmtpClientAuthentication is disabled for the Tenant') ||
+    errorResponse.includes('SmtpClientAuthentication is disabled') ||
+    errorMsg.includes('535 5.7.139 Authentication unsuccessful') ||
+    errorResponse.includes('535 5.7.139 Authentication unsuccessful')
+  );
+};
+
+// Helper function to get an alternative SMTP configuration recommendation
+const getAlternativeSmtpRecommendation = (host: string): string => {
+  if (host.includes('outlook') || host.includes('hotmail') || host.includes('office365')) {
+    return "It appears you're using Microsoft Outlook/Office 365 which may have SMTP authentication disabled. Please check https://aka.ms/smtp_auth_disabled for more information, or consider using an alternative email provider like Gmail (smtp.gmail.com).";
+  }
+  return "Consider using an alternative SMTP server or checking your authentication credentials.";
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -397,6 +418,27 @@ serve(async (req) => {
           console.log("✅ SMTP connection verified successfully");
         } catch (verifyError) {
           const errorLog = createErrorLog("SMTP_VERIFICATION", verifyError);
+          
+          // Check if this is an Outlook SMTP auth error
+          if (isOutlookAuthError(verifyError)) {
+            const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
+            
+            return new Response(
+              JSON.stringify({ 
+                error: `Microsoft Outlook SMTP authentication is disabled`, 
+                details: {
+                  ...errorLog,
+                  recommendedAction: "Check https://aka.ms/smtp_auth_disabled for information on enabling SMTP auth or use an alternative email provider",
+                  recommendation
+                }
+              }),
+              { 
+                status: 500, 
+                headers: corsHeaders 
+              }
+            );
+          }
+          
           return new Response(
             JSON.stringify({ error: `SMTP configuration error`, details: errorLog }),
             { 
@@ -465,6 +507,12 @@ serve(async (req) => {
           );
         } catch (emailError) {
           const errorLog = createErrorLog("SENDING_EMAIL", emailError);
+          
+          // Check if this is an Outlook SMTP auth error
+          if (isOutlookAuthError(emailError)) {
+            const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
+            errorLog.recommendation = recommendation;
+          }
           
           // Log the email error in the database if not a test
           if (!testEmail) {
