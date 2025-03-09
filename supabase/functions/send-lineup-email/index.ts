@@ -29,6 +29,10 @@ interface EmailSettings {
   sender_name: string;
   subject_template: string;
   body_template: string;
+  email_method: string; // 'smtp' or 'gmail'
+  gmail_client_id: string;
+  gmail_client_secret: string;
+  gmail_refresh_token: string;
 }
 
 // Helper function to create detailed error logs
@@ -66,6 +70,84 @@ const getAlternativeSmtpRecommendation = (host: string): string => {
     return "It appears you're using Microsoft Outlook/Office 365 which may have SMTP authentication disabled. Please check https://aka.ms/smtp_auth_disabled for more information, or consider using an alternative email provider like Gmail (smtp.gmail.com).";
   }
   return "Consider using an alternative SMTP server or checking your authentication credentials.";
+};
+
+// Gmail API helper function to send email
+const sendWithGmailApi = async (
+  gmailRefreshToken: string,
+  gmailClientId: string,
+  gmailClientSecret: string,
+  senderEmail: string,
+  senderName: string,
+  recipients: string[],
+  subject: string,
+  htmlContent: string
+): Promise<any> => {
+  try {
+    console.log("Sending email using Gmail API");
+    
+    // First, get a new access token using the refresh token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: gmailClientId,
+        client_secret: gmailClientSecret,
+        refresh_token: gmailRefreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    const tokenData = await tokenResponse.json();
+    
+    if (!tokenResponse.ok) {
+      throw new Error(`Failed to refresh access token: ${tokenData.error_description || tokenData.error}`);
+    }
+    
+    const accessToken = tokenData.access_token;
+    console.log("Successfully obtained access token for Gmail API");
+    
+    // Prepare email in RFC 2822 format
+    const emailLines = [
+      `From: "${senderName}" <${senderEmail}>`,
+      `To: ${recipients.join(', ')}`,
+      `Subject: =?UTF-8?B?${btoa(subject)}?=`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      btoa(htmlContent.replace(/\r?\n/g, ''))
+    ];
+    
+    const email = emailLines.join('\r\n');
+    const encodedEmail = btoa(email).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    
+    // Send the email using Gmail API
+    const sendResponse = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        raw: encodedEmail
+      })
+    });
+    
+    const responseData = await sendResponse.json();
+    
+    if (!sendResponse.ok) {
+      throw new Error(`Gmail API error: ${responseData.error?.message || JSON.stringify(responseData)}`);
+    }
+    
+    console.log("Email sent successfully with Gmail API");
+    return responseData;
+  } catch (error) {
+    console.error("Error sending with Gmail API:", error);
+    throw error;
+  }
 };
 
 serve(async (req) => {
@@ -152,7 +234,7 @@ serve(async (req) => {
       );
     }
     
-    const { showId, testEmail } = requestData;
+    const { showId, testEmail, emailMethod } = requestData;
     
     if (!showId) {
       return new Response(
@@ -164,7 +246,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing request for show ${showId}, test email: ${testEmail || 'none'}`);
+    console.log(`Processing request for show ${showId}, test email: ${testEmail || 'none'}, method: ${emailMethod || 'default'}`);
 
     // Get show details
     try {
@@ -241,31 +323,11 @@ serve(async (req) => {
         );
       }
 
-      console.log(`Email settings found with SMTP host: ${emailSettings.smtp_host}, port: ${emailSettings.smtp_port}`);
-      console.log(`Sender: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
-
-      // Check required SMTP settings
-      const requiredSettings = [
-        "smtp_host", "smtp_port", "smtp_user", "smtp_password", 
-        "sender_email", "sender_name"
-      ];
+      console.log(`Email settings found with method: ${emailSettings.email_method || 'smtp'}`);
       
-      const missingSettings = requiredSettings.filter(key => !emailSettings[key]);
-      
-      if (missingSettings.length > 0) {
-        const errorMessage = `Missing required email settings: ${missingSettings.join(", ")}`;
-        console.error(errorMessage);
-        return new Response(
-          JSON.stringify({ 
-            error: errorMessage,
-            details: { missingSettings }
-          }),
-          { 
-            status: 500, 
-            headers: corsHeaders 
-          }
-        );
-      }
+      // Determine which email method to use (override with parameter if provided)
+      const useMethod = emailMethod || emailSettings.email_method || 'smtp';
+      console.log(`Using email method: ${useMethod}`);
 
       // Get recipient emails if not a test
       let recipientEmails: string[] = [];
@@ -325,13 +387,16 @@ serve(async (req) => {
       // Create lineup link - ensure we're using the right URL format
       let lineupLink = "";
       try {
-        // Extract the base URL dynamically - this helps avoid using HTML site URL
-        const baseUrl = new URL(supabaseUrl).origin.replace('.supabase.co', '.app');
-        lineupLink = `${baseUrl}/print/${show.id}?minutes=false`;
+        // Use the full URL from the request or default to supabase project
+        const appUrl = req.headers.get('Origin') || req.headers.get('Referer')?.split('/').slice(0, 3).join('/');
+        lineupLink = appUrl 
+          ? `${appUrl}/print/${show.id}?minutes=false`
+          : `https://${supabaseUrl.split('://')[1].split('.')[0]}.vercel.app/print/${show.id}?minutes=false`;
+        
         console.log("Generated lineup link:", lineupLink);
       } catch (urlError) {
         console.error("Error creating lineup link:", urlError);
-        lineupLink = `${supabaseUrl.replace('.supabase.co', '.app')}/print/${show.id}?minutes=false`;
+        lineupLink = `https://${supabaseUrl.split('://')[1].split('.')[0]}.vercel.app/print/${show.id}?minutes=false`;
       }
       
       // Generate interviewees list
@@ -379,104 +444,30 @@ serve(async (req) => {
         .replace(/{{lineup_link}}/g, lineupLink);
 
       console.log(`Email prepared - Subject: ${subject}`);
-      console.log(`Using SMTP: ${emailSettings.smtp_host}:${emailSettings.smtp_port}`);
 
-      // Configure email transport
-      try {
-        console.log("Configuring email transport...");
-        const transportConfig = {
-          host: emailSettings.smtp_host,
-          port: emailSettings.smtp_port,
-          secure: emailSettings.smtp_port === 465,
-          auth: {
-            user: emailSettings.smtp_user,
-            pass: emailSettings.smtp_password,
-          },
-          tls: {
-            // Do not fail on invalid certs
-            rejectUnauthorized: false
-          },
-          debug: true, // Enable debug output
-        };
-        
-        console.log("Transport config:", {
-          host: transportConfig.host,
-          port: transportConfig.port,
-          secure: transportConfig.secure,
-          auth: {
-            user: transportConfig.auth.user,
-            pass: "********" // Don't log the actual password
-          }
-        });
-        
-        const transporter = nodemailer.createTransport(transportConfig);
-
-        // Verify SMTP connection configuration
-        console.log("Verifying SMTP connection...");
+      // Send email based on selected method
+      if (useMethod === 'gmail' && emailSettings.gmail_refresh_token) {
+        // Use Gmail API
         try {
-          await transporter.verify();
-          console.log("✅ SMTP connection verified successfully");
-        } catch (verifyError) {
-          const errorLog = createErrorLog("SMTP_VERIFICATION", verifyError);
+          console.log("Sending email using Gmail API...");
           
-          // Check if this is an Outlook SMTP auth error
-          if (isOutlookAuthError(verifyError)) {
-            const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
-            
-            return new Response(
-              JSON.stringify({ 
-                error: `Microsoft Outlook SMTP authentication is disabled`, 
-                details: {
-                  ...errorLog,
-                  recommendedAction: "Check https://aka.ms/smtp_auth_disabled for information on enabling SMTP auth or use an alternative email provider",
-                  recommendation
-                }
-              }),
-              { 
-                status: 500, 
-                headers: corsHeaders 
-              }
-            );
+          if (!emailSettings.gmail_client_id || !emailSettings.gmail_client_secret || !emailSettings.gmail_refresh_token) {
+            throw new Error("Missing Gmail API credentials. Please set up Gmail API credentials in the email settings.");
           }
           
-          return new Response(
-            JSON.stringify({ error: `SMTP configuration error`, details: errorLog }),
-            { 
-              status: 500, 
-              headers: corsHeaders 
-            }
+          const gmailResponse = await sendWithGmailApi(
+            emailSettings.gmail_refresh_token,
+            emailSettings.gmail_client_id,
+            emailSettings.gmail_client_secret,
+            emailSettings.sender_email,
+            emailSettings.sender_name,
+            recipientEmails,
+            subject,
+            body
           );
-        }
-
-        // Send email
-        console.log("Sending email...");
-        try {
-          const mailOptions = {
-            from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
-            to: recipientEmails.join(", "),
-            subject: subject,
-            html: body,
-            headers: {
-              'Content-Type': 'text/html; charset=UTF-8'
-            }
-          };
           
-          console.log("Mail options:", {
-            from: mailOptions.from,
-            to: mailOptions.to,
-            subject: mailOptions.subject,
-            htmlLength: mailOptions.html.length
-          });
+          console.log("✅ Email sent successfully with Gmail API:", gmailResponse);
           
-          const info = await transporter.sendMail(mailOptions);
-
-          console.log("✅ Email sent successfully:", {
-            messageId: info.messageId,
-            response: info.response,
-            accepted: info.accepted,
-            rejected: info.rejected
-          });
-
           // Log the email in the database if not a test
           if (!testEmail) {
             const { error: logError } = await supabase
@@ -484,35 +475,28 @@ serve(async (req) => {
               .upsert({
                 show_id: show.id,
                 success: true,
-                error_message: null
+                error_message: null,
+                method: 'gmail'
               });
               
             if (logError) {
               console.error("Error logging email success:", logError);
             }
           }
-
+          
           return new Response(
             JSON.stringify({ 
               success: true, 
-              messageId: info.messageId,
-              response: info.response,
-              accepted: info.accepted,
-              rejected: info.rejected
+              method: 'gmail',
+              response: gmailResponse
             }),
             { 
               status: 200, 
               headers: corsHeaders 
             }
           );
-        } catch (emailError) {
-          const errorLog = createErrorLog("SENDING_EMAIL", emailError);
-          
-          // Check if this is an Outlook SMTP auth error
-          if (isOutlookAuthError(emailError)) {
-            const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
-            errorLog.recommendation = recommendation;
-          }
+        } catch (gmailError) {
+          const errorLog = createErrorLog("GMAIL_API_SENDING", gmailError);
           
           // Log the email error in the database if not a test
           if (!testEmail) {
@@ -521,31 +505,196 @@ serve(async (req) => {
               .upsert({
                 show_id: show.id,
                 success: false,
-                error_message: errorLog.message
+                error_message: errorLog.message,
+                method: 'gmail'
               });
               
             if (logError) {
               console.error("Error logging email failure:", logError);
             }
           }
-
+          
           return new Response(
-            JSON.stringify({ error: `Failed to send email`, details: errorLog }),
+            JSON.stringify({ error: `Failed to send email via Gmail API`, details: errorLog }),
             { 
               status: 500, 
               headers: corsHeaders 
             }
           );
         }
-      } catch (transportError) {
-        const errorLog = createErrorLog("CONFIGURING_TRANSPORT", transportError);
-        return new Response(
-          JSON.stringify({ error: `Failed to configure email transport`, details: errorLog }),
-          { 
-            status: 500, 
-            headers: corsHeaders 
+      } else {
+        // Use SMTP
+        console.log(`Using SMTP: ${emailSettings.smtp_host}:${emailSettings.smtp_port}`);
+
+        // Configure email transport
+        try {
+          console.log("Configuring email transport...");
+          const transportConfig = {
+            host: emailSettings.smtp_host,
+            port: emailSettings.smtp_port,
+            secure: emailSettings.smtp_port === 465,
+            auth: {
+              user: emailSettings.smtp_user,
+              pass: emailSettings.smtp_password,
+            },
+            tls: {
+              // Do not fail on invalid certs
+              rejectUnauthorized: false
+            },
+            debug: true, // Enable debug output
+          };
+          
+          console.log("Transport config:", {
+            host: transportConfig.host,
+            port: transportConfig.port,
+            secure: transportConfig.secure,
+            auth: {
+              user: transportConfig.auth.user,
+              pass: "********" // Don't log the actual password
+            }
+          });
+          
+          const transporter = nodemailer.createTransport(transportConfig);
+
+          // Verify SMTP connection configuration
+          console.log("Verifying SMTP connection...");
+          try {
+            await transporter.verify();
+            console.log("✅ SMTP connection verified successfully");
+          } catch (verifyError) {
+            const errorLog = createErrorLog("SMTP_VERIFICATION", verifyError);
+            
+            // Check if this is an Outlook SMTP auth error
+            if (isOutlookAuthError(verifyError)) {
+              const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
+              
+              return new Response(
+                JSON.stringify({ 
+                  error: `Microsoft Outlook SMTP authentication is disabled`, 
+                  details: {
+                    ...errorLog,
+                    recommendedAction: "Check https://aka.ms/smtp_auth_disabled for information on enabling SMTP auth or use an alternative email provider",
+                    recommendation
+                  }
+                }),
+                { 
+                  status: 500, 
+                  headers: corsHeaders 
+                }
+              );
+            }
+            
+            return new Response(
+              JSON.stringify({ error: `SMTP configuration error`, details: errorLog }),
+              { 
+                status: 500, 
+                headers: corsHeaders 
+              }
+            );
           }
-        );
+
+          // Send email
+          console.log("Sending email...");
+          try {
+            const mailOptions = {
+              from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
+              to: recipientEmails.join(", "),
+              subject: subject,
+              html: body,
+              headers: {
+                'Content-Type': 'text/html; charset=UTF-8'
+              }
+            };
+            
+            console.log("Mail options:", {
+              from: mailOptions.from,
+              to: mailOptions.to,
+              subject: mailOptions.subject,
+              htmlLength: mailOptions.html.length
+            });
+            
+            const info = await transporter.sendMail(mailOptions);
+
+            console.log("✅ Email sent successfully:", {
+              messageId: info.messageId,
+              response: info.response,
+              accepted: info.accepted,
+              rejected: info.rejected
+            });
+
+            // Log the email in the database if not a test
+            if (!testEmail) {
+              const { error: logError } = await supabase
+                .from("show_email_logs")
+                .upsert({
+                  show_id: show.id,
+                  success: true,
+                  error_message: null,
+                  method: 'smtp'
+                });
+                
+              if (logError) {
+                console.error("Error logging email success:", logError);
+              }
+            }
+
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                method: 'smtp',
+                messageId: info.messageId,
+                response: info.response,
+                accepted: info.accepted,
+                rejected: info.rejected
+              }),
+              { 
+                status: 200, 
+                headers: corsHeaders 
+              }
+            );
+          } catch (emailError) {
+            const errorLog = createErrorLog("SENDING_EMAIL", emailError);
+            
+            // Check if this is an Outlook SMTP auth error
+            if (isOutlookAuthError(emailError)) {
+              const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
+              errorLog.recommendation = recommendation;
+            }
+            
+            // Log the email error in the database if not a test
+            if (!testEmail) {
+              const { error: logError } = await supabase
+                .from("show_email_logs")
+                .upsert({
+                  show_id: show.id,
+                  success: false,
+                  error_message: errorLog.message,
+                  method: 'smtp'
+                });
+                
+              if (logError) {
+                console.error("Error logging email failure:", logError);
+              }
+            }
+
+            return new Response(
+              JSON.stringify({ error: `Failed to send email`, details: errorLog }),
+              { 
+                status: 500, 
+                headers: corsHeaders 
+              }
+            );
+          }
+        } catch (transportError) {
+          const errorLog = createErrorLog("CONFIGURING_TRANSPORT", transportError);
+          return new Response(
+            JSON.stringify({ error: `Failed to configure email transport`, details: errorLog }),
+            { 
+              status: 500, 
+              headers: corsHeaders 
+            }
+          );
+        }
       }
     } catch (showProcessingError) {
       const errorLog = createErrorLog("PROCESSING_SHOW", showProcessingError);
