@@ -6,6 +6,8 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://yyrmodgbnzqbmatlypuc.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0";
 
+export const APP_URL = typeof window !== 'undefined' ? window.location.origin : '';
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
