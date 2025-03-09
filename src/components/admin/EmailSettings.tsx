@@ -223,50 +223,34 @@ const EmailSettings: React.FC = () => {
       
       console.log(`Sending test email for show: ${latestShow.id} to: ${testEmailAddress}`);
       
-      // Construct the full URL for the edge function
-      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-lineup-email`;
-      console.log("Function URL:", functionUrl);
-      
-      // Use fetch with explicit mode and credentials settings
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({ 
+      const { data, error } = await supabase.functions.invoke('send-lineup-email', {
+        body: { 
           showId: latestShow.id,
           testEmail: testEmailAddress  
-        }),
-        mode: 'cors',
-        credentials: 'omit' // Don't send cookies
+        }
       });
       
-      // Store the raw response text first
-      const responseText = await response.text();
-      console.log("Raw response:", responseText);
+      console.log('Test email response:', data);
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        setErrorDetails({ 
+          stage: 'EDGE_FUNCTION_CALL', 
+          message: error.message || 'Unknown error calling edge function',
+          details: error 
+        });
+        throw new Error(`Error calling edge function: ${error.message}`);
+      }
+      
+      const responseText = JSON.stringify(data, null, 2);
       setRawResponse(responseText);
-      
-      // Try to parse the JSON
-      let result;
-      try {
-        result = JSON.parse(responseText);
-        console.log('Test email response:', result);
-      } catch (parseError) {
-        console.error("Failed to parse response as JSON:", parseError);
-        throw new Error(`Server returned invalid JSON. Response: ${responseText.substring(0, 100)}...`);
-      }
-      
-      if (!response.ok) {
-        setErrorDetails(result.details || { message: result.error || "שגיאה לא ידועה" });
-        throw new Error(result.error || "שגיאה בשליחת דואר אלקטרוני");
-      }
       
       toast({
         title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
         description: `נשלח לכתובת ${testEmailAddress}`,
         variant: "default"
       });
+      
     } catch (error) {
       console.error('Error sending test email:', error, errorDetails);
       toast({
