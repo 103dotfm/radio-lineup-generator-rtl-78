@@ -55,14 +55,39 @@ serve(async (req) => {
 
   try {
     console.log("Starting send-lineup-email function");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    
+    // Check for environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing required environment variables:", {
+        supabaseUrl: supabaseUrl ? "present" : "missing",
+        supabaseAnonKey: supabaseAnonKey ? "present" : "missing"
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          error: "Server configuration error: Missing environment variables", 
+          details: {
+            stage: "ENVIRONMENT_CHECK",
+            supabaseUrlPresent: !!supabaseUrl,
+            supabaseAnonKeyPresent: !!supabaseAnonKey
+          }
+        }),
+        { 
+          status: 500, 
+          headers: corsHeaders 
+        }
+      );
+    }
     
     console.log("Environment variables:", {
       supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : "missing",
       supabaseAnonKey: supabaseAnonKey ? "present (not shown)" : "missing"
     });
     
+    // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Parse request body
@@ -174,12 +199,22 @@ serve(async (req) => {
         .limit(1)
         .single();
 
-      if (settingsError || !emailSettings) {
+      if (settingsError) {
         const errorLog = createErrorLog("FETCHING_EMAIL_SETTINGS", settingsError);
         return new Response(
           JSON.stringify({ error: "Failed to fetch email settings", details: errorLog }),
           { 
             status: 500, 
+            headers: corsHeaders 
+          }
+        );
+      }
+
+      if (!emailSettings) {
+        return new Response(
+          JSON.stringify({ error: "Email settings not found" }),
+          { 
+            status: 404, 
             headers: corsHeaders 
           }
         );
@@ -215,6 +250,7 @@ serve(async (req) => {
       let recipientEmails: string[] = [];
       if (testEmail) {
         recipientEmails = [testEmail];
+        console.log(`Using test email: ${testEmail}`);
       } else {
         try {
           console.log("Fetching email recipients...");
@@ -234,6 +270,7 @@ serve(async (req) => {
           }
           
           recipientEmails = recipients.map(r => r.email);
+          console.log(`Found ${recipientEmails.length} recipients`);
         } catch (recipientsError) {
           const errorLog = createErrorLog("PROCESSING_RECIPIENTS", recipientsError);
           return new Response(
@@ -280,29 +317,33 @@ serve(async (req) => {
       let intervieweesList = "<ul>";
       const uniqueInterviewees = new Set();
       
-      show.items.forEach(item => {
-        if (item.interviewees && item.interviewees.length > 0) {
-          item.interviewees.forEach(interviewee => {
-            const intervieweeText = interviewee.title 
-              ? `${interviewee.name}, ${interviewee.title}` 
-              : interviewee.name;
+      if (Array.isArray(show.items)) {
+        show.items.forEach(item => {
+          if (item.interviewees && Array.isArray(item.interviewees) && item.interviewees.length > 0) {
+            item.interviewees.forEach(interviewee => {
+              const intervieweeText = interviewee.title 
+                ? `${interviewee.name}, ${interviewee.title}` 
+                : interviewee.name;
+              
+              if (!uniqueInterviewees.has(intervieweeText)) {
+                uniqueInterviewees.add(intervieweeText);
+                intervieweesList += `<li>${intervieweeText}</li>`;
+              }
+            });
+          } else if (!item.is_break && !item.is_note && !item.is_divider) {
+            const intervieweeText = item.title 
+              ? `${item.name}, ${item.title}` 
+              : item.name;
             
             if (!uniqueInterviewees.has(intervieweeText)) {
               uniqueInterviewees.add(intervieweeText);
               intervieweesList += `<li>${intervieweeText}</li>`;
             }
-          });
-        } else if (!item.is_break && !item.is_note && !item.is_divider) {
-          const intervieweeText = item.title 
-            ? `${item.name}, ${item.title}` 
-            : item.name;
-          
-          if (!uniqueInterviewees.has(intervieweeText)) {
-            uniqueInterviewees.add(intervieweeText);
-            intervieweesList += `<li>${intervieweeText}</li>`;
           }
-        }
-      });
+        });
+      } else {
+        console.warn("Show items is not an array:", show.items);
+      }
       
       intervieweesList += "</ul>";
 
@@ -338,7 +379,9 @@ serve(async (req) => {
         };
         
         console.log("Transport config:", {
-          ...transportConfig,
+          host: transportConfig.host,
+          port: transportConfig.port,
+          secure: transportConfig.secure,
           auth: {
             user: transportConfig.auth.user,
             pass: "********" // Don't log the actual password
@@ -377,8 +420,10 @@ serve(async (req) => {
           };
           
           console.log("Mail options:", {
-            ...mailOptions,
-            html: mailOptions.html.substring(0, 100) + '...' // Don't log the entire HTML
+            from: mailOptions.from,
+            to: mailOptions.to,
+            subject: mailOptions.subject,
+            htmlLength: mailOptions.html.length
           });
           
           const info = await transporter.sendMail(mailOptions);
@@ -392,13 +437,17 @@ serve(async (req) => {
 
           // Log the email in the database if not a test
           if (!testEmail) {
-            await supabase
+            const { error: logError } = await supabase
               .from("show_email_logs")
               .upsert({
                 show_id: show.id,
                 success: true,
                 error_message: null
               });
+              
+            if (logError) {
+              console.error("Error logging email success:", logError);
+            }
           }
 
           return new Response(
@@ -419,13 +468,17 @@ serve(async (req) => {
           
           // Log the email error in the database if not a test
           if (!testEmail) {
-            await supabase
+            const { error: logError } = await supabase
               .from("show_email_logs")
               .upsert({
                 show_id: show.id,
                 success: false,
                 error_message: errorLog.message
               });
+              
+            if (logError) {
+              console.error("Error logging email failure:", logError);
+            }
           }
 
           return new Response(
