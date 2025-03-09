@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Trash, Plus, Send, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { Trash, Plus, Send, AlertCircle, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import BasicEditor from "../editor/BasicEditor";
 import {
   Alert,
@@ -263,6 +264,12 @@ const EmailSettings: React.FC = () => {
     }
   };
 
+  // Helper function to check if the error is related to Outlook SMTP authentication
+  const isOutlookAuthError = (details: any) => {
+    return details?.message?.includes('SmtpClientAuthentication is disabled for the Tenant') ||
+           details?.response?.includes('SmtpClientAuthentication is disabled');
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center p-8">טוען...</div>;
   }
@@ -361,6 +368,28 @@ const EmailSettings: React.FC = () => {
                       {errorDetails.responseCode && <p><strong>קוד תגובה:</strong> {errorDetails.responseCode}</p>}
                       {errorDetails.response && <p><strong>תגובה:</strong> {errorDetails.response}</p>}
                       {errorDetails.command && <p><strong>פקודה:</strong> {errorDetails.command}</p>}
+                      
+                      {isOutlookAuthError(errorDetails) && (
+                        <Alert variant="warning" className="mt-4 bg-amber-50">
+                          <AlertTitle className="text-amber-800">אימות SMTP של Outlook מושבת</AlertTitle>
+                          <AlertDescription className="text-amber-700">
+                            <p className="mb-2">חשבון ה-Outlook שלך אינו מאפשר אימות SMTP. יש לבצע אחת מהפעולות הבאות:</p>
+                            <ol className="list-decimal list-inside space-y-1 mb-2">
+                              <li>הפעל אימות SMTP בחשבון Outlook שלך דרך הפורטל של Microsoft 365</li>
+                              <li>השתמש בשירות דואר אחר כמו Gmail</li>
+                              <li>השתמש בחשבון Outlook אחר שבו מופעלת האפשרות</li>
+                            </ol>
+                            <a 
+                              href="https://aka.ms/smtp_auth_disabled" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center text-blue-600 hover:underline"
+                            >
+                              למידע נוסף <ExternalLink className="h-3 w-3 ml-1" />
+                            </a>
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                   </AlertDescription>
                 </Alert>
@@ -390,6 +419,27 @@ const EmailSettings: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <Alert className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>הערה חשובה לגבי חשבונות Outlook/Microsoft 365</AlertTitle>
+                  <AlertDescription>
+                    <p>אם אתה משתמש בחשבון Outlook או Microsoft 365, ייתכן שאימות SMTP אינו מופעל בחשבון שלך. במקרה זה, יש לפעול לפי אחת מהאפשרויות הבאות:</p>
+                    <ol className="list-decimal list-inside mt-2">
+                      <li>הפעל אימות SMTP בחשבון Outlook שלך</li>
+                      <li>השתמש בשרת SMTP אחר (כמו Gmail)</li>
+                      <li>צור חשבון Outlook חדש עם אימות SMTP מופעל</li>
+                    </ol>
+                    <a 
+                      href="https://aka.ms/smtp_auth_disabled" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center text-blue-600 hover:underline mt-2"
+                    >
+                      למידע נוסף <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  </AlertDescription>
+                </Alert>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="smtp_host">שרת SMTP</Label>
