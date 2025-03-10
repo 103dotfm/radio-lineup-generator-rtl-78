@@ -18,6 +18,8 @@ interface PrintPreviewProps {
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent, showMinutes = false }: PrintPreviewProps) => {
   const { isAuthenticated } = useAuth();
 
+  const formattedTime = format(new Date(showTime), 'HH:mm');
+
   const calculateTotalMinutes = () => {
     return items.reduce((total, item) => total + (item.duration || 0), 0);
   };
@@ -37,14 +39,14 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
     return groups;
   }, [] as Array<Array<ShowItem & { interviewees?: Interviewee[] }>>);
 
-  return (
+   return (
     <div className="print-content bg-white p-4">
       <div className="flex flex-col items-center mb-2">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12" />
         <div className="text-center mt-1">
           <h1 className="text-2xl font-bold showName showNamePrint">{showName}</h1>
           <h2 className="text-lg text-gray-600 mt-0 showTimePrint">
-            {showTime} // {showDate ? format(showDate, 'dd.MM.yyyy') : ''}
+            {formattedTime} // {showDate ? format(showDate, 'dd.MM.yyyy') : ''}
           </h2>
         </div>
       </div>
