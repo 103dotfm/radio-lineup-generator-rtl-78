@@ -14,9 +14,9 @@ const MasterSchedule = () => {
   } = useToast();
   const queryClient = useQueryClient();
   return <div className="space-y-4">
-      <div className="bg-yellow-100 p-4 rounded-lg">
+      <div className="p-4 rounded-lg bg-transparent">
         <h2 className="text-lg font-bold mb-2 text-right">לוח שידורים ראשי</h2>
-        <p className="text-right">זהו לוח השידורים הקבוע של התחנה. שינויים שנעשים כאן ישפיעו על כל השבועות העתידיים</p>
+        <p className="text-right">.זהו לוח השידורים הקבוע של התחנה. שינויים שנעשים כאן ישפיעו על כל השבועות העתידיים</p>
       </div>
 
       <div className="flex justify-end">
