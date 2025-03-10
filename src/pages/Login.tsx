@@ -90,7 +90,7 @@ const Login = () => {
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required className="mt-1" placeholder="••••••••" disabled={isLoading} dir="ltr" />
             </div>
           </div>
-          <Button type="submit" className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} className="w-full py-2 px-4 border border-transparent text-sm rounded-md text-white bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-bold">
             {isLoading ? 'מתחבר...' : 'התחבר'}
           </Button>
         </form>
