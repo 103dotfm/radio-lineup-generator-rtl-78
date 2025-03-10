@@ -44,7 +44,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
         <div className="text-center mt-1">
           <h1 className="text-2xl font-bold showName showNamePrint">{showName}</h1>
           <h2 className="text-lg text-gray-600 mt-0 showTimePrint">
-            {showTime} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
+            {showTime ? format(showDate, 'hh:mm') : ''} {showDate ? format(showDate, 'dd/MM/yyyy') : ''}
           </h2>
         </div>
       </div>
@@ -53,7 +53,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       <table className="w-full border-collapse border border-gray-200 mb-4">
         <thead>
           <tr>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-name">שם</th>
+            <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-name">מרואיינ/ת</th>
             <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-details">פרטים</th>
             {isAuthenticated && (
               <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-phone">טלפון</th>
