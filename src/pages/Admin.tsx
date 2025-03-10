@@ -27,6 +27,7 @@ const Admin = () => {
     // Fetch current server time and timezone offset
     const fetchServerSettings = async () => {
       try {
+        // Check if system_settings table exists by attempting to query it
         const { data: settingsData, error: settingsError } = await supabase
           .from('system_settings')
           .select('*')
@@ -35,6 +36,8 @@ const Admin = () => {
 
         if (!settingsError && settingsData) {
           setTimezoneOffset(parseInt(settingsData.value) || 0);
+        } else {
+          console.warn("Could not fetch timezone offset, defaulting to 0:", settingsError);
         }
 
         // Get server time
@@ -71,7 +74,7 @@ const Admin = () => {
         title: "הגדרות אזור זמן נשמרו בהצלחה",
         variant: "default"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving timezone offset:', error);
       toast({
         title: "שגיאה בשמירת הגדרות אזור זמן",
