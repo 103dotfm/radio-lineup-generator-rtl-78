@@ -163,10 +163,10 @@ const Admin = () => {
       
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="schedule" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200">לוח שידורים ראשי</TabsTrigger>
-          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200">סידורי עבודה</TabsTrigger>
-          <TabsTrigger value="users" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200">ניהול משתמשים</TabsTrigger>
-          <TabsTrigger value="email" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200">דואר אלקטרוני</TabsTrigger>
+          <TabsTrigger value="schedule" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">לוח שידורים ראשי</TabsTrigger>
+          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבודה</TabsTrigger>
+          <TabsTrigger value="users" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">ניהול משתמשים</TabsTrigger>
+          <TabsTrigger value="email" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">דואר אלקטרוני</TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
