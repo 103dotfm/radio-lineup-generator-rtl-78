@@ -14,6 +14,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import { useLocation } from 'react-router-dom';
 
 interface EmailSettingsType {
   id: string;
@@ -34,6 +35,7 @@ interface EmailSettingsType {
 
 const EmailSettings: React.FC = () => {
   const { toast } = useToast();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
@@ -64,7 +66,23 @@ const EmailSettings: React.FC = () => {
     loadSettings();
     loadRecipients();
     loadLatestShow();
-  }, []);
+    
+    const urlParams = new URLSearchParams(location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      setTimeout(() => {
+        alert(`Your Gmail authorization code is: ${code}\n\nPlease copy this code and paste it in the REFRESH TOKEN field in the SMTP settings tab.`);
+        
+        setSettings(prev => ({
+          ...prev,
+          gmail_refresh_token: code
+        }));
+        
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 500);
+    }
+  }, [location]);
 
   const loadSettings = async () => {
     try {
@@ -332,6 +350,35 @@ const EmailSettings: React.FC = () => {
   const isOutlookAuthError = (details: any) => {
     return details?.message?.includes('SmtpClientAuthentication is disabled for the Tenant') ||
            details?.response?.includes('SmtpClientAuthentication is disabled');
+  };
+
+  const initiateGmailAuth = () => {
+    if (!settings.gmail_client_id || !settings.gmail_redirect_uri) {
+      toast({
+        title: "נדרשת הגדרה של Client ID ו-Redirect URI",
+        description: "יש להגדיר את שדות Client ID ו-Redirect URI לפני חיבור ל-Gmail",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const scope = 'https://www.googleapis.com/auth/gmail.send';
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+    
+    window.open(authUrl, '_blank');
+  };
+
+  const processTemplate = (template: string) => {
+    if (!latestShow) return template;
+    
+    let processed = template;
+    const formattedDate = latestShow.date ? new Date(latestShow.date).toLocaleDateString('he-IL') : "";
+    
+    processed = processed.replace(/{{show_name}}/g, latestShow.name || '');
+    processed = processed.replace(/{{show_date}}/g, formattedDate);
+    processed = processed.replace(/{{show_time}}/g, latestShow.time || '');
+    
+    return processed;
   };
 
   if (loading) {
@@ -617,6 +664,36 @@ const EmailSettings: React.FC = () => {
                     />
                   </div>
                 </div>
+                
+                <Alert className="mt-4">
+                  <AlertTitle>אימות Gmail</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-2">
+                      לחיבור ל-Gmail, יש לעקוב אחר השלבים הבאים:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 mb-2">
+                      <li>הגדר ID לקוח, ססמת לקוח ו-URI של התחברות</li>
+                      <li>לחץ על הכפתור "אימות Gmail" למטה</li>
+                      <li>בחלון שייפתח, אשר את הרשאות הגישה</li>
+                      <li>העתק את הקוד שיוצג והדבק אותו בשדה "REFRESH TOKEN Gmail"</li>
+                      <li>לחץ על "שמור הגדרות"</li>
+                    </ol>
+                    <p className="mt-2">
+                      <strong>חשוב:</strong> יש להגדיר את URI ההתחברות זהה לכתובת האתר, לדוגמה: <code dir="ltr">https://your-app-url.com/admin</code>
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={initiateGmailAuth} 
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    disabled={!settings.gmail_client_id || !settings.gmail_redirect_uri}
+                  >
+                    אימות Gmail
+                  </Button>
+                </div>
               </div>
             </CardContent>
             <CardFooter>
@@ -648,6 +725,11 @@ const EmailSettings: React.FC = () => {
                     value={settings.subject_template}
                     onChange={(e) => setSettings({...settings, subject_template: e.target.value})}
                   />
+                  {latestShow && (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      תצוגה מקדימה: {processTemplate(settings.subject_template)}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="body_template">תוכן ההודעה</Label>
@@ -656,6 +738,7 @@ const EmailSettings: React.FC = () => {
                       content={settings.body_template}
                       onChange={(html) => setSettings({...settings, body_template: html})}
                       placeholder="תוכן הודעת הדואר אלקטרוני..."
+                      showTextAlign={true}
                     />
                   </div>
                 </div>
