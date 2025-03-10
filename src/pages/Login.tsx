@@ -85,7 +85,7 @@ const Login = () => {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 text-right">
-                אימייל
+                דואר אלקטרוני:
               </label>
               <Input
                 id="email"
@@ -101,7 +101,7 @@ const Login = () => {
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 text-right">
-                סיסמה
+                סיסמה:
               </label>
               <Input
                 id="password"
