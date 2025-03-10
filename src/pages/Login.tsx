@@ -70,8 +70,8 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg transform transition-all duration-500 hover:shadow-xl hover:scale-105">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-blue-500 to-green-500">
+      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg transform transition-all duration-500 hover:shadow-xl">
         <div className="text-center">
           <img
             src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png"
