@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,28 +17,23 @@ interface PrintPreviewProps {
 const PrintPreview = ({ showName, showTime, showDate, items, editorContent, showMinutes = false }: PrintPreviewProps) => {
   const { isAuthenticated } = useAuth();
 
-  const formattedTime = format(new Date(showTime), 'HH:mm');
-
-  const calculateTotalMinutes = () => {
-    return items.reduce((total, item) => total + (item.duration || 0), 0);
+  // Function to parse showTime string to Date object
+  const parseShowTime = (timeString: string): Date | null => {
+    const timeParts = timeString.split(':');
+    if (timeParts.length >= 2) {
+      const date = new Date();
+      date.setHours(parseInt(timeParts[0], 10));
+      date.setMinutes(parseInt(timeParts[1], 10));
+      date.setSeconds(0); // Set seconds to 0 as we don't need them
+      return date;
+    }
+    return null; // Return null if the time string is not in the expected format
   };
 
-  // Group items by dividers - each divider starts a new group
-  const groupedItems = items.reduce((groups, item) => {
-    if (item.is_divider) {
-      // Start a new group with the divider
-      groups.push([item]);
-    } else if (groups.length === 0) {
-      // First group if no dividers yet
-      groups.push([item]);
-    } else {
-      // Add to current group
-      groups[groups.length - 1].push(item);
-    }
-    return groups;
-  }, [] as Array<Array<ShowItem & { interviewees?: Interviewee[] }>>);
+  const showTimeDate = parseShowTime(showTime);
+  const formattedTime = showTimeDate ? format(showTimeDate, 'HH:mm') : showTime;
 
-   return (
+  return (
     <div className="print-content bg-white p-4">
       <div className="flex flex-col items-center mb-2">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12" />
