@@ -319,8 +319,15 @@ serve(async (req) => {
       // Prepare email content
       console.log("Preparing email content...");
       
-      // Format date for display
-      const formattedDate = show.date ? new Date(show.date).toLocaleDateString('he-IL') : "";
+      // Format date for display - properly parse the date string
+      let formattedDate = "";
+      try {
+        formattedDate = show.date ? new Date(show.date).toLocaleDateString('he-IL') : "";
+        console.log(`Formatted date: ${formattedDate} from raw date: ${show.date}`);
+      } catch (dateError) {
+        console.error("Error formatting date:", dateError);
+        formattedDate = show.date || "";
+      }
       
       // Create lineup link - ensure we're using the right URL format
       let lineupLink = "";
@@ -369,7 +376,9 @@ serve(async (req) => {
       intervieweesList += "</ul>";
 
       // Replace placeholders in templates
-      let subject = emailSettings.subject_template.replace("{{show_name}}", show.name);
+      let subject = emailSettings.subject_template.replace(/{{show_name}}/g, show.name);
+      subject = subject.replace(/{{show_date}}/g, formattedDate);
+      subject = subject.replace(/{{show_time}}/g, show.time || "");
       
       let body = emailSettings.body_template
         .replace(/{{show_name}}/g, show.name)

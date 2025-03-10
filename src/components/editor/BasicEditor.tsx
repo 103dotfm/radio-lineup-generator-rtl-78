@@ -14,9 +14,10 @@ export interface BasicEditorProps {
   className?: string;
   placeholder?: string;
   align?: 'left' | 'right' | 'center';
+  showTextAlign?: boolean;
 }
 
-const BasicEditor = ({ content, onChange, className = '', placeholder = '', align = 'right' }: BasicEditorProps) => {
+const BasicEditor = ({ content, onChange, className = '', placeholder = '', align = 'right', showTextAlign = false }: BasicEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -116,33 +117,37 @@ const BasicEditor = ({ content, onChange, className = '', placeholder = '', alig
           <LinkIcon className="h-4 w-4" />
         </Button>
         <div className="flex-1"></div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          data-active={editor.isActive({ textAlign: 'left' })}
-          className={editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}
-        >
-          <AlignLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          data-active={editor.isActive({ textAlign: 'center' })}
-          className={editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}
-        >
-          <AlignCenter className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          data-active={editor.isActive({ textAlign: 'right' })}
-          className={editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}
-        >
-          <AlignRight className="h-4 w-4" />
-        </Button>
+        {showTextAlign && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor.chain().focus().setTextAlign('left').run()}
+              data-active={editor.isActive({ textAlign: 'left' })}
+              className={editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}
+            >
+              <AlignLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor.chain().focus().setTextAlign('center').run()}
+              data-active={editor.isActive({ textAlign: 'center' })}
+              className={editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}
+            >
+              <AlignCenter className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => editor.chain().focus().setTextAlign('right').run()}
+              data-active={editor.isActive({ textAlign: 'right' })}
+              className={editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}
+            >
+              <AlignRight className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
       <EditorContent editor={editor} className={`p-4 ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`} />
     </div>
