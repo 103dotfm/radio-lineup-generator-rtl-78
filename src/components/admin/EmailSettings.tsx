@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +15,29 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 
+interface EmailSettingsType {
+  id: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_password: string;
+  sender_email: string;
+  sender_name: string;
+  subject_template: string;
+  body_template: string;
+  email_method?: string;
+  gmail_client_id?: string;
+  gmail_client_secret?: string;
+  gmail_refresh_token?: string;
+  gmail_redirect_uri?: string;
+}
+
 const EmailSettings: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<EmailSettingsType>({
     id: '',
     smtp_host: '',
     smtp_port: 587,
@@ -30,7 +46,12 @@ const EmailSettings: React.FC = () => {
     sender_email: '',
     sender_name: '',
     subject_template: '',
-    body_template: ''
+    body_template: '',
+    email_method: 'smtp',
+    gmail_client_id: '',
+    gmail_client_secret: '',
+    gmail_refresh_token: '',
+    gmail_redirect_uri: ''
   });
   const [recipients, setRecipients] = useState<Array<{id: string, email: string}>>([]);
   const [newEmail, setNewEmail] = useState('');
@@ -56,7 +77,7 @@ const EmailSettings: React.FC = () => {
       if (error) throw error;
       
       if (data) {
-        setSettings(data);
+        setSettings(data as EmailSettingsType);
       }
     } catch (error) {
       console.error('Error loading email settings:', error);
@@ -126,7 +147,12 @@ const EmailSettings: React.FC = () => {
           sender_email: settings.sender_email,
           sender_name: settings.sender_name,
           subject_template: settings.subject_template,
-          body_template: settings.body_template
+          body_template: settings.body_template,
+          email_method: settings.email_method,
+          gmail_client_id: settings.gmail_client_id,
+          gmail_client_secret: settings.gmail_client_secret,
+          gmail_refresh_token: settings.gmail_refresh_token,
+          gmail_redirect_uri: settings.gmail_redirect_uri
         });
 
       if (error) throw error;
@@ -144,6 +170,45 @@ const EmailSettings: React.FC = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveGmailRefreshToken = async (refreshToken: string) => {
+    try {
+      const { error } = await supabase
+        .from('email_settings')
+        .update({
+          gmail_refresh_token: refreshToken,
+          id: settings.id,
+          body_template: settings.body_template,
+          smtp_host: settings.smtp_host,
+          smtp_port: settings.smtp_port,
+          smtp_user: settings.smtp_user,
+          smtp_password: settings.smtp_password,
+          sender_email: settings.sender_email,
+          sender_name: settings.sender_name,
+          subject_template: settings.subject_template,
+          email_method: settings.email_method,
+          gmail_client_id: settings.gmail_client_id,
+          gmail_client_secret: settings.gmail_client_secret,
+          gmail_redirect_uri: settings.gmail_redirect_uri
+        });
+
+      if (error) throw error;
+      
+      setSettings({ ...settings, gmail_refresh_token: refreshToken });
+      
+      toast({
+        title: "הגדרות Gmail נשמרו בהצלחה",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error saving Gmail refresh token:', error);
+      toast({
+        title: "שגיאה בשמירת הגדרות Gmail",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -264,7 +329,6 @@ const EmailSettings: React.FC = () => {
     }
   };
 
-  // Helper function to check if the error is related to Outlook SMTP authentication
   const isOutlookAuthError = (details: any) => {
     return details?.message?.includes('SmtpClientAuthentication is disabled for the Tenant') ||
            details?.response?.includes('SmtpClientAuthentication is disabled');
@@ -375,7 +439,7 @@ const EmailSettings: React.FC = () => {
                           <AlertDescription className="text-amber-700">
                             <p className="mb-2">חשבון ה-Outlook שלך אינו מאפשר אימות SMTP. יש לבצע אחת מהפעולות הבאות:</p>
                             <ol className="list-decimal list-inside space-y-1 mb-2">
-                              <li>הפעל אימות SMTP בחשבון Outlook שלך דרך הפורטל של Microsoft 365</li>
+                              <li>הפעל אימות SMTP בחשבון Outlook שלך</li>
                               <li>השתמש בשירות דואר אחר כמו Gmail</li>
                               <li>השתמש בחשבון Outlook אחר שבו מופעלת האפשרות</li>
                             </ol>
@@ -498,6 +562,58 @@ const EmailSettings: React.FC = () => {
                       id="sender_name"
                       value={settings.sender_name}
                       onChange={(e) => setSettings({...settings, sender_name: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email_method">שיטת אימות</Label>
+                    <Input
+                      id="email_method"
+                      dir="ltr"
+                      value={settings.email_method}
+                      onChange={(e) => setSettings({...settings, email_method: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gmail_client_id">ID לקוח Gmail</Label>
+                    <Input
+                      id="gmail_client_id"
+                      dir="ltr"
+                      value={settings.gmail_client_id}
+                      onChange={(e) => setSettings({...settings, gmail_client_id: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gmail_client_secret">ססמה לקוח Gmail</Label>
+                    <Input
+                      id="gmail_client_secret"
+                      dir="ltr"
+                      type="password"
+                      value={settings.gmail_client_secret}
+                      onChange={(e) => setSettings({...settings, gmail_client_secret: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gmail_refresh_token">REFRESH TOKEN Gmail</Label>
+                    <Input
+                      id="gmail_refresh_token"
+                      dir="ltr"
+                      value={settings.gmail_refresh_token}
+                      onChange={(e) => setSettings({...settings, gmail_refresh_token: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gmail_redirect_uri">URI של התחברות ל-Gmail</Label>
+                    <Input
+                      id="gmail_redirect_uri"
+                      dir="ltr"
+                      value={settings.gmail_redirect_uri}
+                      onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
                     />
                   </div>
                 </div>

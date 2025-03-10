@@ -3,29 +3,39 @@ import React from 'react';
 import { Editor, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import { Bold, Italic, Underline as UnderlineIcon } from 'lucide-react';
+import Link from '@tiptap/extension-link';
+import TextAlign from '@tiptap/extension-text-align';
+import { Bold, Italic, Underline as UnderlineIcon, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
-interface BasicEditorProps {
+export interface BasicEditorProps {
   content: string;
   onChange?: (html: string) => void;
   className?: string;
   placeholder?: string;
-  align?: 'right' | 'center';
+  align?: 'left' | 'right' | 'center';
 }
 
-const BasicEditor = ({ content, onChange, className, placeholder = '', align = 'right' }: BasicEditorProps) => {
+const BasicEditor = ({ content, onChange, className = '', placeholder = '', align = 'right' }: BasicEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: false,
       }),
       Underline,
+      Link.configure({
+        openOnClick: true,
+      }),
+      TextAlign.configure({
+        types: ['paragraph'],
+        alignments: ['left', 'center', 'right'],
+        defaultAlignment: align,
+      }),
     ],
     content,
     editorProps: {
       attributes: {
-        class: `prose prose-sm focus:outline-none ${align === 'right' ? 'text-right' : 'text-center'} ${className || ''}`,
+        class: `prose prose-sm focus:outline-none ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'} ${className}`,
         placeholder,
       },
     },
@@ -34,7 +44,7 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
         onChange(editor.getHTML());
       }
     },
-  });  // Remove dependency array to prevent editor recreation
+  });
 
   // Update editor content when the content prop changes, but only if it's different
   React.useEffect(() => {
@@ -46,6 +56,25 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
   if (!editor) {
     return null;
   }
+
+  const setLink = () => {
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    // cancelled
+    if (url === null) {
+      return;
+    }
+
+    // empty
+    if (url === '') {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+
+    // update link
+    editor.chain().focus().setLink({ href: url }).run();
+  };
 
   return (
     <div className="border rounded-md bg-white detailsEditor">
@@ -77,8 +106,45 @@ const BasicEditor = ({ content, onChange, className, placeholder = '', align = '
         >
           <UnderlineIcon className="h-4 w-4" />
         </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={setLink}
+          data-active={editor.isActive('link')}
+          className={editor.isActive('link') ? 'bg-muted' : ''}
+        >
+          <LinkIcon className="h-4 w-4" />
+        </Button>
+        <div className="flex-1"></div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          data-active={editor.isActive({ textAlign: 'left' })}
+          className={editor.isActive({ textAlign: 'left' }) ? 'bg-muted' : ''}
+        >
+          <AlignLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          data-active={editor.isActive({ textAlign: 'center' })}
+          className={editor.isActive({ textAlign: 'center' }) ? 'bg-muted' : ''}
+        >
+          <AlignCenter className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          data-active={editor.isActive({ textAlign: 'right' })}
+          className={editor.isActive({ textAlign: 'right' }) ? 'bg-muted' : ''}
+        >
+          <AlignRight className="h-4 w-4" />
+        </Button>
       </div>
-      <EditorContent editor={editor} className={`p-4 ${align === 'right' ? 'text-right' : 'text-center'}`} />
+      <EditorContent editor={editor} className={`p-4 ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`} />
     </div>
   );
 };
