@@ -44,7 +44,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
         <div className="text-center mt-1">
           <h1 className="text-2xl font-bold showName showNamePrint">{showName}</h1>
           <h2 className="text-lg text-gray-600 mt-0 showTimePrint">
-            {showTime ? format(showTime, 'HH:mm')} {showDate ? format(showDate, 'dd.MM.yyyy') : ''}
+            {showTime ? format('HH:mm')} {showDate ? format(showDate, 'dd.MM.yyyy') : ''}
           </h2>
         </div>
       </div>
