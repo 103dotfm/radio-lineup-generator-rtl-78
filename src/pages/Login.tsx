@@ -1,24 +1,21 @@
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get the redirect path from URL query params or use default
-  const from = new URLSearchParams(location.search).get("from") || "/";
+  const from = new URLSearchParams(location.search).get('from') || '/';
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate(from, { replace: true });
@@ -28,12 +25,12 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     if (!email || !password) {
       toast({
-        variant: "destructive",
-        title: "שגיאה בהתחברות",
-        description: "יש להזין אימייל וסיסמה"
+        variant: 'destructive',
+        title: 'שגיאה בהתחברות',
+        description: 'יש להזין אימייל וסיסמה',
       });
       setIsLoading(false);
       return;
@@ -41,33 +38,31 @@ const Login = () => {
 
     try {
       const { error } = await login(email, password);
-      
+
       if (error) {
-        console.error("Login error details:", error);
-        let errorMessage = "אנא בדוק את פרטי ההתחברות ונסה שוב";
-        
-        // Handle specific error cases
-        if (error.message?.includes("Invalid login credentials")) {
-          errorMessage = "שם משתמש או סיסמה שגויים";
+        console.error('Login error details:', error);
+        let errorMessage = 'אנא בדוק את פרטי ההתחברות ונסה שוב';
+
+        if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'שם משתמש או סיסמה שגויים';
         }
-        
+
         toast({
-          variant: "destructive",
-          title: "שגיאה בהתחברות",
-          description: errorMessage
+          variant: 'destructive',
+          title: 'שגיאה בהתחברות',
+          description: errorMessage,
         });
       } else {
         toast({
-          title: "התחברת בהצלחה"
+          title: 'התחברת בהצלחה',
         });
-        // Redirect will happen automatically via the useEffect above
       }
     } catch (err) {
-      console.error("Unexpected login error:", err);
+      console.error('Unexpected login error:', err);
       toast({
-        variant: "destructive",
-        title: "שגיאה בהתחברות",
-        description: "אירעה שגיאה לא צפויה. אנא נסה שוב מאוחר יותר"
+        variant: 'destructive',
+        title: 'שגיאה בהתחברות',
+        description: 'אירעה שגיאה לא צפויה. אנא נסה שוב מאוחר יותר',
       });
     } finally {
       setIsLoading(false);
@@ -75,23 +70,21 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
+      <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg transform transition-all duration-500 hover:shadow-xl hover:scale-105">
         <div className="text-center">
-          <img 
-            src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" 
-            alt="103FM" 
+          <img
+            src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png"
+            alt="103FM"
             className="mx-auto h-16 w-auto loginLogo"
           />
-          <h2 className="mt-6 text-2xl font-bold">מערכת ליינאפים</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            יש להתחבר עם דואר אלקטרוני וסיסמה
-          </p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">מערכת ליינאפים</h2>
+          <p className="mt-2 text-sm text-gray-600">יש להתחבר עם דואר אלקטרוני וסיסמה</p>
         </div>
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-right">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 text-right">
                 אימייל
               </label>
               <Input
@@ -107,7 +100,7 @@ const Login = () => {
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-right">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 text-right">
                 סיסמה
               </label>
               <Input
@@ -123,8 +116,12 @@ const Login = () => {
               />
             </div>
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "מתחבר..." : "התחבר"}
+          <Button
+            type="submit"
+            className="w-full py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={isLoading}
+          >
+            {isLoading ? 'מתחבר...' : 'התחבר'}
           </Button>
         </form>
       </div>
