@@ -54,7 +54,6 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
         <thead>
           <tr>
             <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-name">שם</th>
-            <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-title">קרדיט</th>
             <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-details">פרטים</th>
             {isAuthenticated && (
               <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-phone">טלפון</th>
@@ -114,10 +113,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                     <React.Fragment key={item.id}>
                       <tr>
                         <td className="py-3 px-4 border border-gray-200 font-medium text-base col-print-name">
-                          {item.name}
-                        </td>
-                        <td className="py-3 px-4 border border-gray-200 text-base col-print-title">
-                          {item.title}
+                          <strong>{item.name}</strong><br />{item.title}
                         </td>
                         <td className="py-3 px-4 border border-gray-200 details-column prose prose-sm max-w-none col-print-details" 
                             rowSpan={intervieweeCount + 1}
@@ -137,10 +133,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                       {item.interviewees?.map((interviewee) => (
                         <tr key={interviewee.id}>
                           <td className="py-3 px-4 border border-gray-200 text-base col-print-name">
-                            {interviewee.name}
-                          </td>
-                          <td className="py-3 px-4 border border-gray-200 text-base col-print-title">
-                            {interviewee.title}
+                            <strong>{interviewee.name}</strong><br />{interviewee.title}
                           </td>
                           {isAuthenticated && (
                             <td className="py-3 px-4 border border-gray-200 text-base whitespace-nowrap col-print-phone">
