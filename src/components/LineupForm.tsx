@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { addGuest } from '../lib/supabase/guests';
@@ -134,7 +133,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       console.log('Using parent onDividerAdd handler');
       onDividerAdd();
     } else {
-      // Create a divider item with is_divider explicitly set to true
       const dividerItem = {
         name: 'שעה שנייה',
         title: '',
@@ -146,7 +144,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
         is_divider: true
       };
       
-      // Debug: Log to make sure it's true before passing to onAdd
       console.log('Adding divider item with flags:', {
         is_break: dividerItem.is_break,
         is_note: dividerItem.is_note,
@@ -189,7 +186,6 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
           <BasicEditor
             content={details}
             onChange={setDetails}
-            className="min-h-[100px]"
             placeholder="פרטים"
           />
         </div>

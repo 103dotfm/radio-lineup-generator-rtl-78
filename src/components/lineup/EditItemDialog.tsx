@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ interface EditItemDialogProps {
 }
 
 const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProps) => {
-  // Store the form state in a ref to persist across tab switches
   const formDataRef = useRef({
     name: item?.name || '',
     title: item?.title || '',
@@ -42,12 +40,10 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
     details: item?.details || ''
   });
 
-  // State for UI rendering
   const [formState, setFormState] = useState(formDataRef.current);
   const [hasChanges, setHasChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  
-  // Initialize form state when dialog opens or item changes
+
   useEffect(() => {
     if (open && item) {
       const initialState = {
@@ -62,9 +58,8 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
       setFormState(initialState);
       setHasChanges(false);
     }
-  }, [open, item?.id]); // Only depend on open state and item ID
+  }, [open, item?.id]);
 
-  // Check for changes against the initial state
   useEffect(() => {
     if (!open) return;
     
@@ -111,7 +106,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    // Update both the React state and the ref
     formDataRef.current = {
       ...formDataRef.current,
       [field]: value
@@ -124,12 +118,10 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   };
 
   const handleEditInterviewee = (intervieweeId: string, updatedData: Partial<Interviewee>) => {
-    // This is a placeholder function - actual implementation would be provided through props
     console.log('Edit interviewee:', intervieweeId, updatedData);
   };
 
   const handleDeleteInterviewee = (intervieweeId: string) => {
-    // This is a placeholder function - actual implementation would be provided through props
     console.log('Delete interviewee:', intervieweeId);
   };
 
@@ -234,7 +226,6 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
                 <BasicEditor
                   content={formState.details}
                   onChange={(html) => handleInputChange('details', html)}
-                  className="min-h-[100px]"
                   align="right"
                 />
               </div>
