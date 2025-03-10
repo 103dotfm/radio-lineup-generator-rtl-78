@@ -5,7 +5,7 @@ import MasterSchedule from '@/components/schedule/MasterSchedule';
 import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,29 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 
 const Admin = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [timezoneOffset, setTimezoneOffset] = useState(0);
   const [serverTime, setServerTime] = useState<Date | null>(null);
   const [savingOffset, setSavingOffset] = useState(false);
+  const [redirectProcessed, setRedirectProcessed] = useState(false);
+  const [defaultTab, setDefaultTab] = useState("schedule");
+
+  // Check for OAuth code in the URL
+  useEffect(() => {
+    const code = searchParams.get('code');
+    
+    if (code && !redirectProcessed) {
+      console.log("Found OAuth code in URL, setting default tab to email");
+      setDefaultTab("email");
+      setRedirectProcessed(true);
+      
+      // Remove the code from the URL without reloading the page
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams, redirectProcessed]);
 
   useEffect(() => {
     // Fetch current server time and timezone offset
@@ -96,6 +113,12 @@ const Admin = () => {
     return offsetDate.toLocaleTimeString('he-IL');
   };
 
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If authenticated but not admin, redirect to home
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
@@ -162,7 +185,7 @@ const Admin = () => {
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="schedule" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="schedule">לוח שידורים ראשי</TabsTrigger>
           <TabsTrigger value="arrangements">סידורי עבודה</TabsTrigger>
