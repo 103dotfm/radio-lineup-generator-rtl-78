@@ -16,7 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 
 const Admin = () => {
-  const { isAdmin, isAuthenticated, getSession } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -36,30 +36,9 @@ const Admin = () => {
       setDefaultTab("email");
       
       // Remove the code from the URL without reloading the page
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
+      navigate('/admin', { replace: true });
     }
-  }, [searchParams]);
-
-  useEffect(() => {
-    // Check authentication status and redirect if needed
-    const checkAuth = async () => {
-      const session = await getSession();
-      if (!session && oauthCode) {
-        // Store the OAuth code in sessionStorage to retrieve after login
-        sessionStorage.setItem('oauthCode', oauthCode);
-        // Redirect to login with returnUrl set to admin
-        navigate('/login?returnUrl=/admin', { replace: true });
-      } else if (session && sessionStorage.getItem('oauthCode')) {
-        // Retrieve the stored OAuth code after successful login
-        setOauthCode(sessionStorage.getItem('oauthCode'));
-        setDefaultTab("email");
-        sessionStorage.removeItem('oauthCode');
-      }
-    };
-    
-    checkAuth();
-  }, [oauthCode, isAuthenticated, navigate, getSession]);
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     // Fetch current server time and timezone offset
@@ -135,11 +114,7 @@ const Admin = () => {
 
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
-    // Store OAuth code if present before redirecting
-    if (oauthCode) {
-      sessionStorage.setItem('oauthCode', oauthCode);
-    }
-    return <Navigate to="/login?returnUrl=/admin" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // If authenticated but not admin, redirect to home

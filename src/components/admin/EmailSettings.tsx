@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +26,10 @@ import {
 } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import SmtpSettings from "./email/SmtpSettings";
-import GmailSettings from "./email/GmailSettings";
+
+// Import subcomponents
+import SmtpSettings from './email/SmtpSettings';
+import GmailSettings from './email/GmailSettings';
 
 interface EmailSettingsProps {
   oauthCode?: string | null;
@@ -149,7 +152,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         toast({
           title: "אימות Gmail הושלם בהצלחה",
           description: "התחברות לחשבון Gmail בוצעה בהצלחה",
-          variant: "default"
+          variant: "success"
         });
       } else {
         throw new Error('לא התקבל טוקן תקין מגוגל');
@@ -282,7 +285,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         
         toast({
           title: "טוקן Gmail רוענן בהצלחה",
-          variant: "default"
+          variant: "success"
         });
       } else {
         throw new Error('לא התקבל טוקן גישה חדש');
@@ -530,7 +533,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
       toast({
         title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
         description: `נשלח לכתובת ${testEmailAddress}`,
-        variant: "default"
+        variant: "success"
       });
       
     } catch (error) {

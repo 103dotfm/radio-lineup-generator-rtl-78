@@ -16,7 +16,6 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
-  getSession: () => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -75,16 +74,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error('Error initializing session:', error);
-    }
-  };
-
-  const getSession = async () => {
-    try {
-      const { data } = await supabase.auth.getSession();
-      return data.session;
-    } catch (error) {
-      console.error('Error getting session:', error);
-      return null;
     }
   };
 
@@ -154,7 +143,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout, getSession }}>
+    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
