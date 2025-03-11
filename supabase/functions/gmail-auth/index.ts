@@ -27,7 +27,17 @@ serve(async (req) => {
     console.log("Starting gmail-auth function");
     
     // Parse request body
-    const requestData: OAuthRequest = await req.json();
+    let requestData: OAuthRequest;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      console.error("Error parsing request JSON:", error);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    
     console.log("Request data:", {
       hasCode: !!requestData.code,
       hasRefreshToken: !!requestData.refreshToken,
@@ -41,10 +51,7 @@ serve(async (req) => {
       console.error("Missing client credentials");
       return new Response(
         JSON.stringify({ error: "Missing client credentials" }),
-        { 
-          status: 400, 
-          headers: corsHeaders 
-        }
+        { status: 400, headers: corsHeaders }
       );
     }
     
@@ -55,63 +62,81 @@ serve(async (req) => {
         console.error("Missing redirect URI for code exchange");
         return new Response(
           JSON.stringify({ error: "Missing redirect URI" }),
-          { 
-            status: 400, 
-            headers: corsHeaders 
-          }
+          { status: 400, headers: corsHeaders }
         );
       }
       
       console.log("Exchanging auth code for tokens");
+      console.log("Redirect URI:", requestData.redirectUri);
+      
+      const tokenParams = new URLSearchParams({
+        code: requestData.code,
+        client_id: requestData.clientId,
+        client_secret: requestData.clientSecret,
+        redirect_uri: requestData.redirectUri,
+        grant_type: "authorization_code",
+      });
+      
+      console.log("Token request params:", tokenParams.toString());
       
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          code: requestData.code,
-          client_id: requestData.clientId,
-          client_secret: requestData.clientSecret,
-          redirect_uri: requestData.redirectUri,
-          grant_type: "authorization_code",
-        }),
+        body: tokenParams,
       });
       
-      if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.text();
-        console.error("Token exchange failed:", errorData);
+      const responseStatus = tokenResponse.status;
+      let responseBody;
+      
+      try {
+        responseBody = await tokenResponse.json();
+      } catch (error) {
+        const responseText = await tokenResponse.text();
+        console.error("Failed to parse token response as JSON:", responseText);
         return new Response(
           JSON.stringify({ 
-            error: "Failed to exchange authorization code for tokens",
-            details: errorData
+            error: "Failed to parse token response", 
+            details: responseText,
+            status: responseStatus
           }),
-          { 
-            status: 400, 
-            headers: corsHeaders 
-          }
+          { status: 400, headers: corsHeaders }
         );
       }
       
-      const tokenData = await tokenResponse.json();
-      console.log("Token exchange successful");
+      if (!tokenResponse.ok) {
+        console.error("Token exchange failed:", responseStatus, responseBody);
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to exchange authorization code for tokens",
+            details: responseBody,
+            status: responseStatus
+          }),
+          { status: responseStatus, headers: corsHeaders }
+        );
+      }
+      
+      console.log("Token exchange successful, response:", JSON.stringify({
+        access_token: tokenResponse.ok ? "REDACTED" : "ERROR",
+        token_type: responseBody.token_type,
+        expires_in: responseBody.expires_in,
+        has_refresh_token: !!responseBody.refresh_token,
+      }));
       
       // Calculate expiry date
       const expiryDate = new Date();
-      expiryDate.setSeconds(expiryDate.getSeconds() + tokenData.expires_in);
+      expiryDate.setSeconds(expiryDate.getSeconds() + responseBody.expires_in);
       
       return new Response(
         JSON.stringify({
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
+          accessToken: responseBody.access_token,
+          refreshToken: responseBody.refresh_token,
           expiryDate: expiryDate.toISOString(),
-          tokenType: tokenData.token_type,
-          scope: tokenData.scope,
+          tokenType: responseBody.token_type,
+          scope: responseBody.scope,
         }),
-        { 
-          status: 200, 
-          headers: corsHeaders 
-        }
+        { status: 200, headers: corsHeaders }
       );
     } else if (requestData.refreshToken) {
       // Refresh access token using refresh token
@@ -138,10 +163,7 @@ serve(async (req) => {
             error: "Failed to refresh access token",
             details: errorData
           }),
-          { 
-            status: 400, 
-            headers: corsHeaders 
-          }
+          { status: 400, headers: corsHeaders }
         );
       }
       
@@ -159,19 +181,13 @@ serve(async (req) => {
           tokenType: refreshData.token_type,
           scope: refreshData.scope,
         }),
-        { 
-          status: 200, 
-          headers: corsHeaders 
-        }
+        { status: 200, headers: corsHeaders }
       );
     } else {
       console.error("Missing either code or refresh token");
       return new Response(
         JSON.stringify({ error: "Missing either authorization code or refresh token" }),
-        { 
-          status: 400, 
-          headers: corsHeaders 
-        }
+        { status: 400, headers: corsHeaders }
       );
     }
   } catch (error) {
@@ -179,12 +195,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: "Unexpected error in gmail-auth function",
-        details: error.message || error 
+        details: error.message || String(error) 
       }),
-      { 
-        status: 500, 
-        headers: corsHeaders 
-      }
+      { status: 500, headers: corsHeaders }
     );
   }
 });
