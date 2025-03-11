@@ -1,27 +1,31 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
-  const { data: shows, error } = await supabase
-    .from('shows')
-    .select(`
-      *,
-      items:show_items(
+  try {
+    const { data: shows, error } = await supabase
+      .from('shows')
+      .select(`
         *,
-        interviewees(*)
-      )
-    `)
-    .order('created_at', { ascending: false });
+        items:show_items(
+          *,
+          interviewees(*)
+        )
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching shows:', error);
+    if (error) {
+      console.error('Error fetching shows:', error);
+      throw error;
+    }
+
+    console.log('Fetched shows:', shows);
+    return shows || [];
+  } catch (error) {
+    console.error('Error in getShows:', error);
     throw error;
   }
-
-  console.log('Fetched shows:', shows);
-  return shows || [];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
