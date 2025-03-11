@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,10 +25,7 @@ import {
 } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-
-// Import subcomponents
-import SmtpSettings from './email/SmtpSettings';
-import GmailSettings from './email/GmailSettings';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EmailSettingsProps {
   oauthCode?: string | null;
@@ -56,6 +52,7 @@ interface EmailSettingsType {
 
 const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
   const { toast } = useToast();
+  const { preserveOauthState } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
@@ -152,7 +149,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         toast({
           title: "אימות Gmail הושלם בהצלחה",
           description: "התחברות לחשבון Gmail בוצעה בהצלחה",
-          variant: "success"
+          variant: "default"
         });
       } else {
         throw new Error('לא התקבל טוקן תקין מגוגל');
@@ -243,10 +240,13 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
     }
     
     saveSettings().then(() => {
-      const scope = 'https://www.googleapis.com/auth/gmail.send';
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+      const state = Math.random().toString(36).substring(2, 15);
+      preserveOauthState(state);
       
-      console.log('Opening Google auth URL');
+      const scope = 'https://www.googleapis.com/auth/gmail.send';
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent&state=${state}`;
+      
+      console.log('Opening Google auth URL with state parameter');
       window.location.href = authUrl;
     });
   };
@@ -285,7 +285,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         
         toast({
           title: "טוקן Gmail רוענן בהצלחה",
-          variant: "success"
+          variant: "default"
         });
       } else {
         throw new Error('לא התקבל טוקן גישה חדש');
@@ -533,7 +533,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
       toast({
         title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
         description: `נשלח לכתובת ${testEmailAddress}`,
-        variant: "success"
+        variant: "default"
       });
       
     } catch (error) {

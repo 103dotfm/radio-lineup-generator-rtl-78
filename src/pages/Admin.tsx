@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import UserManagement from '@/components/admin/UserManagement';
 import MasterSchedule from '@/components/schedule/MasterSchedule';
@@ -16,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 
 const Admin = () => {
-  const { isAdmin, isAuthenticated } = useAuth();
+  const { isAdmin, isAuthenticated, getOauthState } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -30,15 +29,30 @@ const Admin = () => {
   // Check for OAuth code in URL and preserve it for EmailSettings
   useEffect(() => {
     const code = searchParams.get('code');
+    const state = searchParams.get('state');
+    const savedState = getOauthState();
+    
     if (code) {
       console.log("Found OAuth code in URL:", code.substring(0, 5) + "...");
-      setOauthCode(code);
-      setDefaultTab("email");
       
-      // Remove the code from the URL without reloading the page
-      navigate('/admin', { replace: true });
+      if (state && savedState && state === savedState) {
+        console.log("OAuth state validation passed");
+        setOauthCode(code);
+        setDefaultTab("email");
+        
+        // Remove the code from the URL without reloading the page
+        navigate('/admin', { replace: true });
+      } else {
+        console.warn("OAuth state validation failed or no state present");
+        toast({
+          title: "שגיאת אימות OAuth",
+          description: "לא ניתן לאמת את בקשת האימות. נא לנסות שוב.",
+          variant: "destructive"
+        });
+        navigate('/admin', { replace: true });
+      }
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, toast, getOauthState]);
 
   useEffect(() => {
     // Fetch current server time and timezone offset
@@ -174,7 +188,7 @@ const Admin = () => {
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="schedule" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">לוח שידורים ראשי</TabsTrigger>
-          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבודה</TabsTrigger>
+          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבו��ה</TabsTrigger>
           <TabsTrigger value="users" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">ניהול משתמשים</TabsTrigger>
           <TabsTrigger value="email" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">דואר אלקטרוני</TabsTrigger>
         </TabsList>
