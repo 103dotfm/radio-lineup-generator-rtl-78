@@ -16,14 +16,9 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
-  preserveOauthState: (state: string) => void;
-  getOauthState: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-// Key for storing OAuth state in localStorage
-const OAUTH_STATE_KEY = 'gmail_oauth_state';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -61,51 +56,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Handle session persistence and restoration
-  const initializeSession = async () => {
-    try {
-      // Check for existing session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        console.log('Found existing session', session.user.id);
-        setIsAuthenticated(true);
-        await checkUserRole(session.user.id, true);
-      } else {
-        console.log('No session found');
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Error initializing session:', error);
-    }
-  };
-
   useEffect(() => {
-    // Initialize session on component mount
-    initializeSession();
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsAuthenticated(true);
+        checkUserRole(session.user.id, true);
+      }
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      
       if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in:', session.user.id);
         setIsAuthenticated(true);
-        await checkUserRole(session.user.id, true);
+        checkUserRole(session.user.id, true);
       } else if (event === 'SIGNED_OUT') {
-        console.log('User signed out');
         setIsAuthenticated(false);
         setIsAdmin(false);
         setUser(null);
         lastUserCheckRef.current = 0;
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        console.log('Token refreshed for user:', session.user.id);
-        // No need to re-authenticate, just ensure user data is current
-        await checkUserRole(session.user.id, false);
       }
     });
+
+    // Remove visibility change listener entirely since we're using caching
     
     return () => {
       subscription.unsubscribe();
@@ -147,26 +120,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Store OAuth state in localStorage to persist across redirects
-  const preserveOauthState = (state: string) => {
-    localStorage.setItem(OAUTH_STATE_KEY, state);
-  };
-
-  // Retrieve OAuth state from localStorage
-  const getOauthState = () => {
-    return localStorage.getItem(OAUTH_STATE_KEY);
-  };
-
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      isAdmin, 
-      user, 
-      login, 
-      logout,
-      preserveOauthState,
-      getOauthState
-    }}>
+    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

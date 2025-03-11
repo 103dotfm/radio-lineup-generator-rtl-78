@@ -4,7 +4,7 @@ import MasterSchedule from '@/components/schedule/MasterSchedule';
 import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,58 +13,43 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowRight, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
-
 const Admin = () => {
-  const { isAdmin, isAuthenticated, getOauthState } = useAuth();
+  const {
+    isAdmin,
+    isAuthenticated
+  } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [searchParams] = useSearchParams();
   const [timezoneOffset, setTimezoneOffset] = useState(0);
   const [serverTime, setServerTime] = useState<Date | null>(null);
   const [savingOffset, setSavingOffset] = useState(false);
+  const [redirectProcessed, setRedirectProcessed] = useState(false);
   const [defaultTab, setDefaultTab] = useState("schedule");
-  const [oauthCode, setOauthCode] = useState<string | null>(null);
-  
-  // Check for OAuth code in URL and preserve it for EmailSettings
+
+  // Check for OAuth code in the URL
   useEffect(() => {
     const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const savedState = getOauthState();
-    
-    if (code) {
-      console.log("Found OAuth code in URL:", code.substring(0, 5) + "...");
-      
-      if (state && savedState && state === savedState) {
-        console.log("OAuth state validation passed");
-        setOauthCode(code);
-        setDefaultTab("email");
-        
-        // Remove the code from the URL without reloading the page
-        navigate('/admin', { replace: true });
-      } else {
-        console.warn("OAuth state validation failed or no state present");
-        toast({
-          title: "שגיאת אימות OAuth",
-          description: "לא ניתן לאמת את בקשת האימות. נא לנסות שוב.",
-          variant: "destructive"
-        });
-        navigate('/admin', { replace: true });
-      }
-    }
-  }, [searchParams, navigate, toast, getOauthState]);
+    if (code && !redirectProcessed) {
+      console.log("Found OAuth code in URL, setting default tab to email");
+      setDefaultTab("email");
+      setRedirectProcessed(true);
 
+      // Remove the code from the URL without reloading the page
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [searchParams, redirectProcessed]);
   useEffect(() => {
     // Fetch current server time and timezone offset
     const fetchServerSettings = async () => {
       try {
         // Check if system_settings table exists by attempting to query it
-        const { data: settingsData, error: settingsError } = await supabase
-          .from('system_settings')
-          .select('*')
-          .eq('key', 'timezone_offset')
-          .single();
-
+        const {
+          data: settingsData,
+          error: settingsError
+        } = await supabase.from('system_settings').select('*').eq('key', 'timezone_offset').single();
         if (!settingsError && settingsData) {
           setTimezoneOffset(parseInt(settingsData.value) || 0);
         } else {
@@ -78,29 +63,23 @@ const Admin = () => {
         console.error('Error fetching system settings:', error);
       }
     };
-
     fetchServerSettings();
-    
     // Update server time every minute
     const interval = setInterval(() => {
       setServerTime(new Date());
     }, 60000);
-    
     return () => clearInterval(interval);
   }, []);
-
   const saveTimezoneOffset = async () => {
     try {
       setSavingOffset(true);
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert({
-          key: 'timezone_offset',
-          value: timezoneOffset.toString()
-        });
-
+      const {
+        error
+      } = await supabase.from('system_settings').upsert({
+        key: 'timezone_offset',
+        value: timezoneOffset.toString()
+      });
       if (error) throw error;
-      
       toast({
         title: "הגדרות אזור זמן נשמרו בהצלחה",
         variant: "default"
@@ -116,7 +95,6 @@ const Admin = () => {
       setSavingOffset(false);
     }
   };
-
   const formatLocalTime = (date: Date | null) => {
     if (!date) return '';
 
@@ -135,9 +113,7 @@ const Admin = () => {
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-
-  return (
-    <div className="container mx-auto py-8" dir="rtl">
+  return <div className="container mx-auto py-8" dir="rtl">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">ניהול מערכת</h1>
         <Button variant="ghost" onClick={() => navigate('/')} className="flex items-center gap-2">
@@ -188,7 +164,7 @@ const Admin = () => {
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="schedule" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">לוח שידורים ראשי</TabsTrigger>
-          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבו��ה</TabsTrigger>
+          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבודה</TabsTrigger>
           <TabsTrigger value="users" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">ניהול משתמשים</TabsTrigger>
           <TabsTrigger value="email" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">דואר אלקטרוני</TabsTrigger>
         </TabsList>
@@ -206,11 +182,9 @@ const Admin = () => {
         </TabsContent>
         
         <TabsContent value="email" className="mt-4">
-          <EmailSettings oauthCode={oauthCode} />
+          <EmailSettings />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default Admin;
