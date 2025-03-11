@@ -3,10 +3,10 @@ import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertCircle, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { Check, ExternalLink, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 
 interface GmailSettingsProps {
   settings: {
