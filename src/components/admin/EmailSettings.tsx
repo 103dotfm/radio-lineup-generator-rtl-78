@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+import SmtpSettings from "./email/SmtpSettings";
+import GmailSettings from "./email/GmailSettings";
 
 interface EmailSettingsProps {
   oauthCode?: string | null;
