@@ -581,7 +581,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
           <TabsTrigger value="smtp">
             {settings.email_method === 'smtp' ? 'SMTP' : 'Gmail API'}
             {gmailStatus.status === 'authenticated' && settings.email_method === 'gmail_api' && (
-              <Badge variant="success" className="mr-2 bg-green-500 ml-2">
+              <Badge variant="outline" className="mr-2 bg-green-500 text-white ml-2">
                 <Check className="h-3 w-3 mr-1" />
                 מחובר
               </Badge>
