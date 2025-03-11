@@ -1,20 +1,31 @@
 
 import React from 'react';
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface SmtpSettingsProps {
   settings: {
+    id: string;
     smtp_host: string;
     smtp_port: number;
     smtp_user: string;
     smtp_password: string;
+    sender_email: string;
+    sender_name: string;
+    subject_template: string;
+    body_template: string;
+    email_method: 'smtp' | 'gmail_api';
+    gmail_client_id: string;
+    gmail_client_secret: string;
+    gmail_refresh_token: string;
+    gmail_redirect_uri: string;
+    gmail_access_token?: string;
+    gmail_token_expiry?: string;
   };
-  onChange: (field: string, value: string | number) => void;
+  onChange: (field: string, value: any) => void;
   onSave: () => Promise<boolean>;
   saving: boolean;
 }
@@ -28,82 +39,65 @@ const SmtpSettings: React.FC<SmtpSettingsProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>הגדרות SMTP</CardTitle>
+        <CardTitle>הגדרות שרת SMTP</CardTitle>
         <CardDescription>
-          הגדר את פרטי שרת SMTP לשליחת דואר אלקטרוני
+          הגדר את פרטי התחברות לשרת SMTP לשליחת דואר אלקטרוני
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <Alert variant="warning" className="bg-amber-50">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800">מידע על הגדרות SMTP</AlertTitle>
-            <AlertDescription className="text-amber-700">
-              <p className="mb-2">לשליחת דואר אלקטרוני דרך שרת SMTP, תצטרך את פרטי ההתחברות לשרת הדואר שלך.</p>
-              <p className="mb-2">אם אתה משתמש ב-Gmail, תוכל למצוא הוראות 
-                <a href="https://support.google.com/mail/answer/7126229" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline"> כאן</a>.
-              </p>
-              <p>אם אתה משתמש ב-Outlook או Office 365, אנא שים לב שייתכן שתצטרך להפעיל אימות SMTP בחשבון שלך.</p>
+          <Alert>
+            <AlertTitle>הגדרות SMTP</AlertTitle>
+            <AlertDescription>
+              ודא שאתה מזין את הפרטים הנכונים המתאימים לספק הדואר האלקטרוני שלך. 
+              עבור Gmail ו-Outlook, ייתכן שתצטרך להפעיל "גישת אפליקציות פחות מאובטחות" או ליצור סיסמה ייעודית לאפליקציה.
             </AlertDescription>
           </Alert>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="smtp_host">SMTP Host</Label>
+              <Label htmlFor="smtp_host">כתובת שרת SMTP</Label>
               <Input
                 id="smtp_host"
                 dir="ltr"
-                placeholder="smtp.gmail.com"
                 value={settings.smtp_host}
                 onChange={(e) => onChange('smtp_host', e.target.value)}
+                placeholder="smtp.example.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="smtp_port">SMTP Port</Label>
+              <Label htmlFor="smtp_port">פורט SMTP</Label>
               <Input
                 id="smtp_port"
-                dir="ltr"
                 type="number"
-                placeholder="587"
+                dir="ltr"
                 value={settings.smtp_port}
-                onChange={(e) => onChange('smtp_port', parseInt(e.target.value) || 587)}
+                onChange={(e) => onChange('smtp_port', parseInt(e.target.value))}
+                placeholder="587"
               />
             </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="smtp_user">SMTP User</Label>
+              <Label htmlFor="smtp_user">שם משתמש SMTP</Label>
               <Input
                 id="smtp_user"
                 dir="ltr"
-                placeholder="your-email@gmail.com"
                 value={settings.smtp_user}
                 onChange={(e) => onChange('smtp_user', e.target.value)}
+                placeholder="your-username"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="smtp_password">SMTP Password</Label>
+              <Label htmlFor="smtp_password">סיסמת SMTP</Label>
               <Input
                 id="smtp_password"
-                dir="ltr"
                 type="password"
-                placeholder="••••••••••••"
+                dir="ltr"
                 value={settings.smtp_password}
                 onChange={(e) => onChange('smtp_password', e.target.value)}
+                placeholder="••••••••"
               />
             </div>
           </div>
-          
-          <Alert className="bg-blue-50">
-            <AlertTitle className="text-blue-800">הנחיות אבטחה</AlertTitle>
-            <AlertDescription className="text-blue-700">
-              <p className="mb-2">אם אתה משתמש ב-Gmail או Google Workspace, סביר שתצטרך להשתמש בסיסמה ייעודית לאפליקציה.</p>
-              <p>ניתן ליצור סיסמה ייעודית לאפליקציה ב-
-                <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline"> הגדרות האבטחה של Google</a>
-              </p>
-            </AlertDescription>
-          </Alert>
         </div>
       </CardContent>
       <CardFooter>
@@ -111,7 +105,7 @@ const SmtpSettings: React.FC<SmtpSettingsProps> = ({
           onClick={onSave} 
           disabled={saving}
         >
-          {saving ? "שומר..." : "שמור הגדרות"}
+          {saving ? "שומר..." : "שמור הגדרות SMTP"}
         </Button>
       </CardFooter>
     </Card>

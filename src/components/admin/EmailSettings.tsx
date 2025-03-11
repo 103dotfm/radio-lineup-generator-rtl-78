@@ -26,6 +26,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import SmtpSettings from './email/SmtpSettings';
+import GmailSettings from './email/GmailSettings';
 
 interface EmailSettingsProps {
   oauthCode?: string | null;
