@@ -77,7 +77,8 @@ serve(async (req) => {
         grant_type: "authorization_code",
       });
       
-      console.log("Token request params:", tokenParams.toString());
+      console.log("Token request params (except code):", 
+        tokenParams.toString().replace(/code=[^&]+/, 'code=REDACTED'));
       
       const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",

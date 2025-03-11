@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Check, Loader2 } from "lucide-react";
+import { 
+  Trash, 
+  Plus, 
+  Send, 
+  AlertCircle, 
+  ExternalLink, 
+  RefreshCw, 
+  Check, 
+  Loader2 
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import BasicEditor from "../editor/BasicEditor";
 import {
@@ -14,9 +24,12 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { useLocation } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
+
+// Import subcomponents
+import SmtpSettings from './email/SmtpSettings';
+import GmailSettings from './email/GmailSettings';
 
 interface EmailSettingsProps {
   oauthCode?: string | null;
@@ -43,7 +56,6 @@ interface EmailSettingsType {
 
 const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
   const { toast } = useToast();
-  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
@@ -82,6 +94,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
   
   useEffect(() => {
     if (oauthCode && settings.gmail_client_id && settings.gmail_client_secret && settings.gmail_redirect_uri) {
+      console.log("Found OAuth code, handling authorization", oauthCode.substring(0, 5) + "...");
       handleGmailAuthCode(oauthCode);
     }
   }, [oauthCode, settings.gmail_client_id, settings.gmail_client_secret, settings.gmail_redirect_uri]);
@@ -102,7 +115,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
       setAuthorizingGmail(true);
       
       console.log('Exchange code settings:', {
-        code,
+        code: code.substring(0, 5) + "...",
         redirectUri: settings.gmail_redirect_uri,
         clientIdLength: settings.gmail_client_id?.length || 0,
         clientSecretLength: settings.gmail_client_secret?.length || 0
@@ -122,7 +135,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         throw error;
       }
       
-      console.log('Gmail auth response:', data);
+      console.log('Gmail auth response:', data ? 'Success' : 'No data returned');
       
       if (data && data.accessToken) {
         console.log('Got tokens from Google');
@@ -139,7 +152,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         toast({
           title: "אימות Gmail הושלם בהצלחה",
           description: "התחברות לחשבון Gmail בוצעה בהצלחה",
-          variant: "default"
+          variant: "success"
         });
       } else {
         throw new Error('לא התקבל טוקן תקין מגוגל');
@@ -233,7 +246,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
       const scope = 'https://www.googleapis.com/auth/gmail.send';
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
       
-      console.log('Opening Google auth URL:', authUrl);
+      console.log('Opening Google auth URL');
       window.location.href = authUrl;
     });
   };
@@ -272,7 +285,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         
         toast({
           title: "טוקן Gmail רוענן בהצלחה",
-          variant: "default"
+          variant: "success"
         });
       } else {
         throw new Error('לא התקבל טוקן גישה חדש');
@@ -411,6 +424,13 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
     }
   };
 
+  const handleSettingsChange = (field: string, value: any) => {
+    setSettings({
+      ...settings,
+      [field]: value
+    });
+  };
+
   const addRecipient = async () => {
     if (!newEmail || !newEmail.includes('@') || !newEmail.includes('.')) {
       toast({
@@ -513,7 +533,7 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
       toast({
         title: "דואר אלקטרוני לדוגמה נשלח בהצלחה",
         description: `נשלח לכתובת ${testEmailAddress}`,
-        variant: "default"
+        variant: "success"
       });
       
     } catch (error) {
@@ -773,180 +793,25 @@ const EmailSettings: React.FC<EmailSettingsProps> = ({ oauthCode }) => {
         </TabsContent>
         
         <TabsContent value="smtp">
-          <Card>
-            <CardHeader>
-              <CardTitle>{settings.email_method === 'smtp' ? 'הגדרות SMTP' : 'הגדרות Gmail API'}</CardTitle>
-              <CardDescription>
-                {settings.email_method === 'smtp' 
-                  ? 'הגדר את פרטי שרת SMTP לשליחת דואר אלקטרוני' 
-                  : 'הגדר את פרטי הגישה ל-Gmail API לשליחת דואר אלקטרוני'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {settings.email_method === 'smtp' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_host">שרת SMTP</Label>
-                        <Input
-                          id="smtp_host"
-                          dir="ltr"
-                          placeholder="smtp.example.com"
-                          value={settings.smtp_host}
-                          onChange={(e) => setSettings({...settings, smtp_host: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_port">פורט</Label>
-                        <Input
-                          id="smtp_port"
-                          dir="ltr"
-                          type="number"
-                          placeholder="587"
-                          value={settings.smtp_port}
-                          onChange={(e) => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_user">שם משתמש</Label>
-                        <Input
-                          id="smtp_user"
-                          dir="ltr"
-                          placeholder="user@example.com"
-                          value={settings.smtp_user}
-                          onChange={(e) => setSettings({...settings, smtp_user: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_password">סיסמה</Label>
-                        <Input
-                          id="smtp_password"
-                          dir="ltr"
-                          type="password"
-                          placeholder="********"
-                          value={settings.smtp_password}
-                          onChange={(e) => setSettings({...settings, smtp_password: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Alert variant="warning" className="bg-amber-50">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
-                      <AlertTitle className="text-amber-800">הוראות להגדרת Gmail API</AlertTitle>
-                      <AlertDescription className="text-amber-700">
-                        <ol className="list-decimal list-inside space-y-1">
-                          <li>צור פרויקט חדש ב-Google Cloud Console</li>
-                          <li>הפעל את Gmail API</li>
-                          <li>צור פרטי OAuth מסוג Web Application</li>
-                          <li>הגדר את כתובת ה-Redirect URI להיות זהה לכתובת שהוזנה כאן</li>
-                          <li>העתק את Client ID ו-Client Secret ומלא בשדות למטה</li>
-                          <li>לחץ על "התחבר לחשבון Gmail" כדי לבצע את האימות</li>
-                        </ol>
-                        <a 
-                          href="https://console.cloud.google.com/apis/credentials" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="mt-2 flex items-center text-blue-600 hover:underline"
-                        >
-                          פתח את Google Cloud Console <ExternalLink className="h-3 w-3 ml-1" />
-                        </a>
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="gmail_client_id">Client ID</Label>
-                        <Input
-                          id="gmail_client_id"
-                          dir="ltr"
-                          placeholder="your-client-id.apps.googleusercontent.com"
-                          value={settings.gmail_client_id}
-                          onChange={(e) => setSettings({...settings, gmail_client_id: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="gmail_client_secret">Client Secret</Label>
-                        <Input
-                          id="gmail_client_secret"
-                          dir="ltr"
-                          type="password"
-                          placeholder="GOCSPX-***********"
-                          value={settings.gmail_client_secret}
-                          onChange={(e) => setSettings({...settings, gmail_client_secret: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="gmail_redirect_uri">Redirect URI</Label>
-                      <Input
-                        id="gmail_redirect_uri"
-                        dir="ltr"
-                        placeholder="https://your-site.com/admin"
-                        value={settings.gmail_redirect_uri}
-                        onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
-                      />
-                    </div>
-                    
-                    <div className="flex justify-between items-center border p-4 rounded-md bg-gray-50">
-                      <div>
-                        <p className={`font-medium ${gmailStatus.color}`}>{gmailStatus.message}</p>
-                        {settings.gmail_refresh_token && (
-                          <p className="text-sm text-gray-500 mt-1" dir="ltr">
-                            Refresh Token: {settings.gmail_refresh_token.substring(0, 5)}...{settings.gmail_refresh_token.substring(settings.gmail_refresh_token.length - 5)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        {settings.gmail_refresh_token ? (
-                          <Button 
-                            variant="outline" 
-                            onClick={refreshGmailToken}
-                            disabled={authorizingGmail}
-                            className="flex items-center gap-2"
-                          >
-                            {authorizingGmail ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
-                            רענן טוקן
-                          </Button>
-                        ) : null}
-                        <Button 
-                          onClick={initiateGmailAuth}
-                          disabled={authorizingGmail || !settings.gmail_client_id || !settings.gmail_redirect_uri}
-                          className="flex items-center gap-2"
-                        >
-                          {authorizingGmail ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <div className="h-4 w-4 flex items-center justify-center bg-white rounded-full">
-                              <span className="text-red-500 text-xs font-bold">G</span>
-                            </div>
-                          )}
-                          התחבר לחשבון Gmail
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={saveSettings} 
-                disabled={saving}
-              >
-                {saving ? "שומר..." : "שמור הגדרות"}
-              </Button>
-            </CardFooter>
-          </Card>
+          {settings.email_method === 'smtp' ? (
+            <SmtpSettings 
+              settings={settings} 
+              onChange={handleSettingsChange}
+              onSave={saveSettings}
+              saving={saving}
+            />
+          ) : (
+            <GmailSettings 
+              settings={settings} 
+              onChange={handleSettingsChange}
+              onSave={saveSettings}
+              saving={saving}
+              gmailStatus={gmailStatus}
+              authorizingGmail={authorizingGmail}
+              initiateGmailAuth={initiateGmailAuth}
+              refreshGmailToken={refreshGmailToken}
+            />
+          )}
         </TabsContent>
         
         <TabsContent value="template">

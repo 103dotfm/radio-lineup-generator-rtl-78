@@ -5,7 +5,7 @@ import MasterSchedule from '@/components/schedule/MasterSchedule';
 import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 const Admin = () => {
   const { isAdmin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [timezoneOffset, setTimezoneOffset] = useState(0);
@@ -25,19 +26,19 @@ const Admin = () => {
   const [savingOffset, setSavingOffset] = useState(false);
   const [defaultTab, setDefaultTab] = useState("schedule");
   const [oauthCode, setOauthCode] = useState<string | null>(null);
-
-  // Check for OAuth code in the URL and pass it to the EmailSettings component
+  
+  // Check for OAuth code in URL and preserve it for EmailSettings
   useEffect(() => {
     const code = searchParams.get('code');
     if (code) {
-      console.log("Found OAuth code in URL:", code);
+      console.log("Found OAuth code in URL:", code.substring(0, 5) + "...");
       setOauthCode(code);
       setDefaultTab("email");
       
       // Remove the code from the URL without reloading the page
-      window.history.replaceState({}, document.title, window.location.pathname);
+      navigate('/admin', { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     // Fetch current server time and timezone offset

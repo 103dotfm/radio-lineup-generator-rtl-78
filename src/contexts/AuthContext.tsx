@@ -56,29 +56,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+  // Handle session persistence and restoration
+  const initializeSession = async () => {
+    try {
+      // Check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (session) {
+        console.log('Found existing session', session.user.id);
         setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
+        await checkUserRole(session.user.id, true);
+      } else {
+        console.log('No session found');
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setUser(null);
       }
-    });
+    } catch (error) {
+      console.error('Error initializing session:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Initialize session on component mount
+    initializeSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
       if (event === 'SIGNED_IN' && session) {
+        console.log('User signed in:', session.user.id);
         setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
+        await checkUserRole(session.user.id, true);
       } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
         setIsAuthenticated(false);
         setIsAdmin(false);
         setUser(null);
         lastUserCheckRef.current = 0;
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        console.log('Token refreshed for user:', session.user.id);
+        // No need to re-authenticate, just ensure user data is current
+        await checkUserRole(session.user.id, false);
       }
     });
-
-    // Remove visibility change listener entirely since we're using caching
     
     return () => {
       subscription.unsubscribe();
