@@ -93,6 +93,9 @@ serve(async (req) => {
       
       try {
         responseBody = await tokenResponse.json();
+        console.log("Token exchange response status:", responseStatus);
+        // Print response keys without showing the actual tokens
+        console.log("Response contains keys:", Object.keys(responseBody));
       } catch (error) {
         const responseText = await tokenResponse.text();
         console.error("Failed to parse token response as JSON:", responseText);
@@ -118,8 +121,20 @@ serve(async (req) => {
         );
       }
       
+      // Verify we have the expected tokens
+      if (!responseBody.access_token) {
+        console.error("No access token in response");
+        return new Response(
+          JSON.stringify({ 
+            error: "No access token received from Google",
+            details: Object.keys(responseBody)
+          }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      
       console.log("Token exchange successful, response:", JSON.stringify({
-        access_token: tokenResponse.ok ? "REDACTED" : "ERROR",
+        access_token: responseBody.access_token ? "REDACTED" : "MISSING",
         token_type: responseBody.token_type,
         expires_in: responseBody.expires_in,
         has_refresh_token: !!responseBody.refresh_token,
@@ -127,7 +142,7 @@ serve(async (req) => {
       
       // Calculate expiry date
       const expiryDate = new Date();
-      expiryDate.setSeconds(expiryDate.getSeconds() + responseBody.expires_in);
+      expiryDate.setSeconds(expiryDate.getSeconds() + (responseBody.expires_in || 3600));
       
       return new Response(
         JSON.stringify({
@@ -143,37 +158,70 @@ serve(async (req) => {
       // Refresh access token using refresh token
       console.log("Refreshing access token");
       
+      const refreshParams = new URLSearchParams({
+        refresh_token: requestData.refreshToken,
+        client_id: requestData.clientId,
+        client_secret: requestData.clientSecret,
+        grant_type: "refresh_token",
+      });
+      
       const refreshResponse = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          refresh_token: requestData.refreshToken,
-          client_id: requestData.clientId,
-          client_secret: requestData.clientSecret,
-          grant_type: "refresh_token",
-        }),
+        body: refreshParams,
       });
       
-      if (!refreshResponse.ok) {
-        const errorData = await refreshResponse.text();
-        console.error("Token refresh failed:", errorData);
+      const refreshStatus = refreshResponse.status;
+      let refreshData;
+      
+      try {
+        refreshData = await refreshResponse.json();
+        console.log("Refresh response status:", refreshStatus);
+        console.log("Response contains keys:", Object.keys(refreshData));
+      } catch (error) {
+        const errorText = await refreshResponse.text();
+        console.error("Failed to parse refresh response as JSON:", errorText);
         return new Response(
           JSON.stringify({ 
-            error: "Failed to refresh access token",
-            details: errorData
+            error: "Failed to parse refresh token response", 
+            details: errorText,
+            status: refreshStatus
           }),
           { status: 400, headers: corsHeaders }
         );
       }
       
-      const refreshData = await refreshResponse.json();
+      if (!refreshResponse.ok) {
+        console.error("Token refresh failed:", refreshStatus, refreshData);
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to refresh access token",
+            details: refreshData,
+            status: refreshStatus
+          }),
+          { status: refreshStatus, headers: corsHeaders }
+        );
+      }
+      
+      // Verify we have the expected tokens
+      if (!refreshData.access_token) {
+        console.error("No access token in refresh response");
+        return new Response(
+          JSON.stringify({ 
+            error: "No access token received from Google during refresh",
+            details: Object.keys(refreshData)
+          }),
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      
       console.log("Token refresh successful");
       
       // Calculate expiry date
       const expiryDate = new Date();
-      expiryDate.setSeconds(expiryDate.getSeconds() + refreshData.expires_in);
+      expiryDate.setSeconds(expiryDate.getSeconds() + (refreshData.expires_in || 3600));
       
       return new Response(
         JSON.stringify({

@@ -3,10 +3,10 @@ import React from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertCircle, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { Check, ExternalLink, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 
 interface GmailSettingsProps {
   settings: {
@@ -106,6 +106,9 @@ const GmailSettings: React.FC<GmailSettingsProps> = ({
               value={settings.gmail_redirect_uri}
               onChange={(e) => onChange('gmail_redirect_uri', e.target.value)}
             />
+            <p className="text-sm text-gray-500 mt-1">
+              שים לב: הזן כאן את ה-URL של דף ה-admin, כולל http:// או https://, ולא רק את הדומיין
+            </p>
           </div>
           
           <div className="flex justify-between items-center border p-4 rounded-md bg-gray-50">

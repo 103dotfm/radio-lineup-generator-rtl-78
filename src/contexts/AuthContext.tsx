@@ -16,9 +16,14 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
+  preserveOauthState: (state: string) => void;
+  getOauthState: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+// Key for storing OAuth state in localStorage
+const OAUTH_STATE_KEY = 'gmail_oauth_state';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -142,8 +147,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Store OAuth state in localStorage to persist across redirects
+  const preserveOauthState = (state: string) => {
+    localStorage.setItem(OAUTH_STATE_KEY, state);
+  };
+
+  // Retrieve OAuth state from localStorage
+  const getOauthState = () => {
+    return localStorage.getItem(OAUTH_STATE_KEY);
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      isAdmin, 
+      user, 
+      login, 
+      logout,
+      preserveOauthState,
+      getOauthState
+    }}>
       {children}
     </AuthContext.Provider>
   );
