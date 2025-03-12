@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -896,4 +897,327 @@ const EmailSettings: React.FC = () => {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>הערה חשובה לגבי חשבונות Outlook/Microsoft 365</AlertTitle>
                     <AlertDescription>
-                      <p>אם אתה משתמש בחשבון Outlook או Microsoft 365, ייתכן שאימות SMTP אינו מופעל בחשבון שלך. במקרה
+                      <p>אם אתה משתמש בחשבון Outlook או Microsoft 365, ייתכן שאימות SMTP אינו מופעל בחשבון שלך. במקרה כזה, עליך להשתמש בממשק API של Gmail או לפנות למנהל המערכת להפעלת SMTP.</p>
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_host">כתובת שרת SMTP</Label>
+                      <Input
+                        id="smtp_host"
+                        dir="ltr"
+                        value={settings.smtp_host}
+                        onChange={(e) => setSettings({...settings, smtp_host: e.target.value})}
+                        placeholder="smtp.example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_port">פורט SMTP</Label>
+                      <Input
+                        id="smtp_port"
+                        dir="ltr"
+                        type="number"
+                        value={settings.smtp_port}
+                        onChange={(e) => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})}
+                        placeholder="587"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_user">שם משתמש SMTP</Label>
+                      <Input
+                        id="smtp_user"
+                        dir="ltr"
+                        value={settings.smtp_user}
+                        onChange={(e) => setSettings({...settings, smtp_user: e.target.value})}
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_password">סיסמת SMTP</Label>
+                      <Input
+                        id="smtp_password"
+                        dir="ltr"
+                        type="password"
+                        value={settings.smtp_password}
+                        onChange={(e) => setSettings({...settings, smtp_password: e.target.value})}
+                        placeholder="●●●●●●●●"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={saveSettings} 
+                  disabled={saving}
+                >
+                  {saving ? "שומר..." : "שמור הגדרות"}
+                </Button>
+              </CardFooter>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>הגדרות API של Gmail</CardTitle>
+                <CardDescription>
+                  הגדרות אלו ישמשו לשליחת דואר אלקטרוני באמצעות ממשק API של Gmail
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <Alert variant="default" className="border-blue-200 bg-blue-50 text-blue-800 mb-4">
+                    <Info className="h-4 w-4 text-blue-500" />
+                    <AlertTitle>הוראות הגדרת API של Gmail</AlertTitle>
+                    <AlertDescription className="text-blue-700">
+                      <ol className="list-decimal list-inside space-y-2 mt-2">
+                        <li>צור פרויקט בקונסולת מפתחים של Google</li>
+                        <li>הפעל את Gmail API עבור הפרויקט</li>
+                        <li>צור אישורי OAuth (מסך הסכמה והגדרות לקוח OAuth)</li>
+                        <li>העתק את מזהה הלקוח (Client ID) וסוד הלקוח (Client Secret)</li>
+                        <li>הגדר את כתובת ה-URI להפניה כ- <code className="bg-blue-100 px-1 rounded">{window.location.origin}/admin</code></li>
+                      </ol>
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="gmail_client_id">מזהה לקוח OAuth (Client ID)</Label>
+                      <Input
+                        id="gmail_client_id"
+                        dir="ltr"
+                        value={settings.gmail_client_id}
+                        onChange={(e) => setSettings({...settings, gmail_client_id: e.target.value})}
+                        placeholder="your-client-id.apps.googleusercontent.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gmail_client_secret">סוד לקוח OAuth (Client Secret)</Label>
+                      <Input
+                        id="gmail_client_secret"
+                        dir="ltr"
+                        type="password"
+                        value={settings.gmail_client_secret}
+                        onChange={(e) => setSettings({...settings, gmail_client_secret: e.target.value})}
+                        placeholder="●●●●●●●●"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="gmail_redirect_uri">כתובת URI להפניה (Redirect URI)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="gmail_redirect_uri"
+                        dir="ltr"
+                        value={settings.gmail_redirect_uri}
+                        onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
+                        placeholder={`${window.location.origin}/admin`}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => {
+                          setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/admin`});
+                        }}
+                      >
+                        השתמש בנוכחי
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      יש להוסיף בדיוק את הכתובת הזו בהגדרות OAuth במסך הסכמה של Google.
+                    </p>
+                  </div>
+                  
+                  <div className="rounded-md border p-4">
+                    <h4 className="font-semibold mb-2">סטטוס חיבור Gmail</h4>
+                    <p className={`${gmailStatus.color} mb-4`}>
+                      {gmailStatus.message}
+                    </p>
+                    
+                    <div className="flex gap-2 mb-4">
+                      <Button 
+                        onClick={initiateGmailAuth} 
+                        disabled={authorizingGmail || !settings.gmail_client_id || !settings.gmail_redirect_uri}
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        התחבר לחשבון Gmail
+                      </Button>
+                      
+                      {settings.gmail_refresh_token && (
+                        <Button 
+                          onClick={refreshGmailToken} 
+                          variant="outline"
+                          disabled={authorizingGmail}
+                          className="flex items-center gap-2"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${authorizingGmail ? 'animate-spin' : ''}`} />
+                          רענן טוקן
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h4 className="font-semibold">הכנסת קוד אימות באופן ידני</h4>
+                      <p className="text-sm text-muted-foreground">
+                        אם האימות האוטומטי נכשל, באפשרותך להעתיק את כתובת האימות ולגשת אליה באופן ידני:
+                      </p>
+                      
+                      <div className="flex gap-2 items-center">
+                        <Input 
+                          readOnly 
+                          value={generateAuthUrlForCopyPaste()}
+                          dir="ltr"
+                          className="font-mono text-xs flex-grow"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0"
+                          onClick={() => copyToClipboard(generateAuthUrlForCopyPaste())}
+                        >
+                          {copySuccess ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <Label htmlFor="manual_code_input">קוד אימות שהתקבל מ-Google</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Input
+                              id="manual_code_input"
+                              dir="ltr"
+                              value={manualCodeInput}
+                              onChange={(e) => setManualCodeInput(e.target.value)}
+                              placeholder="הכנס קוד אימות מ-Google"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="shrink-0"
+                              disabled={!manualCodeInput || authorizingGmail}
+                              onClick={handleManualCodeSubmission}
+                            >
+                              אמת
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="manual_token_input">טוקן רענון (Refresh Token)</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Input
+                              id="manual_token_input"
+                              dir="ltr"
+                              value={manualTokenInput}
+                              onChange={(e) => setManualTokenInput(e.target.value)}
+                              placeholder="הכנס טוקן רענון באופן ידני"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="shrink-0"
+                              disabled={!manualTokenInput || authorizingGmail}
+                              onClick={handleManualTokenSubmission}
+                            >
+                              שמור
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={saveSettings} 
+                  disabled={saving}
+                >
+                  {saving ? "שומר..." : "שמור הגדרות"}
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="template">
+          <Card>
+            <CardHeader>
+              <CardTitle>תבנית הודעת דואר אלקטרוני</CardTitle>
+              <CardDescription>
+                הגדר את כותרת ותוכן הודעת הדואר האלקטרוני שתישלח
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="subject_template">נושא ההודעה</Label>
+                  <Input
+                    id="subject_template"
+                    value={settings.subject_template}
+                    onChange={(e) => setSettings({...settings, subject_template: e.target.value})}
+                    placeholder="ליינאפ תוכנית {{show_name}} לתאריך {{show_date}}"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="body_template">תוכן ההודעה</Label>
+                  <Textarea
+                    id="body_template"
+                    value={settings.body_template}
+                    onChange={(e) => setSettings({...settings, body_template: e.target.value})}
+                    placeholder="מצורף ליינאפ תוכנית {{show_name}} לתאריך {{show_date}}"
+                    rows={6}
+                  />
+                </div>
+                
+                <Alert className="mt-4">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>משתנים זמינים</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-2">תוכל להשתמש במשתנים הבאים בתבניות:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li><code>{'{{show_name}}'}</code> - שם התוכנית</li>
+                      <li><code>{'{{show_date}}'}</code> - תאריך התוכנית</li>
+                      <li><code>{'{{show_time}}'}</code> - שעת התוכנית</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="rounded-md border p-4">
+                  <h4 className="font-semibold mb-2">תצוגה מקדימה</h4>
+                  <div className="space-y-2">
+                    <p><strong>נושא:</strong> {processTemplate(settings.subject_template)}</p>
+                    <div>
+                      <strong>תוכן:</strong>
+                      <div className="bg-gray-50 p-3 rounded-md mt-1 whitespace-pre-wrap">
+                        {processTemplate(settings.body_template)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={saveSettings} 
+                disabled={saving}
+              >
+                {saving ? "שומר..." : "שמור הגדרות"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default EmailSettings;
