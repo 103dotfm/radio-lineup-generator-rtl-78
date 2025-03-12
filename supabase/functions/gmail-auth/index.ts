@@ -77,7 +77,7 @@ serve(async (req) => {
         );
       }
       
-      console.log("Exchanging auth code for tokens");
+      console.log("Exchanging auth code for tokens with redirect URI:", requestData.redirectUri);
       
       try {
         const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -112,26 +112,58 @@ serve(async (req) => {
           );
         }
         
-        const tokenData = JSON.parse(responseText);
-        console.log("Token exchange successful");
-        
-        // Calculate expiry date
-        const expiryDate = new Date();
-        expiryDate.setSeconds(expiryDate.getSeconds() + tokenData.expires_in);
-        
-        return new Response(
-          JSON.stringify({
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token,
-            expiryDate: expiryDate.toISOString(),
-            tokenType: tokenData.token_type,
-            scope: tokenData.scope,
-          }),
-          { 
-            status: 200, 
-            headers: corsHeaders 
+        try {
+          const tokenData = JSON.parse(responseText);
+          console.log("Token exchange successful");
+          
+          if (!tokenData.refresh_token) {
+            console.error("No refresh token in response. This might happen if you've authorized this app before.");
+            return new Response(
+              JSON.stringify({ 
+                error: "No refresh token in response",
+                message: "This might happen if you've authorized this app before. Try revoking access and trying again.",
+                access_token: tokenData.access_token,
+                expires_in: tokenData.expires_in,
+                token_type: tokenData.token_type,
+              }),
+              { 
+                status: 400, 
+                headers: corsHeaders 
+              }
+            );
           }
-        );
+          
+          // Calculate expiry date
+          const expiryDate = new Date();
+          expiryDate.setSeconds(expiryDate.getSeconds() + tokenData.expires_in);
+          
+          return new Response(
+            JSON.stringify({
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              expiryDate: expiryDate.toISOString(),
+              tokenType: tokenData.token_type,
+              scope: tokenData.scope,
+            }),
+            { 
+              status: 200, 
+              headers: corsHeaders 
+            }
+          );
+        } catch (parseError) {
+          console.error("Error parsing token data:", parseError);
+          return new Response(
+            JSON.stringify({ 
+              error: "Failed to parse token response",
+              details: parseError.message,
+              rawResponse: responseText
+            }),
+            { 
+              status: 500, 
+              headers: corsHeaders 
+            }
+          );
+        }
       } catch (error) {
         console.error("Error during token exchange:", error);
         return new Response(
