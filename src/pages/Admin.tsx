@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowRight, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
+
 const Admin = () => {
   const {
     isAdmin,
@@ -29,7 +30,6 @@ const Admin = () => {
   const [redirectProcessed, setRedirectProcessed] = useState(false);
   const [defaultTab, setDefaultTab] = useState("schedule");
 
-  // Check for OAuth code in the URL
   useEffect(() => {
     const code = searchParams.get('code');
     if (code && !redirectProcessed) {
@@ -37,15 +37,13 @@ const Admin = () => {
       setDefaultTab("email");
       setRedirectProcessed(true);
 
-      // Remove the code from the URL without reloading the page
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [searchParams, redirectProcessed]);
+
   useEffect(() => {
-    // Fetch current server time and timezone offset
     const fetchServerSettings = async () => {
       try {
-        // Check if system_settings table exists by attempting to query it
         const {
           data: settingsData,
           error: settingsError
@@ -56,7 +54,6 @@ const Admin = () => {
           console.warn("Could not fetch timezone offset, defaulting to 0:", settingsError);
         }
 
-        // Get server time
         const now = new Date();
         setServerTime(now);
       } catch (error) {
@@ -64,22 +61,46 @@ const Admin = () => {
       }
     };
     fetchServerSettings();
-    // Update server time every minute
+
     const interval = setInterval(() => {
       setServerTime(new Date());
     }, 60000);
     return () => clearInterval(interval);
   }, []);
+
   const saveTimezoneOffset = async () => {
     try {
       setSavingOffset(true);
-      const {
-        error
-      } = await supabase.from('system_settings').upsert({
-        key: 'timezone_offset',
-        value: timezoneOffset.toString()
-      });
-      if (error) throw error;
+
+      const { data: existingData, error: checkError } = await supabase
+        .from('system_settings')
+        .select('id')
+        .eq('key', 'timezone_offset')
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      let saveError;
+
+      if (existingData) {
+        const { error } = await supabase
+          .from('system_settings')
+          .update({ value: timezoneOffset.toString() })
+          .eq('key', 'timezone_offset');
+        
+        saveError = error;
+      } else {
+        const { error } = await supabase
+          .from('system_settings')
+          .insert({ key: 'timezone_offset', value: timezoneOffset.toString() });
+        
+        saveError = error;
+      }
+
+      if (saveError) throw saveError;
+
       toast({
         title: "הגדרות אזור זמן נשמרו בהצלחה",
         variant: "default"
@@ -95,24 +116,23 @@ const Admin = () => {
       setSavingOffset(false);
     }
   };
+
   const formatLocalTime = (date: Date | null) => {
     if (!date) return '';
 
-    // Apply the offset to display the "server time with offset"
     const offsetDate = new Date(date.getTime());
     offsetDate.setHours(offsetDate.getHours() + timezoneOffset);
     return offsetDate.toLocaleTimeString('he-IL');
   };
 
-  // If not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // If authenticated but not admin, redirect to home
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
+
   return <div className="container mx-auto py-8" dir="rtl">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">ניהול מערכת</h1>
@@ -187,4 +207,5 @@ const Admin = () => {
       </Tabs>
     </div>;
 };
+
 export default Admin;
