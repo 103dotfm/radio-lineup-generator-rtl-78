@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,7 +88,7 @@ const EmailSettings: React.FC = () => {
       setManualCodeInput(code);
       handleGmailAuthCode(code);
       
-      // Remove code from URL without reload
+      // Remove code from URL without reload but stay on admin page
       navigate('/admin', { replace: true });
     }
   }, [searchParams]);
@@ -555,8 +554,8 @@ const EmailSettings: React.FC = () => {
         variant: "default"
       });
       
-      // Open the authorization URL in a new window
-      window.location.href = authUrl;
+      // Open the authorization URL in a new window instead of replacing current window
+      window.open(authUrl, '_blank');
     });
   };
 
@@ -784,7 +783,7 @@ const EmailSettings: React.FC = () => {
                             <p className="mb-2">חשבון ה-Outlook שלך אינו מאפשר אימות SMTP. יש לבצע אחת מהפעולות הבאות:</p>
                             <ol className="list-decimal list-inside space-y-1 mb-2">
                               <li>הפעל אימות SMTP בחשבון Outlook שלך</li>
-                              <li>השתמש בשירות דואר אחר כמו Gmail</li>
+                              <li>השתמש בשירות ��ואר אחר כמו Gmail</li>
                               <li>השתמש בחשבון Outlook אחר שבו מופעלת האפשרות</li>
                             </ol>
                             <a 
@@ -978,7 +977,7 @@ const EmailSettings: React.FC = () => {
                         <li>הפעל את Gmail API עבור הפרויקט</li>
                         <li>צור אישורי OAuth (מסך הסכמה והגדרות לקוח OAuth)</li>
                         <li>העתק את מזהה הלקוח (Client ID) וסוד הלקוח (Client Secret)</li>
-                        <li>הגדר את כתובת ה-URI להפניה כ- <code className="bg-blue-100 px-1 rounded">{window.location.origin}/admin</code></li>
+                        <li>הגדר את כתובת ה-URI להפניה בדיוק כפי שמופיע כאן: <code className="bg-blue-100 px-1 rounded">{window.location.origin}/admin</code></li>
                       </ol>
                     </AlertDescription>
                   </Alert>

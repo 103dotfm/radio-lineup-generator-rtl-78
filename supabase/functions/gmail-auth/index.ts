@@ -80,6 +80,7 @@ serve(async (req) => {
       console.log("Exchanging auth code for tokens with redirect URI:", requestData.redirectUri);
       
       try {
+        // Ensure the redirect URL exactly matches what's configured in Google Console
         const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
           method: "POST",
           headers: {
