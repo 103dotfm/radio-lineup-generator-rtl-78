@@ -18,12 +18,32 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
+    // Get timezone offset from system settings
+    let timezoneOffset = 0;
+    try {
+      const { data: offsetData, error: offsetError } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "timezone_offset")
+        .single();
+        
+      if (!offsetError && offsetData && offsetData.value) {
+        timezoneOffset = parseInt(offsetData.value) || 0;
+        console.log(`Timezone offset: ${timezoneOffset} hours`);
+      }
+    } catch (offsetError) {
+      console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
+    }
+    
     // Get the current date and time in Israel time zone
     const now = new Date();
     const israelOffset = 180; // Israel timezone offset in minutes (UTC+3)
     const clientOffset = now.getTimezoneOffset();
     const totalOffset = israelOffset + clientOffset;
     now.setMinutes(now.getMinutes() + totalOffset);
+    
+    // Apply additional user-defined timezone offset (from system settings)
+    now.setHours(now.getHours() + timezoneOffset);
     
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -39,7 +59,7 @@ serve(async (req) => {
     const currentTimeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
     const oneMinuteAgoTimeString = `${oneMinuteAgoHour.toString().padStart(2, '0')}:${oneMinuteAgoMinute.toString().padStart(2, '0')}`;
     
-    console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString}`);
+    console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString} with timezone offset: ${timezoneOffset}`);
     
     // Current day of week in Israel (0 = Sunday, 6 = Saturday)
     const dayOfWeek = now.getDay();
@@ -196,7 +216,7 @@ serve(async (req) => {
       { 
         status: 500, 
         headers: { "Content-Type": "application/json", ...corsHeaders } 
-        }
+      }
     );
   }
 });

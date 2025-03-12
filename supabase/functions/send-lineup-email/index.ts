@@ -1,11 +1,9 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { format } from "https://deno.land/std@0.178.0/datetime/mod.ts";
 import nodemailer from "npm:nodemailer@6.9.9";
 import { google } from "npm:googleapis@129.0.0";
 
-// Very important for browser requests - use explicit CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -39,7 +37,6 @@ interface EmailSettings {
   gmail_token_expiry?: string;
 }
 
-// Helper function to create detailed error logs
 const createErrorLog = (stage: string, error: any) => {
   const errorDetails = {
     stage,
@@ -55,7 +52,6 @@ const createErrorLog = (stage: string, error: any) => {
   return errorDetails;
 };
 
-// Helper function to check if the error is an Outlook SMTP authentication error
 const isOutlookAuthError = (error: any): boolean => {
   const errorMsg = error?.message || '';
   const errorResponse = error?.response || '';
@@ -68,7 +64,6 @@ const isOutlookAuthError = (error: any): boolean => {
   );
 };
 
-// Helper function to get an alternative SMTP configuration recommendation
 const getAlternativeSmtpRecommendation = (host: string): string => {
   if (host.includes('outlook') || host.includes('hotmail') || host.includes('office365')) {
     return "It appears you're using Microsoft Outlook/Office 365 which may have SMTP authentication disabled. Please check https://aka.ms/smtp_auth_disabled for more information, or consider using an alternative email provider like Gmail (smtp.gmail.com).";
@@ -76,14 +71,12 @@ const getAlternativeSmtpRecommendation = (host: string): string => {
   return "Consider using an alternative SMTP server or checking your authentication credentials.";
 };
 
-// Helper function to apply timezone offset to date
 const applyTimezoneOffset = (date: Date, offsetHours: number): Date => {
   const newDate = new Date(date);
   newDate.setHours(newDate.getHours() + offsetHours);
   return newDate;
 };
 
-// Helper function to send email via Gmail API
 const sendViaGmailApi = async (
   emailSettings: EmailSettings, 
   recipientEmails: string[], 
@@ -93,14 +86,12 @@ const sendViaGmailApi = async (
   try {
     console.log("Setting up Gmail API client");
     
-    // Set up OAuth2 client
     const oauth2Client = new google.auth.OAuth2(
       emailSettings.gmail_client_id,
       emailSettings.gmail_client_secret,
       emailSettings.gmail_redirect_uri
     );
     
-    // Set credentials - first check if we need to refresh the token
     let accessToken = emailSettings.gmail_access_token;
     const expiryDate = emailSettings.gmail_token_expiry ? new Date(emailSettings.gmail_token_expiry) : null;
     const now = new Date();
@@ -108,7 +99,6 @@ const sendViaGmailApi = async (
     if (!accessToken || !expiryDate || expiryDate <= now) {
       console.log("Access token missing or expired, refreshing token");
       
-      // Refresh token
       oauth2Client.setCredentials({
         refresh_token: emailSettings.gmail_refresh_token
       });
@@ -116,8 +106,6 @@ const sendViaGmailApi = async (
       const tokens = await oauth2Client.refreshAccessToken();
       accessToken = tokens.credentials.access_token;
       
-      // Note: We don't save the refreshed token back to the database here
-      // as it's a separate concern. The UI should handle refreshing tokens periodically.
       console.log("Token refreshed successfully");
     }
     
@@ -126,16 +114,13 @@ const sendViaGmailApi = async (
       refresh_token: emailSettings.gmail_refresh_token
     });
     
-    // Create Gmail API client
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
     
     console.log("Creating email message");
     
-    // Create the email content
     const from = `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`;
     const to = recipientEmails.join(", ");
     
-    // Construct raw email
     const emailLines = [
       `From: ${from}`,
       `To: ${to}`,
@@ -149,7 +134,6 @@ const sendViaGmailApi = async (
     
     const email = emailLines.join('\r\n');
     
-    // Encode the email to base64url format as required by Gmail API
     const encodedEmail = Buffer.from(email).toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
@@ -157,7 +141,6 @@ const sendViaGmailApi = async (
     
     console.log("Sending email via Gmail API");
     
-    // Send the email
     const res = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
@@ -182,7 +165,6 @@ const sendViaGmailApi = async (
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -190,7 +172,6 @@ serve(async (req) => {
   try {
     console.log("Starting send-lineup-email function");
     
-    // Check for environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     
@@ -221,10 +202,8 @@ serve(async (req) => {
       supabaseAnonKey: supabaseAnonKey ? "present (not shown)" : "missing"
     });
     
-    // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Parse request body
     let requestData;
     
     try {
@@ -279,7 +258,6 @@ serve(async (req) => {
 
     console.log(`Processing request for show ${showId}, test email: ${testEmail || 'none'}`);
 
-    // Get timezone offset setting
     let timezoneOffset = 0;
     try {
       const { data: offsetData, error: offsetError } = await supabase
@@ -296,7 +274,6 @@ serve(async (req) => {
       console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
     }
 
-    // Get show details
     try {
       console.log("Fetching show details...");
       const { data: show, error: showError } = await supabase
@@ -342,8 +319,6 @@ serve(async (req) => {
 
       console.log(`Show found: ${show.name}, with ${show.items?.length || 0} items`);
 
-      // Get email settings
-      console.log("Fetching email settings...");
       const { data: emailSettings, error: settingsError } = await supabase
         .from("email_settings")
         .select("*")
@@ -374,7 +349,6 @@ serve(async (req) => {
       console.log(`Email settings found with method: ${emailSettings.email_method || 'smtp'}`);
       console.log(`Sender: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
 
-      // Check required settings based on email method
       let missingSettings: string[] = [];
       
       if (emailSettings.email_method === 'gmail_api') {
@@ -385,7 +359,6 @@ serve(async (req) => {
         
         missingSettings = requiredGmailSettings.filter(key => !emailSettings[key]);
       } else {
-        // Default to SMTP
         const requiredSmtpSettings = [
           "smtp_host", "smtp_port", "smtp_user", "smtp_password", 
           "sender_email", "sender_name"
@@ -409,7 +382,6 @@ serve(async (req) => {
         );
       }
 
-      // Get recipient emails if not a test
       let recipientEmails: string[] = [];
       if (testEmail) {
         recipientEmails = [testEmail];
@@ -458,14 +430,11 @@ serve(async (req) => {
 
       console.log(`Recipients: ${recipientEmails.join(', ')}`);
 
-      // Prepare email content
       console.log("Preparing email content...");
       
-      // Format date for display - properly parse the date string
       let formattedDate = "";
       try {
         if (show.date) {
-          // Parse the date string and apply timezone offset
           const showDate = new Date(show.date);
           const adjustedDate = applyTimezoneOffset(showDate, timezoneOffset);
           formattedDate = adjustedDate.toLocaleDateString('he-IL');
@@ -476,20 +445,28 @@ serve(async (req) => {
         formattedDate = show.date || "";
       }
       
-      // Create lineup link - ensure we're using the right URL format
       let lineupLink = "";
       try {
-        // Extract the base URL dynamically - this helps avoid using HTML site URL
-        const baseUrl = new URL(supabaseUrl).origin.replace('.supabase.co', '.app');
+        const origin = req.headers.get("origin") || "";
+        let baseUrl = origin;
+        
+        if (!baseUrl || baseUrl.includes("supabase.co")) {
+          if (supabaseUrl.includes("supabase.co")) {
+            const projectRef = supabaseUrl.split("//")[1].split(".")[0];
+            baseUrl = `https://${projectRef}.vercel.app`;
+          } else {
+            baseUrl = supabaseUrl;
+          }
+        }
+        
         lineupLink = `${baseUrl}/print/${show.id}?minutes=false`;
         console.log("Generated lineup link:", lineupLink);
       } catch (urlError) {
         console.error("Error creating lineup link:", urlError);
-        lineupLink = `${supabaseUrl.replace('.supabase.co', '.app')}/print/${show.id}?minutes=false`;
+        lineupLink = `https://app.radioline.co.il/print/${show.id}?minutes=false`;
       }
       
-      // Generate interviewees list
-      let intervieweesList = "<ul>";
+      let intervieweesList = "<ul style='direction: rtl; text-align: right;'>";
       const uniqueInterviewees = new Set();
       
       if (Array.isArray(show.items)) {
@@ -522,21 +499,31 @@ serve(async (req) => {
       
       intervieweesList += "</ul>";
 
-      // Replace placeholders in templates
       let subject = emailSettings.subject_template.replace(/{{show_name}}/g, show.name);
       subject = subject.replace(/{{show_date}}/g, formattedDate);
       subject = subject.replace(/{{show_time}}/g, show.time || "");
       
-      let body = emailSettings.body_template
-        .replace(/{{show_name}}/g, show.name)
-        .replace(/{{show_date}}/g, formattedDate)
-        .replace(/{{show_time}}/g, show.time || "")
-        .replace(/{{interviewees_list}}/g, intervieweesList)
-        .replace(/{{lineup_link}}/g, lineupLink);
+      let body = `<div style="direction: rtl; text-align: right;">
+        ${emailSettings.body_template
+          .replace(/{{show_name}}/g, show.name)
+          .replace(/{{show_date}}/g, formattedDate)
+          .replace(/{{show_time}}/g, show.time || "")
+          .replace(/{{interviewees_list}}/g, intervieweesList)
+          .replace(/{{lineup_link}}/g, lineupLink)}
+      </div>`;
+      
+      body = body
+        .replace(/<p/g, '<p style="direction: rtl; text-align: right;"')
+        .replace(/<h1/g, '<h1 style="direction: rtl; text-align: right;"')
+        .replace(/<h2/g, '<h2 style="direction: rtl; text-align: right;"')
+        .replace(/<h3/g, '<h3 style="direction: rtl; text-align: right;"')
+        .replace(/<h4/g, '<h4 style="direction: rtl; text-align: right;"')
+        .replace(/<h5/g, '<h5 style="direction: rtl; text-align: right;"')
+        .replace(/<h6/g, '<h6 style="direction: rtl; text-align: right;"')
+        .replace(/<div/g, '<div style="direction: rtl; text-align: right;"');
 
       console.log(`Email prepared - Subject: ${subject}`);
       
-      // Send email based on method
       if (emailSettings.email_method === 'gmail_api') {
         try {
           console.log("Sending email via Gmail API...");
@@ -548,7 +535,6 @@ serve(async (req) => {
             body
           );
           
-          // Log the email in the database if not a test
           if (!testEmail) {
             const { error: logError } = await supabase
               .from("show_email_logs")
@@ -577,7 +563,6 @@ serve(async (req) => {
         } catch (gmailError) {
           const errorLog = createErrorLog("GMAIL_API_SEND", gmailError);
           
-          // Log the email error in the database if not a test
           if (!testEmail) {
             const { error: logError } = await supabase
               .from("show_email_logs")
@@ -601,7 +586,6 @@ serve(async (req) => {
           );
         }
       } else {
-        // Default to SMTP
         console.log(`Using SMTP: ${emailSettings.smtp_host}:${emailSettings.smtp_port}`);
         
         try {
@@ -615,10 +599,9 @@ serve(async (req) => {
               pass: emailSettings.smtp_password,
             },
             tls: {
-              // Do not fail on invalid certs
               rejectUnauthorized: false
             },
-            debug: true, // Enable debug output
+            debug: true
           };
           
           console.log("Transport config:", {
@@ -627,13 +610,12 @@ serve(async (req) => {
             secure: transportConfig.secure,
             auth: {
               user: transportConfig.auth.user,
-              pass: "********" // Don't log the actual password
+              pass: "********"
             }
           });
           
           const transporter = nodemailer.createTransport(transportConfig);
 
-          // Verify SMTP connection configuration
           console.log("Verifying SMTP connection...");
           try {
             await transporter.verify();
@@ -641,7 +623,6 @@ serve(async (req) => {
           } catch (verifyError) {
             const errorLog = createErrorLog("SMTP_VERIFICATION", verifyError);
             
-            // Check if this is an Outlook SMTP auth error
             if (isOutlookAuthError(verifyError)) {
               const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
               
@@ -670,7 +651,6 @@ serve(async (req) => {
             );
           }
 
-          // Send email
           console.log("Sending email...");
           try {
             const mailOptions = {
@@ -699,7 +679,6 @@ serve(async (req) => {
               rejected: info.rejected
             });
 
-            // Log the email in the database if not a test
             if (!testEmail) {
               const { error: logError } = await supabase
                 .from("show_email_logs")
@@ -731,13 +710,11 @@ serve(async (req) => {
           } catch (emailError) {
             const errorLog = createErrorLog("SENDING_EMAIL", emailError);
             
-            // Check if this is an Outlook SMTP auth error
             if (isOutlookAuthError(emailError)) {
               const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
               errorLog.recommendation = recommendation;
             }
             
-            // Log the email error in the database if not a test
             if (!testEmail) {
               const { error: logError } = await supabase
                 .from("show_email_logs")
