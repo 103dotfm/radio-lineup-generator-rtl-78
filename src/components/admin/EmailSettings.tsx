@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw } from "lucide-react";
+import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import BasicEditor from "../editor/BasicEditor";
 import {
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/alert";
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 interface EmailSettingsType {
   id: string;
@@ -45,6 +45,8 @@ const EmailSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [authorizingGmail, setAuthorizingGmail] = useState(false);
+  const [manualTokenInput, setManualTokenInput] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
   const [settings, setSettings] = useState<EmailSettingsType>({
     id: '',
     smtp_host: '',
@@ -144,6 +146,85 @@ const EmailSettings: React.FC = () => {
     } finally {
       setAuthorizingGmail(false);
     }
+  };
+
+  const handleManualTokenSubmission = async () => {
+    if (!manualTokenInput.trim()) {
+      toast({
+        title: "טוקן ריק",
+        description: "אנא הכנס טוקן תקף",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setAuthorizingGmail(true);
+      
+      // Process the manual refresh token
+      const { data, error } = await supabase.functions.invoke('gmail-auth', {
+        body: { 
+          refreshToken: manualTokenInput,
+          clientId: settings.gmail_client_id,
+          clientSecret: settings.gmail_client_secret
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.accessToken) {
+        console.log('Successfully validated manual refresh token');
+        
+        // Save the tokens to our database
+        const newSettings = {
+          ...settings,
+          gmail_refresh_token: manualTokenInput,
+          gmail_access_token: data.accessToken,
+          gmail_token_expiry: data.expiryDate
+        };
+        
+        await saveGmailTokens(newSettings);
+        
+        setManualTokenInput('');
+        
+        toast({
+          title: "טוקן Gmail נשמר בהצלחה",
+          description: "טוקן הגישה נוצר בהצלחה",
+          variant: "default"
+        });
+      } else {
+        throw new Error('לא ניתן לאמת את הטוקן שהוזן');
+      }
+    } catch (error) {
+      console.error('Error processing manual token:', error);
+      toast({
+        title: "שגיאה בעיבוד הטוקן",
+        description: error.message || 'אירעה שגיאה בעיבוד הטוקן',
+        variant: "destructive"
+      });
+    } finally {
+      setAuthorizingGmail(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+        toast({
+          title: "הועתק ללוח",
+          variant: "default"
+        });
+      },
+      (err) => {
+        console.error('Could not copy text: ', err);
+        toast({
+          title: "שגיאה בהעתקה ללוח",
+          variant: "destructive"
+        });
+      }
+    );
   };
 
   const saveGmailTokens = async (updatedSettings: EmailSettingsType) => {
@@ -419,10 +500,23 @@ const EmailSettings: React.FC = () => {
       return;
     }
     
-    const scope = 'https://www.googleapis.com/auth/gmail.send';
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
-    
-    window.open(authUrl, '_self'); // Changed to _self to ensure we return to same window
+    // Save the current settings before initiating the OAuth flow
+    saveSettings().then(() => {
+      const scope = 'https://www.googleapis.com/auth/gmail.send';
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+      
+      // Open the authorization URL in a new window
+      const authWindow = window.open(authUrl, 'gmailAuthWindow', 'width=600,height=600');
+      
+      // Check if window was blocked
+      if (!authWindow || authWindow.closed || typeof authWindow.closed === 'undefined') {
+        toast({
+          title: "חלון האימות נחסם",
+          description: "אנא אפשר חלונות קופצים באתר זה ונסה שוב",
+          variant: "destructive"
+        });
+      }
+    });
   };
 
   const refreshGmailToken = async () => {
@@ -522,6 +616,15 @@ const EmailSettings: React.FC = () => {
       message: 'סטטוס חיבור Gmail לא ידוע',
       color: 'text-gray-500'
     };
+  };
+
+  const generateAuthUrlForCopyPaste = () => {
+    if (!settings.gmail_client_id || !settings.gmail_redirect_uri) {
+      return '';
+    }
+    
+    const scope = 'https://www.googleapis.com/auth/gmail.send';
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
   };
 
   if (loading) {
@@ -825,7 +928,7 @@ const EmailSettings: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <Alert className="mb-4">
                     <AlertTitle>הגדרת ממשק API של Gmail</AlertTitle>
                     <AlertDescription>
@@ -876,6 +979,8 @@ const EmailSettings: React.FC = () => {
                     </p>
                   </div>
                   
+                  <Separator />
+                  
                   <div className="space-y-2">
                     <Label>סטטוס אימות Gmail</Label>
                     <div className={`text-sm ${gmailStatus.color} p-2 border rounded-md flex justify-between items-center`}>
@@ -895,22 +1000,77 @@ const EmailSettings: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex justify-between">
-                    <Button 
-                      onClick={saveSettings} 
-                      disabled={saving}
-                    >
-                      {saving ? "שומר..." : "שמור הגדרות"}
-                    </Button>
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-md">שיטה 1: אימות אוטומטי (מומלץ)</h3>
+                    <div className="flex justify-between">
+                      <Button 
+                        onClick={saveSettings} 
+                        disabled={saving}
+                      >
+                        {saving ? "שומר..." : "שמור הגדרות"}
+                      </Button>
+                      
+                      <Button 
+                        onClick={initiateGmailAuth} 
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        disabled={!settings.gmail_client_id || !settings.gmail_client_secret || !settings.gmail_redirect_uri || authorizingGmail}
+                      >
+                        {authorizingGmail ? "מבצע אימות..." : "בצע אימות מול Gmail"}
+                      </Button>
+                    </div>
                     
-                    <Button 
-                      onClick={initiateGmailAuth} 
-                      variant="outline"
-                      className="flex items-center gap-2"
-                      disabled={!settings.gmail_client_id || !settings.gmail_client_secret || !settings.gmail_redirect_uri || authorizingGmail}
-                    >
-                      {authorizingGmail ? "מבצע אימות..." : "בצע אימות מול Gmail"}
-                    </Button>
+                    <Separator className="my-4" />
+                    
+                    <h3 className="font-medium text-md">שיטה 2: אימות ידני (במקרה של חסימת חלונות קופצים)</h3>
+                    
+                    <div className="space-y-2">
+                      <Label>1. העתק את כתובת האימות ופתח אותה בדפדפן:</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          dir="ltr"
+                          readOnly 
+                          value={generateAuthUrlForCopyPaste()}
+                          onClick={() => copyToClipboard(generateAuthUrlForCopyPaste())}
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => copyToClipboard(generateAuthUrlForCopyPaste())}
+                          disabled={!settings.gmail_client_id || !settings.gmail_redirect_uri}
+                        >
+                          {copySuccess ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="refresh_token_manual">2. לאחר אישור הגישה, הכנס את הטוקן שקיבלת:</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="refresh_token_manual"
+                          dir="ltr"
+                          value={manualTokenInput}
+                          onChange={(e) => setManualTokenInput(e.target.value)}
+                          placeholder="הכנס כאן את הטוקן שקיבלת..."
+                        />
+                        <Button 
+                          onClick={handleManualTokenSubmission}
+                          disabled={!manualTokenInput.trim() || authorizingGmail}
+                        >
+                          {authorizingGmail ? "מאמת..." : "אמת טוקן"}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>הערה חשובה</AlertTitle>
+                      <AlertDescription>
+                        לאחר שתאשר את הגישה, תקבל קוד בחלק מהדפדפנים (כרום) ובחלק תועבר ישירות לכתובת שהגדרת.
+                        במידה ותועבר ישירות, המערכת תזהה זאת אוטומטית. אם קיבלת קוד, העתק אותו לשדה למעלה ולחץ על "אמת טוקן".
+                      </AlertDescription>
+                    </Alert>
                   </div>
                 </div>
               </CardContent>

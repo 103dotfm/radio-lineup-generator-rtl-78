@@ -448,14 +448,16 @@ serve(async (req) => {
       let lineupLink = "";
       try {
         const origin = req.headers.get("origin") || "";
-        let baseUrl = origin;
+        let baseUrl = "";
         
-        if (!baseUrl || baseUrl.includes("supabase.co")) {
-          if (supabaseUrl.includes("supabase.co")) {
-            const projectRef = supabaseUrl.split("//")[1].split(".")[0];
-            baseUrl = `https://${projectRef}.vercel.app`;
+        if (origin && !origin.includes("supabase.co")) {
+          baseUrl = origin;
+        } else {
+          const url = new URL(req.url);
+          if (url.hostname !== "yyrmodgbnzqbmatlypuc.supabase.co") {
+            baseUrl = `${url.protocol}//${url.hostname}`;
           } else {
-            baseUrl = supabaseUrl;
+            baseUrl = "https://app.radioline.co.il";
           }
         }
         
@@ -466,7 +468,7 @@ serve(async (req) => {
         lineupLink = `https://app.radioline.co.il/print/${show.id}?minutes=false`;
       }
       
-      let intervieweesList = "<ul style='direction: rtl; text-align: right;'>";
+      let intervieweesList = "<ul style='direction: rtl; text-align: right; padding-right: 20px; margin-right: 0;'>";
       const uniqueInterviewees = new Set();
       
       if (Array.isArray(show.items)) {
@@ -479,7 +481,7 @@ serve(async (req) => {
               
               if (!uniqueInterviewees.has(intervieweeText)) {
                 uniqueInterviewees.add(intervieweeText);
-                intervieweesList += `<li>${intervieweeText}</li>`;
+                intervieweesList += `<li style="direction: rtl; text-align: right;">${intervieweeText}</li>`;
               }
             });
           } else if (!item.is_break && !item.is_note && !item.is_divider) {
@@ -489,7 +491,7 @@ serve(async (req) => {
             
             if (!uniqueInterviewees.has(intervieweeText)) {
               uniqueInterviewees.add(intervieweeText);
-              intervieweesList += `<li>${intervieweeText}</li>`;
+              intervieweesList += `<li style="direction: rtl; text-align: right;">${intervieweeText}</li>`;
             }
           }
         });
@@ -503,7 +505,7 @@ serve(async (req) => {
       subject = subject.replace(/{{show_date}}/g, formattedDate);
       subject = subject.replace(/{{show_time}}/g, show.time || "");
       
-      let body = `<div style="direction: rtl; text-align: right;">
+      let body = `<div dir="rtl" style="direction: rtl; text-align: right; font-family: Arial, sans-serif;">
         ${emailSettings.body_template
           .replace(/{{show_name}}/g, show.name)
           .replace(/{{show_date}}/g, formattedDate)
@@ -512,15 +514,11 @@ serve(async (req) => {
           .replace(/{{lineup_link}}/g, lineupLink)}
       </div>`;
       
-      body = body
-        .replace(/<p/g, '<p style="direction: rtl; text-align: right;"')
-        .replace(/<h1/g, '<h1 style="direction: rtl; text-align: right;"')
-        .replace(/<h2/g, '<h2 style="direction: rtl; text-align: right;"')
-        .replace(/<h3/g, '<h3 style="direction: rtl; text-align: right;"')
-        .replace(/<h4/g, '<h4 style="direction: rtl; text-align: right;"')
-        .replace(/<h5/g, '<h5 style="direction: rtl; text-align: right;"')
-        .replace(/<h6/g, '<h6 style="direction: rtl; text-align: right;"')
-        .replace(/<div/g, '<div style="direction: rtl; text-align: right;"');
+      const rtlElements = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'a', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th'];
+      rtlElements.forEach(element => {
+        const regex = new RegExp(`<${element}(\\s[^>]*|)>`, 'g');
+        body = body.replace(regex, `<${element}$1 style="direction: rtl; text-align: right;">`);
+      });
 
       console.log(`Email prepared - Subject: ${subject}`);
       
