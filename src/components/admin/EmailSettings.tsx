@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
+import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check, Info } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import BasicEditor from "../editor/BasicEditor";
 import {
@@ -14,7 +15,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -41,11 +42,14 @@ const EmailSettings: React.FC = () => {
   const { toast } = useToast();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [authorizingGmail, setAuthorizingGmail] = useState(false);
   const [manualTokenInput, setManualTokenInput] = useState('');
+  const [manualCodeInput, setManualCodeInput] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   const [settings, setSettings] = useState<EmailSettingsType>({
     id: '',
@@ -82,12 +86,16 @@ const EmailSettings: React.FC = () => {
     
     if (code) {
       console.log('Found OAuth code in URL:', code);
+      setManualCodeInput(code);
       handleGmailAuthCode(code);
+      
+      // Remove code from URL without reload
+      navigate('/admin', { replace: true });
     }
   }, [searchParams]);
 
   const handleGmailAuthCode = async (code: string) => {
-    console.log('Processing Gmail auth code');
+    console.log('Processing Gmail auth code:', code);
     
     // Update UI to show we're processing the code
     toast({
@@ -98,6 +106,11 @@ const EmailSettings: React.FC = () => {
     
     try {
       setAuthorizingGmail(true);
+      setErrorDetails(null);
+      
+      if (!settings.gmail_redirect_uri || !settings.gmail_client_id || !settings.gmail_client_secret) {
+        throw new Error("חסרות הגדרות חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
+      }
       
       // Exchange the code for tokens
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
@@ -109,7 +122,16 @@ const EmailSettings: React.FC = () => {
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error from gmail-auth function:', error);
+        throw error;
+      }
+      
+      console.log('Response from gmail-auth function:', data);
+      
+      if (data && data.error) {
+        throw new Error(data.error + (data.message ? ': ' + data.message : ''));
+      }
       
       if (data && data.refreshToken) {
         console.log('Got refresh token from Google');
@@ -130,14 +152,16 @@ const EmailSettings: React.FC = () => {
           variant: "default"
         });
       } else {
-        throw new Error('לא התקבל טוקן מגוגל');
+        throw new Error('לא התקבל טוקן רענון מגוגל');
       }
-      
-      // Remove code from URL without reload
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
     } catch (error) {
       console.error('Error processing Gmail auth code:', error);
+      setErrorDetails({
+        stage: 'GMAIL_AUTH_CODE',
+        message: error.message || 'אירעה שגיאה לא ידועה',
+        details: error
+      });
+      
       toast({
         title: "שגיאה בתהליך אימות Gmail",
         description: error.message || 'אירעה שגיאה לא ידועה',
@@ -160,6 +184,7 @@ const EmailSettings: React.FC = () => {
 
     try {
       setAuthorizingGmail(true);
+      setErrorDetails(null);
       
       // Process the manual refresh token
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
@@ -197,6 +222,12 @@ const EmailSettings: React.FC = () => {
       }
     } catch (error) {
       console.error('Error processing manual token:', error);
+      setErrorDetails({
+        stage: 'MANUAL_TOKEN_VALIDATION',
+        message: error.message || 'אירעה שגיאה בעיבוד הטוקן',
+        details: error
+      });
+      
       toast({
         title: "שגיאה בעיבוד הטוקן",
         description: error.message || 'אירעה שגיאה בעיבוד הטוקן',
@@ -204,6 +235,28 @@ const EmailSettings: React.FC = () => {
       });
     } finally {
       setAuthorizingGmail(false);
+    }
+  };
+
+  const handleManualCodeSubmission = async () => {
+    if (!manualCodeInput.trim()) {
+      toast({
+        title: "קוד אימות ריק",
+        description: "אנא הכנס קוד אימות תקף",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await handleGmailAuthCode(manualCodeInput);
+    } catch (error) {
+      console.error('Error processing manual code:', error);
+      toast({
+        title: "שגיאה בעיבוד קוד האימות",
+        description: error.message || 'אירעה שגיאה בעיבוד קוד האימות',
+        variant: "destructive"
+      });
     }
   };
 
@@ -234,21 +287,9 @@ const EmailSettings: React.FC = () => {
         .update({
           gmail_refresh_token: updatedSettings.gmail_refresh_token,
           gmail_access_token: updatedSettings.gmail_access_token,
-          gmail_token_expiry: updatedSettings.gmail_token_expiry,
-          id: updatedSettings.id,
-          body_template: updatedSettings.body_template,
-          smtp_host: updatedSettings.smtp_host,
-          smtp_port: updatedSettings.smtp_port,
-          smtp_user: updatedSettings.smtp_user,
-          smtp_password: updatedSettings.smtp_password,
-          sender_email: updatedSettings.sender_email,
-          sender_name: updatedSettings.sender_name,
-          subject_template: updatedSettings.subject_template,
-          email_method: updatedSettings.email_method,
-          gmail_client_id: updatedSettings.gmail_client_id,
-          gmail_client_secret: updatedSettings.gmail_client_secret,
-          gmail_redirect_uri: updatedSettings.gmail_redirect_uri
-        });
+          gmail_token_expiry: updatedSettings.gmail_token_expiry
+        })
+        .eq('id', updatedSettings.id);
 
       if (error) throw error;
       
@@ -502,20 +543,20 @@ const EmailSettings: React.FC = () => {
     
     // Save the current settings before initiating the OAuth flow
     saveSettings().then(() => {
+      // Make sure the redirectUri in settings is configured to point to the admin page
       const scope = 'https://www.googleapis.com/auth/gmail.send';
+      
+      // Make sure to include access_type=offline and prompt=consent to always get a refresh token
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
       
-      // Open the authorization URL in a new window
-      const authWindow = window.open(authUrl, 'gmailAuthWindow', 'width=600,height=600');
+      toast({
+        title: "פתיחת חלון אימות Gmail",
+        description: "עוקב אחר ההוראות בחלון שנפתח",
+        variant: "default"
+      });
       
-      // Check if window was blocked
-      if (!authWindow || authWindow.closed || typeof authWindow.closed === 'undefined') {
-        toast({
-          title: "חלון האימות נחסם",
-          description: "אנא אפשר חלונות קופצים באתר זה ונסה שוב",
-          variant: "destructive"
-        });
-      }
+      // Open the authorization URL in a new window
+      window.location.href = authUrl;
     });
   };
 
@@ -531,6 +572,7 @@ const EmailSettings: React.FC = () => {
     
     try {
       setAuthorizingGmail(true);
+      setErrorDetails(null);
       
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
         body: { 
@@ -560,6 +602,12 @@ const EmailSettings: React.FC = () => {
       }
     } catch (error) {
       console.error('Error refreshing Gmail token:', error);
+      setErrorDetails({
+        stage: 'TOKEN_REFRESH',
+        message: error.message || 'אירעה שגיאה לא ידועה',
+        details: error
+      });
+      
       toast({
         title: "שגיאה ברענון טוקן Gmail",
         description: error.message || 'אירעה שגיאה לא ידועה',
@@ -974,9 +1022,29 @@ const EmailSettings: React.FC = () => {
                       onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
                       placeholder="https://your-app-url.com/admin"
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      הכתובת אליה יופנה המשתמש לאחר אישור הגישה. חייבת להיות זהה להגדרות בקונסולת Google
-                    </p>
+                    <Alert variant="warning" className="mt-2">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>חשוב מאוד!</AlertTitle>
+                      <AlertDescription>
+                        <p>כתובת ההפניה חייבת להיות בדיוק: <strong>{window.location.origin}/admin</strong></p>
+                        <p>השתמש בכתובת זו גם בהגדרות Google Cloud Console</p>
+                        <Button 
+                          onClick={() => {
+                            setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/admin`});
+                            toast({
+                              title: "כתובת ההפניה עודכנה",
+                              description: "כתובת ההפניה הוגדרה לדף הנוכחי",
+                              variant: "default"
+                            });
+                          }}
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                        >
+                          הגדר כתובת אוטומטית
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
                   </div>
                   
                   <Separator />
@@ -1002,6 +1070,15 @@ const EmailSettings: React.FC = () => {
                   
                   <div className="space-y-4">
                     <h3 className="font-medium text-md">שיטה 1: אימות אוטומטי (מומלץ)</h3>
+                    
+                    <Alert variant="info" className="mb-4 bg-blue-50 border-blue-100">
+                      <AlertTitle className="text-blue-800">מידע חשוב</AlertTitle>
+                      <AlertDescription className="text-blue-700">
+                        <p>בסיום תהליך האימות מול Google, המערכת תחזיר אותך לעמוד זה ותשלים את תהליך האימות אוטומטית.</p>
+                        <p>חשוב לוודא ש"כתובת ההפניה" מוגדרת נכון בשדה למעלה וגם בהגדרות Google Cloud Console.</p>
+                      </AlertDescription>
+                    </Alert>
+                    
                     <div className="flex justify-between">
                       <Button 
                         onClick={saveSettings} 
@@ -1022,7 +1099,7 @@ const EmailSettings: React.FC = () => {
                     
                     <Separator className="my-4" />
                     
-                    <h3 className="font-medium text-md">שיטה 2: אימות ידני (במקרה של חסימת חלונות קופצים)</h3>
+                    <h3 className="font-medium text-md">שיטה 2: אימות ידני (במקרה של חסימת חלונות קופצים או בעיות בהפניה)</h3>
                     
                     <div className="space-y-2">
                       <Label>1. העתק את כתובת האימות ופתח אותה בדפדפן:</Label>
@@ -1045,14 +1122,38 @@ const EmailSettings: React.FC = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="refresh_token_manual">2. לאחר אישור הגישה, הכנס את הטוקן שקיבלת:</Label>
+                      <Label htmlFor="manual_auth_code">2. לאחר אישור הגישה, העתק את הקוד מהכתובת:</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="manual_auth_code"
+                          dir="ltr"
+                          value={manualCodeInput}
+                          onChange={(e) => setManualCodeInput(e.target.value)}
+                          placeholder="הכנס את קוד האימות שקיבלת (מתחיל ב-4/...)"
+                        />
+                        <Button 
+                          onClick={handleManualCodeSubmission}
+                          disabled={!manualCodeInput.trim() || authorizingGmail}
+                        >
+                          {authorizingGmail ? "מאמת..." : "אמת קוד"}
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        הקוד מופיע בכתובת הדפדפן אחרי <code>?code=</code>
+                      </p>
+                    </div>
+                    
+                    <h4 className="font-medium mt-4">או לחלופין, הזן ישירות את טוקן הרענון:</h4>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="refresh_token_manual">3. אם יש לך טוקן רענון מוכן, הכנס אותו כאן:</Label>
                       <div className="flex gap-2">
                         <Input
                           id="refresh_token_manual"
                           dir="ltr"
                           value={manualTokenInput}
                           onChange={(e) => setManualTokenInput(e.target.value)}
-                          placeholder="הכנס כאן את הטוקן שקיבלת..."
+                          placeholder="הכנס טוקן רענון (refresh token)..."
                         />
                         <Button 
                           onClick={handleManualTokenSubmission}
@@ -1061,14 +1162,21 @@ const EmailSettings: React.FC = () => {
                           {authorizingGmail ? "מאמת..." : "אמת טוקן"}
                         </Button>
                       </div>
+                      <p className="text-sm text-muted-foreground">
+                        אפשרות זו מיועדת למשתמשים מתקדמים שכבר השיגו טוקן רענון בדרך אחרת
+                      </p>
                     </div>
                     
-                    <Alert>
+                    <Alert className="mt-2">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>הערה חשובה</AlertTitle>
+                      <AlertTitle>הערות לגבי תהליך האימות</AlertTitle>
                       <AlertDescription>
-                        לאחר שתאשר את הגישה, תקבל קוד בחלק מהדפדפנים (כרום) ובחלק תועבר ישירות לכתובת שהגדרת.
-                        במידה ותועבר ישירות, המערכת תזהה זאת אוטומטית. אם קיבלת קוד, העתק אותו לשדה למעלה ולחץ על "אמת טוקן".
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          <li>בסיום האימות אצל Google, הדפדפן יפנה אותך לכתובת ההפניה שהגדרת</li>
+                          <li>אם הכל הוגדר נכון, תוחזר לעמוד זה והאימות יושלם אוטומטית</li>
+                          <li>אם מופיעה שגיאה, העתק את הקוד מהכתובת והזן אותו בשדה למעלה</li>
+                          <li>ודא שהגדרת את אותה כתובת הפניה גם בקונסולת Google וגם בשדות כאן</li>
+                        </ul>
                       </AlertDescription>
                     </Alert>
                   </div>
@@ -1126,6 +1234,25 @@ const EmailSettings: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Display current error details if any */}
+      {errorDetails && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>שגיאה בתהליך אימות Gmail</AlertTitle>
+          <AlertDescription>
+            <div className="text-sm mt-2">
+              <p><strong>שלב:</strong> {errorDetails.stage || 'לא ידוע'}</p>
+              <p><strong>הודעה:</strong> {errorDetails.message || 'לא ידוע'}</p>
+              {errorDetails.details && (
+                <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40" dir="ltr">
+                  {JSON.stringify(errorDetails.details, null, 2)}
+                </pre>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
