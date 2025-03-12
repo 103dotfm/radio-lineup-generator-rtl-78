@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import UserManagement from '@/components/admin/UserManagement';
 import MasterSchedule from '@/components/schedule/MasterSchedule';
@@ -37,7 +38,7 @@ const Admin = () => {
       setDefaultTab("email");
       setRedirectProcessed(true);
 
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Don't modify the URL here, let EmailSettings handle it
     }
   }, [searchParams, redirectProcessed]);
 

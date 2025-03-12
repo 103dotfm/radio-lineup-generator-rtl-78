@@ -89,7 +89,7 @@ const EmailSettings: React.FC = () => {
       handleGmailAuthCode(code);
       
       // Remove code from URL without reload but stay on admin page
-      navigate('/admin', { replace: true });
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [searchParams]);
 
