@@ -123,10 +123,11 @@ const DataManagement = () => {
         
         // Get show items for these shows to later filter interviewees
         if (filteredShowIds.length > 0) {
+          // Using as any to avoid excessive type instantiation
           const { data: filteredItems, error: itemsError } = await supabase
             .from('show_items' as ValidTableName)
             .select('id')
-            .in('show_id', filteredShowIds);
+            .in('show_id', filteredShowIds) as any;
             
           if (itemsError) {
             throw new Error(`Error filtering show items: ${itemsError.message}`);
@@ -168,11 +169,13 @@ const DataManagement = () => {
           }
           else if (tableName === 'show_items' && filteredShowIds.length > 0) {
             // Show items are filtered by show_id
-            query = query.in('show_id', filteredShowIds);
+            // Using as any to avoid excessive type instantiation
+            query = query.in('show_id', filteredShowIds) as any;
           }
           else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
             // Interviewees are filtered by item_id
-            query = query.in('item_id', filteredShowItemIds);
+            // Using as any to avoid excessive type instantiation
+            query = query.in('item_id', filteredShowItemIds) as any;
           }
           // Other tables not filtered by date range
         }
