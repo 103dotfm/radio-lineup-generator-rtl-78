@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { format, parse, isValid } from 'date-fns';
 import { 
@@ -49,6 +50,11 @@ type ConflictItem = {
   resolution?: 'overwrite' | 'keep';
 };
 
+// Define valid table names to satisfy TypeScript
+type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots" | 
+  "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
+  "show_email_logs" | "system_settings" | "users";
+
 const DataManagement = () => {
   const { toast } = useToast();
   const [exportStartDate, setExportStartDate] = useState<Date | undefined>(undefined);
@@ -62,6 +68,7 @@ const DataManagement = () => {
   const [currentConflictIndex, setCurrentConflictIndex] = useState(0);
   const [showGlobalResolutionDialog, setShowGlobalResolutionDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState("export");
   
   // Tables to export/import
   const [selectedTables, setSelectedTables] = useState({
@@ -92,7 +99,8 @@ const DataManagement = () => {
       
       // Process each selected table
       for (const tableName of tables) {
-        let query = supabase.from(tableName).select('*');
+        // Cast tableName to ValidTableName to satisfy TypeScript
+        let query = supabase.from(tableName as ValidTableName).select('*');
         
         // Add date filters for tables with date fields
         if (['shows', 'work_arrangements'].includes(tableName) && (exportStartDate || exportEndDate)) {
@@ -225,7 +233,7 @@ const DataManagement = () => {
         
         // Check if record already exists
         const { data: existingData, error } = await supabase
-          .from(tableName)
+          .from(tableName as ValidTableName)
           .select('*')
           .eq('id', record.id)
           .single();
@@ -267,7 +275,7 @@ const DataManagement = () => {
           
           // Check if record exists
           const { data: existingData, error: checkError } = await supabase
-            .from(tableName)
+            .from(tableName as ValidTableName)
             .select('id')
             .eq('id', record.id)
             .single();
@@ -276,7 +284,7 @@ const DataManagement = () => {
             // Record exists, handle based on resolution
             if (resolution === 'overwrite') {
               const { error: updateError } = await supabase
-                .from(tableName)
+                .from(tableName as ValidTableName)
                 .update(record)
                 .eq('id', record.id);
               
@@ -288,7 +296,7 @@ const DataManagement = () => {
           } else {
             // Record doesn't exist, insert it
             const { error: insertError } = await supabase
-              .from(tableName)
+              .from(tableName as ValidTableName)
               .insert(record);
             
             if (insertError) {
@@ -373,7 +381,7 @@ const DataManagement = () => {
       for (const [tableName, records] of Object.entries(tableData)) {
         for (const record of records) {
           const { error } = await supabase
-            .from(tableName)
+            .from(tableName as ValidTableName)
             .update(record)
             .eq('id', record.id);
           
@@ -439,7 +447,7 @@ const DataManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="export" className="space-y-4">
+          <Tabs defaultValue="export" className="space-y-4" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="export">
                 <Download className="h-4 w-4 ms-2" />
@@ -629,25 +637,21 @@ const DataManagement = () => {
             {/* Placeholder for status messages */}
           </div>
           
-          <Tabs.Context>
-            {({ value }) => (
-              value === 'export' ? (
-                <Button 
-                  onClick={handleExport} 
-                  disabled={isExporting || !Object.values(selectedTables).some(v => v)}
-                >
-                  {isExporting ? (
-                    <>מייצא נתונים...</>
-                  ) : (
-                    <>
-                      <Download className="ms-2 h-4 w-4" />
-                      ייצא נתונים
-                    </>
-                  )}
-                </Button>
-              ) : null
-            )}
-          </Tabs.Context>
+          {activeTab === 'export' && (
+            <Button 
+              onClick={handleExport} 
+              disabled={isExporting || !Object.values(selectedTables).some(v => v)}
+            >
+              {isExporting ? (
+                <>מייצא נתונים...</>
+              ) : (
+                <>
+                  <Download className="ms-2 h-4 w-4" />
+                  ייצא נתונים
+                </>
+              )}
+            </Button>
+          )}
         </CardFooter>
       </Card>
       
