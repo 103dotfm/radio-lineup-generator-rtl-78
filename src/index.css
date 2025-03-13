@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -549,4 +548,28 @@ tbody {vertical-align: top;}
 /* Print Header for Schedule */
 .print-schedule-header {
   display: none;
+}
+
+/* Floating header styles */
+.fixed {
+  z-index: 1000;
+}
+
+@media print {
+  .fixed {
+    display: none !important;
+  }
+}
+
+/* Admin page tab styles */
+.admin-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+/* Admin content border styles */
+.border-r-4 {
+  border-right-width: 4px;
 }

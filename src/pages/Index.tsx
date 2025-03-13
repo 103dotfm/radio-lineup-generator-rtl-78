@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -418,6 +419,7 @@ const Index = () => {
           showMinutes={showMinutes}
           onToggleMinutes={handleToggleMinutes}
           onDividerAdd={handleAddDivider}
+          isSaving={isSaving}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">

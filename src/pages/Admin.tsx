@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import UserManagement from '@/components/admin/UserManagement';
 import MasterSchedule from '@/components/schedule/MasterSchedule';
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Clock, Database } from "lucide-react";
+import { ArrowRight, Clock, Database, Users, Briefcase, Mail, Calendar } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 
@@ -184,34 +185,66 @@ const Admin = () => {
       
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5 mb-8">
-          <TabsTrigger value="schedule" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">לוח שידורים ראשי</TabsTrigger>
-          <TabsTrigger value="arrangements" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבודה</TabsTrigger>
-          <TabsTrigger value="users" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">ניהול משתמשים</TabsTrigger>
-          <TabsTrigger value="email" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">דואר אלקטרוני</TabsTrigger>
+          <TabsTrigger value="schedule" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
+            <div className="flex items-center gap-2 text-right">
+              <Calendar className="h-4 w-4 flex-shrink-0" />
+              <span>לוח שידורים</span>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="arrangements" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
+            <div className="flex items-center gap-2 text-right">
+              <Briefcase className="h-4 w-4 flex-shrink-0" />
+              <span>סידורי עבודה</span>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
+            <div className="flex items-center gap-2 text-right">
+              <Users className="h-4 w-4 flex-shrink-0" />
+              <span>ניהול משתמשים</span>
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="email" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
+            <div className="flex items-center gap-2 text-right">
+              <Mail className="h-4 w-4 flex-shrink-0" />
+              <span>דואר אלקטרוני</span>
+            </div>
+          </TabsTrigger>
           <TabsTrigger value="data" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
-            <Database className="h-4 w-4 ml-1" />
-            ניהול נתונים
+            <div className="flex items-center gap-2 text-right">
+              <Database className="h-4 w-4 flex-shrink-0" />
+              <span>ניהול נתונים</span>
+            </div>
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
-          <MasterSchedule />
+          <div className="border-r-4 border-emerald-300 pr-4">
+            <MasterSchedule />
+          </div>
         </TabsContent>
         
         <TabsContent value="arrangements" className="mt-4">
-          <WorkArrangements />
+          <div className="border-r-4 border-emerald-300 pr-4">
+            <WorkArrangements />
+          </div>
         </TabsContent>
         
         <TabsContent value="users" className="mt-4">
-          <UserManagement />
+          <div className="border-r-4 border-emerald-300 pr-4">
+            <UserManagement />
+          </div>
         </TabsContent>
         
         <TabsContent value="email" className="mt-4">
-          <EmailSettings />
+          <div className="border-r-4 border-emerald-300 pr-4">
+            <EmailSettings />
+          </div>
         </TabsContent>
         
         <TabsContent value="data" className="mt-4">
-          <DataManagement />
+          <div className="border-r-4 border-emerald-300 pr-4">
+            <DataManagement />
+          </div>
         </TabsContent>
       </Tabs>
     </div>;
