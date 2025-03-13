@@ -8,12 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check, Info } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import BasicEditor from "../editor/BasicEditor";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
@@ -977,7 +972,7 @@ const EmailSettings: React.FC = () => {
                         <li>הפעל את Gmail API עבור הפרויקט</li>
                         <li>צור אישורי OAuth (מסך הסכמה והגדרות לקוח OAuth)</li>
                         <li>העתק את מזהה הלקוח (Client ID) וסוד הלקוח (Client Secret)</li>
-                        <li>הגדר את כתובת ה-URI להפניה בדיוק כפי שמופיע כאן: <code className="bg-blue-100 px-1 rounded">{window.location.origin}/admin</code></li>
+                        <li>הגדר את כתובת ה-URI להפניה בדיוק כפי שמופיע כאן: <code className="bg-blue-100 px-1 rounded">{window.location.origin}/admin?provider=gmail</code></li>
                       </ol>
                     </AlertDescription>
                   </Alert>
@@ -1014,14 +1009,14 @@ const EmailSettings: React.FC = () => {
                         dir="ltr"
                         value={settings.gmail_redirect_uri}
                         onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
-                        placeholder={`${window.location.origin}/admin`}
+                        placeholder={`${window.location.origin}/admin?provider=gmail`}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="shrink-0"
                         onClick={() => {
-                          setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/admin`});
+                          setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/admin?provider=gmail`});
                         }}
                       >
                         השתמש בנוכחי
@@ -1220,3 +1215,4 @@ const EmailSettings: React.FC = () => {
 };
 
 export default EmailSettings;
+
