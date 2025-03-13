@@ -37,7 +37,7 @@ const Admin = () => {
       console.log("Found OAuth code in URL, setting default tab to email");
       setDefaultTab("email");
       setRedirectProcessed(true);
-
+      
       // Don't modify the URL here, let EmailSettings handle it
     }
   }, [searchParams, redirectProcessed]);

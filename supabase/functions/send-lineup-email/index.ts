@@ -74,6 +74,7 @@ const getAlternativeSmtpRecommendation = (host: string): string => {
 const applyTimezoneOffset = (date: Date, offsetHours: number): Date => {
   const newDate = new Date(date);
   newDate.setHours(newDate.getHours() + offsetHours);
+  console.log(`Applying timezone offset: ${offsetHours} hours to ${date.toISOString()}, result: ${newDate.toISOString()}`);
   return newDate;
 };
 
@@ -268,7 +269,7 @@ serve(async (req) => {
         
       if (!offsetError && offsetData && offsetData.value) {
         timezoneOffset = parseInt(offsetData.value) || 0;
-        console.log(`Timezone offset: ${timezoneOffset} hours`);
+        console.log(`Timezone offset from system settings: ${timezoneOffset} hours`);
       }
     } catch (offsetError) {
       console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
@@ -438,7 +439,7 @@ serve(async (req) => {
           const showDate = new Date(show.date);
           const adjustedDate = applyTimezoneOffset(showDate, timezoneOffset);
           formattedDate = adjustedDate.toLocaleDateString('he-IL');
-          console.log(`Raw date: ${show.date}, Adjusted date: ${adjustedDate.toISOString()}, Formatted date: ${formattedDate}`);
+          console.log(`Raw date: ${show.date}, Adjusted date with offset ${timezoneOffset}: ${adjustedDate.toISOString()}, Formatted date: ${formattedDate}`);
         }
       } catch (dateError) {
         console.error("Error formatting date:", dateError);
