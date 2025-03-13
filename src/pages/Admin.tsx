@@ -17,14 +17,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 
 const Admin = () => {
-  const {
-    isAdmin,
-    isAuthenticated
-  } = useAuth();
+  const { isAdmin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [timezoneOffset, setTimezoneOffset] = useState(0);
   const [serverTime, setServerTime] = useState<Date | null>(null);
@@ -46,10 +41,12 @@ const Admin = () => {
   useEffect(() => {
     const fetchServerSettings = async () => {
       try {
-        const {
-          data: settingsData,
-          error: settingsError
-        } = await supabase.from('system_settings').select('*').eq('key', 'timezone_offset').single();
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('system_settings')
+          .select('*')
+          .eq('key', 'timezone_offset')
+          .single();
+          
         if (!settingsError && settingsData) {
           setTimezoneOffset(parseInt(settingsData.value) || 0);
         } else {
@@ -135,7 +132,8 @@ const Admin = () => {
     return <Navigate to="/" replace />;
   }
 
-  return <div className="container mx-auto py-8" dir="rtl">
+  return (
+    <div className="container mx-auto py-8" dir="rtl">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">ניהול מערכת</h1>
         <Button variant="ghost" onClick={() => navigate('/')} className="flex items-center gap-2">
@@ -145,38 +143,38 @@ const Admin = () => {
       </div>
       
       <Card className="mb-8">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl flex items-center gap-2">
+        <CardHeader className="pb-2 text-right">
+          <CardTitle className="text-xl flex items-center gap-2 justify-end">
             <Clock className="h-5 w-5" />
             הגדרות זמן מערכת
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-right">
             כוונון אזור זמן לשליחת הודעות דואר אלקטרוני
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-end gap-6">
-            <div className="space-y-2 flex-1">
-              <Label htmlFor="server-time">זמן שרת נוכחי:</Label>
-              <div className="text-lg font-medium" id="server-time">
+            <div className="space-y-2 flex-1 text-right">
+              <Label htmlFor="server-time" className="block text-right">זמן שרת נוכחי:</Label>
+              <div className="text-lg font-medium text-right" id="server-time">
                 {serverTime ? serverTime.toLocaleTimeString('he-IL') : 'טוען...'}
               </div>
             </div>
             
-            <div className="space-y-2 flex-1">
-              <Label htmlFor="server-time-offset">זמן שרת עם היסט:</Label>
-              <div className="text-lg font-medium text-green-600" id="server-time-offset">
+            <div className="space-y-2 flex-1 text-right">
+              <Label htmlFor="server-time-offset" className="block text-right">זמן שרת עם היסט:</Label>
+              <div className="text-lg font-medium text-green-600 text-right" id="server-time-offset">
                 {serverTime ? formatLocalTime(serverTime) : 'טוען...'}
               </div>
             </div>
             
-            <div className="space-y-2 flex-1">
-              <Label htmlFor="timezone-offset">היסט שעות (מספר שלם):</Label>
-              <div className="flex gap-2">
-                <Input id="timezone-offset" type="number" value={timezoneOffset} onChange={e => setTimezoneOffset(parseInt(e.target.value) || 0)} className="w-24" />
+            <div className="space-y-2 flex-1 text-right">
+              <Label htmlFor="timezone-offset" className="block text-right">היסט שעות (מספר שלם):</Label>
+              <div className="flex gap-2 justify-end">
                 <Button onClick={saveTimezoneOffset} disabled={savingOffset}>
                   {savingOffset ? "שומר..." : "שמור היסט"}
                 </Button>
+                <Input id="timezone-offset" type="number" value={timezoneOffset} onChange={e => setTimezoneOffset(parseInt(e.target.value) || 0)} className="w-24 text-right" />
               </div>
             </div>
           </div>
@@ -185,69 +183,64 @@ const Admin = () => {
       
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5 mb-8">
-          <TabsTrigger value="schedule" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
-            <div className="flex items-center gap-2 text-right">
-              <Calendar className="h-4 w-4 flex-shrink-0" />
-              <span>לוח שידורים</span>
-            </div>
+          <TabsTrigger value="schedule" className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Calendar className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">לוח שידורים</span>
           </TabsTrigger>
-          <TabsTrigger value="arrangements" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
-            <div className="flex items-center gap-2 text-right">
-              <Briefcase className="h-4 w-4 flex-shrink-0" />
-              <span>סידורי עבודה</span>
-            </div>
+          
+          <TabsTrigger value="arrangements" className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Briefcase className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">סידורי עבודה</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
-            <div className="flex items-center gap-2 text-right">
-              <Users className="h-4 w-4 flex-shrink-0" />
-              <span>ניהול משתמשים</span>
-            </div>
+          
+          <TabsTrigger value="users" className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Users className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">ניהול משתמשים</span>
           </TabsTrigger>
-          <TabsTrigger value="email" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
-            <div className="flex items-center gap-2 text-right">
-              <Mail className="h-4 w-4 flex-shrink-0" />
-              <span>דואר אלקטרוני</span>
-            </div>
+          
+          <TabsTrigger value="email" className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Mail className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">דואר אלקטרוני</span>
           </TabsTrigger>
-          <TabsTrigger value="data" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
-            <div className="flex items-center gap-2 text-right">
-              <Database className="h-4 w-4 flex-shrink-0" />
-              <span>ניהול נתונים</span>
-            </div>
+          
+          <TabsTrigger value="data" className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Database className="h-5 w-5 flex-shrink-0" />
+            <span className="font-medium">ניהול נתונים</span>
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
-          <div className="border-r-4 border-emerald-300 pr-4">
+          <div className="border-r-4 border-emerald-500 pr-6 py-3">
             <MasterSchedule />
           </div>
         </TabsContent>
         
         <TabsContent value="arrangements" className="mt-4">
-          <div className="border-r-4 border-emerald-300 pr-4">
+          <div className="border-r-4 border-emerald-500 pr-6 py-3">
             <WorkArrangements />
           </div>
         </TabsContent>
         
         <TabsContent value="users" className="mt-4">
-          <div className="border-r-4 border-emerald-300 pr-4">
+          <div className="border-r-4 border-emerald-500 pr-6 py-3">
             <UserManagement />
           </div>
         </TabsContent>
         
         <TabsContent value="email" className="mt-4">
-          <div className="border-r-4 border-emerald-300 pr-4">
+          <div className="border-r-4 border-emerald-500 pr-6 py-3">
             <EmailSettings />
           </div>
         </TabsContent>
         
         <TabsContent value="data" className="mt-4">
-          <div className="border-r-4 border-emerald-300 pr-4">
+          <div className="border-r-4 border-emerald-500 pr-6 py-3">
             <DataManagement />
           </div>
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 };
 
 export default Admin;
