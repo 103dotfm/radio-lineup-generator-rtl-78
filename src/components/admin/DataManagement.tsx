@@ -123,11 +123,14 @@ const DataManagement = () => {
         
         // Get show items for these shows to later filter interviewees
         if (filteredShowIds.length > 0) {
-          // Using as any to avoid excessive type instantiation
-          const { data: filteredItems, error: itemsError } = await supabase
+          // Need to cast to any before using .in() to prevent excessive type instantiation
+          const queryBuilder = supabase
             .from('show_items' as ValidTableName)
-            .select('id')
-            .in('show_id', filteredShowIds) as any;
+            .select('id');
+          
+          // Cast queryBuilder to any before calling .in()
+          const { data: filteredItems, error: itemsError } = await (queryBuilder as any)
+            .in('show_id', filteredShowIds);
             
           if (itemsError) {
             throw new Error(`Error filtering show items: ${itemsError.message}`);
@@ -168,14 +171,12 @@ const DataManagement = () => {
             }
           }
           else if (tableName === 'show_items' && filteredShowIds.length > 0) {
-            // Show items are filtered by show_id
-            // Using as any to avoid excessive type instantiation
-            query = query.in('show_id', filteredShowIds) as any;
+            // Cast query to any before calling .in()
+            query = (query as any).in('show_id', filteredShowIds);
           }
           else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
-            // Interviewees are filtered by item_id
-            // Using as any to avoid excessive type instantiation
-            query = query.in('item_id', filteredShowItemIds) as any;
+            // Cast query to any before calling .in()
+            query = (query as any).in('item_id', filteredShowItemIds);
           }
           // Other tables not filtered by date range
         }
@@ -456,7 +457,7 @@ const DataManagement = () => {
       
       toast({
         title: "ייבוא הצליח",
-        description: "הנתונים יובאו בהצלחה למערכת",
+        description: "הנתונים יובאו ב��צלחה למערכת",
         variant: "default",
       });
     } catch (error: any) {
