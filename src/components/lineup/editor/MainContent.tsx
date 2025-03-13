@@ -63,7 +63,7 @@ const MainContent = memo(({
   onDividerAdd
 }: MainContentProps) => {
   return (
-    <main className="space-y-8">
+    <main className="space-y-8" dir="rtl">
       <ShowHeader
         showName={showName}
         showTime={showTime}

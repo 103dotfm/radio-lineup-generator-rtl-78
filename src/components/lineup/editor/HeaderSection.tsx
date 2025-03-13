@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -12,7 +13,7 @@ interface HeaderSectionProps {
 
 const HeaderSection = ({ showName, showDate, onBackToDashboard }: HeaderSectionProps) => {
   return (
-    <div className="lineup-editor-header mb-8">
+    <div className="lineup-editor-header mb-8" dir="rtl">
       <Button 
         variant="outline" 
         onClick={onBackToDashboard}

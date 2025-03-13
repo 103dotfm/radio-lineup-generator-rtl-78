@@ -4,6 +4,7 @@ import { Editor } from '@tiptap/react';
 import HeaderSection from './editor/HeaderSection';
 import MainContent from './editor/MainContent';
 import FooterSection from './editor/FooterSection';
+import FloatingHeader from './editor/FloatingHeader';
 
 interface LineupEditorProps {
   showName: string;
@@ -31,6 +32,7 @@ interface LineupEditorProps {
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
   onDividerAdd?: () => void;
+  isSaving?: boolean;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -60,9 +62,17 @@ const LineupEditor = memo(({
   showMinutes,
   onToggleMinutes,
   onDividerAdd,
+  isSaving,
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden lineup-editor">
+      <FloatingHeader 
+        showName={showName}
+        onSave={onSave}
+        onBackToDashboard={onBackToDashboard}
+        isSaving={isSaving}
+      />
+      
       <HeaderSection 
         showName={showName}
         showDate={showDate}
