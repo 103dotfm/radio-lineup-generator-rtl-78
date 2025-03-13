@@ -13,7 +13,7 @@ interface HeaderSectionProps {
 
 const HeaderSection = ({ showName, showDate, onBackToDashboard }: HeaderSectionProps) => {
   return (
-    <div className="lineup-editor-header mb-8" dir="rtl">
+    <div className="lineup-editor-header mb-8 print:hidden" dir="rtl">
       <Button 
         variant="outline" 
         onClick={onBackToDashboard}

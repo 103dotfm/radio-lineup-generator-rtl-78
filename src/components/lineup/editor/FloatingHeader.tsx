@@ -47,8 +47,8 @@ const FloatingHeader = ({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 bg-white z-50 shadow-md py-2 px-4 flex justify-between items-center">
-      <div className="flex items-center space-x-2 ml-auto">
+    <div className="fixed top-0 left-0 right-0 bg-white z-50 shadow-md py-2 px-4 flex justify-between items-center print:hidden">
+      <div className="flex items-center space-x-2">
         <Button
           variant="outline"
           size="sm"
@@ -81,7 +81,7 @@ const FloatingHeader = ({
         </Button>
       </div>
       
-      <div className="text-lg font-semibold truncate ml-4 text-right">
+      <div className="text-lg font-semibold truncate mr-4 text-right">
         {showName}
       </div>
     </div>
