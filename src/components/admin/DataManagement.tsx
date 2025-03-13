@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { format, parse, isValid } from 'date-fns';
 import { 
@@ -97,24 +96,85 @@ const DataManagement = () => {
         .filter(([_, isSelected]) => isSelected)
         .map(([tableName]) => tableName);
       
+      let filteredShowIds: string[] = [];
+      let filteredShowItemIds: string[] = [];
+      
+      // If date range is specified, first get the IDs of shows within that range
+      if (exportStartDate || exportEndDate) {
+        let showsQuery = supabase.from('shows' as ValidTableName).select('id');
+        
+        if (exportStartDate) {
+          const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
+          showsQuery = showsQuery.gte('date', formattedStartDate);
+        }
+        
+        if (exportEndDate) {
+          const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
+          showsQuery = showsQuery.lte('date', formattedEndDate);
+        }
+        
+        const { data: filteredShows, error: showsError } = await showsQuery;
+        
+        if (showsError) {
+          throw new Error(`Error filtering shows: ${showsError.message}`);
+        }
+        
+        filteredShowIds = filteredShows?.map(show => show.id) || [];
+        
+        // Get show items for these shows to later filter interviewees
+        if (filteredShowIds.length > 0) {
+          const { data: filteredItems, error: itemsError } = await supabase
+            .from('show_items' as ValidTableName)
+            .select('id')
+            .in('show_id', filteredShowIds);
+            
+          if (itemsError) {
+            throw new Error(`Error filtering show items: ${itemsError.message}`);
+          }
+          
+          filteredShowItemIds = filteredItems?.map(item => item.id) || [];
+        }
+      }
+      
       // Process each selected table
       for (const tableName of tables) {
-        // Cast tableName to ValidTableName to satisfy TypeScript
         let query = supabase.from(tableName as ValidTableName).select('*');
         
-        // Add date filters for tables with date fields
-        if (['shows', 'work_arrangements'].includes(tableName) && (exportStartDate || exportEndDate)) {
-          const dateField = tableName === 'shows' ? 'date' : 'week_start';
-          
-          if (exportStartDate) {
-            const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
-            query = query.gte(dateField, formattedStartDate);
+        // Apply filters based on date range for each table type
+        if (exportStartDate || exportEndDate) {
+          if (tableName === 'shows') {
+            // Shows are filtered directly by date
+            if (exportStartDate) {
+              const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
+              query = query.gte('date', formattedStartDate);
+            }
+            
+            if (exportEndDate) {
+              const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
+              query = query.lte('date', formattedEndDate);
+            }
+          } 
+          else if (tableName === 'work_arrangements') {
+            // Work arrangements are filtered by week_start
+            if (exportStartDate) {
+              const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
+              query = query.gte('week_start', formattedStartDate);
+            }
+            
+            if (exportEndDate) {
+              const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
+              query = query.lte('week_start', formattedEndDate);
+            }
           }
-          
-          if (exportEndDate) {
-            const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
-            query = query.lte(dateField, formattedEndDate);
+          else if (tableName === 'show_items' && filteredShowIds.length > 0) {
+            // Show items are filtered by show_id
+            query = query.in('show_id', filteredShowIds);
           }
+          else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
+            // Interviewees are filtered by item_id
+            query = query.in('item_id', filteredShowItemIds);
+          }
+          // Other tables not filtered by date range
         }
         
         const { data, error } = await query;
