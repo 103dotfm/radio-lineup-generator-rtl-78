@@ -4,6 +4,7 @@ import UserManagement from '@/components/admin/UserManagement';
 import MasterSchedule from '@/components/schedule/MasterSchedule';
 import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
+import DataManagement from '@/components/admin/DataManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, Database } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 
@@ -183,11 +184,15 @@ const Admin = () => {
       </Card>
       
       <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="schedule" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">לוח שידורים ראשי</TabsTrigger>
-          <TabsTrigger value="arrangements" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבודה</TabsTrigger>
-          <TabsTrigger value="users" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">ניהול משתמשים</TabsTrigger>
-          <TabsTrigger value="email" className="rounded-2xl mx-[20px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">דואר אלקטרוני</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 mb-8">
+          <TabsTrigger value="schedule" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">לוח שידורים ראשי</TabsTrigger>
+          <TabsTrigger value="arrangements" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">סידורי עבודה</TabsTrigger>
+          <TabsTrigger value="users" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">ניהול משתמשים</TabsTrigger>
+          <TabsTrigger value="email" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">דואר אלקטרוני</TabsTrigger>
+          <TabsTrigger value="data" className="rounded-2xl mx-[10px] bg-emerald-300 hover:bg-emerald-200 active:bg-cyan-300">
+            <Database className="h-4 w-4 ml-1" />
+            ניהול נתונים
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule" className="mt-4">
@@ -204,6 +209,10 @@ const Admin = () => {
         
         <TabsContent value="email" className="mt-4">
           <EmailSettings />
+        </TabsContent>
+        
+        <TabsContent value="data" className="mt-4">
+          <DataManagement />
         </TabsContent>
       </Tabs>
     </div>;
