@@ -6,7 +6,8 @@ import UserManagement from '@/components/admin/user-management/UserManagement';
 import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
 import DataManagement from '@/components/admin/data-management/DataManagement';
-import { Calendar, Briefcase, Users, Mail, Database } from "lucide-react";
+import DatabaseSettings from '@/components/admin/DatabaseSettings';
+import { Calendar, Briefcase, Users, Mail, Database, HardDrive } from "lucide-react";
 
 interface AdminTabsProps {
   defaultTab: string;
@@ -15,7 +16,7 @@ interface AdminTabsProps {
 const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
   return (
     <Tabs defaultValue={defaultTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-5 mb-8">
+      <TabsList className="grid w-full grid-cols-6 mb-8">
         <TabsTrigger 
           value="schedule" 
           className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
@@ -55,6 +56,14 @@ const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
           <Database className="h-5 w-5 flex-shrink-0" />
           <span className="font-medium">ניהול נתונים</span>
         </TabsTrigger>
+        
+        <TabsTrigger 
+          value="database" 
+          className="flex items-center gap-2 px-4 py-3 rounded-2xl mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
+        >
+          <HardDrive className="h-5 w-5 flex-shrink-0" />
+          <span className="font-medium">הגדרות בסיס נתונים</span>
+        </TabsTrigger>
       </TabsList>
       
       <TabsContent value="schedule" className="mt-4">
@@ -84,6 +93,12 @@ const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
       <TabsContent value="data" className="mt-4">
         <div className="border-r-4 border-emerald-500 pr-6 py-3">
           <DataManagement />
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="database" className="mt-4">
+        <div className="border-r-4 border-emerald-500 pr-6 py-3">
+          <DatabaseSettings />
         </div>
       </TabsContent>
     </Tabs>
