@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User } from './types';
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface UserFormProps {
   user: Partial<User>;
@@ -54,7 +55,7 @@ const UserForm: React.FC<UserFormProps> = ({
           <Input
             id="password"
             type="password"
-            value={(user as any).password || ''}
+            value={user.password || ''}
             onChange={(e) => setUser({ ...user, password: e.target.value })}
             dir="ltr"
           />
@@ -62,13 +63,14 @@ const UserForm: React.FC<UserFormProps> = ({
       )}
       
       <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
+        <Checkbox
           id="is_admin"
           checked={user.is_admin || false}
-          onChange={(e) => setUser({ ...user, is_admin: e.target.checked })}
+          onCheckedChange={(checked) => 
+            setUser({ ...user, is_admin: checked === true })
+          }
         />
-        <Label htmlFor="is_admin">מנהל מערכת</Label>
+        <Label htmlFor="is_admin" className="cursor-pointer">מנהל מערכת</Label>
       </div>
       
       <Button
