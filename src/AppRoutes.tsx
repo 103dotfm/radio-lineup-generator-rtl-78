@@ -46,6 +46,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/admin/database"
+        element={
+          <ProtectedRoute adminOnly>
+            <Navigate to="/admin?tab=database" replace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/new"
         element={
           <ProtectedRoute>

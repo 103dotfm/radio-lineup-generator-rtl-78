@@ -24,6 +24,12 @@ const Admin = () => {
       
       // Don't modify the URL here, let EmailSettings handle it
     }
+
+    // Check if we're being directed to the database tab
+    const tab = searchParams.get('tab');
+    if (tab === 'database') {
+      setDefaultTab("database");
+    }
   }, [searchParams, redirectProcessed]);
 
   useEffect(() => {
