@@ -2,10 +2,10 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MasterSchedule from '@/components/schedule/MasterSchedule';
-import UserManagement from '@/components/admin/UserManagement';
+import UserManagement from '@/components/admin/user-management/UserManagement';
 import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
-import DataManagement from '@/components/admin/DataManagement';
+import DataManagement from '@/components/admin/data-management/DataManagement';
 import { Calendar, Briefcase, Users, Mail, Database } from "lucide-react";
 
 interface AdminTabsProps {
