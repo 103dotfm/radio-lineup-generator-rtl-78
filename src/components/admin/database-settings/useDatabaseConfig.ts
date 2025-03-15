@@ -14,6 +14,7 @@ export const useDatabaseConfig = () => {
     database: "",
     username: "",
     password: "",
+    createSchema: false,
   });
 
   const form = useForm<DatabaseFormValues>({
@@ -34,8 +35,13 @@ export const useDatabaseConfig = () => {
 
         if (data && !error) {
           const config = JSON.parse(data.value);
-          setCurrentConfig(config);
-          form.reset(config);
+          // Add the createSchema field with default false
+          const configWithCreateSchema = {
+            ...config,
+            createSchema: false,
+          };
+          setCurrentConfig(configWithCreateSchema);
+          form.reset(configWithCreateSchema);
         }
       } catch (error) {
         console.error('Error fetching database configuration:', error);

@@ -7,6 +7,7 @@ import DatabaseTypeSelector from './DatabaseTypeSelector';
 import LocalDatabaseForm from './LocalDatabaseForm';
 import { useDatabaseConfig } from './useDatabaseConfig';
 import { useSaveDatabaseConfig } from './useSaveDatabaseConfig';
+import { AlertCircle } from 'lucide-react';
 
 const DatabaseSettings: React.FC = () => {
   const { form, isLoading, setIsLoading } = useDatabaseConfig();
@@ -29,6 +30,19 @@ const DatabaseSettings: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {databaseType === "local" && (
+            <div className="mb-6 p-4 bg-amber-50 rounded-md flex items-start">
+              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 ms-2" />
+              <div>
+                <h4 className="text-sm font-medium text-amber-800">חשוב לדעת בעת שימוש בבסיס נתונים מקומי</h4>
+                <p className="text-sm text-amber-700 mt-1">
+                  אם אתה מחבר בסיס נתונים ריק, סמן את אפשרות "אתחל סכמת בסיס נתונים" כדי ליצור את כל הטבלאות הנדרשות.
+                  לאחר ההתקנה, תוכל לייבא נתונים מגיבוי קיים בעמוד ייבוא/ייצוא הנתונים.
+                </p>
+              </div>
+            </div>
+          )}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <DatabaseTypeSelector form={form} />
