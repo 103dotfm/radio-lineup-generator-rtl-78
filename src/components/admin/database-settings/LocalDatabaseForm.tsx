@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import { DatabaseFormValues } from './types';
 import { Checkbox } from "@/components/ui/checkbox";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface LocalDatabaseFormProps {
@@ -115,7 +115,7 @@ const LocalDatabaseForm: React.FC<LocalDatabaseFormProps> = ({ form }) => {
 
       <Card className="bg-blue-50 mt-4">
         <CardContent className="p-4 flex">
-          <InfoCircledIcon className="h-5 w-5 text-blue-500 mr-2 shrink-0 mt-0.5" />
+          <Info className="h-5 w-5 text-blue-500 mr-2 shrink-0 mt-0.5" />
           <p className="text-sm text-blue-600">
             אם אתה מגדיר בסיס נתונים חדש, סמן את תיבת הסימון "אתחל סכמת בסיס נתונים". 
             לאחר ההתקנה, תוכל להשתמש בעמוד ייבוא/ייצוא הנתונים כדי לייבא מידע ממערכת קיימת.
