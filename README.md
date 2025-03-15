@@ -1,4 +1,5 @@
-# Radio Libeup Generator - RTL
+
+# Radio Lineup Generator - RTL
 
 Generated with Lovable.
 
@@ -6,16 +7,18 @@ Generated with Lovable.
 
 **URL**: https://lovable.dev/projects/e09ea48d-3f42-4739-95ef-f05c2d5b6f9c
 
-## Beta
+## Installation
 
-In development.
+For detailed installation instructions, including how to set up with a local database, see [INSTALLATION.md](./INSTALLATION.md).
 
 ## What technologies are used for this project?
 
-This project is built with .
+This project is built with:
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
+- Supabase (default) or local PostgreSQL database
+
