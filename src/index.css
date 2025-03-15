@@ -13,6 +13,41 @@ body {
   background-color: #f8fafc;
 }
 
+/* Mobile first media queries */
+@layer utilities {
+  .responsive-container {
+    @apply px-3 sm:px-6 md:px-8 w-full;
+  }
+  
+  .mobile-full-width {
+    @apply -mx-4 sm:mx-0 px-4 sm:px-0 w-screen sm:w-auto;
+  }
+  
+  .mobile-text-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .mobile-stack {
+    @apply flex flex-col sm:flex-row;
+  }
+  
+  .mobile-stack-reverse {
+    @apply flex flex-col-reverse sm:flex-row;
+  }
+  
+  .mobile-full-grid {
+    @apply grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
+  }
+  
+  .mobile-hidden {
+    @apply hidden sm:block;
+  }
+  
+  .desktop-hidden {
+    @apply block sm:hidden;
+  }
+}
+
 /* Component styles */
 .lineup-item {
   transition: all 0.2s ease-in-out;
@@ -111,7 +146,7 @@ body {
   pointer-events: none;
 }
 
-/* Mobile Schedule Styles */
+/* Mobile Schedule Styles - Enhanced */
 @media (max-width: 768px) {
   .schedule-page .topLogo {
     max-width: 100%;
@@ -119,10 +154,54 @@ body {
   
   .schedule-content {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
   }
   
   .schedule-content table {
     min-width: 600px;
+  }
+  
+  /* Improved mobile form controls */
+  input, select, textarea {
+    @apply text-base; /* Prevents zoom on iOS */
+    max-height: 44px; /* Better touch targets */
+  }
+  
+  /* Better spacing for mobile forms */
+  .form-group, .form-item, [data-sidebar="group"] {
+    @apply mb-4;
+  }
+  
+  /* Improved button sizing for touch */
+  button, [role="button"], .button {
+    @apply min-h-[44px] px-4;
+  }
+  
+  /* Adjust tabs for mobile */
+  [role="tablist"] {
+    @apply flex overflow-x-auto py-2 gap-2;
+    scrollbar-width: none; /* Hide scrollbar in Firefox */
+    -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+  }
+  
+  [role="tablist"]::-webkit-scrollbar {
+    display: none; /* Hide scrollbar in Chrome/Safari */
+  }
+  
+  /* Mobile admin tabs */
+  .admin-tabs [role="tablist"] {
+    @apply grid-cols-3 sm:grid-cols-6;
+    @apply text-xs;
+  }
+  
+  .admin-tabs [role="tab"] {
+    @apply py-2 px-3;
+  }
+  
+  /* Mobile lineup table */
+  .lineup-table-wrapper {
+    @apply overflow-x-auto -mx-4 px-4 pb-2;
+    width: calc(100% + 2rem);
   }
 }
 
@@ -498,8 +577,34 @@ body {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+  
+  /* Better spacing for mobile */
+  .container {
+    @apply px-4;
+  }
+  
+  /* Mobile menu adjustments */
+  .mobile-menu {
+    @apply fixed inset-0 z-50 bg-white;
+  }
+  
+  /* Mobile card styles */
+  .card {
+    @apply rounded-md sm:rounded-lg mx-0 w-full;
+  }
+  
+  /* Make dialogs more compact on mobile */
+  [role="dialog"] {
+    @apply p-4 sm:p-6;
+  }
+  
+  /* Stack form elements on mobile */
+  .form-row {
+    @apply flex-col sm:flex-row gap-2 sm:gap-4;
+  }
 }
 
+/* Other existing styles */
 .showCredits {
   text-align: center;
   color: black;
@@ -572,4 +677,11 @@ tbody {vertical-align: top;}
 /* Admin content border styles */
 .border-r-4 {
   border-right-width: 4px;
+}
+
+/* Media query for small height screens */
+@media (max-height: 700px) {
+  .height-sensitive {
+    @apply max-h-[60vh] overflow-y-auto;
+  }
 }
