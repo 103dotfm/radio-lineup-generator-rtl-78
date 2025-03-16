@@ -9,4 +9,43 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    flowType: 'pkce',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  }
+});
+
+// Helper function to get the app domain
+export const getAppDomain = async (): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'app_domain')
+      .single();
+      
+    if (error) {
+      console.warn("Could not fetch app domain:", error);
+      return window.location.origin;
+    }
+    
+    if (data && data.value) {
+      const domain = data.value;
+      // Ensure domain has protocol
+      if (domain.includes('://')) {
+        return domain;
+      } else {
+        const protocol = domain.startsWith('localhost') ? 'http://' : 'https://';
+        return `${protocol}${domain}`;
+      }
+    }
+    
+    return window.location.origin;
+  } catch (error) {
+    console.error('Error fetching app domain:', error);
+    return window.location.origin;
+  }
+};

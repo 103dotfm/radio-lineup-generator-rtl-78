@@ -275,6 +275,22 @@ serve(async (req) => {
       console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
     }
 
+    let appDomain = null;
+    try {
+      const { data: domainData, error: domainError } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "app_domain")
+        .single();
+        
+      if (!domainError && domainData && domainData.value) {
+        appDomain = domainData.value;
+        console.log(`App domain from system settings: ${appDomain}`);
+      }
+    } catch (domainError) {
+      console.warn("Error fetching app domain, will use request origin:", domainError);
+    }
+
     try {
       console.log("Fetching show details...");
       const { data: show, error: showError } = await supabase
@@ -448,22 +464,32 @@ serve(async (req) => {
       
       let lineupLink = "";
       try {
-        const origin = req.headers.get("origin") || "";
-        let baseUrl = "";
-        
-        if (origin && !origin.includes("supabase.co")) {
-          baseUrl = origin;
+        // Use the app domain setting if available
+        if (appDomain) {
+          // Ensure domain has protocol
+          const protocol = appDomain.startsWith('localhost') ? 'http://' : 'https://';
+          const fullDomain = appDomain.includes('://') ? appDomain : `${protocol}${appDomain}`;
+          lineupLink = `${fullDomain}/print/${show.id}?minutes=false`;
+          console.log("Generated lineup link using app domain:", lineupLink);
         } else {
-          const url = new URL(req.url);
-          if (url.hostname !== "yyrmodgbnzqbmatlypuc.supabase.co") {
-            baseUrl = `${url.protocol}//${url.hostname}`;
+          // Fall back to request origin or default
+          const origin = req.headers.get("origin") || "";
+          let baseUrl = "";
+          
+          if (origin && !origin.includes("supabase.co")) {
+            baseUrl = origin;
           } else {
-            baseUrl = "https://app.radioline.co.il";
+            const url = new URL(req.url);
+            if (url.hostname !== "yyrmodgbnzqbmatlypuc.supabase.co") {
+              baseUrl = `${url.protocol}//${url.hostname}`;
+            } else {
+              baseUrl = "https://app.radioline.co.il";
+            }
           }
+          
+          lineupLink = `${baseUrl}/print/${show.id}?minutes=false`;
+          console.log("Generated lineup link using fallback method:", lineupLink);
         }
-        
-        lineupLink = `${baseUrl}/print/${show.id}?minutes=false`;
-        console.log("Generated lineup link:", lineupLink);
       } catch (urlError) {
         console.error("Error creating lineup link:", urlError);
         lineupLink = `https://app.radioline.co.il/print/${show.id}?minutes=false`;
