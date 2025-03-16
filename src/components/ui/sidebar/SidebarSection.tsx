@@ -2,12 +2,13 @@
 import * as React from "react"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
+import { useSidebar } from "./SidebarContext"
 
 export const SidebarRail = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, ...props }, ref) => {
-  const { toggleSidebar } = React.useContext(SidebarContext)
+  const { toggleSidebar } = useSidebar()
 
   return (
     <button
@@ -142,6 +143,3 @@ SidebarContent.displayName = "SidebarContent"
 function cn(...inputs: (string | boolean | undefined | null)[]) {
   return inputs.filter(Boolean).join(" ")
 }
-
-// Import from context file
-import { SidebarContext } from './SidebarContext'

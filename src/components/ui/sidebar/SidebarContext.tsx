@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -15,7 +16,7 @@ type SidebarContext = {
   toggleSidebar: () => void
 }
 
-const SidebarContext = React.createContext<SidebarContext | null>(null)
+export const SidebarContext = React.createContext<SidebarContext | null>(null)
 
 export function useSidebar() {
   const context = React.useContext(SidebarContext)
