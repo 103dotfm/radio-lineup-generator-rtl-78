@@ -246,8 +246,9 @@ body {
     margin: 0 !important;
   }
 
-  .schedule-page @page {
-    size: landscape;
+  .schedule-page {
+    /* Fixed: Added proper page rule with brace */
+    page: landscape;
   }
   
   .schedule-page header {
@@ -485,15 +486,15 @@ body {
 }
 
 /* UI Components */
-#radix-:r1: {
+#radix-\:r1\: {
   background: white;
 }
 
 #radix,
 #radix h2,
 #radix p,
-#radix-:r2:,
-#radix-:r3: {
+#radix-\:r2\:,
+#radix-\:r3\: {
   text-align: right;
 }
 
@@ -685,3 +686,4 @@ tbody {vertical-align: top;}
     @apply max-h-[60vh] overflow-y-auto;
   }
 }
+
