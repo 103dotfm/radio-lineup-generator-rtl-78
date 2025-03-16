@@ -1,175 +1,20 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { format } from "https://deno.land/std@0.178.0/datetime/mod.ts";
-import nodemailer from "npm:nodemailer@6.9.9";
-import { google } from "npm:googleapis@129.0.0";
+import { 
+  corsHeaders, 
+  EmailSettings, 
+  ShowData, 
+  applyTimezoneOffset,
+  generateLineupLink,
+  validateEmailSettings
+} from "./utils.ts";
+import { createErrorLog } from "./error-handler.ts";
+import { prepareEmailContent } from "./email-content.ts";
+import { sendViaGmailApi } from "./gmail-api-sender.ts";
+import { sendViaSmtp } from "./smtp-sender.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
-
-interface ShowData {
-  id: string;
-  name: string;
-  date: string;
-  time: string;
-  items: any[];
-}
-
-interface EmailSettings {
-  smtp_host: string;
-  smtp_port: number;
-  smtp_user: string;
-  smtp_password: string;
-  sender_email: string;
-  sender_name: string;
-  subject_template: string;
-  body_template: string;
-  email_method: 'smtp' | 'gmail_api';
-  gmail_client_id: string;
-  gmail_client_secret: string;
-  gmail_refresh_token: string;
-  gmail_redirect_uri: string;
-  gmail_access_token?: string;
-  gmail_token_expiry?: string;
-}
-
-const createErrorLog = (stage: string, error: any) => {
-  const errorDetails = {
-    stage,
-    message: error.message || 'Unknown error',
-    stack: error.stack,
-    code: error.code,
-    command: error.command,
-    responseCode: error.responseCode,
-    response: error.response
-  };
-  
-  console.error(`ERROR IN ${stage}:`, JSON.stringify(errorDetails, null, 2));
-  return errorDetails;
-};
-
-const isOutlookAuthError = (error: any): boolean => {
-  const errorMsg = error?.message || '';
-  const errorResponse = error?.response || '';
-  
-  return (
-    errorMsg.includes('SmtpClientAuthentication is disabled for the Tenant') ||
-    errorResponse.includes('SmtpClientAuthentication is disabled') ||
-    errorMsg.includes('535 5.7.139 Authentication unsuccessful') ||
-    errorResponse.includes('535 5.7.139 Authentication unsuccessful')
-  );
-};
-
-const getAlternativeSmtpRecommendation = (host: string): string => {
-  if (host.includes('outlook') || host.includes('hotmail') || host.includes('office365')) {
-    return "It appears you're using Microsoft Outlook/Office 365 which may have SMTP authentication disabled. Please check https://aka.ms/smtp_auth_disabled for more information, or consider using an alternative email provider like Gmail (smtp.gmail.com).";
-  }
-  return "Consider using an alternative SMTP server or checking your authentication credentials.";
-};
-
-const applyTimezoneOffset = (date: Date, offsetHours: number): Date => {
-  const newDate = new Date(date);
-  newDate.setHours(newDate.getHours() + offsetHours);
-  console.log(`Applying timezone offset: ${offsetHours} hours to ${date.toISOString()}, result: ${newDate.toISOString()}`);
-  return newDate;
-};
-
-const sendViaGmailApi = async (
-  emailSettings: EmailSettings, 
-  recipientEmails: string[], 
-  subject: string, 
-  body: string
-): Promise<any> => {
-  try {
-    console.log("Setting up Gmail API client");
-    
-    const oauth2Client = new google.auth.OAuth2(
-      emailSettings.gmail_client_id,
-      emailSettings.gmail_client_secret,
-      emailSettings.gmail_redirect_uri
-    );
-    
-    let accessToken = emailSettings.gmail_access_token;
-    const expiryDate = emailSettings.gmail_token_expiry ? new Date(emailSettings.gmail_token_expiry) : null;
-    const now = new Date();
-    
-    if (!accessToken || !expiryDate || expiryDate <= now) {
-      console.log("Access token missing or expired, refreshing token");
-      
-      oauth2Client.setCredentials({
-        refresh_token: emailSettings.gmail_refresh_token
-      });
-      
-      const tokens = await oauth2Client.refreshAccessToken();
-      accessToken = tokens.credentials.access_token;
-      
-      console.log("Token refreshed successfully");
-    }
-    
-    oauth2Client.setCredentials({
-      access_token: accessToken,
-      refresh_token: emailSettings.gmail_refresh_token
-    });
-    
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-    
-    console.log("Creating email message");
-    
-    const from = `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`;
-    const to = recipientEmails.join(", ");
-    
-    const emailLines = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: quoted-printable',
-      '',
-      body
-    ];
-    
-    const email = emailLines.join('\r\n');
-    
-    const encodedEmail = Buffer.from(email).toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-    
-    console.log("Sending email via Gmail API");
-    
-    const res = await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: encodedEmail
-      }
-    });
-    
-    console.log("✅ Email sent successfully via Gmail API:", {
-      messageId: res.data.id,
-      threadId: res.data.threadId,
-      labelIds: res.data.labelIds
-    });
-    
-    return {
-      messageId: res.data.id,
-      success: true
-    };
-  } catch (error) {
-    console.error("Error sending email via Gmail API:", error);
-    throw error;
-  }
-};
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+async function handleRequest(req: Request) {
   try {
     console.log("Starting send-lineup-email function");
     
@@ -259,6 +104,7 @@ serve(async (req) => {
 
     console.log(`Processing request for show ${showId}, test email: ${testEmail || 'none'}`);
 
+    // Get timezone offset from system settings
     let timezoneOffset = 0;
     try {
       const { data: offsetData, error: offsetError } = await supabase
@@ -275,6 +121,7 @@ serve(async (req) => {
       console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
     }
 
+    // Get app domain from system settings
     let appDomain = null;
     try {
       const { data: domainData, error: domainError } = await supabase
@@ -291,6 +138,7 @@ serve(async (req) => {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
+    // Fetch the show details
     try {
       console.log("Fetching show details...");
       const { data: show, error: showError } = await supabase
@@ -336,6 +184,7 @@ serve(async (req) => {
 
       console.log(`Show found: ${show.name}, with ${show.items?.length || 0} items`);
 
+      // Fetch email settings
       const { data: emailSettings, error: settingsError } = await supabase
         .from("email_settings")
         .select("*")
@@ -366,23 +215,8 @@ serve(async (req) => {
       console.log(`Email settings found with method: ${emailSettings.email_method || 'smtp'}`);
       console.log(`Sender: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
 
-      let missingSettings: string[] = [];
-      
-      if (emailSettings.email_method === 'gmail_api') {
-        const requiredGmailSettings = [
-          "gmail_client_id", "gmail_client_secret", "gmail_refresh_token", 
-          "sender_email", "sender_name"
-        ];
-        
-        missingSettings = requiredGmailSettings.filter(key => !emailSettings[key]);
-      } else {
-        const requiredSmtpSettings = [
-          "smtp_host", "smtp_port", "smtp_user", "smtp_password", 
-          "sender_email", "sender_name"
-        ];
-        
-        missingSettings = requiredSmtpSettings.filter(key => !emailSettings[key]);
-      }
+      // Validate email settings
+      const missingSettings = validateEmailSettings(emailSettings as EmailSettings);
       
       if (missingSettings.length > 0) {
         const errorMessage = `Missing required email settings: ${missingSettings.join(", ")}`;
@@ -399,6 +233,7 @@ serve(async (req) => {
         );
       }
 
+      // Get recipient emails
       let recipientEmails: string[] = [];
       if (testEmail) {
         recipientEmails = [testEmail];
@@ -447,8 +282,8 @@ serve(async (req) => {
 
       console.log(`Recipients: ${recipientEmails.join(', ')}`);
 
+      // Format the date with timezone offset
       console.log("Preparing email content...");
-      
       let formattedDate = "";
       try {
         if (show.date) {
@@ -461,94 +296,21 @@ serve(async (req) => {
         console.error("Error formatting date:", dateError);
         formattedDate = show.date || "";
       }
-      
-      let lineupLink = "";
-      try {
-        // Use the app domain setting if available
-        if (appDomain) {
-          // Ensure domain has protocol
-          const protocol = appDomain.startsWith('localhost') ? 'http://' : 'https://';
-          const fullDomain = appDomain.includes('://') ? appDomain : `${protocol}${appDomain}`;
-          lineupLink = `${fullDomain}/print/${show.id}?minutes=false`;
-          console.log("Generated lineup link using app domain:", lineupLink);
-        } else {
-          // Fall back to request origin or default
-          const origin = req.headers.get("origin") || "";
-          let baseUrl = "";
-          
-          if (origin && !origin.includes("supabase.co")) {
-            baseUrl = origin;
-          } else {
-            const url = new URL(req.url);
-            if (url.hostname !== "yyrmodgbnzqbmatlypuc.supabase.co") {
-              baseUrl = `${url.protocol}//${url.hostname}`;
-            } else {
-              baseUrl = "https://app.radioline.co.il";
-            }
-          }
-          
-          lineupLink = `${baseUrl}/print/${show.id}?minutes=false`;
-          console.log("Generated lineup link using fallback method:", lineupLink);
-        }
-      } catch (urlError) {
-        console.error("Error creating lineup link:", urlError);
-        lineupLink = `https://app.radioline.co.il/print/${show.id}?minutes=false`;
-      }
-      
-      let intervieweesList = "<ul style='direction: rtl; text-align: right; padding-right: 20px; margin-right: 0;'>";
-      const uniqueInterviewees = new Set();
-      
-      if (Array.isArray(show.items)) {
-        show.items.forEach(item => {
-          if (item.interviewees && Array.isArray(item.interviewees) && item.interviewees.length > 0) {
-            item.interviewees.forEach(interviewee => {
-              const intervieweeText = interviewee.title 
-                ? `${interviewee.name}, ${interviewee.title}` 
-                : interviewee.name;
-              
-              if (!uniqueInterviewees.has(intervieweeText)) {
-                uniqueInterviewees.add(intervieweeText);
-                intervieweesList += `<li style="direction: rtl; text-align: right;">${intervieweeText}</li>`;
-              }
-            });
-          } else if (!item.is_break && !item.is_note && !item.is_divider) {
-            const intervieweeText = item.title 
-              ? `${item.name}, ${item.title}` 
-              : item.name;
-            
-            if (!uniqueInterviewees.has(intervieweeText)) {
-              uniqueInterviewees.add(intervieweeText);
-              intervieweesList += `<li style="direction: rtl; text-align: right;">${intervieweeText}</li>`;
-            }
-          }
-        });
-      } else {
-        console.warn("Show items is not an array:", show.items);
-      }
-      
-      intervieweesList += "</ul>";
 
-      let subject = emailSettings.subject_template.replace(/{{show_name}}/g, show.name);
-      subject = subject.replace(/{{show_date}}/g, formattedDate);
-      subject = subject.replace(/{{show_time}}/g, show.time || "");
+      // Generate lineup link
+      const lineupLink = generateLineupLink(show.id, appDomain, req.url, req.headers.get("origin"));
       
-      let body = `<div dir="rtl" style="direction: rtl; text-align: right; font-family: Arial, sans-serif;">
-        ${emailSettings.body_template
-          .replace(/{{show_name}}/g, show.name)
-          .replace(/{{show_date}}/g, formattedDate)
-          .replace(/{{show_time}}/g, show.time || "")
-          .replace(/{{interviewees_list}}/g, intervieweesList)
-          .replace(/{{lineup_link}}/g, lineupLink)}
-      </div>`;
-      
-      const rtlElements = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'a', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th'];
-      rtlElements.forEach(element => {
-        const regex = new RegExp(`<${element}(\\s[^>]*|)>`, 'g');
-        body = body.replace(regex, `<${element}$1 style="direction: rtl; text-align: right;">`);
-      });
+      // Prepare email content
+      const { subject, body } = prepareEmailContent(
+        show as ShowData, 
+        formattedDate, 
+        lineupLink, 
+        emailSettings
+      );
 
       console.log(`Email prepared - Subject: ${subject}`);
       
+      // Send email based on method
       if (emailSettings.email_method === 'gmail_api') {
         try {
           console.log("Sending email via Gmail API...");
@@ -611,161 +373,54 @@ serve(async (req) => {
           );
         }
       } else {
-        console.log(`Using SMTP: ${emailSettings.smtp_host}:${emailSettings.smtp_port}`);
-        
         try {
-          console.log("Configuring email transport...");
-          const transportConfig = {
-            host: emailSettings.smtp_host,
-            port: emailSettings.smtp_port,
-            secure: emailSettings.smtp_port === 465,
-            auth: {
-              user: emailSettings.smtp_user,
-              pass: emailSettings.smtp_password,
-            },
-            tls: {
-              rejectUnauthorized: false
-            },
-            debug: true
-          };
-          
-          console.log("Transport config:", {
-            host: transportConfig.host,
-            port: transportConfig.port,
-            secure: transportConfig.secure,
-            auth: {
-              user: transportConfig.auth.user,
-              pass: "********"
-            }
-          });
-          
-          const transporter = nodemailer.createTransport(transportConfig);
+          const result = await sendViaSmtp(
+            emailSettings as EmailSettings,
+            recipientEmails,
+            subject,
+            body
+          );
 
-          console.log("Verifying SMTP connection...");
-          try {
-            await transporter.verify();
-            console.log("✅ SMTP connection verified successfully");
-          } catch (verifyError) {
-            const errorLog = createErrorLog("SMTP_VERIFICATION", verifyError);
-            
-            if (isOutlookAuthError(verifyError)) {
-              const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
-              
-              return new Response(
-                JSON.stringify({ 
-                  error: `Microsoft Outlook SMTP authentication is disabled`, 
-                  details: {
-                    ...errorLog,
-                    recommendedAction: "Check https://aka.ms/smtp_auth_disabled for information on enabling SMTP auth or use an alternative email provider",
-                    recommendation
-                  }
-                }),
-                { 
-                  status: 500, 
-                  headers: corsHeaders 
-                }
-              );
-            }
-            
-            return new Response(
-              JSON.stringify({ error: `SMTP configuration error`, details: errorLog }),
-              { 
-                status: 500, 
-                headers: corsHeaders 
-              }
-            );
-          }
-
-          console.log("Sending email...");
-          try {
-            const mailOptions = {
-              from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
-              to: recipientEmails.join(", "),
-              subject: subject,
-              html: body,
-              headers: {
-                'Content-Type': 'text/html; charset=UTF-8'
-              }
-            };
-            
-            console.log("Mail options:", {
-              from: mailOptions.from,
-              to: mailOptions.to,
-              subject: mailOptions.subject,
-              htmlLength: mailOptions.html.length
-            });
-            
-            const info = await transporter.sendMail(mailOptions);
-
-            console.log("✅ Email sent successfully:", {
-              messageId: info.messageId,
-              response: info.response,
-              accepted: info.accepted,
-              rejected: info.rejected
-            });
-
-            if (!testEmail) {
-              const { error: logError } = await supabase
-                .from("show_email_logs")
-                .upsert({
-                  show_id: show.id,
-                  success: true,
-                  error_message: null
-                });
-                
-              if (logError) {
-                console.error("Error logging email success:", logError);
-              }
-            }
-
-            return new Response(
-              JSON.stringify({ 
+          if (!testEmail) {
+            const { error: logError } = await supabase
+              .from("show_email_logs")
+              .upsert({
+                show_id: show.id,
                 success: true,
-                method: 'smtp',
-                messageId: info.messageId,
-                response: info.response,
-                accepted: info.accepted,
-                rejected: info.rejected
-              }),
-              { 
-                status: 200, 
-                headers: corsHeaders 
-              }
-            );
-          } catch (emailError) {
-            const errorLog = createErrorLog("SENDING_EMAIL", emailError);
-            
-            if (isOutlookAuthError(emailError)) {
-              const recommendation = getAlternativeSmtpRecommendation(emailSettings.smtp_host);
-              errorLog.recommendation = recommendation;
+                error_message: null
+              });
+              
+            if (logError) {
+              console.error("Error logging email success:", logError);
             }
-            
-            if (!testEmail) {
-              const { error: logError } = await supabase
-                .from("show_email_logs")
-                .upsert({
-                  show_id: show.id,
-                  success: false,
-                  error_message: errorLog.message
-                });
-                
-              if (logError) {
-                console.error("Error logging email failure:", logError);
-              }
-            }
-
-            return new Response(
-              JSON.stringify({ error: `Failed to send email`, details: errorLog }),
-              { 
-                status: 500, 
-                headers: corsHeaders 
-              }
-            );
           }
-        } catch (transportError) {
-          const errorLog = createErrorLog("CONFIGURING_TRANSPORT", transportError);
+
           return new Response(
-            JSON.stringify({ error: `Failed to configure email transport`, details: errorLog }),
+            JSON.stringify(result),
+            { 
+              status: 200, 
+              headers: corsHeaders 
+            }
+          );
+        } catch (smtpError) {
+          const errorLog = smtpError.errorLog || createErrorLog("SMTP_ERROR", smtpError);
+          
+          if (!testEmail) {
+            const { error: logError } = await supabase
+              .from("show_email_logs")
+              .upsert({
+                show_id: show.id,
+                success: false,
+                error_message: errorLog.message
+              });
+              
+            if (logError) {
+              console.error("Error logging email failure:", logError);
+            }
+          }
+
+          return new Response(
+            JSON.stringify({ error: `Failed to send email`, details: errorLog }),
             { 
               status: 500, 
               headers: corsHeaders 
@@ -793,4 +448,12 @@ serve(async (req) => {
       }
     );
   }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
+  return handleRequest(req);
 });
