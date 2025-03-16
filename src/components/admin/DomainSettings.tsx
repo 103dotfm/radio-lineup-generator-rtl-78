@@ -60,14 +60,14 @@ const DomainSettings = () => {
       cleanDomain = cleanDomain.replace(/^(https?:\/\/)/, '');
       cleanDomain = cleanDomain.replace(/\/$/, '');
 
-      const { data, error } = await supabase
+      // Fixed this line: removed 'returning' property from options
+      const { error } = await supabase
         .from('system_settings')
         .upsert({
           key: 'app_domain',
           value: cleanDomain,
         }, {
           onConflict: 'key',
-          returning: 'minimal',
         });
 
       if (error) {
