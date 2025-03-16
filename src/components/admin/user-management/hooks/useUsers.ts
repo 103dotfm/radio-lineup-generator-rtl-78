@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAppDomain } from '@/integrations/supabase/client';
 import { User } from '../types';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -23,6 +23,9 @@ export const useUsers = () => {
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: Partial<User> & { password: string }) => {
+      // Get the app domain for the redirect URL
+      const appDomain = await getAppDomain();
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: userData.email!,
         password: userData.password,
@@ -31,7 +34,8 @@ export const useUsers = () => {
             username: userData.username,
             full_name: userData.full_name,
             is_admin: userData.is_admin,
-          }
+          },
+          emailRedirectTo: `${appDomain}/login`
         }
       });
 
