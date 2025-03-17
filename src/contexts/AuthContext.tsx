@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (data) {
         console.log('User data retrieved:', data);
         setUser(data);
-        setIsAdmin(data.is_admin);
+        setIsAdmin(data.is_admin || false);
         lastUserCheckRef.current = now;
       }
     } catch (error) {
@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {children}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
