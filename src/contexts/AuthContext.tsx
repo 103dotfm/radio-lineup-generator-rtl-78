@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
+      console.log('Fetching user role for userId:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -47,6 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (data) {
+        console.log('User data retrieved:', data);
         setUser(data);
         setIsAdmin(data.is_admin);
         lastUserCheckRef.current = now;
@@ -58,27 +60,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeAuth = async () => {
+      console.log('Initializing auth state');
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (session) {
+        console.log('Session found, user is authenticated');
         setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
+        await checkUserRole(session.user.id, true);
+      } else {
+        console.log('No session found, user is not authenticated');
+        setIsAuthenticated(false);
       }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      
       if (event === 'SIGNED_IN' && session) {
+        console.log('User signed in, setting isAuthenticated to true');
         setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
+        await checkUserRole(session.user.id, true);
       } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing auth state');
         setIsAuthenticated(false);
         setIsAdmin(false);
         setUser(null);
         lastUserCheckRef.current = 0;
       }
     });
-
-    // Remove visibility change listener entirely since we're using caching
     
     return () => {
       subscription.unsubscribe();
@@ -87,6 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -97,7 +111,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
+      console.log('Login successful, user ID:', data.user?.id);
       if (data.user) {
+        setIsAuthenticated(true); // Explicitly set isAuthenticated to true here
         await checkUserRole(data.user.id, true);
       }
 
@@ -110,6 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     try {
+      console.log('Logging out user');
       await supabase.auth.signOut();
       setIsAuthenticated(false);
       setIsAdmin(false);
@@ -120,8 +137,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const contextValue = {
+    isAuthenticated,
+    isAdmin,
+    user,
+    login,
+    logout
+  };
+  
+  console.log('Auth context current state:', { isAuthenticated, isAdmin, user: user?.username });
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

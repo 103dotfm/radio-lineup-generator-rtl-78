@@ -22,6 +22,7 @@ const AppRoutes = () => {
   // Simple ProtectedRoute component to handle authentication
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const isAuthenticated = authCheck();
+    console.log('ProtectedRoute check, isAuthenticated:', isAuthenticated);
     return isAuthenticated ? <>{children}</> : <Login />;
   };
 
