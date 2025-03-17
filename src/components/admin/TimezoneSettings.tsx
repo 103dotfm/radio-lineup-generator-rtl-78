@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock } from "lucide-react";
+import { Clock, InfoIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TimezoneSettingsProps {
   timezoneOffset: number;
@@ -17,6 +18,16 @@ interface TimezoneSettingsProps {
 const TimezoneSettings = ({ timezoneOffset, setTimezoneOffset, serverTime }: TimezoneSettingsProps) => {
   const { toast } = useToast();
   const [savingOffset, setSavingOffset] = useState(false);
+  const [serverTimeRefreshedAt, setServerTimeRefreshedAt] = useState<Date>(new Date());
+
+  // Refresh the time display every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setServerTimeRefreshedAt(new Date());
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const saveTimezoneOffset = async () => {
     try {
@@ -75,6 +86,25 @@ const TimezoneSettings = ({ timezoneOffset, setTimezoneOffset, serverTime }: Tim
     return offsetDate.toLocaleTimeString('he-IL');
   };
 
+  // Get the server time in Israel timezone (UTC+3)
+  const getIsraelTime = (date: Date | null) => {
+    if (!date) return '';
+    
+    // Create a new date object to avoid modifying the original
+    const israelTime = new Date(date.getTime());
+    
+    // Get the UTC time
+    const utcHours = israelTime.getUTCHours();
+    
+    // Calculate Israel time (UTC+3)
+    const israelHours = (utcHours + 3) % 24;
+    
+    // Set the hours to Israel time
+    israelTime.setHours(israelHours);
+    
+    return israelTime.toLocaleTimeString('he-IL');
+  };
+
   return (
     <Card className="mb-8">
       <CardHeader className="pb-2 text-right">
@@ -82,21 +112,40 @@ const TimezoneSettings = ({ timezoneOffset, setTimezoneOffset, serverTime }: Tim
           <Clock className="h-5 w-5" />
           הגדרות זמן מערכת
         </CardTitle>
-        <CardDescription className="text-right">
+        <CardDescription className="text-right flex items-center justify-end gap-2">
           כוונון אזור זמן לשליחת הודעות דואר אלקטרוני
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <InfoIcon className="h-4 w-4 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent align="end" className="max-w-sm">
+                <p className="text-sm text-right">
+                  הגדרה זו משפיעה על זמן שליחת המיילים האוטומטיים. שינוי ערך ההיסט משנה את הזמן בו נשלחים המיילים ביחס לזמן התוכנית בלוח.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-end gap-6">
+        <div className="flex flex-col md:flex-row gap-6">
           <div className="space-y-2 flex-1 text-right">
-            <Label htmlFor="server-time" className="block text-right">זמן שרת נוכחי:</Label>
+            <Label htmlFor="server-time-utc" className="block text-right">זמן שרת (UTC):</Label>
+            <div className="text-lg font-medium text-right" id="server-time-utc">
+              {serverTime ? serverTime.toISOString() : 'טוען...'}
+            </div>
+          </div>
+
+          <div className="space-y-2 flex-1 text-right">
+            <Label htmlFor="server-time" className="block text-right">זמן ישראל (UTC+3):</Label>
             <div className="text-lg font-medium text-right" id="server-time">
-              {serverTime ? serverTime.toLocaleTimeString('he-IL') : 'טוען...'}
+              {serverTime ? getIsraelTime(serverTime) : 'טוען...'}
             </div>
           </div>
           
           <div className="space-y-2 flex-1 text-right">
-            <Label htmlFor="server-time-offset" className="block text-right">זמן שרת עם היסט:</Label>
+            <Label htmlFor="server-time-offset" className="block text-right">זמן עם היסט:</Label>
             <div className="text-lg font-medium text-green-600 text-right" id="server-time-offset">
               {serverTime ? formatLocalTime(serverTime) : 'טוען...'}
             </div>
@@ -117,6 +166,12 @@ const TimezoneSettings = ({ timezoneOffset, setTimezoneOffset, serverTime }: Tim
               />
             </div>
           </div>
+        </div>
+
+        <div className="mt-4 p-3 bg-yellow-50 rounded-md text-right">
+          <p className="text-sm text-amber-800">
+            <strong>שים לב:</strong> מיילים אוטומטיים נשלחים בהתבסס על זמני השידור בלוח עם היסט הזמן. אם המיילים יוצאים מוקדם/מאוחר מדי, התאם את ערך ההיסט בהתאם.
+          </p>
         </div>
       </CardContent>
     </Card>
