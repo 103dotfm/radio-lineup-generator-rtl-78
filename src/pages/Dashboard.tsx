@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,23 +12,40 @@ import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "sonner";
 import ScheduleView from '@/components/schedule/ScheduleView';
+
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
     logout,
-    isAdmin
+    isAdmin,
+    isAuthenticated
   } = useAuth();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const queryClient = useQueryClient();
+  
   const {
-    data: shows,
-    isLoading
+    data: shows = [],
+    isLoading,
+    error
   } = useQuery({
     queryKey: ['shows', searchQuery],
-    queryFn: () => searchQuery ? searchShows(searchQuery) : getShows()
+    queryFn: () => searchQuery ? searchShows(searchQuery) : getShows(),
+    staleTime: 10000, // 10 seconds
+    retry: 2
   });
+
+  // If there's an error fetching shows, log it
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching shows:', error);
+      toast.error('שגיאה בטעינת הליינאפים');
+    }
+  }, [error]);
+
   const deleteShowMutation = useMutation({
     mutationFn: (showId: string) => deleteShow(showId),
     onSuccess: () => {
@@ -41,35 +59,45 @@ const Dashboard = () => {
       console.error('Error deleting show:', error);
     }
   });
+
   const handleDelete = (showId: string) => {
     if (window.confirm('האם אתה בטוח שברצונך למחוק ליינאפ זה?')) {
       deleteShowMutation.mutate(showId);
     }
   };
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
   const sortedShows = React.useMemo(() => {
     if (!shows) return [];
     const sortedData = [...shows];
     switch (sortBy) {
       case 'date':
-        return sortedData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return sortedData.sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
       case 'time':
         return sortedData.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
       case 'name':
         return sortedData.sort((a, b) => a.name.localeCompare(b.name));
       case 'modified':
-        return sortedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return sortedData.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
       case 'recent':
       default:
-        return sortedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return sortedData.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
     }
   }, [shows, sortBy]);
+
+  // Early return for loading state
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
@@ -110,20 +138,21 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedShows.flatMap(show => show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => <TableRow key={`${show.id}-${index}`}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.title}</TableCell>
-                      <TableCell>{item.phone}</TableCell>
-                      <TableCell>{show.name}</TableCell>
-                      <TableCell>
-                        {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/show/${show.id}`)}>
-                          צפייה בליינאפ
-                        </Button>
-                      </TableCell>
-                    </TableRow>) || [])}
+                {sortedShows.flatMap(show => (show.items?.filter(item => !item.is_break && !item.is_note) || [])
+                  .map((item, index) => <TableRow key={`${show.id}-${index}`}>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.title}</TableCell>
+                    <TableCell>{item.phone}</TableCell>
+                    <TableCell>{show.name}</TableCell>
+                    <TableCell>
+                      {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/show/${show.id}`)}>
+                        צפייה בליינאפ
+                      </Button>
+                    </TableCell>
+                  </TableRow>))}
               </TableBody>
             </Table>
           </div>}
@@ -198,4 +227,5 @@ const Dashboard = () => {
       </div>
     </div>;
 };
+
 export default Dashboard;

@@ -4,24 +4,29 @@ import { Show } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
-  const { data: shows, error } = await supabase
-    .from('shows')
-    .select(`
-      *,
-      items:show_items(
+  try {
+    const { data: shows, error } = await supabase
+      .from('shows')
+      .select(`
         *,
-        interviewees(*)
-      )
-    `)
-    .order('created_at', { ascending: false });
+        items:show_items(
+          *,
+          interviewees(*)
+        )
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching shows:', error);
+    if (error) {
+      console.error('Error fetching shows:', error);
+      throw error;
+    }
+
+    console.log('Fetched shows:', shows?.length || 0);
+    return shows || [];
+  } catch (error) {
+    console.error('Unexpected error fetching shows:', error);
     throw error;
   }
-
-  console.log('Fetched shows:', shows);
-  return shows || [];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
@@ -41,7 +46,12 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
+    if (!matchingItems || matchingItems.length === 0) {
+      console.log('No matching items found for query:', query);
+      return [];
+    }
+
+    const shows = matchingItems.reduce((acc: { [key: string]: Show }, item) => {
       if (!item.show) return acc;
       
       const showId = item.show.id;
@@ -70,7 +80,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       return acc;
     }, {});
 
-    console.log('Search results:', Object.values(shows));
+    console.log('Search results:', Object.values(shows || {}).length);
     return Object.values(shows || {});
 
   } catch (error) {
