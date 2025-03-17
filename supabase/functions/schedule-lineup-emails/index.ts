@@ -18,6 +18,10 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
+    // Log start time for debugging
+    const requestStartTime = new Date();
+    console.log(`Function execution started at: ${requestStartTime.toISOString()}`);
+    
     // Get timezone offset from system settings
     let timezoneOffset = 0;
     try {
@@ -29,47 +33,71 @@ serve(async (req) => {
         
       if (!offsetError && offsetData && offsetData.value) {
         timezoneOffset = parseInt(offsetData.value) || 0;
-        console.log(`Timezone offset: ${timezoneOffset} hours`);
+        console.log(`Timezone offset from settings: ${timezoneOffset} hours`);
       }
     } catch (offsetError) {
       console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
     }
     
-    // Get the current date and time in Israel time zone
+    // Create date object for current time
     const now = new Date();
-    const israelOffset = 180; // Israel timezone offset in minutes (UTC+3)
-    const clientOffset = now.getTimezoneOffset();
-    const totalOffset = israelOffset + clientOffset;
-    now.setMinutes(now.getMinutes() + totalOffset);
+    console.log(`Raw server time: ${now.toISOString()}`);
     
-    // Apply additional user-defined timezone offset (from system settings)
-    now.setHours(now.getHours() + timezoneOffset);
+    // Calculate Israel time (UTC+3) without relying on client timezone
+    const israelOffset = 3; // Israel is UTC+3 (3 hours ahead of UTC)
+    const utcHours = now.getUTCHours();
+    const israelHours = (utcHours + israelOffset) % 24;
+    const israelMinutes = now.getUTCMinutes();
     
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    console.log(`Israel time (calculated from UTC): ${israelHours.toString().padStart(2, '0')}:${israelMinutes.toString().padStart(2, '0')}`);
     
-    // Calculate the time window (1 minute ago)
-    const oneMinuteAgo = new Date(now);
-    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+    // Apply additional user-defined timezone offset from settings
+    const adjustedHours = (israelHours + timezoneOffset) % 24;
+    const currentTimeString = `${adjustedHours.toString().padStart(2, '0')}:${israelMinutes.toString().padStart(2, '0')}`;
     
-    const oneMinuteAgoHour = oneMinuteAgo.getHours();
-    const oneMinuteAgoMinute = oneMinuteAgo.getMinutes();
+    // Calculate time 1 minute ago for the window
+    const oneMinuteAgoMinutes = israelMinutes - 1;
+    let oneMinuteAgoHours = israelHours;
     
-    // Format time strings for comparison
-    const currentTimeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-    const oneMinuteAgoTimeString = `${oneMinuteAgoHour.toString().padStart(2, '0')}:${oneMinuteAgoMinute.toString().padStart(2, '0')}`;
+    // Handle minute rollover
+    if (oneMinuteAgoMinutes < 0) {
+      oneMinuteAgoMinutes = 59;
+      oneMinuteAgoHours = (israelHours - 1 + 24) % 24;
+    }
+    
+    // Apply timezone offset to the one minute ago time as well
+    const adjustedOneMinuteAgoHours = (oneMinuteAgoHours + timezoneOffset) % 24;
+    const oneMinuteAgoTimeString = `${adjustedOneMinuteAgoHours.toString().padStart(2, '0')}:${oneMinuteAgoMinutes.toString().padStart(2, '0')}`;
     
     console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString} with timezone offset: ${timezoneOffset}`);
     
-    // Current day of week in Israel (0 = Sunday, 6 = Saturday)
-    const dayOfWeek = now.getDay();
-    console.log(`Current day of week: ${dayOfWeek}`);
+    // Current day of week in Israel time
+    // JS getDay() returns 0 for Sunday, 1 for Monday, etc.
+    // First get the UTC day
+    const utcDay = now.getUTCDay();
+    
+    // Calculate the Israel day by potentially adjusting for day rollover
+    // If it's late enough UTC that adding israelOffset hours crosses midnight, increment the day
+    let israelDay = utcDay;
+    if (utcHours + israelOffset >= 24) {
+      israelDay = (utcDay + 1) % 7;
+    }
+    
+    // Apply timezone offset that might affect the day (if negative offset crosses midnight backwards)
+    let adjustedDay = israelDay;
+    if (israelHours + timezoneOffset < 0) {
+      adjustedDay = (israelDay - 1 + 7) % 7;
+    } else if (israelHours + timezoneOffset >= 24) {
+      adjustedDay = (israelDay + 1) % 7;
+    }
+    
+    console.log(`Current day of week (Israel): ${israelDay}, Adjusted for offset: ${adjustedDay}`);
     
     // Get all shows from Schedule slots for today that match the time window
     const { data: slots, error: slotsError } = await supabase
       .from("schedule_slots")
       .select("id, show_name, start_time")
-      .eq("day_of_week", dayOfWeek)
+      .eq("day_of_week", adjustedDay)
       .eq("has_lineup", true)
       .gte("start_time", oneMinuteAgoTimeString)
       .lt("start_time", currentTimeString);
@@ -99,15 +127,25 @@ serve(async (req) => {
     
     const results = [];
     
-    // For each slot, find the most recent show
+    // For each slot, find the most recent show for the current date
     for (const slot of slots) {
       console.log(`Processing slot: ${slot.show_name} (${slot.start_time})`);
       
-      // Get the most recent show associated with this slot
+      // Get current date in YYYY-MM-DD format (using Israel time)
+      // We need to construct this from UTC with the offset
+      const nowUtc = new Date();
+      // Add Israel offset hours (and apply timezone offset)
+      nowUtc.setUTCHours(nowUtc.getUTCHours() + israelOffset + timezoneOffset);
+      const todayDate = nowUtc.toISOString().slice(0, 10); // YYYY-MM-DD
+      
+      console.log(`Looking for shows on date: ${todayDate}`);
+      
+      // Get the most recent show associated with this slot for today's date
       const { data: shows, error: showsError } = await supabase
         .from("shows")
-        .select("id, name")
+        .select("id, name, date")
         .eq("slot_id", slot.id)
+        .eq("date", todayDate) // Filter for today's date explicitly
         .order("created_at", { ascending: false })
         .limit(1);
       
@@ -122,17 +160,19 @@ serve(async (req) => {
       }
       
       if (!shows || shows.length === 0) {
-        console.log(`No shows found for slot ${slot.id}`);
+        console.log(`No shows found for slot ${slot.id} on date ${todayDate}`);
+        
+        // If no show found for today, log the issue and skip this slot
         results.push({
           slot: slot.id,
           success: false,
-          error: "No shows found for slot"
+          error: `No shows found for slot on date ${todayDate}`
         });
         continue;
       }
       
       const show = shows[0];
-      console.log(`Found show: ${show.name} (${show.id})`);
+      console.log(`Found show: ${show.name} (${show.id}) for date ${show.date}`);
       
       // Check if we've already sent an email for this show
       const { data: logs, error: logsError } = await supabase
@@ -203,7 +243,7 @@ serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify({ results }),
+      JSON.stringify({ results, executionTime: new Date().getTime() - requestStartTime.getTime() }),
       { 
         status: 200, 
         headers: { "Content-Type": "application/json", ...corsHeaders } 

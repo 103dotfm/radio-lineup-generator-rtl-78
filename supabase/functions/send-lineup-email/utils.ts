@@ -43,33 +43,39 @@ export const applyTimezoneOffset = (date: Date, offsetHours: number): Date => {
 
 export const generateLineupLink = (showId: string, appDomain: string | null, reqUrl: string, reqOrigin: string | null): string => {
   try {
+    console.log(`Generating lineup link with params:`, {
+      showId,
+      appDomain: appDomain || 'null',
+      reqUrl: reqUrl || 'null',
+      reqOrigin: reqOrigin || 'null'
+    });
+    
     // Use the app domain setting if available
-    if (appDomain) {
+    if (appDomain && appDomain.trim() !== '') {
       // Ensure domain has protocol
-      const protocol = appDomain.startsWith('localhost') ? 'http://' : 'https://';
+      const protocol = appDomain.includes('localhost') ? 'http://' : 'https://';
       const fullDomain = appDomain.includes('://') ? appDomain : `${protocol}${appDomain}`;
-      const link = `${fullDomain}/print/${showId}?minutes=false`;
+      
+      // Remove any trailing slashes for consistency
+      const cleanDomain = fullDomain.replace(/\/+$/, '');
+      
+      const link = `${cleanDomain}/print/${showId}?minutes=false`;
       console.log("Generated lineup link using app domain:", link);
       return link;
     } else {
-      // Fall back to request origin or default
-      const origin = reqOrigin || "";
-      let baseUrl = "";
+      console.log("No app domain found in settings, using fallback");
       
-      if (origin && !origin.includes("supabase.co")) {
-        baseUrl = origin;
-      } else {
-        const url = new URL(reqUrl);
-        if (url.hostname !== "yyrmodgbnzqbmatlypuc.supabase.co") {
-          baseUrl = `${url.protocol}//${url.hostname}`;
-        } else {
-          baseUrl = "https://app.radioline.co.il";
-        }
-      }
+      // Fall back to request origin if it doesn't contain supabase.co or edge-runtime
+      if (reqOrigin && 
+          !reqOrigin.includes("supabase.co") && 
+          !reqOrigin.includes("edge-runtime")) {
+        const link = `${reqOrigin}/print/${showId}?minutes=false`;
+        console.log("Generated lineup link using request origin:", link);
+        return link;
+      } 
       
-      const link = `${baseUrl}/print/${showId}?minutes=false`;
-      console.log("Generated lineup link using fallback method:", link);
-      return link;
+      // Last resort fallback
+      return `https://app.radioline.co.il/print/${showId}?minutes=false`;
     }
   } catch (urlError) {
     console.error("Error creating lineup link:", urlError);
