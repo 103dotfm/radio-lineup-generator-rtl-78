@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const lastUserCheckRef = useRef<number>(0);
   const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  const [isLoading, setIsLoading] = useState(true);
 
   const checkUserRole = async (userId: string, force: boolean = false) => {
     const now = Date.now();
@@ -62,15 +63,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Initial session check
     const initializeAuth = async () => {
       console.log('Initializing auth state');
-      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoading(true);
       
-      if (session) {
-        console.log('Session found, user is authenticated');
-        setIsAuthenticated(true);
-        await checkUserRole(session.user.id, true);
-      } else {
-        console.log('No session found, user is not authenticated');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          console.log('Session found, user is authenticated');
+          setIsAuthenticated(true);
+          await checkUserRole(session.user.id, true);
+        } else {
+          console.log('No session found, user is not authenticated');
+          setIsAuthenticated(false);
+          setUser(null);
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
         setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 

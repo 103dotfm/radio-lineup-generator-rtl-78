@@ -20,7 +20,10 @@ const Login = () => {
     // This effect runs when isAuthenticated changes
     if (isAuthenticated) {
       console.log('User is authenticated, redirecting to:', from);
-      navigate(from, { replace: true });
+      // Use setTimeout to ensure this happens after the current render cycle
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
     }
   }, [isAuthenticated, navigate, from]);
 
