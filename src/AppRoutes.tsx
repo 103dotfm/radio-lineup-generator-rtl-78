@@ -1,7 +1,7 @@
 
-import React from 'react';
-import { Route, Routes } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
+import React, { useEffect } from 'react';
+import { Route, Routes, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import Admin from '@/pages/Admin';
@@ -13,19 +13,23 @@ import GoogleAuthRedirect from '@/pages/GoogleAuthRedirect';
 // Create a new QueryClient instance
 const queryClient = new QueryClient();
 
-const AppRoutes = () => {
-  const authCheck = () => {
-    const authData = localStorage.getItem('sb-rfwqowktjisgnucdolwm-auth-token');
-    return !!authData;
-  };
-
-  // Simple ProtectedRoute component to handle authentication
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    const isAuthenticated = authCheck();
+// Simple ProtectedRoute component to handle authentication
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
     console.log('ProtectedRoute check, isAuthenticated:', isAuthenticated);
-    return isAuthenticated ? <>{children}</> : <Login />;
-  };
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+  
+  // If authenticated, render children
+  return isAuthenticated ? <>{children}</> : null;
+};
 
+const AppRoutes = () => {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
