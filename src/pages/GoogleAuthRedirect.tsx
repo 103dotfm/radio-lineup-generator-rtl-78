@@ -30,6 +30,7 @@ const GoogleAuthRedirect = () => {
         }
 
         setMessage(`Authorization code received. Exchanging for tokens...`);
+        console.log(`Processing authorization code: ${code.substring(0, 10)}...`);
         
         // Get the Gmail settings from the database
         const { data: emailSettings, error: settingsError } = await supabase
@@ -39,6 +40,7 @@ const GoogleAuthRedirect = () => {
           .single();
           
         if (settingsError) {
+          console.error('Failed to fetch email settings:', settingsError);
           throw new Error(`Failed to fetch email settings: ${settingsError.message}`);
         }
         
@@ -52,8 +54,10 @@ const GoogleAuthRedirect = () => {
         
         // Set the redirect URI to the current page
         const redirectUri = `${window.location.origin}/gmail-auth-redirect`;
+        console.log(`Using redirect URI: ${redirectUri}`);
         
         // Call the edge function to exchange the code for tokens
+        console.log('Calling gmail-auth function...');
         const { data, error } = await supabase.functions.invoke('gmail-auth', {
           body: { 
             code,
@@ -68,6 +72,13 @@ const GoogleAuthRedirect = () => {
           throw new Error(`Error calling Gmail auth function: ${error.message}`);
         }
         
+        console.log('Response from gmail-auth function:', {
+          hasError: !!data.error,
+          hasRefreshToken: !!data.refreshToken,
+          hasAccessToken: !!data.accessToken,
+          expiryDate: data.expiryDate
+        });
+        
         if (data.error) {
           console.error('Error from Gmail auth function:', data.error, data.message);
           throw new Error(`Error from Gmail auth function: ${data.error} ${data.message || ''}`);
@@ -78,6 +89,7 @@ const GoogleAuthRedirect = () => {
         }
         
         // Save the tokens to the database
+        console.log('Saving tokens to database...');
         const { error: updateError } = await supabase
           .from('email_settings')
           .update({
@@ -101,6 +113,12 @@ const GoogleAuthRedirect = () => {
         
         setStatus('success');
         setMessage('Google authentication successful! You can now use Gmail API to send emails.');
+        
+        // Add a small delay before redirecting to ensure toast is visible
+        setTimeout(() => {
+          navigate('/admin?tab=email');
+        }, 2000);
+        
       } catch (error: any) {
         console.error('Google auth error:', error);
         setStatus('error');
@@ -116,7 +134,7 @@ const GoogleAuthRedirect = () => {
     };
 
     handleAuth();
-  }, [location, toast]);
+  }, [location, toast, navigate]);
 
   const goToEmailSettings = () => {
     navigate('/admin?tab=email');
