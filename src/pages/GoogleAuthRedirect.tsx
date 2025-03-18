@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const GoogleAuthRedirect = () => {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
@@ -13,6 +14,7 @@ const GoogleAuthRedirect = () => {
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
 
   useEffect(() => {
     const handleAuth = async () => {
@@ -62,10 +64,12 @@ const GoogleAuthRedirect = () => {
         });
         
         if (error) {
+          console.error('Error calling Gmail auth function:', error);
           throw new Error(`Error calling Gmail auth function: ${error.message}`);
         }
         
         if (data.error) {
+          console.error('Error from Gmail auth function:', data.error, data.message);
           throw new Error(`Error from Gmail auth function: ${data.error} ${data.message || ''}`);
         }
         
@@ -85,8 +89,15 @@ const GoogleAuthRedirect = () => {
           .eq('id', emailSettings.id);
           
         if (updateError) {
+          console.error('Failed to save tokens:', updateError);
           throw new Error(`Failed to save tokens: ${updateError.message}`);
         }
+        
+        toast({
+          title: "Gmail authentication successful",
+          description: "Your Gmail account has been successfully connected.",
+          variant: "default",
+        });
         
         setStatus('success');
         setMessage('Google authentication successful! You can now use Gmail API to send emails.');
@@ -95,11 +106,17 @@ const GoogleAuthRedirect = () => {
         setStatus('error');
         setMessage(`Authentication failed: ${error.message}`);
         setErrorDetails(error);
+        
+        toast({
+          title: "Authentication failed",
+          description: error.message || "An unknown error occurred",
+          variant: "destructive",
+        });
       }
     };
 
     handleAuth();
-  }, [location]);
+  }, [location, toast]);
 
   const goToEmailSettings = () => {
     navigate('/admin?tab=email');
