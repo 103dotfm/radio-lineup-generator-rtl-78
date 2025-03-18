@@ -1,72 +1,49 @@
 
-import React, { Suspense, lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
+import React, { useEffect } from 'react';
+import { Route, Routes, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import Dashboard from '@/pages/Dashboard';
+import Login from '@/pages/Login';
+import Admin from '@/pages/Admin';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import GoogleAuthRedirect from '@/pages/GoogleAuthRedirect';
 
-// Lazy load components to improve initial load time
-const Index = lazy(() => import('./pages/Index'));
-const Login = lazy(() => import('./pages/Login'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Admin = lazy(() => import('./pages/Admin'));
-const Print = lazy(() => import('./pages/Print'));
-const GoogleAuthRedirect = lazy(() => import('./pages/GoogleAuthRedirect'));
-const SchedulePage = lazy(() => import('./pages/SchedulePage'));
+// Create a new QueryClient instance
+const queryClient = new QueryClient();
 
-// Loading component to display while lazy-loaded components are loading
-const Loading = () => (
-  <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-  </div>
-);
-
-// Protected Route component that redirects to login if not authenticated
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Simple ProtectedRoute component to handle authentication
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
+  useEffect(() => {
+    console.log('ProtectedRoute check, isAuthenticated:', isAuthenticated);
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
   
-  return <>{children}</>;
+  // If authenticated, render children
+  return isAuthenticated ? <>{children}</> : null;
 };
 
-// Route configuration
-const AppRoutes: React.FC = () => {
+const AppRoutes = () => {
   return (
-    <Suspense fallback={<Loading />}>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/login" element={<Login />} />
-        
-        {/* Gmail Auth Redirect - this route should be public */}
-        <Route path="/gmail-auth-redirect" element={<GoogleAuthRedirect />} />
-        
-        {/* Protected routes */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <Admin />
-          </ProtectedRoute>
-        } />
-        <Route path="/schedule" element={
-          <ProtectedRoute>
-            <SchedulePage />
-          </ProtectedRoute>
-        } />
-        <Route path="/print/:id" element={
-          <ProtectedRoute>
-            <Print />
-          </ProtectedRoute>
-        } />
-        
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Suspense>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider delayDuration={0}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/gmail-auth-redirect" element={<GoogleAuthRedirect />} />
+          </Routes>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   );
 };
 
