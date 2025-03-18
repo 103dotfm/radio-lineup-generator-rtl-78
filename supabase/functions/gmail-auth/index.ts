@@ -36,7 +36,6 @@ serve(async (req) => {
         hasRedirectUri: !!requestData.redirectUri,
         hasClientId: !!requestData.clientId,
         hasClientSecret: !!requestData.clientSecret ? true : false,
-        codeLength: requestData.code ? requestData.code.length : 0,
       });
     } catch (error) {
       console.error("Failed to parse request body:", error);
@@ -79,7 +78,6 @@ serve(async (req) => {
       }
       
       console.log("Exchanging auth code for tokens with redirect URI:", requestData.redirectUri);
-      console.log("Auth code length:", requestData.code.length);
       
       try {
         // Ensure the redirect URL exactly matches what's configured in Google Console
@@ -99,7 +97,7 @@ serve(async (req) => {
         
         const responseText = await tokenResponse.text();
         console.log("Token exchange response status:", tokenResponse.status);
-        console.log("Token exchange response body preview:", responseText.substring(0, 300) + (responseText.length > 300 ? '...' : ''));
+        console.log("Token exchange response body:", responseText);
         
         if (!tokenResponse.ok) {
           return new Response(
@@ -117,12 +115,7 @@ serve(async (req) => {
         
         try {
           const tokenData = JSON.parse(responseText);
-          console.log("Token exchange successful, got tokens:", {
-            has_access_token: !!tokenData.access_token,
-            has_refresh_token: !!tokenData.refresh_token,
-            expires_in: tokenData.expires_in,
-            token_type: tokenData.token_type,
-          });
+          console.log("Token exchange successful");
           
           if (!tokenData.refresh_token) {
             console.error("No refresh token in response. This might happen if you've authorized this app before.");
