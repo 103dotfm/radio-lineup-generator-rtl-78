@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 interface EmailSettingsType {
   id: string;
@@ -69,27 +70,35 @@ const EmailSettings: React.FC = () => {
   const [testEmailAddress, setTestEmailAddress] = useState('yaniv@103.fm');
   const [errorDetails, setErrorDetails] = useState<any>(null);
   const [rawResponse, setRawResponse] = useState<string>('');
+  const [code, setCode] = useState('');
   
   useEffect(() => {
     loadSettings();
     loadRecipients();
     loadLatestShow();
     
-    // Check for OAuth code in URL
+    // Check for provider parameter in URL
+    const provider = searchParams.get('provider');
     const code = searchParams.get('code');
     
-    if (code) {
-      console.log('Found OAuth code in URL:', code);
-      setManualCodeInput(code);
-      handleGmailAuthCode(code);
-      
-      // Remove code from URL without reload but stay on admin page
-      window.history.replaceState({}, document.title, window.location.pathname);
+    if (provider === 'gmail' && code) {
+      // If there's a code but we're on the admin page, we need to redirect to the dedicated handler
+      const redirectUri = `${window.location.origin}/gmail-auth-redirect?code=${code}`;
+      window.location.href = redirectUri;
     }
   }, [searchParams]);
 
-  const handleGmailAuthCode = async (code: string) => {
-    console.log('Processing Gmail auth code:', code);
+  const handleGmailAuthCode = async (authCode: string) => {
+    if (!authCode || authCode.length < 6) {
+      toast({
+        title: "Invalid validation code",
+        description: "Please enter a valid Google validation code",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Processing Gmail auth code:', authCode);
     
     // Update UI to show we're processing the code
     toast({
@@ -106,11 +115,14 @@ const EmailSettings: React.FC = () => {
         throw new Error("חסרות הגדרות חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
       }
       
+      // Set the redirect URI to the dedicated handler page
+      const redirectUri = `${window.location.origin}/gmail-auth-redirect`;
+      
       // Exchange the code for tokens
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
         body: { 
-          code,
-          redirectUri: settings.gmail_redirect_uri,
+          code: authCode,
+          redirectUri: redirectUri,
           clientId: settings.gmail_client_id,
           clientSecret: settings.gmail_client_secret
         }
@@ -135,10 +147,12 @@ const EmailSettings: React.FC = () => {
           ...settings,
           gmail_refresh_token: data.refreshToken,
           gmail_access_token: data.accessToken,
-          gmail_token_expiry: data.expiryDate
+          gmail_token_expiry: data.expiryDate,
+          gmail_redirect_uri: redirectUri
         };
         
         await saveGmailTokens(newSettings);
+        setCode('');
         
         toast({
           title: "אימות Gmail הושלם בהצלחה",
@@ -232,28 +246,6 @@ const EmailSettings: React.FC = () => {
     }
   };
 
-  const handleManualCodeSubmission = async () => {
-    if (!manualCodeInput.trim()) {
-      toast({
-        title: "קוד אימות ריק",
-        description: "אנא הכנס קוד אימות תקף",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      await handleGmailAuthCode(manualCodeInput);
-    } catch (error) {
-      console.error('Error processing manual code:', error);
-      toast({
-        title: "שגיאה בעיבוד קוד האימות",
-        description: error.message || 'אירעה שגיאה בעיבוד קוד האימות',
-        variant: "destructive"
-      });
-    }
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(
       () => {
@@ -281,7 +273,8 @@ const EmailSettings: React.FC = () => {
         .update({
           gmail_refresh_token: updatedSettings.gmail_refresh_token,
           gmail_access_token: updatedSettings.gmail_access_token,
-          gmail_token_expiry: updatedSettings.gmail_token_expiry
+          gmail_token_expiry: updatedSettings.gmail_token_expiry,
+          gmail_redirect_uri: updatedSettings.gmail_redirect_uri
         })
         .eq('id', updatedSettings.id);
 
@@ -1005,7 +998,7 @@ const EmailSettings: React.FC = () => {
                         <li>הפעל את Gmail API עבור הפרויקט</li>
                         <li>צור אישורי OAuth (מסך הסכמה והגדרות לקוח OAuth)</li>
                         <li>העתק את מזהה הלקוח (Client ID) וסוד הלקוח (Client Secret)</li>
-                        <li>הגדר את כתובת ה-URI להפניה בדיוק כפי שמופיע כאן: <code className="bg-blue-100 px-1 rounded">{window.location.origin}/admin?provider=gmail</code></li>
+                        <li>הגדר את כתובת ה-URI להפניה (Redirect URI) בדיוק כפי שמופיע כאן: <code className="bg-blue-100 px-1 rounded">{window.location.origin}/gmail-auth-redirect</code></li>
                       </ol>
                     </AlertDescription>
                   </Alert>
@@ -1042,14 +1035,14 @@ const EmailSettings: React.FC = () => {
                         dir="ltr"
                         value={settings.gmail_redirect_uri}
                         onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
-                        placeholder={`${window.location.origin}/admin?provider=gmail`}
+                        placeholder={`${window.location.origin}/gmail-auth-redirect`}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="shrink-0"
                         onClick={() => {
-                          setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/admin?provider=gmail`});
+                          setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/gmail-auth-redirect`});
                         }}
                       >
                         השתמש בנוכחי
@@ -1090,54 +1083,87 @@ const EmailSettings: React.FC = () => {
                     </div>
                     
                     <div className="space-y-4">
-                      <h4 className="font-semibold">הכנסת קוד אימות באופן ידני</h4>
-                      <p className="text-sm text-muted-foreground">
-                        אם האימות האוטומטי נכשל, באפשרותך להעתיק את כתובת האימות ולגשת אליה באופן ידני:
+                      <h4 className="font-semibold">הזנת קוד אימות מ-Google</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        לאחר שאישרת גישה ב-Google, הזן כאן את קוד האימות שקיבלת:
                       </p>
                       
-                      <div className="flex gap-2 items-center">
-                        <Input 
-                          readOnly 
-                          value={generateAuthUrlForCopyPaste()}
-                          dir="ltr"
-                          className="font-mono text-xs flex-grow"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0"
-                          onClick={() => copyToClipboard(generateAuthUrlForCopyPaste())}
-                        >
-                          {copySuccess ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div>
-                          <Label htmlFor="manual_code_input">קוד אימות שהתקבל מ-Google</Label>
-                          <div className="flex gap-2 mt-1">
-                            <Input
-                              id="manual_code_input"
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="validation_code">קוד אימות מ-Google</Label>
+                          <div className="flex flex-col gap-2">
+                            <InputOTP 
+                              maxLength={30} 
+                              value={code} 
+                              onChange={setCode}
                               dir="ltr"
-                              value={manualCodeInput}
-                              onChange={(e) => setManualCodeInput(e.target.value)}
-                              placeholder="הכנס קוד אימות מ-Google"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="shrink-0"
-                              disabled={!manualCodeInput || authorizingGmail}
-                              onClick={handleManualCodeSubmission}
-                            >
-                              אמת
-                            </Button>
+                              className="font-mono text-lg">
+                              <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                                <InputOTPSlot index={6} />
+                                <InputOTPSlot index={7} />
+                                <InputOTPSlot index={8} />
+                                <InputOTPSlot index={9} />
+                              </InputOTPGroup>
+                              <InputOTPGroup>
+                                <InputOTPSlot index={10} />
+                                <InputOTPSlot index={11} />
+                                <InputOTPSlot index={12} />
+                                <InputOTPSlot index={13} />
+                                <InputOTPSlot index={14} />
+                                <InputOTPSlot index={15} />
+                                <InputOTPSlot index={16} />
+                                <InputOTPSlot index={17} />
+                                <InputOTPSlot index={18} />
+                                <InputOTPSlot index={19} />
+                              </InputOTPGroup>
+                              <InputOTPGroup>
+                                <InputOTPSlot index={20} />
+                                <InputOTPSlot index={21} />
+                                <InputOTPSlot index={22} />
+                                <InputOTPSlot index={23} />
+                                <InputOTPSlot index={24} />
+                                <InputOTPSlot index={25} />
+                                <InputOTPSlot index={26} />
+                                <InputOTPSlot index={27} />
+                                <InputOTPSlot index={28} />
+                                <InputOTPSlot index={29} />
+                              </InputOTPGroup>
+                            </InputOTP>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              הזן את הקוד הארוך שקיבלת מ-Google לאחר אישור הגישה
+                            </p>
                           </div>
                         </div>
                         
+                        <Button
+                          onClick={() => handleGmailAuthCode(code)}
+                          disabled={authorizingGmail || !code || code.length < 6}
+                          className="w-full"
+                        >
+                          {authorizingGmail ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              מאמת...
+                            </>
+                          ) : (
+                            "אמת ושמור את הקוד"
+                          )}
+                        </Button>
+                      </div>
+                      
+                      <Separator className="my-6" />
+                      
+                      <div className="space-y-4">
+                        <h4 className="font-semibold">אפשרויות מתקדמות</h4>
+                        
                         <div>
-                          <Label htmlFor="manual_token_input">טוקן רענון (Refresh Token)</Label>
+                          <Label htmlFor="manual_token_input">הזנת טוקן רענון (Refresh Token) באופן ידני</Label>
                           <div className="flex gap-2 mt-1">
                             <Input
                               id="manual_token_input"
@@ -1156,10 +1182,55 @@ const EmailSettings: React.FC = () => {
                               שמור
                             </Button>
                           </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            השתמש באפשרות זו רק אם יש לך כבר טוקן רענון מחשבון Google
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <Label>כתובת אימות לעיון</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Input 
+                              readOnly 
+                              value={generateAuthUrlForCopyPaste()}
+                              dir="ltr"
+                              className="font-mono text-xs flex-grow"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0"
+                              onClick={() => copyToClipboard(generateAuthUrlForCopyPaste())}
+                            >
+                              {copySuccess ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            כתובת זו נועדה לעיון בלבד. מומלץ להשתמש בכפתור "התחבר לחשבון Gmail" לעיל.
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
+                  
+                  {errorDetails && (
+                    <Alert variant="destructive" className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>שגיאה בתהליך אימות Gmail</AlertTitle>
+                      <AlertDescription>
+                        <div className="text-sm mt-2">
+                          <p><strong>שלב:</strong> {errorDetails.stage || 'לא ידוע'}</p>
+                          <p><strong>הודעה:</strong> {errorDetails.message || 'לא ידוע'}</p>
+                          {errorDetails.details && (
+                            <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40 text-left">
+                              {JSON.stringify(errorDetails.details, null, 2)}
+                            </pre>
+                          )}
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -1248,4 +1319,3 @@ const EmailSettings: React.FC = () => {
 };
 
 export default EmailSettings;
-
