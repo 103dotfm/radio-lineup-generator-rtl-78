@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check, Info } from "lucide-react";
+import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check, Info, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
