@@ -22,32 +22,19 @@ export const sendViaGmailApi = async (
     const expiryDate = emailSettings.gmail_token_expiry ? new Date(emailSettings.gmail_token_expiry) : null;
     const now = new Date();
     
-    // Check if token is missing or expired
     if (!accessToken || !expiryDate || expiryDate <= now) {
       console.log("Access token missing or expired, refreshing token");
-      
-      if (!emailSettings.gmail_refresh_token) {
-        throw new Error("No refresh token available. Please authenticate with Gmail again from the admin panel.");
-      }
       
       oauth2Client.setCredentials({
         refresh_token: emailSettings.gmail_refresh_token
       });
       
-      try {
-        const tokens = await oauth2Client.refreshAccessToken();
-        accessToken = tokens.credentials.access_token;
-        
-        // Store the new access token and expiry for future use
-        // This should ideally be saved back to the database in a production environment
-        console.log("Token refreshed successfully, new expiry:", tokens.credentials.expiry_date);
-      } catch (refreshError) {
-        console.error("Failed to refresh token:", refreshError);
-        throw new Error(`Failed to refresh Gmail access token: ${refreshError.message}`);
-      }
+      const tokens = await oauth2Client.refreshAccessToken();
+      accessToken = tokens.credentials.access_token;
+      
+      console.log("Token refreshed successfully");
     }
     
-    // Set credentials with both access and refresh tokens
     oauth2Client.setCredentials({
       access_token: accessToken,
       refresh_token: emailSettings.gmail_refresh_token
