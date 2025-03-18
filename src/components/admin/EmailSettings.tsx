@@ -526,62 +526,32 @@ const EmailSettings: React.FC = () => {
   };
 
   const initiateGmailAuth = () => {
-    if (!settings.gmail_client_id) {
+    if (!settings.gmail_client_id || !settings.gmail_redirect_uri) {
       toast({
-        title: "נדרשת הגדרה של Client ID",
-        description: "יש להגדיר את שדות Client ID לפני חיבור ל-Gmail",
+        title: "נדרשת הגדרה של Client ID ו-Redirect URI",
+        description: "יש להגדיר את שדות Client ID ו-Redirect URI לפני חיבור ל-Gmail",
         variant: "destructive"
       });
       return;
     }
     
-    // Use the dedicated redirect URI
-    const redirectUri = `${window.location.origin}/gmail-auth-redirect`;
-    
-    // Save the redirect URI to the settings
-    const updatedSettings = {
-      ...settings,
-      gmail_redirect_uri: redirectUri
-    };
-    
-    // Save the settings first
-    setSaving(true);
-    
-    supabase
-      .from('email_settings')
-      .update({
-        gmail_redirect_uri: redirectUri
-      })
-      .eq('id', settings.id)
-      .then(({ error }) => {
-        setSaving(false);
-        
-        if (error) {
-          console.error('Error saving redirect URI:', error);
-          toast({
-            title: "שגיאה בשמירת URI להפניה",
-            description: error.message,
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        // Update local state
-        setSettings(updatedSettings);
-        
-        // Make sure to include access_type=offline and prompt=consent to always get a refresh token
-        const scope = 'https://www.googleapis.com/auth/gmail.send';
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
-        
-        toast({
-          title: "פתיחת חלון אימות Gmail",
-          description: "עוקב אחר ההוראות בחלון שנפתח",
-          variant: "default"
-        });
-        
-        // Open the authorization URL in a new window
-        window.open(authUrl, '_blank');
+    // Save the current settings before initiating the OAuth flow
+    saveSettings().then(() => {
+      // Make sure the redirectUri in settings is configured to point to the admin page
+      const scope = 'https://www.googleapis.com/auth/gmail.send';
+      
+      // Make sure to include access_type=offline and prompt=consent to always get a refresh token
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+      
+      toast({
+        title: "פתיחת חלון אימות Gmail",
+        description: "עוקב אחר ההוראות בחלון שנפתח",
+        variant: "default"
       });
+      
+      // Open the authorization URL in a new window instead of replacing current window
+      window.open(authUrl, '_blank');
+    });
   };
 
   const refreshGmailToken = async () => {
@@ -691,15 +661,12 @@ const EmailSettings: React.FC = () => {
   };
 
   const generateAuthUrlForCopyPaste = () => {
-    if (!settings.gmail_client_id) {
+    if (!settings.gmail_client_id || !settings.gmail_redirect_uri) {
       return '';
     }
     
-    // Use the dedicated redirect URI
-    const redirectUri = `${window.location.origin}/gmail-auth-redirect`;
     const scope = 'https://www.googleapis.com/auth/gmail.send';
-    
-    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
   };
 
   if (loading) {
@@ -997,7 +964,7 @@ const EmailSettings: React.FC = () => {
               <CardContent>
                 <div className="space-y-6">
                   <Alert variant="default" className="border-blue-200 bg-blue-50 text-blue-800 mb-4">
-                    <Info className="h-4 w-4" />
+                    <Info className="h-4 w-4 text-blue-500" />
                     <AlertTitle>הוראות הגדרת API של Gmail</AlertTitle>
                     <AlertDescription className="text-blue-700">
                       <ol className="list-decimal list-inside space-y-2 mt-2">
@@ -1069,7 +1036,7 @@ const EmailSettings: React.FC = () => {
                     <div className="flex gap-2 mb-4">
                       <Button 
                         onClick={initiateGmailAuth} 
-                        disabled={authorizingGmail || !settings.gmail_client_id}
+                        disabled={authorizingGmail || !settings.gmail_client_id || !settings.gmail_redirect_uri}
                         className="flex items-center gap-2"
                       >
                         <ExternalLink className="h-4 w-4" />

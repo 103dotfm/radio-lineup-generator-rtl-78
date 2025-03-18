@@ -1,49 +1,84 @@
 
-import React, { useEffect } from 'react';
-import { Route, Routes, useNavigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import Dashboard from '@/pages/Dashboard';
-import Login from '@/pages/Login';
-import Admin from '@/pages/Admin';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import GoogleAuthRedirect from '@/pages/GoogleAuthRedirect';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
+import { format, startOfWeek } from 'date-fns';
+import Index from "./pages/Index";
+import Print from "./pages/Print";
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Admin from "./pages/Admin";
+import SchedulePage from "./pages/SchedulePage";
 
-// Create a new QueryClient instance
-const queryClient = new QueryClient();
+const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
-// Simple ProtectedRoute component to handle authentication
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    console.log('ProtectedRoute check, isAuthenticated:', isAuthenticated);
-    if (!isAuthenticated) {
-      navigate('/login', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-  
-  // If authenticated, render children
-  return isAuthenticated ? <>{children}</> : null;
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={0}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-            <Route path="/gmail-auth-redirect" element={<GoogleAuthRedirect />} />
-          </Routes>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
+    <Routes>
+      <Route 
+        path="/login" 
+        element={
+          isAuthenticated ? <Navigate to="/" replace /> : <Login />
+        } 
+      />
+      <Route path="/print/:id" element={<Print />} />
+      <Route path="/schedule/:weekDate" element={<SchedulePage />} />
+      <Route path="/schedule" element={<Navigate to={`/schedule/${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd')}`} replace />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute adminOnly>
+            <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/database"
+        element={
+          <ProtectedRoute adminOnly>
+            <Navigate to="/admin?tab=database" replace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/new"
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/show/:id"
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 
