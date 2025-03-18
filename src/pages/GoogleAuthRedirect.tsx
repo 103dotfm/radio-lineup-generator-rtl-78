@@ -62,16 +62,14 @@ const GoogleAuthRedirect = () => {
         });
         
         if (error) {
-          console.error('Error calling Gmail auth function:', error);
           throw new Error(`Error calling Gmail auth function: ${error.message}`);
         }
         
-        if (data && data.error) {
-          console.error('Error from Gmail auth function:', data.error, data.message || '');
+        if (data.error) {
           throw new Error(`Error from Gmail auth function: ${data.error} ${data.message || ''}`);
         }
         
-        if (!data || !data.refreshToken) {
+        if (!data.refreshToken) {
           throw new Error('No refresh token received from Google. You may need to revoke access and try again.');
         }
         

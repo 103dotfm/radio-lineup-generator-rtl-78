@@ -14,7 +14,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   user: User | null;
-  isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
 }
@@ -163,16 +162,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAuthenticated,
     isAdmin,
     user,
-    isLoading,
     login,
     logout
   };
   
-  console.log('Auth context current state:', { isAuthenticated, isAdmin, user: user?.username, isLoading });
+  console.log('Auth context current state:', { isAuthenticated, isAdmin, user: user?.username });
 
   return (
     <AuthContext.Provider value={contextValue}>
-      {children}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
