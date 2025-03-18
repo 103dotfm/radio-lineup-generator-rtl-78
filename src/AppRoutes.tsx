@@ -37,6 +37,8 @@ const AppRoutes: React.FC = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
+        
+        {/* Gmail Auth Redirect - this route should be public */}
         <Route path="/gmail-auth-redirect" element={<GoogleAuthRedirect />} />
         
         {/* Protected routes */}
