@@ -97,14 +97,16 @@ serve(async (req) => {
         
         const responseText = await tokenResponse.text();
         console.log("Token exchange response status:", tokenResponse.status);
-        console.log("Token exchange response body:", responseText);
         
         if (!tokenResponse.ok) {
+          console.error("Token exchange failed with status:", tokenResponse.status);
+          console.error("Response body:", responseText);
+          
           return new Response(
             JSON.stringify({ 
               error: "Failed to exchange authorization code for tokens",
-              details: responseText,
-              status: tokenResponse.status
+              status: tokenResponse.status,
+              responseBody: responseText
             }),
             { 
               status: 400, 
@@ -115,20 +117,32 @@ serve(async (req) => {
         
         try {
           const tokenData = JSON.parse(responseText);
-          console.log("Token exchange successful");
+          console.log("Token exchange successful, received data:", {
+            hasAccessToken: !!tokenData.access_token,
+            hasRefreshToken: !!tokenData.refresh_token,
+            expiresIn: tokenData.expires_in,
+            tokenType: tokenData.token_type,
+            scope: tokenData.scope
+          });
           
           if (!tokenData.refresh_token) {
-            console.error("No refresh token in response. This might happen if you've authorized this app before.");
+            console.warn("No refresh token in response. This might happen if you've authorized this app before.");
+            
+            // Return the access token anyway, the client can decide what to do
+            const expiryDate = new Date();
+            expiryDate.setSeconds(expiryDate.getSeconds() + tokenData.expires_in);
+            
             return new Response(
               JSON.stringify({ 
-                error: "No refresh token in response",
-                message: "This might happen if you've authorized this app before. Try revoking access and trying again.",
-                access_token: tokenData.access_token,
-                expires_in: tokenData.expires_in,
-                token_type: tokenData.token_type,
+                accessToken: tokenData.access_token,
+                expiresIn: tokenData.expires_in,
+                expiryDate: expiryDate.toISOString(),
+                tokenType: tokenData.token_type,
+                scope: tokenData.scope,
+                warning: "No refresh token received. This might happen if you've authorized this app before or if consent was not granted."
               }),
               { 
-                status: 400, 
+                status: 200, 
                 headers: corsHeaders 
               }
             );
@@ -198,14 +212,16 @@ serve(async (req) => {
         
         const responseText = await refreshResponse.text();
         console.log("Token refresh response status:", refreshResponse.status);
-        console.log("Token refresh response body:", responseText);
         
         if (!refreshResponse.ok) {
+          console.error("Token refresh failed with status:", refreshResponse.status);
+          console.error("Response body:", responseText);
+          
           return new Response(
             JSON.stringify({ 
               error: "Failed to refresh access token",
-              details: responseText,
-              status: refreshResponse.status
+              status: refreshResponse.status,
+              responseBody: responseText
             }),
             { 
               status: 400, 
@@ -214,25 +230,40 @@ serve(async (req) => {
           );
         }
         
-        const refreshData = JSON.parse(responseText);
-        console.log("Token refresh successful");
-        
-        // Calculate expiry date
-        const expiryDate = new Date();
-        expiryDate.setSeconds(expiryDate.getSeconds() + refreshData.expires_in);
-        
-        return new Response(
-          JSON.stringify({
-            accessToken: refreshData.access_token,
-            expiryDate: expiryDate.toISOString(),
-            tokenType: refreshData.token_type,
-            scope: refreshData.scope,
-          }),
-          { 
-            status: 200, 
-            headers: corsHeaders 
-          }
-        );
+        try {
+          const refreshData = JSON.parse(responseText);
+          console.log("Token refresh successful");
+          
+          // Calculate expiry date
+          const expiryDate = new Date();
+          expiryDate.setSeconds(expiryDate.getSeconds() + refreshData.expires_in);
+          
+          return new Response(
+            JSON.stringify({
+              accessToken: refreshData.access_token,
+              expiryDate: expiryDate.toISOString(),
+              tokenType: refreshData.token_type,
+              scope: refreshData.scope,
+            }),
+            { 
+              status: 200, 
+              headers: corsHeaders 
+            }
+          );
+        } catch (parseError) {
+          console.error("Error parsing refresh response:", parseError);
+          return new Response(
+            JSON.stringify({ 
+              error: "Failed to parse token refresh response",
+              details: parseError.message,
+              rawResponse: responseText
+            }),
+            { 
+              status: 500, 
+              headers: corsHeaders 
+            }
+          );
+        }
       } catch (error) {
         console.error("Error during token refresh:", error);
         return new Response(

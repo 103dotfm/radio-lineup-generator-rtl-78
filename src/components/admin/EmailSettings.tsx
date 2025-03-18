@@ -537,7 +537,7 @@ const EmailSettings: React.FC = () => {
     
     // Save the current settings before initiating the OAuth flow
     saveSettings().then(() => {
-      // Make sure the redirectUri in settings is configured to point to the admin page
+      // Make sure the redirectUri in settings is configured to point to the dedicated redirect page
       const scope = 'https://www.googleapis.com/auth/gmail.send';
       
       // Make sure to include access_type=offline and prompt=consent to always get a refresh token
@@ -667,6 +667,11 @@ const EmailSettings: React.FC = () => {
     
     const scope = 'https://www.googleapis.com/auth/gmail.send';
     return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+  };
+
+  const generateSuggestedRedirectUri = () => {
+    const origin = window.location.origin;
+    return `${origin}/google-auth-redirect`;
   };
 
   if (loading) {
@@ -1009,21 +1014,22 @@ const EmailSettings: React.FC = () => {
                         dir="ltr"
                         value={settings.gmail_redirect_uri}
                         onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
-                        placeholder={`${window.location.origin}/admin?provider=gmail`}
+                        placeholder={generateSuggestedRedirectUri()}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="shrink-0"
                         onClick={() => {
-                          setSettings({...settings, gmail_redirect_uri: `${window.location.origin}/admin?provider=gmail`});
+                          setSettings({...settings, gmail_redirect_uri: generateSuggestedRedirectUri()});
                         }}
                       >
-                        השתמש בנוכחי
+                        השתמש במומלץ
                       </Button>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      יש להוסיף בדיוק את הכתובת הזו בהגדרות OAuth במסך הסכמה של Google.
+                      יש להוסיף בדיוק את הכתובת הזו בהגדרות OAuth במסך הסכמה של Google. 
+                      <strong> חשוב להשתמש בדף הייעודי /google-auth-redirect ולא בדף הניהול.</strong>
                     </p>
                   </div>
                   
