@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -27,9 +28,12 @@ export default function ScheduleSlotDialog({
 }: ScheduleSlotDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] z-50">
         <DialogHeader>
           <DialogTitle>{editingSlot ? 'ערוך משבצת' : 'הוסף משבצת'}</DialogTitle>
+          <DialogDescription>
+            {editingSlot ? 'ערוך את פרטי המשבצת' : 'הוסף משבצת חדשה ללוח הזמנים'}
+          </DialogDescription>
         </DialogHeader>
         <ScheduleSlotForm 
           onSubmit={onSave}
