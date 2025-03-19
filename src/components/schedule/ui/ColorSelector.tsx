@@ -19,6 +19,7 @@ export const colorOptions = [
   { value: 'green', label: 'ירוק', bgClass: 'bg-[#eff4ec]' },
   { value: 'yellow', label: 'צהוב', bgClass: 'bg-[#FEF7CD]' },
   { value: 'blue', label: 'כחול', bgClass: 'bg-[#D3E4FD]' },
+  { value: 'red', label: 'אדום בהיר', bgClass: 'bg-[#FFDEE2]' },
 ];
 
 export function ColorSelector({ selectedColor, onChange, disabled = false }: ColorSelectorProps) {
