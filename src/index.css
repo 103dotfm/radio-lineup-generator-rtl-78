@@ -122,6 +122,10 @@ body {
   background-color: #F1F1F1;  /* Light gray */
 }
 
+.cell-red {
+  background-color: #FFDEE2;  /* Light red - New */
+}
+
 /* Editor styles */
 .note-editor {
   min-height: 100px;
@@ -687,4 +691,3 @@ tbody {vertical-align: top;}
     @apply max-h-[60vh] overflow-y-auto;
   }
 }
-

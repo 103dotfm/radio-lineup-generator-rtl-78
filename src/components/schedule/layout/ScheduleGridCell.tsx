@@ -41,6 +41,8 @@ export default function ScheduleGridCell({
           return 'bg-[#FEF7CD]';
         case 'blue':
           return 'bg-[#D3E4FD]';
+        case 'red':
+          return 'bg-[#FFDEE2]';
         default:
           return 'bg-[#eff4ec]';
       }
