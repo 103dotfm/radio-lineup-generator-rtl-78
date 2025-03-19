@@ -13,6 +13,7 @@ const GoogleAuthRedirect = () => {
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [redirectUri, setRedirectUri] = useState<string | null>(null);
   
   useEffect(() => {
     const processCode = async () => {
@@ -44,6 +45,9 @@ const GoogleAuthRedirect = () => {
           setErrorDetails('Gmail settings are incomplete. Please check your Gmail configuration in the admin panel.');
           return;
         }
+        
+        // Store the redirect URI for display purposes
+        setRedirectUri(emailSettings.gmail_redirect_uri);
         
         // Log the actual redirect URI being used for debugging
         console.log('Using redirect URI:', emailSettings.gmail_redirect_uri);
@@ -156,6 +160,16 @@ const GoogleAuthRedirect = () => {
               <AlertDescription>
                 {errorDetails || 'An unknown error occurred during authentication.'}
                 
+                {redirectUri && (
+                  <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
+                    <p className="font-semibold">Current Redirect URI:</p>
+                    <p className="break-all">{redirectUri}</p>
+                    <p className="mt-2 text-red-600">
+                      Make sure this exact URI is added to your Google Cloud Console's Authorized redirect URIs.
+                    </p>
+                  </div>
+                )}
+                
                 {tokenInfo && tokenInfo.accessToken && (
                   <div className="mt-4 p-3 bg-gray-100 rounded-md">
                     <p className="text-sm font-medium">Note: We received an access token but no refresh token.</p>
@@ -189,6 +203,16 @@ const GoogleAuthRedirect = () => {
                 className="w-full flex items-center justify-center gap-2"
               >
                 Revoke Access in Google <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+            
+            {status === 'error' && (
+              <Button
+                variant="outline"
+                onClick={() => window.open('https://console.cloud.google.com/apis/credentials', '_blank')}
+                className="w-full flex items-center justify-center gap-2 mt-2"
+              >
+                Google Cloud Credentials <ExternalLink className="h-4 w-4" />
               </Button>
             )}
           </div>
