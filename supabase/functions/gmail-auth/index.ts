@@ -37,6 +37,11 @@ serve(async (req) => {
         hasClientId: !!requestData.clientId,
         hasClientSecret: !!requestData.clientSecret ? true : false,
       });
+      
+      // Log the actual redirect URI for debugging
+      if (requestData.redirectUri) {
+        console.log("Received redirect URI:", requestData.redirectUri);
+      }
     } catch (error) {
       console.error("Failed to parse request body:", error);
       return new Response(

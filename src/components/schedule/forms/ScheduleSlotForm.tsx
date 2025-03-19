@@ -37,8 +37,8 @@ export function ScheduleSlotForm({
   );
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
-  const [slotColor, setSlotColor] = useState('default');
-  const [isColorOverrideEnabled, setIsColorOverrideEnabled] = useState(false);
+  const [slotColor, setSlotColor] = useState(editingSlot?.color || 'default');
+  const [isColorOverrideEnabled, setIsColorOverrideEnabled] = useState(editingSlot?.color ? true : false);
 
   useEffect(() => {
     if (editingSlot) {
@@ -51,9 +51,7 @@ export function ScheduleSlotForm({
       setIsCollection(editingSlot.is_collection || false);
       
       const hasExplicitColor = editingSlot.color !== null && editingSlot.color !== undefined;
-      
-      setIsColorOverrideEnabled(false);
-      
+      setIsColorOverrideEnabled(hasExplicitColor);
       setSlotColor(hasExplicitColor ? editingSlot.color : 'default');
       
       console.log('Editing slot with data:', {

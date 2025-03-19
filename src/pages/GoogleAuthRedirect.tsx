@@ -45,7 +45,8 @@ const GoogleAuthRedirect = () => {
           return;
         }
         
-        console.log('Exchanging code for tokens with Gmail API...');
+        // Log the actual redirect URI being used for debugging
+        console.log('Using redirect URI:', emailSettings.gmail_redirect_uri);
         
         // Exchange the code for tokens
         const { data, error } = await supabase.functions.invoke('gmail-auth', {
@@ -86,7 +87,7 @@ const GoogleAuthRedirect = () => {
         
         console.log('Successfully received tokens from Gmail API');
         
-        // Save the tokens to the database - corrected to use a plain update without the id
+        // Save the tokens to the database - using string ID for consistency
         const { error: updateError } = await supabase
           .from('email_settings')
           .update({
@@ -94,7 +95,7 @@ const GoogleAuthRedirect = () => {
             gmail_access_token: data.accessToken,
             gmail_token_expiry: data.expiryDate
           })
-          .eq('id', '1');  // Convert the number to a string for the ID
+          .eq('id', '1');  // ID as string to match the expected type
           
         if (updateError) {
           setStatus('error');
