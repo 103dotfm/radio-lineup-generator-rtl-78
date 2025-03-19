@@ -38,6 +38,28 @@ export const sendViaGmailApi = async (
         const tokens = await oauth2Client.refreshAccessToken();
         accessToken = tokens.credentials.access_token;
         
+        // Update stored token in database
+        try {
+          const { error } = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/email_settings`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": Deno.env.get("SUPABASE_ANON_KEY") || "",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`
+            },
+            body: JSON.stringify({
+              gmail_access_token: accessToken,
+              gmail_token_expiry: new Date(tokens.credentials.expiry_date || (Date.now() + 3600 * 1000)).toISOString()
+            })
+          }).then(r => r.json());
+          
+          if (error) {
+            console.warn("Failed to update access token in database:", error);
+          }
+        } catch (updateErr) {
+          console.warn("Error updating token in database:", updateErr);
+        }
+        
         console.log("Token refreshed successfully");
       } catch (refreshError) {
         console.error("Error refreshing token:", refreshError);

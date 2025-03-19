@@ -86,7 +86,7 @@ const GoogleAuthRedirect = () => {
         
         console.log('Successfully received tokens from Gmail API');
         
-        // Save the tokens to the database
+        // Save the tokens to the database - corrected to use a plain update without the id
         const { error: updateError } = await supabase
           .from('email_settings')
           .update({
@@ -94,7 +94,7 @@ const GoogleAuthRedirect = () => {
             gmail_access_token: data.accessToken,
             gmail_token_expiry: data.expiryDate
           })
-          .eq('id', emailSettings.id || 1);
+          .eq('id', 1);  // Target the first and likely only record
           
         if (updateError) {
           setStatus('error');
