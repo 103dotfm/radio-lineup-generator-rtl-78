@@ -94,7 +94,7 @@ const GoogleAuthRedirect = () => {
             gmail_access_token: data.accessToken,
             gmail_token_expiry: data.expiryDate
           })
-          .eq('id', 1);  // Target the first and likely only record
+          .eq('id', '1');  // Convert the number to a string for the ID
           
         if (updateError) {
           setStatus('error');
