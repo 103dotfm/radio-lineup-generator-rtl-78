@@ -33,7 +33,7 @@ export function ColorSelector({ selectedColor, onChange, disabled = false }: Col
         <SelectTrigger id="slot-color" className="w-full">
           <SelectValue placeholder="בחר צבע" />
         </SelectTrigger>
-        <SelectContent className="z-50 bg-white">
+        <SelectContent position="popper" className="z-[100] bg-white shadow-lg">
           {colorOptions.map((color) => (
             <SelectItem key={color.value} value={color.value} className={color.bgClass}>
               {color.label}
