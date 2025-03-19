@@ -28,7 +28,7 @@ export default function ScheduleSlotDialog({
 }: ScheduleSlotDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[425px] z-50">
+      <DialogContent className="sm:max-w-[425px] z-[9999] bg-white">
         <DialogHeader>
           <DialogTitle>{editingSlot ? 'ערוך משבצת' : 'הוסף משבצת'}</DialogTitle>
           <DialogDescription>
