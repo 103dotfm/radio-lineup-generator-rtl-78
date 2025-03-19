@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { 
@@ -13,6 +12,7 @@ import { createErrorLog } from "./error-handler.ts";
 import { prepareEmailContent } from "./email-content.ts";
 import { sendViaGmailApi } from "./gmail-api-sender.ts";
 import { sendViaSmtp } from "./smtp-sender.ts";
+import { sendViaMailgun } from "./mailgun-sender.ts";
 
 async function handleRequest(req: Request) {
   try {
@@ -311,7 +311,68 @@ async function handleRequest(req: Request) {
       console.log(`Email prepared - Subject: ${subject}`);
       
       // Send email based on method
-      if (emailSettings.email_method === 'gmail_api') {
+      if (emailSettings.email_method === 'mailgun') {
+        try {
+          console.log("Sending email via Mailgun...");
+          
+          const result = await sendViaMailgun(
+            emailSettings as EmailSettings,
+            recipientEmails,
+            subject,
+            body
+          );
+          
+          if (!testEmail) {
+            const { error: logError } = await supabase
+              .from("show_email_logs")
+              .upsert({
+                show_id: show.id,
+                success: true,
+                error_message: null
+              });
+              
+            if (logError) {
+              console.error("Error logging email success:", logError);
+            }
+          }
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              method: 'mailgun',
+              ...result
+            }),
+            { 
+              status: 200, 
+              headers: corsHeaders 
+            }
+          );
+        } catch (mailgunError) {
+          const errorLog = mailgunError.errorLog || createErrorLog("MAILGUN_SEND", mailgunError);
+          
+          if (!testEmail) {
+            const { error: logError } = await supabase
+              .from("show_email_logs")
+              .upsert({
+                show_id: show.id,
+                success: false,
+                error_message: errorLog.message
+              });
+              
+            if (logError) {
+              console.error("Error logging email failure:", logError);
+            }
+          }
+          
+          return new Response(
+            JSON.stringify({ error: `Failed to send email via Mailgun`, details: errorLog }),
+            { 
+              status: 500, 
+              headers: corsHeaders 
+            }
+          );
+        }
+      } else if (emailSettings.email_method === 'gmail_api') {
         try {
           console.log("Sending email via Gmail API...");
           
