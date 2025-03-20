@@ -25,11 +25,13 @@ export const createErrorLog = (stage: string, error: any): ErrorDetails => {
   
   // Add recommendations based on error context
   if (stage === "MAILGUN_SENDING") {
-    errorDetails.recommendation = "Verify your Mailgun API key and domain in the Supabase Edge Function secrets. Ensure your Mailgun account is active and the domain is verified.";
+    errorDetails.recommendation = "Verify your Mailgun API key and domain in your email settings. Ensure your Mailgun account is active and the domain is verified.";
     
-    if (error.response && typeof error.response === 'string') {
-      if (error.response.includes("domain not found") || error.response.includes("not authorized")) {
-        errorDetails.recommendation = "The domain you specified was not found or you're not authorized to send from it. Please check that the MAILGUN_DOMAIN environment variable is set correctly and that the domain is verified in your Mailgun account.";
+    if (error.response) {
+      const responseStr = typeof error.response === 'string' ? error.response : JSON.stringify(error.response);
+      
+      if (responseStr.includes("domain not found") || responseStr.includes("not authorized")) {
+        errorDetails.recommendation = "The domain you specified was not found or you're not authorized to send from it. Please check that the domain is correct and is verified in your Mailgun account.";
       }
       
       if (error.status === 401) {
