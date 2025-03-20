@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { 
@@ -16,7 +17,16 @@ import { sendViaMailgun } from "./mailgun-sender.ts";
 
 async function handleRequest(req: Request) {
   try {
-    console.log("Starting send-lineup-email function");
+    console.log("Starting send-lineup-email function with URL:", req.url);
+    console.log("Request method:", req.method);
+    
+    // Dump the environment variables (secure)
+    console.log("Environment variables available:", {
+      SUPABASE_URL: !!Deno.env.get("SUPABASE_URL"),
+      SUPABASE_ANON_KEY: !!Deno.env.get("SUPABASE_ANON_KEY"),
+      MAILGUN_API_KEY: !!Deno.env.get("MAILGUN_API_KEY"),
+      MAILGUN_DOMAIN: !!Deno.env.get("MAILGUN_DOMAIN"),
+    });
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -45,7 +55,9 @@ async function handleRequest(req: Request) {
     
     console.log("Environment variables:", {
       supabaseUrl: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : "missing",
-      supabaseAnonKey: supabaseAnonKey ? "present (not shown)" : "missing"
+      supabaseAnonKey: supabaseAnonKey ? "present (not shown)" : "missing",
+      mailgunApiKey: Deno.env.get("MAILGUN_API_KEY") ? "present (not shown)" : "missing",
+      mailgunDomain: Deno.env.get("MAILGUN_DOMAIN") ? "present (not shown)" : "missing"
     });
     
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -309,11 +321,39 @@ async function handleRequest(req: Request) {
       );
 
       console.log(`Email prepared - Subject: ${subject}`);
+      console.log(`Using email method: ${emailSettings.email_method}`);
       
       // Send email based on method
       if (emailSettings.email_method === 'mailgun') {
         try {
           console.log("Sending email via Mailgun...");
+          
+          // Double check that Mailgun secrets are set
+          const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
+          const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN");
+          
+          if (!mailgunApiKey || !mailgunDomain) {
+            const missingSecrets = [];
+            if (!mailgunApiKey) missingSecrets.push("MAILGUN_API_KEY");
+            if (!mailgunDomain) missingSecrets.push("MAILGUN_DOMAIN");
+            
+            const errorLog = createErrorLog("MAILGUN_SECRETS_CHECK", {
+              message: `Missing Mailgun secrets: ${missingSecrets.join(", ")}`,
+              code: "MISSING_SECRETS"
+            });
+            
+            return new Response(
+              JSON.stringify({ 
+                error: "Missing Mailgun configuration", 
+                details: errorLog,
+                missingSecrets
+              }),
+              { 
+                status: 500, 
+                headers: corsHeaders 
+              }
+            );
+          }
           
           const result = await sendViaMailgun(
             emailSettings as EmailSettings,
@@ -348,6 +388,7 @@ async function handleRequest(req: Request) {
             }
           );
         } catch (mailgunError) {
+          console.error("Mailgun error (caught at top level):", mailgunError);
           const errorLog = mailgunError.errorLog || createErrorLog("MAILGUN_SEND", mailgunError);
           
           if (!testEmail) {
@@ -464,6 +505,7 @@ async function handleRequest(req: Request) {
             }
           );
         } catch (smtpError) {
+          console.error("SMTP error (caught at top level):", smtpError);
           const errorLog = smtpError.errorLog || createErrorLog("SMTP_ERROR", smtpError);
           
           if (!testEmail) {
@@ -500,6 +542,7 @@ async function handleRequest(req: Request) {
       );
     }
   } catch (error) {
+    console.error("General error in send-lineup-email function:", error);
     const errorLog = createErrorLog("GENERAL", error);
     return new Response(
       JSON.stringify({ error: `Unexpected error in send-lineup-email function`, details: errorLog }),

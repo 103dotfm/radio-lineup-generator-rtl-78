@@ -13,6 +13,14 @@ export const sendViaSmtp = async (
   
   try {
     console.log("Configuring email transport...");
+    // Debug log SMTP details
+    console.log("SMTP Details:", {
+      host: emailSettings.smtp_host || 'Not set',
+      port: emailSettings.smtp_port || 'Not set',
+      user: emailSettings.smtp_user ? 'Set (hidden)' : 'Not set',
+      password: emailSettings.smtp_password ? 'Set (hidden)' : 'Not set',
+    });
+    
     const transportConfig = {
       host: emailSettings.smtp_host,
       port: emailSettings.smtp_port,
@@ -24,7 +32,8 @@ export const sendViaSmtp = async (
       tls: {
         rejectUnauthorized: false
       },
-      debug: true
+      debug: true,
+      logger: true // Enable built-in logger
     };
     
     console.log("Transport config:", {
@@ -44,6 +53,13 @@ export const sendViaSmtp = async (
       await transporter.verify();
       console.log("✅ SMTP connection verified successfully");
     } catch (verifyError) {
+      console.error("SMTP verification error (full):", verifyError);
+      // Add host information to the error for better recommendations
+      if (verifyError) {
+        // @ts-ignore
+        verifyError.host = emailSettings.smtp_host;
+      }
+      
       const errorLog = createErrorLog("SMTP_VERIFICATION", verifyError);
       
       if (isOutlookAuthError(verifyError)) {
@@ -90,11 +106,17 @@ export const sendViaSmtp = async (
       rejected: info.rejected
     };
   } catch (error) {
-    console.error("Error in SMTP sending:", error);
+    console.error("Error in SMTP sending (full):", error);
     
     // If the error was from SMTP verification, it already has the errorLog
     if (error.errorLog) {
       throw error;
+    }
+    
+    // Add host information to the error for better recommendations
+    if (error) {
+      // @ts-ignore
+      error.host = emailSettings.smtp_host;
     }
     
     const errorLog = createErrorLog("SENDING_EMAIL", error);
