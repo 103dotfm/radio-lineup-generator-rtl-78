@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { 
@@ -354,6 +353,13 @@ async function handleRequest(req: Request) {
               }
             );
           }
+          
+          // Log more details about the Mailgun configuration
+          console.log("Mailgun configuration:", {
+            domain: mailgunDomain,
+            apiKeyLength: mailgunApiKey ? mailgunApiKey.length : 0,
+            isEuRegion: emailSettings.is_eu_region || false
+          });
           
           const result = await sendViaMailgun(
             emailSettings as EmailSettings,
