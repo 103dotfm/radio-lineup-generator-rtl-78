@@ -688,10 +688,9 @@ const EmailSettings: React.FC = () => {
       </div>
       
       <Tabs defaultValue="recipients" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="recipients">נמענים</TabsTrigger>
           <TabsTrigger value="settings">הגדרות שליחה</TabsTrigger>
-          <TabsTrigger value="smtp">הגדרות שירות</TabsTrigger>
           <TabsTrigger value="template">תבנית הודעה</TabsTrigger>
         </TabsList>
         
@@ -778,7 +777,7 @@ const EmailSettings: React.FC = () => {
                       {errorDetails.command && <p><strong>פקודה:</strong> {errorDetails.command}</p>}
                       
                       {isOutlookAuthError(errorDetails) && (
-                        <Alert variant="warning" className="mt-4 bg-amber-50">
+                        <Alert variant="destructive" className="mt-4 bg-amber-50">
                           <AlertTitle className="text-amber-800">אימות SMTP של Outlook מושבת</AlertTitle>
                           <AlertDescription className="text-amber-700">
                             <p className="mb-2">חשבון ה-Outlook שלך אינו מאפשר אימות SMTP. יש לבצע אחת מהפעולות הבאות:</p>
@@ -822,39 +821,12 @@ const EmailSettings: React.FC = () => {
             <CardHeader>
               <CardTitle>הגדרות שליחת דואר אלקטרוני</CardTitle>
               <CardDescription>
-                בחר את שיטת שליחת הדואר האלקטרוני המועדפת עליך
+                בחר את שיטת שליחת הדואר האלקטרוני המועדפת עליך והזן את הפרטים הנדרשים
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <RadioGroup 
-                  value={settings.email_method} 
-                  onValueChange={(value) => setSettings({...settings, email_method: value as 'smtp' | 'gmail_api' | 'mailgun'})}
-                  className="space-y-4"
-                >
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <RadioGroupItem value="smtp" id="email-method-smtp" />
-                    <Label htmlFor="email-method-smtp" className="mr-2 cursor-pointer">שרת SMTP (שיטה סטנדרטית)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <RadioGroupItem value="gmail_api" id="email-method-gmail" />
-                    <Label htmlFor="email-method-gmail" className="mr-2 cursor-pointer">ממשק API של Gmail</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <RadioGroupItem value="mailgun" id="email-method-mailgun" />
-                    <Label htmlFor="email-method-mailgun" className="mr-2 cursor-pointer">Mailgun API (מומלץ)</Label>
-                  </div>
-                </RadioGroup>
-                
-                <Alert>
-                  <AlertTitle>מידע על שיטות שליחה</AlertTitle>
-                  <AlertDescription>
-                    <p className="mb-2"><strong>שרת SMTP:</strong> שיטה סטנדרטית לשליחת דואר אלקטרוני. מתאימה לרוב השירותים אך עלולה להיתקל בחסימות.</p>
-                    <p className="mb-2"><strong>ממשק API של Gmail:</strong> שיטה מתקדמת לשליחת דואר דרך חשבון Google. מתאימה במיוחד אם נתקלת בבעיות עם SMTP של Gmail או Outlook.</p>
-                    <p><strong>Mailgun API:</strong> שיטה מומלצת לשליחת דואר אלקטרוני, מסייעת במניעת סיווג כספאם ומספקת ניתוח משלוחים. דורשת יצירת חשבון Mailgun והגדרת Domain.</p>
-                  </AlertDescription>
-                </Alert>
-                
+              <div className="space-y-8">
+                {/* Email Sender Information */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="sender_email">כתובת דואר אלקטרוני השולח</Label>
@@ -874,6 +846,267 @@ const EmailSettings: React.FC = () => {
                     />
                   </div>
                 </div>
+                
+                {/* Email Method Selection */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">שיטת שליחה</h3>
+                  <RadioGroup 
+                    value={settings.email_method} 
+                    onValueChange={(value) => setSettings({...settings, email_method: value as 'smtp' | 'gmail_api' | 'mailgun'})}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <RadioGroupItem value="smtp" id="email-method-smtp" />
+                      <Label htmlFor="email-method-smtp" className="mr-2 cursor-pointer">שרת SMTP (שיטה סטנדרטית)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <RadioGroupItem value="gmail_api" id="email-method-gmail" />
+                      <Label htmlFor="email-method-gmail" className="mr-2 cursor-pointer">ממשק API של Gmail</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <RadioGroupItem value="mailgun" id="email-method-mailgun" />
+                      <Label htmlFor="email-method-mailgun" className="mr-2 cursor-pointer">Mailgun API (מומלץ)</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {/* SMTP Settings */}
+                {settings.email_method === 'smtp' && (
+                  <div className="space-y-4 border p-4 rounded-md">
+                    <h3 className="text-lg font-medium">הגדרות SMTP</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_host">כתובת שרת SMTP</Label>
+                        <Input
+                          id="smtp_host"
+                          dir="ltr"
+                          placeholder="smtp.example.com"
+                          value={settings.smtp_host}
+                          onChange={(e) => setSettings({...settings, smtp_host: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_port">פורט SMTP</Label>
+                        <Input
+                          id="smtp_port"
+                          dir="ltr"
+                          type="number"
+                          placeholder="587"
+                          value={settings.smtp_port.toString()}
+                          onChange={(e) => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_user">שם משתמש SMTP</Label>
+                        <Input
+                          id="smtp_user"
+                          dir="ltr"
+                          placeholder="your-email@example.com"
+                          value={settings.smtp_user}
+                          onChange={(e) => setSettings({...settings, smtp_user: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_password">סיסמה SMTP</Label>
+                        <Input
+                          id="smtp_password"
+                          dir="ltr"
+                          type="password"
+                          placeholder="******"
+                          value={settings.smtp_password}
+                          onChange={(e) => setSettings({...settings, smtp_password: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Gmail API Settings */}
+                {settings.email_method === 'gmail_api' && (
+                  <div className="space-y-4 border p-4 rounded-md">
+                    <h3 className="text-lg font-medium">הגדרות Gmail API</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gmail_client_id">Client ID</Label>
+                        <Input
+                          id="gmail_client_id"
+                          dir="ltr"
+                          placeholder="your-client-id.apps.googleusercontent.com"
+                          value={settings.gmail_client_id}
+                          onChange={(e) => setSettings({...settings, gmail_client_id: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gmail_client_secret">Client Secret</Label>
+                        <Input
+                          id="gmail_client_secret"
+                          dir="ltr"
+                          type="password"
+                          placeholder="GOCSPX-..."
+                          value={settings.gmail_client_secret}
+                          onChange={(e) => setSettings({...settings, gmail_client_secret: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="gmail_redirect_uri">Redirect URI</Label>
+                        <Input
+                          id="gmail_redirect_uri"
+                          dir="ltr"
+                          placeholder={generateSuggestedRedirectUri()}
+                          value={settings.gmail_redirect_uri}
+                          onChange={(e) => setSettings({...settings, gmail_redirect_uri: e.target.value})}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ודא שכתובת זו מוגדרת גם ב-Google Cloud Console בהגדרות OAuth
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">סטטוס אימות:</h4>
+                        <span className={gmailStatus.color}>{gmailStatus.message}</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          onClick={initiateGmailAuth}
+                          disabled={!settings.gmail_client_id || !settings.gmail_redirect_uri || authorizingGmail}
+                          className="mt-2"
+                        >
+                          התחבר עם Gmail
+                        </Button>
+                        
+                        {settings.gmail_refresh_token && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={refreshGmailToken}
+                            disabled={authorizingGmail}
+                            className="mt-2 flex items-center gap-2"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            רענן טוקן
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h4 className="font-medium mb-2">הזנה ידנית של קוד אימות:</h4>
+                        <div className="flex gap-2">
+                          <Input
+                            dir="ltr"
+                            value={manualCodeInput}
+                            onChange={(e) => setManualCodeInput(e.target.value)}
+                            placeholder="הזן קוד אימות שקיבלת מ-Google"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleManualCodeSubmission}
+                            disabled={!manualCodeInput.trim() || authorizingGmail}
+                          >
+                            שלח
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h4 className="font-medium mb-2">הזנה ידנית של טוקן רענון:</h4>
+                        <div className="flex gap-2">
+                          <Input
+                            dir="ltr"
+                            value={manualTokenInput}
+                            onChange={(e) => setManualTokenInput(e.target.value)}
+                            placeholder="הזן טוקן רענון ידנית"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleManualTokenSubmission}
+                            disabled={!manualTokenInput.trim() || authorizingGmail}
+                          >
+                            שלח
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Mailgun Settings */}
+                {settings.email_method === 'mailgun' && (
+                  <div className="space-y-4 border p-4 rounded-md">
+                    <h3 className="text-lg font-medium">הגדרות Mailgun API</h3>
+                    <Alert className="mb-4">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>מידע על Mailgun</AlertTitle>
+                      <AlertDescription>
+                        <p className="text-sm mt-1">
+                          Mailgun היא שירות שליחת דואר אלקטרוני אמין ומקצועי. כדי להשתמש בו עליך להירשם לחשבון ב-<a href="https://www.mailgun.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Mailgun.com</a>, לאמת דומיין ולהשיג מפתח API.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="mailgun_api_key">Mailgun API Key</Label>
+                        <Input
+                          id="mailgun_api_key"
+                          dir="ltr"
+                          type="password"
+                          placeholder="key-*************"
+                          onChange={(e) => {
+                            // Store in Supabase Edge Function secrets instead of in the database
+                            console.log("Mailgun API Key should be set as a Supabase Edge Function secret");
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          מפתח ה-API של Mailgun מאוחסן כסוד (secret) בפונקציות Edge של Supabase. הגדר אותו בלוח בקרה של Supabase.
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="mailgun_domain">Mailgun Domain</Label>
+                        <Input
+                          id="mailgun_domain"
+                          dir="ltr"
+                          placeholder="mail.yourdomain.com"
+                          onChange={(e) => {
+                            // Store in Supabase Edge Function secrets instead of in the database
+                            console.log("Mailgun Domain should be set as a Supabase Edge Function secret");
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          הדומיין שאימתת ב-Mailgun. גם זה מוגדר כסוד (secret) בפונקציות Edge של Supabase.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                      <h4 className="font-medium mb-2">כיצד להגדיר סודות בפונקציות Edge של Supabase:</h4>
+                      <ol className="list-decimal list-inside space-y-2 text-sm">
+                        <li>היכנס ללוח הבקרה של Supabase</li>
+                        <li>עבור אל Edge Functions &gt; Settings</li>
+                        <li>הוסף את הסודות הבאים:
+                          <ul className="list-disc list-inside ml-4 mt-1">
+                            <li>MAILGUN_API_KEY - המפתח שקיבלת מ-Mailgun</li>
+                            <li>MAILGUN_DOMAIN - הדומיין שאימתת ב-Mailgun</li>
+                          </ul>
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Info About Email Methods */}
+                <Alert>
+                  <AlertTitle>מידע על שיטות שליחה</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-2"><strong>שרת SMTP:</strong> שיטה סטנדרטית לשליחת דואר אלקטרוני. מתאימה לרוב השירותים אך עלולה להיתקל בחסימות.</p>
+                    <p className="mb-2"><strong>ממשק API של Gmail:</strong> שיטה מתקדמת לשליחת דואר דרך חשבון Google. מתאימה במיוחד אם נתקלת בבעיות עם SMTP של Gmail או Outlook.</p>
+                    <p><strong>Mailgun API:</strong> שיטה מומלצת לשליחת דואר אלקטרוני, מסייעת במניעת סיווג כספאם ומספקת ניתוח משלוחים. דורשת יצירת חשבון Mailgun והגדרת Domain.</p>
+                  </AlertDescription>
+                </Alert>
               </div>
             </CardContent>
             <CardFooter>
@@ -887,76 +1120,6 @@ const EmailSettings: React.FC = () => {
           </Card>
         </TabsContent>
         
-        <TabsContent value="smtp">
-          {/* SMTP Tab Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle>הגדרות שרת SMTP</CardTitle>
-              <CardDescription>
-                הזן את פרטי שרת הדואר היוצא (SMTP)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_host">כתובת שרת SMTP</Label>
-                    <Input
-                      id="smtp_host"
-                      dir="ltr"
-                      placeholder="smtp.example.com"
-                      value={settings.smtp_host}
-                      onChange={(e) => setSettings({...settings, smtp_host: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_port">פורט SMTP</Label>
-                    <Input
-                      id="smtp_port"
-                      dir="ltr"
-                      type="number"
-                      placeholder="587"
-                      value={settings.smtp_port.toString()}
-                      onChange={(e) => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_user">שם משתמש SMTP</Label>
-                    <Input
-                      id="smtp_user"
-                      dir="ltr"
-                      placeholder="your-email@example.com"
-                      value={settings.smtp_user}
-                      onChange={(e) => setSettings({...settings, smtp_user: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_password">סיסמה SMTP</Label>
-                    <Input
-                      id="smtp_password"
-                      dir="ltr"
-                      type="password"
-                      placeholder="******"
-                      value={settings.smtp_password}
-                      onChange={(e) => setSettings({...settings, smtp_password: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={saveSettings}
-                disabled={saving}
-              >
-                {saving ? "שומר..." : "שמור הגדרות SMTP"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="template">
           <Card>
             <CardHeader>
@@ -995,9 +1158,9 @@ const EmailSettings: React.FC = () => {
                 </div>
                 
                 {latestShow && (
-                  <Alert variant="outline" className="bg-gray-50">
+                  <Alert>
+                    <Info className="h-4 w-4" />
                     <AlertTitle className="flex items-center gap-2">
-                      <Info className="h-4 w-4" />
                       תצוגה מקדימה
                     </AlertTitle>
                     <AlertDescription>
