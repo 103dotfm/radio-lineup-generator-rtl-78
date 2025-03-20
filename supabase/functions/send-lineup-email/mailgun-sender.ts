@@ -1,6 +1,6 @@
 
-import { EmailSettings } from "./utils.ts";
 import { createErrorLog } from "./error-handler.ts";
+import { EmailSettings } from "./utils.ts";
 
 export const sendViaMailgun = async (
   emailSettings: EmailSettings,
@@ -9,134 +9,104 @@ export const sendViaMailgun = async (
   body: string
 ): Promise<any> => {
   try {
-    console.log("Sending email via Mailgun API...");
+    // Determine the appropriate Mailgun API URL based on region
+    const isEuRegion = emailSettings.is_eu_region || false;
+    const mailgunApiBase = isEuRegion ? "https://api.eu.mailgun.net/v3" : "https://api.mailgun.net/v3";
     
-    const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
-    const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
+    // First try to get API key and domain from environment variables (for backward compatibility)
+    let apiKey = Deno.env.get("MAILGUN_API_KEY");
+    let domain = Deno.env.get("MAILGUN_DOMAIN");
     
-    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-      console.error("Missing Mailgun credentials:", {
-        apiKeyPresent: !!MAILGUN_API_KEY,
-        domainPresent: !!MAILGUN_DOMAIN
-      });
-      throw new Error("Missing Mailgun credentials. Please set MAILGUN_API_KEY and MAILGUN_DOMAIN in environment variables.");
+    // Then check if API key and domain are in emailSettings (preferred method)
+    if (emailSettings.mailgun_api_key) {
+      apiKey = emailSettings.mailgun_api_key;
+      console.log("Using Mailgun API key from database settings");
     }
     
-    // Determine if we should use EU domain based on provided API key or domain
-    const isEuDomain = MAILGUN_DOMAIN.includes(".eu.") || 
-                       MAILGUN_API_KEY.startsWith("key-eu") || 
-                       emailSettings.is_eu_region === true;
+    if (emailSettings.mailgun_domain) {
+      domain = emailSettings.mailgun_domain;
+      console.log("Using Mailgun domain from database settings");
+    }
     
-    const mailgunBaseUrl = isEuDomain 
-      ? "https://api.eu.mailgun.net/v3"
-      : "https://api.mailgun.net/v3";
+    // Validate required parameters
+    if (!apiKey) {
+      throw new Error("Mailgun API key is required");
+    }
     
-    console.log(`Using Mailgun ${isEuDomain ? 'EU' : 'US'} region. Base URL: ${mailgunBaseUrl}`);
+    if (!domain) {
+      throw new Error("Mailgun domain is required");
+    }
     
-    const authHeader = `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`;
-    const mailgunUrl = `${mailgunBaseUrl}/${MAILGUN_DOMAIN}/messages`;
+    console.log(`Sending email via Mailgun (${isEuRegion ? 'EU' : 'US'} region) to domain: ${domain}`);
+    console.log(`From: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
+    console.log(`To: ${recipientEmails.join(", ")}`);
+    console.log(`Subject: ${subject}`);
     
-    console.log(`Using Mailgun domain: ${MAILGUN_DOMAIN}`);
-    console.log(`Full Mailgun API endpoint: ${mailgunUrl}`);
-    console.log("Sending to recipients:", recipientEmails.join(", "));
+    // Prepare headers for basic authentication
+    const headers = new Headers({
+      "Authorization": `Basic ${btoa(`api:${apiKey}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    });
     
-    const formData = new FormData();
+    // Create form data for the request
+    const formData = new URLSearchParams();
     formData.append("from", `${emailSettings.sender_name} <${emailSettings.sender_email}>`);
-    
-    // Add recipients in a way that ensures they're properly added to the FormData
-    for (const email of recipientEmails) {
-      formData.append("to", email.trim());
-    }
-    
+    formData.append("to", recipientEmails.join(","));
     formData.append("subject", subject);
     formData.append("html", body);
     
-    // Log request payload for debugging (excluding sensitive info)
-    console.log("Request payload:", { 
-      url: mailgunUrl,
-      from: `${emailSettings.sender_name} <${emailSettings.sender_email}>`,
-      to: recipientEmails,
-      subject: subject,
-      formDataEntries: [...formData.entries()].map(([key, value]) => 
-        typeof value === 'string' ? `${key}: ${value}` : `${key}: [FormData value]`
-      )
+    // Log the request URL
+    const requestUrl = `${mailgunApiBase}/${domain}/messages`;
+    console.log(`Making Mailgun API request to: ${requestUrl}`);
+    
+    // Make the request
+    const response = await fetch(requestUrl, {
+      method: "POST",
+      headers: headers,
+      body: formData,
     });
     
+    // Parse the response
+    let responseData;
     try {
-      console.log("Sending Mailgun API request...");
-      
-      const response = await fetch(mailgunUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": authHeader
-        },
-        body: formData
-      });
-      
-      const responseStatus = response.status;
-      let responseText = "";
-      
-      try {
-        responseText = await response.text();
-        console.log(`Mailgun API response status: ${responseStatus}`);
-        console.log("Mailgun API response:", responseText);
-      } catch (textError) {
-        console.error("Error reading response text:", textError);
-        responseText = "Could not read response text";
-      }
-      
-      if (!response.ok) {
-        let errorDetail;
-        try {
-          errorDetail = JSON.parse(responseText);
-        } catch (e) {
-          errorDetail = responseText;
-        }
-        
-        const error = new Error(`Mailgun API error (${responseStatus}): ${JSON.stringify(errorDetail)}`);
-        // @ts-ignore
-        error.status = responseStatus;
-        // @ts-ignore
-        error.response = responseText;
-        throw error;
-      }
-      
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.warn("Could not parse Mailgun response as JSON:", responseText);
-        result = { message: responseText };
-      }
-      
-      console.log("✅ Email sent successfully via Mailgun:", result);
-      
-      return {
-        success: true,
-        method: 'mailgun',
-        messageId: result.id || 'unknown',
-        response: JSON.stringify(result)
-      };
-    } catch (fetchError) {
-      console.error("Fetch error with Mailgun API:", fetchError);
-      throw fetchError;
+      responseData = await response.json();
+    } catch (error) {
+      // If response isn't JSON, get text instead
+      responseData = { text: await response.text() };
     }
+    
+    // Log response status and data
+    console.log(`Mailgun API response status: ${response.status}`);
+    console.log("Mailgun API response data:", responseData);
+    
+    // Check if the request was successful
+    if (!response.ok) {
+      const errorMessage = responseData.message || `Mailgun API returned status ${response.status}`;
+      throw {
+        message: errorMessage,
+        status: response.status,
+        response: responseData
+      };
+    }
+    
+    return {
+      success: true,
+      method: 'mailgun',
+      messageId: responseData.id,
+      response: JSON.stringify(responseData)
+    };
   } catch (error) {
-    console.error("Error in Mailgun sending:", error);
+    console.error("Error in Mailgun sending (full):", error);
     
-    // Add more debug information
-    const additionalInfo = `
-      API Key present: ${!!Deno.env.get("MAILGUN_API_KEY")}
-      Domain present: ${!!Deno.env.get("MAILGUN_DOMAIN")}
-      Domain value: ${Deno.env.get("MAILGUN_DOMAIN") || '(not set)'}
-    `;
+    // Generate detailed error log
+    const errorLog = createErrorLog("MAILGUN_SENDING", error);
     
-    // Create more detailed error log
-    const errorLog = createErrorLog("MAILGUN_SENDING", {
-      ...error,
-      message: error.message,
-      additionalInfo: additionalInfo + "\nMake sure Mailgun API key and domain are correctly set in Supabase Edge Function secrets"
-    });
+    // Add additional error context
+    if (error.response) {
+      errorLog.response = typeof error.response === 'string' 
+        ? error.response 
+        : JSON.stringify(error.response);
+    }
     
     throw { ...error, errorLog };
   }

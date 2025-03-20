@@ -32,6 +32,8 @@ interface EmailSettingsType {
   gmail_access_token?: string;
   gmail_token_expiry?: string;
   is_eu_region?: boolean;
+  mailgun_api_key?: string;
+  mailgun_domain?: string;
 }
 
 const EmailSettings: React.FC = () => {
@@ -64,7 +66,9 @@ const EmailSettings: React.FC = () => {
     gmail_redirect_uri: '',
     gmail_access_token: '',
     gmail_token_expiry: '',
-    is_eu_region: false
+    is_eu_region: false,
+    mailgun_api_key: '',
+    mailgun_domain: ''
   });
   const [recipients, setRecipients] = useState<Array<{id: string, email: string}>>([]);
   const [newEmail, setNewEmail] = useState('');
@@ -106,7 +110,7 @@ const EmailSettings: React.FC = () => {
       setErrorDetails(null);
       
       if (!settings.gmail_redirect_uri || !settings.gmail_client_id || !settings.gmail_client_secret) {
-        throw new Error("חסרות הגדר��ת חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
+        throw new Error("חסרות הגדרות חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
       }
       
       // Exchange the code for tokens
@@ -386,7 +390,9 @@ const EmailSettings: React.FC = () => {
           gmail_redirect_uri: settings.gmail_redirect_uri,
           gmail_access_token: settings.gmail_access_token,
           gmail_token_expiry: settings.gmail_token_expiry,
-          is_eu_region: settings.is_eu_region
+          is_eu_region: settings.is_eu_region,
+          mailgun_api_key: settings.mailgun_api_key,
+          mailgun_domain: settings.mailgun_domain
         });
 
       if (error) throw error;
@@ -1042,23 +1048,43 @@ const EmailSettings: React.FC = () => {
                     <h3 className="text-lg font-medium">הגדרות Mailgun API</h3>
                     <Alert className="mb-4">
                       <Info className="h-4 w-4" />
-                      <AlertTitle>חשוב מאוד: הגדרת סודות Mailgun</AlertTitle>
+                      <AlertTitle>הגדרת Mailgun</AlertTitle>
                       <AlertDescription>
                         <p className="text-sm mt-1">
-                          מפתח ה-API של Mailgun והדומיין חייבים להיות מוגדרים כסודות בפונקציות Edge של Supabase. פעל על פי ההוראות להלן:
+                          הזן את פרטי ה-API של Mailgun להלן. ניתן לקבל את המפתח והדומיין מלוח הבקרה של Mailgun.
                         </p>
-                        <ol className="list-decimal list-inside space-y-1 mt-2 text-sm">
-                          <li>היכנס ל<a href="https://supabase.com/dashboard/project/yyrmodgbnzqbmatlypuc/settings/functions" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">הגדרות פונקציות Edge של Supabase</a></li>
-                          <li>תחת "Edge Function Secrets", הוסף את הסודות הבאים:
-                            <ul className="list-disc list-inside ml-4 mt-1 mb-2">
-                              <li><strong>MAILGUN_API_KEY</strong>: המפתח הפרטי שקיבלת מ-Mailgun (מתחיל ב-key-...)</li>
-                              <li><strong>MAILGUN_DOMAIN</strong>: הדומיין המאומת ב-Mailgun (לדוגמה: myradio.co.il)</li>
-                            </ul>
-                          </li>
-                          <li>לאחר שהוספת את הסודות, אתה יכול לבדוק את המשלוח באמצעות הכפתור "שלח דואר אלקטרוני לדוגמה"</li>
-                        </ol>
                       </AlertDescription>
                     </Alert>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="mailgun_api_key">API Key</Label>
+                        <Input
+                          id="mailgun_api_key"
+                          dir="ltr"
+                          placeholder="key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                          value={settings.mailgun_api_key || ''}
+                          onChange={(e) => setSettings({...settings, mailgun_api_key: e.target.value})}
+                          type="password"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          המפתח האישי שלך מ-Mailgun (מתחיל ב-key-...)
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mailgun_domain">Domain</Label>
+                        <Input
+                          id="mailgun_domain"
+                          dir="ltr"
+                          placeholder="myradio.co.il"
+                          value={settings.mailgun_domain || ''}
+                          onChange={(e) => setSettings({...settings, mailgun_domain: e.target.value})}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          הדומיין המאומת שלך ב-Mailgun
+                        </p>
+                      </div>
+                    </div>
                     
                     <div className="flex items-center space-x-2 space-x-reverse rtl:space-x-reverse">
                       <Switch
@@ -1066,7 +1092,7 @@ const EmailSettings: React.FC = () => {
                         checked={settings.is_eu_region || false}
                         onCheckedChange={(checked) => setSettings({...settings, is_eu_region: checked})}
                       />
-                      <Label htmlFor="is_eu_region">השתמש באזור האיר��פי של Mailgun (api.eu.mailgun.net)</Label>
+                      <Label htmlFor="is_eu_region">השתמש באזור האירופי של Mailgun (api.eu.mailgun.net)</Label>
                     </div>
 
                     <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
@@ -1075,7 +1101,7 @@ const EmailSettings: React.FC = () => {
                         <li>היכנס ל<a href="https://signup.mailgun.com/new/signup" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">הרשמה ל-Mailgun</a> וצור חשבון</li>
                         <li>אמת את הדומיין שלך (כגון myradio.co.il) ב-Mailgun</li>
                         <li>במסך הבקרה של Mailgun, מצא את מפתח ה-API תחת "API Security"</li>
-                        <li>העתק את מפתח ה-API והדומיין המאומת, והוסף אותם כסודות בהגדרות פונקציות Edge של Supabase</li>
+                        <li>העתק את מפתח ה-API והדומיין המאומת והזן אותם בשדות למעלה</li>
                       </ol>
                       <div className="mt-4">
                         <h5 className="font-medium text-blue-800">קישורים שימושיים:</h5>
@@ -1092,7 +1118,7 @@ const EmailSettings: React.FC = () => {
                       <AlertTitle>כתובת ה-from בדומיין Mailgun</AlertTitle>
                       <AlertDescription>
                         <p className="text-sm">
-                          ודא שכתובת השולח (כתובת ה-from) תואמת את הדומיין המאומת שלך (myradio.co.il). אחרת, המשלוח עלול להיכשל.
+                          ודא שכתובת השולח (כתובת ה-from) תואמת את הדומיין המאומת שלך. אחרת, המשלוח עלול להיכשל.
                         </p>
                       </AlertDescription>
                     </Alert>
@@ -1190,3 +1216,4 @@ const EmailSettings: React.FC = () => {
 };
 
 export default EmailSettings;
+

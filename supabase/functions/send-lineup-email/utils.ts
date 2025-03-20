@@ -1,3 +1,4 @@
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -23,6 +24,8 @@ export interface EmailSettings {
   gmail_access_token?: string;
   gmail_token_expiry?: string;
   is_eu_region?: boolean;
+  mailgun_api_key?: string;
+  mailgun_domain?: string;
 }
 
 export interface ShowData {
@@ -64,6 +67,14 @@ export const validateEmailSettings = (settings: EmailSettings): string[] => {
   } else if (settings.email_method === 'gmail_api') {
     if (!settings.gmail_refresh_token) {
       missingFields.push('gmail_authentication');
+    }
+  } else if (settings.email_method === 'mailgun') {
+    // Check for Mailgun settings in the database first
+    if (!settings.mailgun_api_key && !Deno.env.get("MAILGUN_API_KEY")) {
+      missingFields.push('mailgun_api_key');
+    }
+    if (!settings.mailgun_domain && !Deno.env.get("MAILGUN_DOMAIN")) {
+      missingFields.push('mailgun_domain');
     }
   }
   

@@ -327,37 +327,45 @@ async function handleRequest(req: Request) {
         try {
           console.log("Sending email via Mailgun...");
           
-          // Double check that Mailgun secrets are set
-          const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
-          const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN");
+          // Check for mailgun settings in the database
+          const usingDatabaseSettings = !!(emailSettings.mailgun_api_key && emailSettings.mailgun_domain);
+          console.log(`Using Mailgun settings from: ${usingDatabaseSettings ? 'database' : 'environment variables'}`);
           
-          if (!mailgunApiKey || !mailgunDomain) {
-            const missingSecrets = [];
-            if (!mailgunApiKey) missingSecrets.push("MAILGUN_API_KEY");
-            if (!mailgunDomain) missingSecrets.push("MAILGUN_DOMAIN");
+          // If not using database settings, double check that Mailgun secrets are set in the environment
+          if (!usingDatabaseSettings) {
+            const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
+            const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN");
             
-            const errorLog = createErrorLog("MAILGUN_SECRETS_CHECK", {
-              message: `Missing Mailgun secrets: ${missingSecrets.join(", ")}`,
-              code: "MISSING_SECRETS"
-            });
-            
-            return new Response(
-              JSON.stringify({ 
-                error: "Missing Mailgun configuration", 
-                details: errorLog,
-                missingSecrets
-              }),
-              { 
-                status: 500, 
-                headers: corsHeaders 
-              }
-            );
+            if (!mailgunApiKey || !mailgunDomain) {
+              const missingSecrets = [];
+              if (!mailgunApiKey) missingSecrets.push("MAILGUN_API_KEY");
+              if (!mailgunDomain) missingSecrets.push("MAILGUN_DOMAIN");
+              
+              const errorLog = createErrorLog("MAILGUN_SECRETS_CHECK", {
+                message: `Missing Mailgun secrets: ${missingSecrets.join(", ")}`,
+                code: "MISSING_SECRETS",
+                additionalInfo: "Mailgun settings were not found in database or environment variables"
+              });
+              
+              return new Response(
+                JSON.stringify({ 
+                  error: "Missing Mailgun configuration", 
+                  details: errorLog,
+                  missingSecrets
+                }),
+                { 
+                  status: 500, 
+                  headers: corsHeaders 
+                }
+              );
+            }
           }
           
-          // Log more details about the Mailgun configuration
+          // Log configuration details
           console.log("Mailgun configuration:", {
-            domain: mailgunDomain,
-            apiKeyLength: mailgunApiKey ? mailgunApiKey.length : 0,
+            usingDatabaseSettings,
+            domain: emailSettings.mailgun_domain || Deno.env.get("MAILGUN_DOMAIN"),
+            apiKeyPresent: !!(emailSettings.mailgun_api_key || Deno.env.get("MAILGUN_API_KEY")),
             isEuRegion: emailSettings.is_eu_region || false
           });
           
