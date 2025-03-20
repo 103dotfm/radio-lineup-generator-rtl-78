@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +103,7 @@ const EmailSettings: React.FC = () => {
       setErrorDetails(null);
       
       if (!settings.gmail_redirect_uri || !settings.gmail_client_id || !settings.gmail_client_secret) {
-        throw new Error("חסרות הגדרות חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
+        throw new Error("חסרות הגדר��ת חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
       }
       
       // Exchange the code for tokens
@@ -467,7 +466,7 @@ const EmailSettings: React.FC = () => {
   const sendTestEmail = async () => {
     if (!latestShow) {
       toast({
-        title: "לא נמצאה תוכנית לשליחה",
+        title: "לא נמצאה תוכנית לשליחת",
         description: "אנא צור תוכנית חדשה",
         variant: "destructive"
       });
@@ -1039,62 +1038,51 @@ const EmailSettings: React.FC = () => {
                     <h3 className="text-lg font-medium">הגדרות Mailgun API</h3>
                     <Alert className="mb-4">
                       <Info className="h-4 w-4" />
-                      <AlertTitle>מידע על Mailgun</AlertTitle>
+                      <AlertTitle>חשוב מאוד: הגדרת סודות Mailgun</AlertTitle>
                       <AlertDescription>
                         <p className="text-sm mt-1">
-                          Mailgun היא שירות שליחת דואר אלקטרוני אמין ומקצועי. כדי להשתמש בו עליך להירשם לחשבון ב-<a href="https://www.mailgun.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Mailgun.com</a>, לאמת דומיין ולהשיג מפתח API.
+                          מפתח ה-API של Mailgun והדומיין חייבים להיות מוגדרים כסודות בפונקציות Edge של Supabase. פעל על פי ההוראות להלן:
                         </p>
+                        <ol className="list-decimal list-inside space-y-1 mt-2 text-sm">
+                          <li>היכנס ל<a href="https://supabase.com/dashboard/project/yyrmodgbnzqbmatlypuc/settings/functions" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">הגדרות פונקציות Edge של Supabase</a></li>
+                          <li>תחת "Edge Function Secrets", הוסף את הסודות הבאים:
+                            <ul className="list-disc list-inside ml-4 mt-1 mb-2">
+                              <li><strong>MAILGUN_API_KEY</strong>: המפתח הפרטי שקיבלת מ-Mailgun (מתחיל ב-key-...)</li>
+                              <li><strong>MAILGUN_DOMAIN</strong>: הדומיין המאומת ב-Mailgun (לדוגמה: mail.yourdomain.com)</li>
+                            </ul>
+                          </li>
+                          <li>לאחר שהוספת את הסודות, אתה יכול לבדוק את המשלוח באמצעות הכפתור "שלח דואר אלקטרוני לדוגמה"</li>
+                        </ol>
                       </AlertDescription>
                     </Alert>
                     
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="mailgun_api_key">Mailgun API Key</Label>
-                        <Input
-                          id="mailgun_api_key"
-                          dir="ltr"
-                          type="password"
-                          placeholder="key-*************"
-                          onChange={(e) => {
-                            // Store in Supabase Edge Function secrets instead of in the database
-                            console.log("Mailgun API Key should be set as a Supabase Edge Function secret");
-                          }}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          מפתח ה-API של Mailgun מאוחסן כסוד (secret) בפונקציות Edge של Supabase. הגדר אותו בלוח בקרה של Supabase.
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="mailgun_domain">Mailgun Domain</Label>
-                        <Input
-                          id="mailgun_domain"
-                          dir="ltr"
-                          placeholder="mail.yourdomain.com"
-                          onChange={(e) => {
-                            // Store in Supabase Edge Function secrets instead of in the database
-                            console.log("Mailgun Domain should be set as a Supabase Edge Function secret");
-                          }}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          הדומיין שאימתת ב-Mailgun. גם זה מוגדר כסוד (secret) בפונקציות Edge של Supabase.
-                        </p>
+                    <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
+                      <h4 className="font-medium mb-2 text-blue-800">יצירת חשבון Mailgun והגדרתו:</h4>
+                      <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
+                        <li>היכנס ל<a href="https://signup.mailgun.com/new/signup" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">הרשמה ל-Mailgun</a> וצור חשבון</li>
+                        <li>אמת דומיין או השתמש בדומיין בדיקה (sandbox domain) של Mailgun</li>
+                        <li>במסך הבקרה של Mailgun, מצא את מפתח ה-API תחת "API Security"</li>
+                        <li>העתק את מפתח ה-API והדומיין המאומת, והוסף אותם כסודות בהגדרות פונקציות Edge של Supabase</li>
+                      </ol>
+                      <div className="mt-4">
+                        <h5 className="font-medium text-blue-800">קישורים שימושיים:</h5>
+                        <ul className="list-disc list-inside mt-1 text-sm text-blue-700">
+                          <li><a href="https://app.mailgun.com/app/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">לוח בקרה של Mailgun</a></li>
+                          <li><a href="https://app.mailgun.com/app/account/security/api_keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">מפתחות API של Mailgun</a></li>
+                          <li><a href="https://app.mailgun.com/app/sending/domains" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">דומיינים מאומתים ב-Mailgun</a></li>
+                        </ul>
                       </div>
                     </div>
                     
-                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                      <h4 className="font-medium mb-2">כיצד להגדיר סודות בפונקציות Edge של Supabase:</h4>
-                      <ol className="list-decimal list-inside space-y-2 text-sm">
-                        <li>היכנס ללוח הבקרה של Supabase</li>
-                        <li>עבור אל Edge Functions &gt; Settings</li>
-                        <li>הוסף את הסודות הבאים:
-                          <ul className="list-disc list-inside ml-4 mt-1">
-                            <li>MAILGUN_API_KEY - המפתח שקיבלת מ-Mailgun</li>
-                            <li>MAILGUN_DOMAIN - הדומיין שאימתת ב-Mailgun</li>
-                          </ul>
-                        </li>
-                      </ol>
-                    </div>
+                    <Alert variant="warning" className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>המלצה: ודא שהדומיין מאומת</AlertTitle>
+                      <AlertDescription>
+                        <p className="text-sm">
+                          אם אתה משתמש בדומיין בדיקה (sandbox domain), זכור שתוכל לשלוח רק לנמענים מאושרים מראש. לשימוש מלא, אמת דומיין אמיתי ב-Mailgun.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
                   </div>
                 )}
                 
@@ -1104,7 +1092,7 @@ const EmailSettings: React.FC = () => {
                   <AlertDescription>
                     <p className="mb-2"><strong>שרת SMTP:</strong> שיטה סטנדרטית לשליחת דואר אלקטרוני. מתאימה לרוב השירותים אך עלולה להיתקל בחסימות.</p>
                     <p className="mb-2"><strong>ממשק API של Gmail:</strong> שיטה מתקדמת לשליחת דואר דרך חשבון Google. מתאימה במיוחד אם נתקלת בבעיות עם SMTP של Gmail או Outlook.</p>
-                    <p><strong>Mailgun API:</strong> שיטה מומלצת לשליחת דואר אלקטרוני, מסייעת במניעת סיווג כספאם ומספקת ניתוח משלוחים. דורשת יצירת חשבון Mailgun והגדרת Domain.</p>
+                    <p><strong>Mailgun API:</strong> ��יטה מומלצת לשליחת דואר אלקטרוני, מסייעת במניעת סיווג כספאם ומספקת ניתוח משלוחים. דורשת יצירת חשבון Mailgun והגדרת Domain.</p>
                   </AlertDescription>
                 </Alert>
               </div>

@@ -8,6 +8,7 @@ export interface ErrorDetails {
   responseCode?: string;
   response?: string;
   recommendation?: string;
+  additionalInfo?: string;
 }
 
 export const createErrorLog = (stage: string, error: any): ErrorDetails => {
@@ -17,9 +18,15 @@ export const createErrorLog = (stage: string, error: any): ErrorDetails => {
     stack: error.stack,
     code: error.code,
     command: error.command,
-    responseCode: error.responseCode,
-    response: error.response
+    responseCode: error.responseCode || error.status,
+    response: error.response,
+    additionalInfo: error.additionalInfo
   };
+  
+  // Add recommendations based on error context
+  if (stage === "MAILGUN_SENDING") {
+    errorDetails.recommendation = "Verify your Mailgun API key and domain in the Supabase Edge Function secrets. Ensure your Mailgun account is active and the domain is verified.";
+  }
   
   console.error(`ERROR IN ${stage}:`, JSON.stringify(errorDetails, null, 2));
   return errorDetails;
