@@ -18,17 +18,26 @@ export const createErrorLog = (stage: string, error: any): ErrorDetails => {
     stack: error.stack,
     code: error.code,
     command: error.command,
-    responseCode: error.responseCode || error.status,
-    response: error.response,
+    responseCode: error.responseCode || error.status || error.statusCode,
+    response: typeof error.response === 'string' ? error.response : JSON.stringify(error.response || {}),
     additionalInfo: error.additionalInfo
   };
   
   // Add recommendations based on error context
   if (stage === "MAILGUN_SENDING") {
     errorDetails.recommendation = "Verify your Mailgun API key and domain in the Supabase Edge Function secrets. Ensure your Mailgun account is active and the domain is verified.";
+  } else if (stage === "SMTP_VERIFICATION" || stage === "SENDING_EMAIL") {
+    if (isOutlookAuthError(error)) {
+      errorDetails.recommendation = getAlternativeSmtpRecommendation(error.host || '');
+    } else {
+      errorDetails.recommendation = "Check your SMTP credentials and ensure your SMTP server allows the connection.";
+    }
   }
   
+  // Log the full error object for debugging
   console.error(`ERROR IN ${stage}:`, JSON.stringify(errorDetails, null, 2));
+  console.error("ORIGINAL ERROR OBJECT:", error);
+  
   return errorDetails;
 };
 

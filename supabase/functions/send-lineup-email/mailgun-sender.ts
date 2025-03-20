@@ -49,6 +49,8 @@ export const sendViaMailgun = async (
     });
     
     try {
+      console.log("Sending Mailgun API request...");
+      
       const response = await fetch(mailgunUrl, {
         method: "POST",
         headers: {
@@ -58,10 +60,16 @@ export const sendViaMailgun = async (
       });
       
       const responseStatus = response.status;
-      const responseText = await response.text();
+      let responseText = "";
       
-      console.log(`Mailgun API response status: ${responseStatus}`);
-      console.log("Mailgun API response:", responseText);
+      try {
+        responseText = await response.text();
+        console.log(`Mailgun API response status: ${responseStatus}`);
+        console.log("Mailgun API response:", responseText);
+      } catch (textError) {
+        console.error("Error reading response text:", textError);
+        responseText = "Could not read response text";
+      }
       
       if (!response.ok) {
         let errorDetail;
@@ -71,7 +79,12 @@ export const sendViaMailgun = async (
           errorDetail = responseText;
         }
         
-        throw new Error(`Mailgun API error (${responseStatus}): ${JSON.stringify(errorDetail)}`);
+        const error = new Error(`Mailgun API error (${responseStatus}): ${JSON.stringify(errorDetail)}`);
+        // @ts-ignore
+        error.status = responseStatus;
+        // @ts-ignore
+        error.response = responseText;
+        throw error;
       }
       
       let result;
@@ -97,11 +110,17 @@ export const sendViaMailgun = async (
   } catch (error) {
     console.error("Error in Mailgun sending:", error);
     
+    // Add more debug information
+    const additionalInfo = `
+      API Key present: ${!!Deno.env.get("MAILGUN_API_KEY")}
+      Domain present: ${!!Deno.env.get("MAILGUN_DOMAIN")}
+    `;
+    
     // Create more detailed error log
     const errorLog = createErrorLog("MAILGUN_SENDING", {
       ...error,
       message: error.message,
-      additionalInfo: "Make sure Mailgun API key and domain are correctly set in Supabase Edge Function secrets"
+      additionalInfo: additionalInfo + "\nMake sure Mailgun API key and domain are correctly set in Supabase Edge Function secrets"
     });
     
     throw { ...error, errorLog };
