@@ -1,4 +1,3 @@
-
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -8,14 +7,14 @@ export const corsHeaders = {
 
 export interface EmailSettings {
   id: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string;
+  smtp_password: string;
   sender_email: string;
   sender_name: string;
   subject_template: string;
   body_template: string;
-  smtp_host?: string;
-  smtp_port?: number;
-  smtp_user?: string;
-  smtp_password?: string;
   email_method: 'smtp' | 'gmail_api' | 'mailgun';
   gmail_client_id?: string;
   gmail_client_secret?: string;
@@ -23,6 +22,7 @@ export interface EmailSettings {
   gmail_redirect_uri?: string;
   gmail_access_token?: string;
   gmail_token_expiry?: string;
+  is_eu_region?: boolean;
 }
 
 export interface ShowData {

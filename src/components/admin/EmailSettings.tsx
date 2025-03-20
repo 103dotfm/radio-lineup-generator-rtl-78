@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 interface EmailSettingsType {
   id: string;
@@ -30,6 +31,7 @@ interface EmailSettingsType {
   gmail_redirect_uri: string;
   gmail_access_token?: string;
   gmail_token_expiry?: string;
+  is_eu_region?: boolean;
 }
 
 const EmailSettings: React.FC = () => {
@@ -61,7 +63,8 @@ const EmailSettings: React.FC = () => {
     gmail_refresh_token: '',
     gmail_redirect_uri: '',
     gmail_access_token: '',
-    gmail_token_expiry: ''
+    gmail_token_expiry: '',
+    is_eu_region: false
   });
   const [recipients, setRecipients] = useState<Array<{id: string, email: string}>>([]);
   const [newEmail, setNewEmail] = useState('');
@@ -382,7 +385,8 @@ const EmailSettings: React.FC = () => {
           gmail_refresh_token: settings.gmail_refresh_token,
           gmail_redirect_uri: settings.gmail_redirect_uri,
           gmail_access_token: settings.gmail_access_token,
-          gmail_token_expiry: settings.gmail_token_expiry
+          gmail_token_expiry: settings.gmail_token_expiry,
+          is_eu_region: settings.is_eu_region
         });
 
       if (error) throw error;
@@ -781,7 +785,7 @@ const EmailSettings: React.FC = () => {
                           <AlertDescription className="text-amber-700">
                             <p className="mb-2">חשבון ה-Outlook שלך אינו מאפשר אימות SMTP. יש לבצע אחת מהפעולות הבאות:</p>
                             <ol className="list-decimal list-inside space-y-1 mb-2">
-                              <li>הפעל אימות SMTP בחשבון Outlook שלך</li>
+                              <li>ה��על אימות SMTP בחשבון Outlook שלך</li>
                               <li>השתמש בשירות דואר אחר כמו Gmail</li>
                               <li>השתמש בחשבון Outlook אחר שבו מופעלת האפשרות</li>
                             </ol>
@@ -1048,7 +1052,7 @@ const EmailSettings: React.FC = () => {
                           <li>תחת "Edge Function Secrets", הוסף את הסודות הבאים:
                             <ul className="list-disc list-inside ml-4 mt-1 mb-2">
                               <li><strong>MAILGUN_API_KEY</strong>: המפתח הפרטי שקיבלת מ-Mailgun (מתחיל ב-key-...)</li>
-                              <li><strong>MAILGUN_DOMAIN</strong>: הדומיין המאומת ב-Mailgun (לדוגמה: mail.yourdomain.com)</li>
+                              <li><strong>MAILGUN_DOMAIN</strong>: הדומיין המאומת ב-Mailgun (לדוגמה: myradio.co.il)</li>
                             </ul>
                           </li>
                           <li>לאחר שהוספת את הסודות, אתה יכול לבדוק את המשלוח באמצעות הכפתור "שלח דואר אלקטרוני לדוגמה"</li>
@@ -1056,11 +1060,20 @@ const EmailSettings: React.FC = () => {
                       </AlertDescription>
                     </Alert>
                     
+                    <div className="flex items-center space-x-2 space-x-reverse rtl:space-x-reverse">
+                      <Switch
+                        id="is_eu_region"
+                        checked={settings.is_eu_region || false}
+                        onCheckedChange={(checked) => setSettings({...settings, is_eu_region: checked})}
+                      />
+                      <Label htmlFor="is_eu_region">השתמש באזור האיר��פי של Mailgun (api.eu.mailgun.net)</Label>
+                    </div>
+
                     <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
                       <h4 className="font-medium mb-2 text-blue-800">יצירת חשבון Mailgun והגדרתו:</h4>
                       <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
                         <li>היכנס ל<a href="https://signup.mailgun.com/new/signup" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">הרשמה ל-Mailgun</a> וצור חשבון</li>
-                        <li>אמת דומיין או השתמש בדומיין בדיקה (sandbox domain) של Mailgun</li>
+                        <li>אמת את הדומיין שלך (כגון myradio.co.il) ב-Mailgun</li>
                         <li>במסך הבקרה של Mailgun, מצא את מפתח ה-API תחת "API Security"</li>
                         <li>העתק את מפתח ה-API והדומיין המאומת, והוסף אותם כסודות בהגדרות פונקציות Edge של Supabase</li>
                       </ol>
@@ -1076,10 +1089,10 @@ const EmailSettings: React.FC = () => {
                     
                     <Alert variant="warning" className="mt-4">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>המלצה: ודא שהדומיין מאומת</AlertTitle>
+                      <AlertTitle>כתובת ה-from בדומיין Mailgun</AlertTitle>
                       <AlertDescription>
                         <p className="text-sm">
-                          אם אתה משתמש בדומיין בדיקה (sandbox domain), זכור שתוכל לשלוח רק לנמענים מאושרים מראש. לשימוש מלא, אמת דומיין אמיתי ב-Mailgun.
+                          ודא שכתובת השולח (כתובת ה-from) תואמת את הדומיין המאומת שלך (myradio.co.il). אחרת, המשלוח עלול להיכשל.
                         </p>
                       </AlertDescription>
                     </Alert>

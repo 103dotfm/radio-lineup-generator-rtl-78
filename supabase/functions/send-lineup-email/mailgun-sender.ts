@@ -22,7 +22,23 @@ export const sendViaMailgun = async (
       throw new Error("Missing Mailgun credentials. Please set MAILGUN_API_KEY and MAILGUN_DOMAIN in environment variables.");
     }
     
+    // Determine if we should use EU domain based on provided API key or domain
+    const isEuDomain = MAILGUN_DOMAIN.includes(".eu.") || 
+                       MAILGUN_API_KEY.startsWith("key-eu") || 
+                       emailSettings.is_eu_region === true;
+    
+    const mailgunBaseUrl = isEuDomain 
+      ? "https://api.eu.mailgun.net/v3"
+      : "https://api.mailgun.net/v3";
+    
+    console.log(`Using Mailgun ${isEuDomain ? 'EU' : 'US'} region. Base URL: ${mailgunBaseUrl}`);
+    
     const authHeader = `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`;
+    const mailgunUrl = `${mailgunBaseUrl}/${MAILGUN_DOMAIN}/messages`;
+    
+    console.log(`Using Mailgun domain: ${MAILGUN_DOMAIN}`);
+    console.log(`Full Mailgun API endpoint: ${mailgunUrl}`);
+    console.log("Sending to recipients:", recipientEmails.join(", "));
     
     const formData = new FormData();
     formData.append("from", `${emailSettings.sender_name} <${emailSettings.sender_email}>`);
@@ -35,17 +51,15 @@ export const sendViaMailgun = async (
     formData.append("subject", subject);
     formData.append("html", body);
     
-    const mailgunUrl = `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`;
-    
-    console.log(`Using Mailgun domain: ${MAILGUN_DOMAIN}`);
-    console.log("Sending to:", recipientEmails.join(", "));
-    
     // Log request payload for debugging (excluding sensitive info)
     console.log("Request payload:", { 
       url: mailgunUrl,
       from: `${emailSettings.sender_name} <${emailSettings.sender_email}>`,
       to: recipientEmails,
-      subject: subject
+      subject: subject,
+      formDataEntries: [...formData.entries()].map(([key, value]) => 
+        typeof value === 'string' ? `${key}: ${value}` : `${key}: [FormData value]`
+      )
     });
     
     try {
@@ -114,6 +128,7 @@ export const sendViaMailgun = async (
     const additionalInfo = `
       API Key present: ${!!Deno.env.get("MAILGUN_API_KEY")}
       Domain present: ${!!Deno.env.get("MAILGUN_DOMAIN")}
+      Domain value: ${Deno.env.get("MAILGUN_DOMAIN") || '(not set)'}
     `;
     
     // Create more detailed error log
