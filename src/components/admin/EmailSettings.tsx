@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -887,3 +888,141 @@ const EmailSettings: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="smtp">
+          {/* SMTP Tab Content */}
+          <Card>
+            <CardHeader>
+              <CardTitle>הגדרות שרת SMTP</CardTitle>
+              <CardDescription>
+                הזן את פרטי שרת הדואר היוצא (SMTP)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_host">כתובת שרת SMTP</Label>
+                    <Input
+                      id="smtp_host"
+                      dir="ltr"
+                      placeholder="smtp.example.com"
+                      value={settings.smtp_host}
+                      onChange={(e) => setSettings({...settings, smtp_host: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_port">פורט SMTP</Label>
+                    <Input
+                      id="smtp_port"
+                      dir="ltr"
+                      type="number"
+                      placeholder="587"
+                      value={settings.smtp_port.toString()}
+                      onChange={(e) => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_user">שם משתמש SMTP</Label>
+                    <Input
+                      id="smtp_user"
+                      dir="ltr"
+                      placeholder="your-email@example.com"
+                      value={settings.smtp_user}
+                      onChange={(e) => setSettings({...settings, smtp_user: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_password">סיסמה SMTP</Label>
+                    <Input
+                      id="smtp_password"
+                      dir="ltr"
+                      type="password"
+                      placeholder="******"
+                      value={settings.smtp_password}
+                      onChange={(e) => setSettings({...settings, smtp_password: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={saveSettings}
+                disabled={saving}
+              >
+                {saving ? "שומר..." : "שמור הגדרות SMTP"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="template">
+          <Card>
+            <CardHeader>
+              <CardTitle>תבנית הודעת דואר אלקטרוני</CardTitle>
+              <CardDescription>
+                הגדר את הפורמט של הודעות הדואר האלקטרוני
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="subject_template">נושא ההודעה</Label>
+                  <Input
+                    id="subject_template"
+                    placeholder="ליינאפ תוכנית {{show_name}} לתאריך {{show_date}}"
+                    value={settings.subject_template}
+                    onChange={(e) => setSettings({...settings, subject_template: e.target.value})}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    תגיות אפשריות: <code>{'{{show_name}}'}</code>, <code>{'{{show_date}}'}</code>, <code>{'{{show_time}}'}</code>
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="body_template">גוף ההודעה</Label>
+                  <Textarea
+                    id="body_template"
+                    placeholder="שלום, מצורף ליינאפ התוכנית {{show_name}} לתאריך {{show_date}}"
+                    rows={8}
+                    value={settings.body_template}
+                    onChange={(e) => setSettings({...settings, body_template: e.target.value})}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    תגיות אפשריות: <code>{'{{show_name}}'}</code>, <code>{'{{show_date}}'}</code>, <code>{'{{show_time}}'}</code>
+                  </p>
+                </div>
+                
+                {latestShow && (
+                  <Alert variant="outline" className="bg-gray-50">
+                    <AlertTitle className="flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      תצוגה מקדימה
+                    </AlertTitle>
+                    <AlertDescription>
+                      <div className="mt-2 space-y-2">
+                        <p><strong>נושא:</strong> {processTemplate(settings.subject_template)}</p>
+                        <p><strong>גוף:</strong> {processTemplate(settings.body_template)}</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={saveSettings}
+                disabled={saving}
+              >
+                {saving ? "שומר..." : "שמור תבנית"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default EmailSettings;
