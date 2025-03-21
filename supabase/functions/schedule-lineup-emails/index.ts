@@ -45,53 +45,67 @@ serve(async (req) => {
     
     // Calculate Israel time (UTC+3) without relying on client timezone
     const israelOffset = 3; // Israel is UTC+3 (3 hours ahead of UTC)
+    
+    // Get the current UTC hours and minutes
     const utcHours = now.getUTCHours();
+    const utcMinutes = now.getUTCMinutes();
+    console.log(`UTC time: ${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
+    
+    // First calculate Israel time
     const israelHours = (utcHours + israelOffset) % 24;
-    const israelMinutes = now.getUTCMinutes();
+    console.log(`Israel time (UTC+3): ${israelHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
     
-    console.log(`Israel time (calculated from UTC): ${israelHours.toString().padStart(2, '0')}:${israelMinutes.toString().padStart(2, '0')}`);
+    // Then apply the user-defined timezone offset
+    const adjustedHours = (israelHours + timezoneOffset + 24) % 24; // Add 24 to handle negative offsets
     
-    // Apply additional user-defined timezone offset from settings
-    const adjustedHours = (israelHours + timezoneOffset) % 24;
-    const currentTimeString = `${adjustedHours.toString().padStart(2, '0')}:${israelMinutes.toString().padStart(2, '0')}`;
+    // Format the current time with the applied offset
+    const currentTimeString = `${adjustedHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`;
+    console.log(`Adjusted time with offset ${timezoneOffset}: ${currentTimeString}`);
     
     // Calculate time 1 minute ago for the window
-    const oneMinuteAgoMinutes = israelMinutes - 1;
-    let oneMinuteAgoHours = israelHours;
+    let oneMinuteAgoMinutes = utcMinutes - 1;
+    let oneMinuteAgoHours = utcHours;
     
     // Handle minute rollover
     if (oneMinuteAgoMinutes < 0) {
       oneMinuteAgoMinutes = 59;
-      oneMinuteAgoHours = (israelHours - 1 + 24) % 24;
+      oneMinuteAgoHours = (utcHours - 1 + 24) % 24;
     }
     
-    // Apply timezone offset to the one minute ago time as well
-    const adjustedOneMinuteAgoHours = (oneMinuteAgoHours + timezoneOffset) % 24;
+    // First calculate one minute ago in Israel time
+    const israelOneMinuteAgoHours = (oneMinuteAgoHours + israelOffset) % 24;
+    
+    // Then apply timezone offset to the one minute ago time
+    const adjustedOneMinuteAgoHours = (israelOneMinuteAgoHours + timezoneOffset + 24) % 24;
     const oneMinuteAgoTimeString = `${adjustedOneMinuteAgoHours.toString().padStart(2, '0')}:${oneMinuteAgoMinutes.toString().padStart(2, '0')}`;
     
-    console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString} with timezone offset: ${timezoneOffset}`);
+    console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString}`);
     
-    // Current day of week in Israel time
-    // JS getDay() returns 0 for Sunday, 1 for Monday, etc.
+    // Current day of week calculations
     // First get the UTC day
     const utcDay = now.getUTCDay();
+    console.log(`UTC day of week: ${utcDay}`);
     
     // Calculate the Israel day by potentially adjusting for day rollover
-    // If it's late enough UTC that adding israelOffset hours crosses midnight, increment the day
     let israelDay = utcDay;
     if (utcHours + israelOffset >= 24) {
       israelDay = (utcDay + 1) % 7;
     }
+    console.log(`Israel day of week: ${israelDay}`);
     
-    // Apply timezone offset that might affect the day (if negative offset crosses midnight backwards)
+    // Apply timezone offset that might affect the day
     let adjustedDay = israelDay;
+    
+    // If the timezone offset pushes us back a day (negative offset)
     if (israelHours + timezoneOffset < 0) {
       adjustedDay = (israelDay - 1 + 7) % 7;
-    } else if (israelHours + timezoneOffset >= 24) {
+    } 
+    // If the timezone offset pushes us forward a day (positive offset)
+    else if (israelHours + timezoneOffset >= 24) {
       adjustedDay = (israelDay + 1) % 7;
     }
     
-    console.log(`Current day of week (Israel): ${israelDay}, Adjusted for offset: ${adjustedDay}`);
+    console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
     // Get all shows from Schedule slots for today that match the time window
     const { data: slots, error: slotsError } = await supabase
@@ -131,12 +145,31 @@ serve(async (req) => {
     for (const slot of slots) {
       console.log(`Processing slot: ${slot.show_name} (${slot.start_time})`);
       
-      // Get current date in YYYY-MM-DD format (using Israel time)
-      // We need to construct this from UTC with the offset
+      // Get current date in YYYY-MM-DD format
+      // Start with UTC
       const nowUtc = new Date();
-      // Add Israel offset hours (and apply timezone offset)
-      nowUtc.setUTCHours(nowUtc.getUTCHours() + israelOffset + timezoneOffset);
-      const todayDate = nowUtc.toISOString().slice(0, 10); // YYYY-MM-DD
+      
+      // Adjust for Israel and timezone offset
+      const totalOffsetHours = israelOffset + timezoneOffset;
+      
+      // Calculate if the date should roll forward or backward based on the offset
+      let dateAdjustment = 0;
+      if (utcHours + totalOffsetHours >= 24) {
+        dateAdjustment = 1; // Add a day
+      } else if (utcHours + totalOffsetHours < 0) {
+        dateAdjustment = -1; // Subtract a day
+      }
+      
+      // Create a new date object and adjust by the total offset
+      const adjustedDate = new Date(nowUtc);
+      adjustedDate.setUTCHours(nowUtc.getUTCHours() + totalOffsetHours);
+      
+      // Apply any date rollover
+      if (dateAdjustment !== 0) {
+        adjustedDate.setUTCDate(adjustedDate.getUTCDate() + dateAdjustment);
+      }
+      
+      const todayDate = adjustedDate.toISOString().slice(0, 10); // YYYY-MM-DD
       
       console.log(`Looking for shows on date: ${todayDate}`);
       
@@ -203,6 +236,7 @@ serve(async (req) => {
       
       // Send email for this show
       try {
+        console.log(`Sending email for show ${show.id}`);
         const response = await fetch(
           `${supabaseUrl}/functions/v1/send-lineup-email`,
           {
@@ -227,7 +261,7 @@ serve(async (req) => {
           continue;
         }
         
-        console.log(`Email sent for show ${show.id}`);
+        console.log(`Email sent successfully for show ${show.id}`);
         results.push({
           show: show.id,
           success: true
@@ -243,7 +277,18 @@ serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify({ results, executionTime: new Date().getTime() - requestStartTime.getTime() }),
+      JSON.stringify({ 
+        results, 
+        executionTime: new Date().getTime() - requestStartTime.getTime(),
+        debug: {
+          serverTime: now.toISOString(),
+          utcTime: `${utcHours}:${utcMinutes}`,
+          israelTime: `${israelHours}:${utcMinutes}`,
+          adjustedTime: currentTimeString,
+          timezoneOffset,
+          adjustedDay
+        }
+      }),
       { 
         status: 200, 
         headers: { "Content-Type": "application/json", ...corsHeaders } 

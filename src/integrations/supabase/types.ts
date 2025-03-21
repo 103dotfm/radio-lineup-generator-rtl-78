@@ -61,6 +61,8 @@ export type Database = {
           gmail_redirect_uri: string | null
           gmail_refresh_token: string | null
           id: string
+          mailgun_api_key: string | null
+          mailgun_domain: string | null
           sender_email: string
           sender_name: string
           smtp_host: string
@@ -79,6 +81,8 @@ export type Database = {
           gmail_redirect_uri?: string | null
           gmail_refresh_token?: string | null
           id?: string
+          mailgun_api_key?: string | null
+          mailgun_domain?: string | null
           sender_email: string
           sender_name: string
           smtp_host: string
@@ -97,6 +101,8 @@ export type Database = {
           gmail_redirect_uri?: string | null
           gmail_refresh_token?: string | null
           id?: string
+          mailgun_api_key?: string | null
+          mailgun_domain?: string | null
           sender_email?: string
           sender_name?: string
           smtp_host?: string
