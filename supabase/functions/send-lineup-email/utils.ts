@@ -122,13 +122,32 @@ export const generateLineupLink = (
   requestUrl: string,
   requestOrigin: string | null
 ): string => {
-  // Try to use app_domain from system settings first
+  // First log everything for debugging
+  console.log(`Generating lineup link for show: ${showId}`);
+  console.log(`App domain from settings: ${appDomain}`);
+  console.log(`Request URL: ${requestUrl}`);
+  console.log(`Request origin: ${requestOrigin}`);
+  
+  // Try to use app_domain from system settings first (with protocol check)
   if (appDomain) {
+    // Ensure the domain has a protocol
+    if (!appDomain.startsWith('http://') && !appDomain.startsWith('https://')) {
+      appDomain = `https://${appDomain}`;
+    }
+    
+    // Normalize the domain (remove trailing slashes)
+    appDomain = appDomain.replace(/\/+$/, '');
+    
+    console.log(`Using app domain from settings: ${appDomain}`);
     return `${appDomain}/print/${showId}`;
   }
   
   // Fall back to request origin
   if (requestOrigin) {
+    // Normalize the origin
+    requestOrigin = requestOrigin.replace(/\/+$/, '');
+    
+    console.log(`Using request origin: ${requestOrigin}`);
     return `${requestOrigin}/print/${showId}`;
   }
   
@@ -136,9 +155,12 @@ export const generateLineupLink = (
   try {
     const url = new URL(requestUrl);
     const origin = `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+    
+    console.log(`Extracted origin from request URL: ${origin}`);
     return `${origin}/print/${showId}`;
   } catch (error) {
     console.error("Failed to generate lineup link from request URL:", error);
+    console.log(`Falling back to relative URL: /print/${showId}`);
     return `/print/${showId}`;
   }
 };
