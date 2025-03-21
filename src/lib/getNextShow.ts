@@ -33,7 +33,7 @@ export const getNextShow = async (
     // Parse the current show time to create a full date-time
     const currentTimeParts = currentShowTime.split(':');
     const currentDateTime = new Date(currentShowDate);
-    currentDateTime.setHours(parseInt(currentTimeParts[0], 10));
+    currentDateTime.setHours(parseInt(currentTimeParts[0], 10) || 0);
     currentDateTime.setMinutes(parseInt(currentTimeParts[1] || '0', 10));
     
     // Add a default duration (e.g., 60 minutes) to the current show time
@@ -45,7 +45,7 @@ export const getNextShow = async (
       .map(show => {
         const timeParts = show.time!.split(':');
         const showDateTime = new Date(currentShowDate);
-        showDateTime.setHours(parseInt(timeParts[0], 10));
+        showDateTime.setHours(parseInt(timeParts[0], 10) || 0);
         showDateTime.setMinutes(parseInt(timeParts[1] || '0', 10));
         
         return {
@@ -78,7 +78,7 @@ export const getNextShow = async (
     }
     
     return {
-      name: nextShow.name
+      name: nextShow.name || 'התוכנית הבאה'
     };
   } catch (error) {
     console.error('Error getting next show:', error);
