@@ -32,6 +32,9 @@ interface MainContentProps {
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
   onDividerAdd?: () => void;
+  nextShowName?: string;
+  nextShowHost?: string;
+  onRemoveNextShowLine?: () => void;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -60,7 +63,10 @@ const MainContent = memo(({
   onDetailsChange,
   showMinutes,
   onToggleMinutes,
-  onDividerAdd
+  onDividerAdd,
+  nextShowName,
+  nextShowHost,
+  onRemoveNextShowLine
 }: MainContentProps) => {
   return (
     <main className="space-y-8 text-right" dir="rtl">
@@ -78,7 +84,12 @@ const MainContent = memo(({
       />
 
       <div className="space-y-8">
-        <ShowCredits editor={editor} />
+        <ShowCredits 
+          editor={editor} 
+          nextShowName={nextShowName}
+          nextShowHost={nextShowHost}
+          onRemoveNextShowLine={onRemoveNextShowLine}
+        />
 
         <LineupForm 
           onAdd={onAdd}

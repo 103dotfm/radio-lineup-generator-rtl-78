@@ -7,10 +7,13 @@ import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
+import { saveShow, getShowWithItems, getShowsByDate } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
+import { getNextShow } from '@/lib/getNextShow';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
 
 const Index = () => {
   const { id: showId } = useParams();
@@ -26,11 +29,16 @@ const Index = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [initialState, setInitialState] = useState(null);
   const [showMinutes, setShowMinutes] = useState(false);
+  const [nextShowInfo, setNextShowInfo] = useState<{ name: string; host?: string } | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const isNewLineup = !showId;
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      Link,
+      Underline
+    ],
     content: '',
     editorProps: {
       attributes: {
@@ -40,6 +48,18 @@ const Index = () => {
     },
     onUpdate: () => setHasUnsavedChanges(true),
   });
+
+  // Fetch next show information based on current show date and time
+  const fetchNextShowInfo = useCallback(async () => {
+    if (showDate && showTime) {
+      try {
+        const nextShow = await getNextShow(showDate, showTime, getShowsByDate);
+        setNextShowInfo(nextShow);
+      } catch (error) {
+        console.error('Error fetching next show:', error);
+      }
+    }
+  }, [showDate, showTime]);
 
   useEffect(() => {
     if (isNewLineup && state) {
@@ -115,6 +135,11 @@ const Index = () => {
       setHasUnsavedChanges(false);
     }
   }, [state, isNewLineup]);
+
+  // Fetch next show info when show date or time changes
+  useEffect(() => {
+    fetchNextShowInfo();
+  }, [fetchNextShowInfo]);
 
   const handleEdit = useCallback(async (id: string, updatedItem: any) => {
     console.log(`Editing item ${id} with data:`, updatedItem);
@@ -224,13 +249,16 @@ const Index = () => {
       
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
+      
+      // Refresh next show info after saving
+      fetchNextShowInfo();
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת הליינאפ');
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, showName, showTime, showDate, editor, items, state, showId, navigate]);
+  }, [isSaving, showName, showTime, showDate, editor, items, state, showId, navigate, fetchNextShowInfo]);
 
   const handleAdd = useCallback((newItem) => {
     if (editingItem) {
@@ -313,12 +341,16 @@ const Index = () => {
   const handleTimeChange = useCallback((time: string) => {
     setShowTime(time);
     setHasUnsavedChanges(true);
-  }, []);
+    // Refresh next show when time changes
+    fetchNextShowInfo();
+  }, [fetchNextShowInfo]);
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setShowDate(date || new Date());
     setHasUnsavedChanges(true);
-  }, []);
+    // Refresh next show when date changes
+    setTimeout(fetchNextShowInfo, 100);
+  }, [fetchNextShowInfo]);
 
   const handleDelete = useCallback((id: string) => {
     setItems(items.filter(item => item.id !== id));
@@ -390,6 +422,11 @@ const Index = () => {
     toast.success('הפרדה נוספה בהצלחה');
   }, [items]);
 
+  const handleRemoveNextShowLine = useCallback(() => {
+    // Refresh next show info when line is removed
+    setTimeout(fetchNextShowInfo, 100);
+  }, [fetchNextShowInfo]);
+
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -420,6 +457,9 @@ const Index = () => {
           onToggleMinutes={handleToggleMinutes}
           onDividerAdd={handleAddDivider}
           isSaving={isSaving}
+          nextShowName={nextShowInfo?.name}
+          nextShowHost={nextShowInfo?.host}
+          onRemoveNextShowLine={handleRemoveNextShowLine}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">

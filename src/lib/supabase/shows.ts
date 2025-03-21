@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -124,6 +123,24 @@ export const getShowWithItems = async (showId: string) => {
     show,
     items: items || []
   };
+};
+
+export const getShowsByDate = async (date: string): Promise<Show[]> => {
+  console.log('Fetching shows for date:', date);
+  
+  const { data: shows, error } = await supabase
+    .from('shows')
+    .select('*')
+    .eq('date', date)
+    .order('time', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching shows by date:', error);
+    throw error;
+  }
+
+  console.log(`Found ${shows?.length || 0} shows for date ${date}:`, shows);
+  return shows || [];
 };
 
 export const saveShow = async (
