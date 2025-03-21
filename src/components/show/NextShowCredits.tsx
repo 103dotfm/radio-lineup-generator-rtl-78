@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { Check } from 'lucide-react';
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -52,11 +51,8 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
         // Append to the end
         editor.commands.focus('end');
         
-        // Check if we need to add a line break first
-        if (editor.getText().trim().length > 0) {
-          editor.commands.insertContent('<br><br>');
-        }
-        
+        // Add two line breaks - one for empty line and one for the text
+        editor.commands.insertContent('<br><br>');
         editor.commands.insertContent(`<strong>${editedText}</strong>`);
       }
     } else {
@@ -91,59 +87,33 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
 
   return (
     <Card className="p-4 mb-4 border border-dashed bg-muted/50">
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center space-x-2 rtl:space-x-reverse">
-          <Checkbox 
-            id="approve-next-show"
-            checked={approved}
-            onCheckedChange={(checked) => {
-              if (checked) {
-                handleApprove();
-              } else {
-                handleRemove();
-              }
-            }}
-          />
-          <label 
-            htmlFor="approve-next-show" 
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            הוסף מידע על התוכנית הבאה לקרדיטים
-          </label>
-        </div>
+      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+        <input
+          className="flex-1 p-2 border rounded text-sm"
+          value={editedText}
+          onChange={(e) => setEditedText(e.target.value)}
+          disabled={approved}
+          dir="rtl"
+        />
         
-        <div className="pl-6 rtl:pr-6 rtl:pl-0">
-          <div className="flex flex-col space-y-2">
-            <input
-              className="p-2 border rounded text-sm w-full"
-              value={editedText}
-              onChange={(e) => setEditedText(e.target.value)}
-              disabled={approved}
-              dir="rtl"
-            />
-            
-            {approved ? (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="self-start"
-                onClick={handleRemove}
-              >
-                הסר מהקרדיטים
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="self-start"
-                onClick={handleApprove}
-              >
-                <Check className="h-4 w-4 ml-2" />
-                הוסף לקרדיטים
-              </Button>
-            )}
-          </div>
-        </div>
+        {approved ? (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRemove}
+          >
+            הסר מהקרדיטים
+          </Button>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleApprove}
+          >
+            <Check className="h-4 w-4 ml-2" />
+            הוסף לקרדיטים
+          </Button>
+        )}
       </div>
     </Card>
   );
