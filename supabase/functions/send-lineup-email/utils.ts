@@ -82,9 +82,38 @@ export const validateEmailSettings = (settings: EmailSettings): string[] => {
 };
 
 export const applyTimezoneOffset = (date: Date, offsetHours: number): Date => {
+  // Create a new date to avoid modifying the input
   const newDate = new Date(date);
-  newDate.setHours(newDate.getHours() + offsetHours);
-  return newDate;
+  
+  // First ensure we're working with UTC time
+  const year = newDate.getUTCFullYear();
+  const month = newDate.getUTCMonth();
+  const day = newDate.getUTCDate();
+  const hours = newDate.getUTCHours();
+  const minutes = newDate.getUTCMinutes();
+  const seconds = newDate.getUTCSeconds();
+  
+  // Create a new UTC date
+  const utcDate = new Date();
+  utcDate.setUTCFullYear(year);
+  utcDate.setUTCMonth(month);
+  utcDate.setUTCDate(day);
+  utcDate.setUTCHours(hours);
+  utcDate.setUTCMinutes(minutes);
+  utcDate.setUTCSeconds(seconds);
+  
+  // Apply Israel offset (UTC+3)
+  const israelOffset = 3;
+  utcDate.setUTCHours(utcDate.getUTCHours() + israelOffset);
+  
+  // Apply the additional user-defined timezone offset
+  utcDate.setUTCHours(utcDate.getUTCHours() + offsetHours);
+  
+  console.log(`Original date: ${date.toISOString()}`);
+  console.log(`With Israel offset (UTC+3): ${new Date(date.getTime() + israelOffset * 3600000).toISOString()}`);
+  console.log(`With additional offset (${offsetHours}): ${utcDate.toISOString()}`);
+  
+  return utcDate;
 };
 
 export const generateLineupLink = (
