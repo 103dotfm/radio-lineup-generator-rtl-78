@@ -15,6 +15,8 @@ const ShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveNextShowLine 
 
   return (
     <div className="col-span-2 space-y-4">
+      <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
+      
       {nextShowName && (
         <NextShowCredits
           editor={editor}
@@ -23,7 +25,6 @@ const ShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveNextShowLine 
           onRemoveLine={onRemoveNextShowLine}
         />
       )}
-      <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
     </div>
   );
 };
