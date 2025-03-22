@@ -16,6 +16,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
   const [approved, setApproved] = useState(false);
   const [editedText, setEditedText] = useState('');
   const [needsAttention, setNeedsAttention] = useState(true);
+  const [showComponent, setShowComponent] = useState(true);
   
   useEffect(() => {
     if (nextShowName) {
@@ -25,6 +26,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
       
       setEditedText(text);
       setNeedsAttention(true); // New or updated next show info needs attention
+      setShowComponent(true); // Show component when next show changes
     }
   }, [nextShowName, nextShowHost]);
 
@@ -69,6 +71,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
     
     setApproved(true);
     setNeedsAttention(false);
+    setShowComponent(false); // Hide component after approval
   };
 
   const handleRemove = () => {
@@ -99,6 +102,11 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
       onRemoveLine();
     }
   };
+
+  // Hide the component if approved and doesn't need attention
+  if (!showComponent && approved && !needsAttention) {
+    return null;
+  }
 
   return (
     <Card className={`p-4 mb-4 border ${needsAttention ? 'border-orange-400 bg-orange-50' : 'border-dashed bg-muted/50'}`}>
