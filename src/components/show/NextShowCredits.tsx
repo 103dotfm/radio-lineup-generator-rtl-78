@@ -19,44 +19,49 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
   const [showComponent, setShowComponent] = useState(true);
   const [previousNextShow, setPreviousNextShow] = useState<string | undefined>(undefined);
   
+  // Update component when next show info changes
   useEffect(() => {
     if (nextShowName) {
       const text = nextShowHost && nextShowName !== nextShowHost 
         ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
         : `מיד אחרינו: ${nextShowName}`;
       
-      // Check if next show info has changed
+      // Generate a unique ID for the next show
       const nextShowId = nextShowHost ? `${nextShowName}-${nextShowHost}` : nextShowName;
       
+      // If next show info has changed, update the component
       if (nextShowId !== previousNextShow) {
+        console.log('Next show has changed:', nextShowId, 'vs previous:', previousNextShow);
         setEditedText(text);
         setNeedsAttention(true);
         setShowComponent(true);
+        setApproved(false); // Reset approval status on next show change
         setPreviousNextShow(nextShowId);
       }
     }
   }, [nextShowName, nextShowHost, previousNextShow]);
 
+  // Check if next show line already exists in editor
   useEffect(() => {
-    // Check if the next show line already exists in the editor content
-    if (editor) {
+    if (editor && nextShowName) {
       const content = editor.getHTML();
       const hasNextShowLine = content.includes('מיד אחרינו:');
-      setApproved(hasNextShowLine);
       
-      // If approved and already in credits, don't need attention
+      // If already in editor and matches current next show, mark as approved
       if (hasNextShowLine) {
+        console.log('Next show line already exists in editor');
+        setApproved(true);
         setNeedsAttention(false);
       }
     }
-  }, [editor]);
+  }, [editor, nextShowName]);
 
   const handleApprove = () => {
     if (!editor || !editedText) return;
 
     // Add a line break if content already exists
     if (editor.getText().trim().length > 0) {
-      // Check if the editor already has the next show line
+      // Check if the editor already has a next show line
       const content = editor.getHTML();
       if (content.includes('מיד אחרינו:')) {
         // Replace existing next show line
@@ -97,12 +102,17 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
       ? newContent 
       : content.replace(fallbackRegex, '');
     
-    // Clean up consecutive break tags that might be left
-    const cleanedContent = finalContent.replace(/<br><br><br>/g, '<br><br>').trim();
+    // Clean up any standalone "מיד אחרינו" text as well
+    const cleanupRegex = /<strong>מיד אחרינו:.*?<\/strong>/;
+    const cleanedContent = finalContent.replace(cleanupRegex, '').trim();
     
-    editor.commands.setContent(cleanedContent);
+    // Clean up consecutive break tags that might be left
+    const finalCleanedContent = cleanedContent.replace(/<br><br><br>/g, '<br><br>');
+    
+    editor.commands.setContent(finalCleanedContent);
     setApproved(false);
     setNeedsAttention(true);
+    setShowComponent(true); // Show component after removal
     
     // Notify parent that line was removed
     if (onRemoveLine) {
@@ -110,8 +120,8 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
     }
   };
 
-  // Hide the component if approved and doesn't need attention
-  if (!showComponent && approved && !needsAttention) {
+  // Don't render if no next show info or already approved and doesn't need attention
+  if (!nextShowName || (!showComponent && approved && !needsAttention)) {
     return null;
   }
 

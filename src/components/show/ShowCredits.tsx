@@ -17,12 +17,14 @@ const ShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveNextShowLine 
     <div className="col-span-2 space-y-4">
       <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
       
-      <NextShowCredits
-        editor={editor}
-        nextShowName={nextShowName}
-        nextShowHost={nextShowHost}
-        onRemoveLine={onRemoveNextShowLine}
-      />
+      {nextShowName && (
+        <NextShowCredits
+          editor={editor}
+          nextShowName={nextShowName}
+          nextShowHost={nextShowHost}
+          onRemoveLine={onRemoveNextShowLine}
+        />
+      )}
     </div>
   );
 };
