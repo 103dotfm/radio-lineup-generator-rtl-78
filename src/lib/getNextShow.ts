@@ -17,18 +17,23 @@ export const getNextShow = async (
 ): Promise<NextShowInfo | null> => {
   try {
     if (!currentShowDate || !currentShowTime) {
+      console.log('Current show date or time is missing');
       return null;
     }
     
     // Format the date to match the DB format
     const dateStr = format(currentShowDate, 'yyyy-MM-dd');
+    console.log('Fetching shows for date:', dateStr);
     
     // Get all shows for the current date
     const shows = await supabaseGetShow(dateStr);
     
     if (!shows || shows.length === 0) {
+      console.log('No shows found for date:', dateStr);
       return null;
     }
+    
+    console.log(`Found ${shows.length} shows for date ${dateStr}`);
     
     // Parse the current show time to create a full date-time
     const currentTimeParts = currentShowTime.split(':');
@@ -40,8 +45,10 @@ export const getNextShow = async (
     const estimatedEndTime = new Date(currentDateTime);
     estimatedEndTime.setMinutes(estimatedEndTime.getMinutes() + 60);
     
+    console.log('Current show ends at approximately:', estimatedEndTime);
+    
     // Find the next show that starts after the estimated end time
-    // Important: We now use all shows, not just ones with a lineup
+    // Important: Consider ALL shows with time, regardless of whether they have a lineup
     const showsWithTimes = shows
       .filter(show => show.time) // Only consider shows with time
       .map(show => {
@@ -61,12 +68,19 @@ export const getNextShow = async (
       })
       .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
     
+    console.log(`Found ${showsWithTimes.length} shows after current show ends`);
+    showsWithTimes.forEach((show, i) => {
+      console.log(`Show ${i+1}: ${show.name} at ${show.time}`);
+    });
+    
     if (showsWithTimes.length === 0) {
+      console.log('No next show found after current show');
       return null;
     }
     
     // Get the next show (first in the sorted list)
     const nextShow = showsWithTimes[0];
+    console.log('Next show:', nextShow.name, 'at', nextShow.time);
     
     // Extract host from show name if applicable
     const nameWithHost = nextShow.name || '';
