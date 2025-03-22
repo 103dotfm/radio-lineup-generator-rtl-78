@@ -17,6 +17,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
   const [editedText, setEditedText] = useState('');
   const [needsAttention, setNeedsAttention] = useState(true);
   const [showComponent, setShowComponent] = useState(true);
+  const [previousNextShow, setPreviousNextShow] = useState<string | undefined>(undefined);
   
   useEffect(() => {
     if (nextShowName) {
@@ -24,11 +25,17 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
         ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
         : `מיד אחרינו: ${nextShowName}`;
       
-      setEditedText(text);
-      setNeedsAttention(true); // New or updated next show info needs attention
-      setShowComponent(true); // Show component when next show changes
+      // Check if next show info has changed
+      const nextShowId = nextShowHost ? `${nextShowName}-${nextShowHost}` : nextShowName;
+      
+      if (nextShowId !== previousNextShow) {
+        setEditedText(text);
+        setNeedsAttention(true);
+        setShowComponent(true);
+        setPreviousNextShow(nextShowId);
+      }
     }
-  }, [nextShowName, nextShowHost]);
+  }, [nextShowName, nextShowHost, previousNextShow]);
 
   useEffect(() => {
     // Check if the next show line already exists in the editor content
@@ -57,7 +64,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
         const newContent = content.replace(regex, `<strong>${editedText}</strong>`);
         editor.commands.setContent(newContent);
       } else {
-        // Append to the end
+        // Append to the end with an empty line above
         editor.commands.focus('end');
         
         // Add two line breaks - one for empty line and one for the text
