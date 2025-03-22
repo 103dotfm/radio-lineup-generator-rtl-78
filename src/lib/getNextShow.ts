@@ -1,7 +1,6 @@
 
-import { Show } from '@/types/show';
-import { format, addDays, parse, isAfter } from 'date-fns';
 import { supabase } from '@/lib/supabase';
+import { format, addDays, isAfter, isSameDay } from 'date-fns';
 
 interface NextShowInfo {
   name: string;
@@ -10,7 +9,7 @@ interface NextShowInfo {
 
 /**
  * Gets the next show based on current show date and time
- * Directly queries the schedule_slots table to find the next slot
+ * Directly queries the schedule_slots table to find the next slot for the exact date
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -31,34 +30,33 @@ export const getNextShow = async (
     const currentHour = parseInt(timeParts[0], 10) || 0;
     const currentMinute = parseInt(timeParts[1] || '0', 10);
     
-    // Add a default duration (60 minutes) to get the end time
+    // Create a full date-time object for the current show
     const currentDateTime = new Date(currentShowDate);
     currentDateTime.setHours(currentHour);
     currentDateTime.setMinutes(currentMinute);
     
-    // Estimated end time (current time + 60 minutes)
+    // Add show duration (default 60 minutes) to get the end time
     const estimatedEndTime = new Date(currentDateTime);
     estimatedEndTime.setMinutes(estimatedEndTime.getMinutes() + 60);
     
     console.log(`Current show ends at approximately: ${format(estimatedEndTime, 'HH:mm')}`);
     
     // Get the day of week (0 = Sunday, 1 = Monday, etc.)
-    const dayOfWeek = currentShowDate.getDay();
-    console.log(`Current day of week: ${dayOfWeek}`);
+    const currentDayOfWeek = currentShowDate.getDay();
+    console.log(`Current day of week: ${currentDayOfWeek}`);
     
     // Format estimated end time as HH:mm for database query
     const endTimeStr = format(estimatedEndTime, 'HH:mm');
     
-    // Query for slots on the current day that start after the estimated end time
+    // 1. First try: Find slots on the SAME day that start AFTER the estimated end time
     const { data: slotsToday, error: errorToday } = await supabase
       .from('schedule_slots')
       .select('*')
-      .eq('day_of_week', dayOfWeek)
+      .eq('day_of_week', currentDayOfWeek)
       .gt('start_time', endTimeStr)
-      .or(`is_recurring.eq.true,is_modified.eq.true`)
       .not('is_deleted', 'eq', true)
       .order('start_time', { ascending: true })
-      .limit(10);
+      .limit(1);
     
     if (errorToday) {
       console.error('Error fetching today slots:', errorToday);
@@ -68,40 +66,35 @@ export const getNextShow = async (
     console.log(`Found ${slotsToday?.length || 0} slots later today`);
     
     if (slotsToday && slotsToday.length > 0) {
-      // Found slots for today, use the first one (earliest after current show)
+      // Found slot for today, use it (earliest after current show)
       const nextSlot = slotsToday[0];
       console.log('Next slot today:', nextSlot.show_name, 'at', nextSlot.start_time);
       
-      // Extract host from show name if applicable
-      if (nextSlot.host_name && nextSlot.host_name !== nextSlot.show_name) {
-        return {
-          name: nextSlot.show_name,
-          host: nextSlot.host_name
-        };
+      // Check if this slot belongs to the current week for non-recurring slots
+      if (!nextSlot.is_recurring) {
+        const slotDate = new Date(nextSlot.created_at);
+        const weekStart = getWeekStart(currentShowDate);
+        const nextWeekStart = addDays(weekStart, 7);
+        
+        if (!isSameWeek(slotDate, currentShowDate)) {
+          console.log('Skipping non-recurring slot from different week');
+          // Continue to check for tomorrow's slots
+        } else {
+          return extractShowInfo(nextSlot);
+        }
+      } else {
+        return extractShowInfo(nextSlot);
       }
-      
-      const hostMatch = nextSlot.show_name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
-      return {
-        name: nextSlot.show_name
-      };
     }
     
-    // If no slots for today, check tomorrow (next day's morning slots)
-    const tomorrowDayOfWeek = (dayOfWeek + 1) % 7;
-    console.log(`Checking slots for tomorrow (day ${tomorrowDayOfWeek})`);
+    // 2. Second try: Check for slots on the NEXT day (first slot of next day)
+    const nextDayOfWeek = (currentDayOfWeek + 1) % 7;
+    console.log(`Checking slots for tomorrow (day ${nextDayOfWeek})`);
     
     const { data: slotsTomorrow, error: errorTomorrow } = await supabase
       .from('schedule_slots')
       .select('*')
-      .eq('day_of_week', tomorrowDayOfWeek)
-      .or(`is_recurring.eq.true,is_modified.eq.true`)
+      .eq('day_of_week', nextDayOfWeek)
       .not('is_deleted', 'eq', true)
       .order('start_time', { ascending: true })
       .limit(1);
@@ -114,29 +107,25 @@ export const getNextShow = async (
     console.log(`Found ${slotsTomorrow?.length || 0} slots for tomorrow`);
     
     if (slotsTomorrow && slotsTomorrow.length > 0) {
-      // First slot of tomorrow
       const nextSlot = slotsTomorrow[0];
       console.log('First slot tomorrow:', nextSlot.show_name, 'at', nextSlot.start_time);
       
-      // Extract host from show name if applicable
-      if (nextSlot.host_name && nextSlot.host_name !== nextSlot.show_name) {
-        return {
-          name: nextSlot.show_name,
-          host: nextSlot.host_name
-        };
+      // Check if this slot belongs to the current/next week for non-recurring slots
+      if (!nextSlot.is_recurring) {
+        const slotDate = new Date(nextSlot.created_at);
+        const weekStart = getWeekStart(currentShowDate);
+        const nextWeekStart = addDays(weekStart, 7);
+        
+        // Make sure the non-recurring slot is from the current week or exactly next week
+        // (not from a future week)
+        if (!isSameWeek(slotDate, currentShowDate) && 
+            !isSameWeek(slotDate, addDays(currentShowDate, 1))) {
+          console.log('Skipping non-recurring slot from different week');
+          return null;
+        }
       }
       
-      const hostMatch = nextSlot.show_name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
-      return {
-        name: nextSlot.show_name
-      };
+      return extractShowInfo(nextSlot);
     }
     
     console.log('No next show found');
@@ -146,3 +135,42 @@ export const getNextShow = async (
     return null;
   }
 };
+
+// Helper function to extract name and host from a slot
+function extractShowInfo(slot: any): NextShowInfo {
+  // Extract host from show name if applicable
+  if (slot.host_name && slot.host_name !== slot.show_name) {
+    return {
+      name: slot.show_name,
+      host: slot.host_name
+    };
+  }
+  
+  const hostMatch = slot.show_name.match(/(.*?)\s+עם\s+(.*)/);
+  if (hostMatch) {
+    return {
+      name: hostMatch[1].trim(),
+      host: hostMatch[2].trim()
+    };
+  }
+  
+  return {
+    name: slot.show_name
+  };
+}
+
+// Helper function to get the start of the week (Sunday)
+function getWeekStart(date: Date): Date {
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const result = new Date(date);
+  result.setDate(date.getDate() - dayOfWeek);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+// Helper function to check if two dates are in the same week
+function isSameWeek(date1: Date, date2: Date): boolean {
+  const weekStart1 = getWeekStart(date1);
+  const weekStart2 = getWeekStart(date2);
+  return isSameDay(weekStart1, weekStart2);
+}
