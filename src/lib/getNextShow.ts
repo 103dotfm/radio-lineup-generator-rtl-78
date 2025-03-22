@@ -1,6 +1,6 @@
 
 import { Show } from '@/types/show';
-import { format, parse, addMinutes } from 'date-fns';
+import { format } from 'date-fns';
 
 interface NextShowInfo {
   name: string;
@@ -37,9 +37,11 @@ export const getNextShow = async (
     currentDateTime.setMinutes(parseInt(currentTimeParts[1] || '0', 10));
     
     // Add a default duration (e.g., 60 minutes) to the current show time
-    const estimatedEndTime = addMinutes(currentDateTime, 60);
+    const estimatedEndTime = new Date(currentDateTime);
+    estimatedEndTime.setMinutes(estimatedEndTime.getMinutes() + 60);
     
     // Find the next show that starts after the estimated end time
+    // Important: We now use all shows, not just ones with a lineup
     const showsWithTimes = shows
       .filter(show => show.time) // Only consider shows with time
       .map(show => {
