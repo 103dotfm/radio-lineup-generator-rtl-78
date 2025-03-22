@@ -53,7 +53,9 @@ const Index = () => {
   const fetchNextShowInfo = useCallback(async () => {
     if (showDate && showTime) {
       try {
-        const nextShow = await getNextShow(showDate, showTime, getShowsByDate);
+        console.log('Fetching next show info for:', format(showDate, 'yyyy-MM-dd'), showTime);
+        const nextShow = await getNextShow(showDate, showTime);
+        console.log('Next show info result:', nextShow);
         setNextShowInfo(nextShow);
       } catch (error) {
         console.error('Error fetching next show:', error);
