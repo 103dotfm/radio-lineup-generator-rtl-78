@@ -1,17 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
-import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
-import { getDayNotes } from '@/lib/supabase/dayNotes';
-import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
-import EditModeDialog from './EditModeDialog';
+import { ViewMode, ScheduleSlot } from '@/types/schedule';
 import ScheduleHeader from './layout/ScheduleHeader';
 import ScheduleGrid from './layout/ScheduleGrid';
-import { format, addDays, startOfWeek, addWeeks } from 'date-fns';
+import ScheduleDialogs from './ScheduleDialogs';
+import { useScheduleSlots } from './hooks/useScheduleSlots';
+import { useDayNotes } from './hooks/useDayNotes';
+import { format, startOfWeek, addDays } from 'date-fns';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -36,128 +33,28 @@ export default function ScheduleView({
   const [showSlotDialog, setShowSlotDialog] = useState(false);
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
-  const [dayNotes, setDayNotes] = useState<DayNote[]>([]);
   
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
-
+  
   // Format the date range for print header
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const weekEnd = addDays(weekStart, 6);
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
+
+  // Use custom hooks
+  const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
+    selectedDate, 
+    isMasterSchedule
+  );
+  
+  const { dayNotes, refreshDayNotes } = useDayNotes(selectedDate, viewMode);
 
   useEffect(() => {
     if (externalSelectedDate) {
       setSelectedDate(externalSelectedDate);
     }
   }, [externalSelectedDate]);
-
-  useEffect(() => {
-    fetchDayNotes();
-  }, [selectedDate, viewMode]);
-
-  const fetchDayNotes = async () => {
-    if (viewMode === 'weekly') {
-      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-      const weekEnd = addDays(weekStart, 6);
-      const notes = await getDayNotes(weekStart, weekEnd);
-      setDayNotes(notes);
-    }
-  };
-
-  const {
-    data: scheduleSlots = [],
-    isLoading
-  } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
-    queryFn: () => {
-      console.log('Fetching slots with params:', {
-        selectedDate,
-        isMasterSchedule
-      });
-      return getScheduleSlots(selectedDate, isMasterSchedule);
-    },
-    meta: {
-      onSuccess: (data: ScheduleSlot[]) => {
-        console.log('Successfully fetched slots:', data);
-      },
-      onError: (error: Error) => {
-        console.error('Error fetching slots:', error);
-      }
-    }
-  });
-
-  const createSlotMutation = useMutation({
-    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      toast({
-        title: 'משבצת שידור נוספה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error creating slot:', error);
-      toast({
-        title: 'שגיאה בהוספת משבצת שידור',
-        variant: 'destructive'
-      });
-    }
-  });
-
-  const updateSlotMutation = useMutation({
-    mutationFn: ({
-      id,
-      updates
-    }: {
-      id: string;
-      updates: Partial<ScheduleSlot>;
-    }) => {
-      console.log("Mutation updating slot:", {
-        id,
-        updates
-      });
-      return updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      toast({
-        title: 'משבצת שידור עודכנה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error updating slot:', error);
-      toast({
-        title: 'שגיאה בעדכון משבצת שידור',
-        variant: 'destructive'
-      });
-    }
-  });
-
-  const deleteSlotMutation = useMutation({
-    mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      toast({
-        title: 'משבצת שידור נמחקה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error deleting slot:', error);
-      toast({
-        title: 'שגיאה במחיקת משבצת שידור',
-        variant: 'destructive'
-      });
-    }
-  });
 
   const handleAddSlot = () => {
     setEditingSlot(undefined);
@@ -169,12 +66,12 @@ export default function ScheduleView({
 
     // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
-      await deleteSlotMutation.mutateAsync(slot.id);
+      await deleteSlot(slot.id);
       return;
     }
     
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
-      await deleteSlotMutation.mutateAsync(slot.id);
+      await deleteSlot(slot.id);
     }
   };
 
@@ -207,21 +104,17 @@ export default function ScheduleView({
           id,
           ...updates
         } = slotData;
-        await updateSlotMutation.mutateAsync({
+        await updateSlot({
           id,
           updates
         });
       } else {
         console.log("Creating new slot:", slotData);
-        await createSlotMutation.mutateAsync(slotData);
+        await createSlot(slotData);
       }
       setShowSlotDialog(false);
     } catch (error) {
       console.error('Error saving slot:', error);
-      toast({
-        title: 'שגיאה בשמירת משבצת שידור',
-        variant: 'destructive'
-      });
     }
   };
 
@@ -296,30 +189,24 @@ export default function ScheduleView({
         isAuthenticated={isAuthenticated}
         hideHeaderDates={hideHeaderDates}
         dayNotes={dayNotes}
-        onDayNoteChange={fetchDayNotes}
+        onDayNoteChange={refreshDayNotes}
       />
 
-      {isAdmin && (
-        <>
-          <EditModeDialog 
-            isOpen={showEditModeDialog} 
-            onClose={() => setShowEditModeDialog(false)} 
-            onEditCurrent={handleEditCurrent} 
-            onEditAll={handleEditAll} 
-          />
-
-          <ScheduleSlotDialog 
-            isOpen={showSlotDialog} 
-            onClose={() => {
-              setShowSlotDialog(false);
-              setEditingSlot(undefined);
-            }} 
-            onSave={handleSaveSlot} 
-            editingSlot={editingSlot} 
-            isMasterSchedule={isMasterSchedule} 
-          />
-        </>
-      )}
+      <ScheduleDialogs 
+        isAdmin={isAdmin}
+        showSlotDialog={showSlotDialog}
+        showEditModeDialog={showEditModeDialog}
+        editingSlot={editingSlot}
+        isMasterSchedule={isMasterSchedule}
+        onCloseSlotDialog={() => {
+          setShowSlotDialog(false);
+          setEditingSlot(undefined);
+        }}
+        onCloseEditModeDialog={() => setShowEditModeDialog(false)}
+        onEditCurrent={handleEditCurrent}
+        onEditAll={handleEditAll}
+        onSaveSlot={handleSaveSlot}
+      />
     </div>
   );
 }

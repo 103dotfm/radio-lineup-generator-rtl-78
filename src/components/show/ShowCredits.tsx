@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Editor, EditorContent } from '@tiptap/react';
-import NextShowCredits from './NextShowCredits';
+import NextShowCredits from './next-show/NextShowCredits';
 
 interface ShowCreditsProps {
   editor: Editor | null;
