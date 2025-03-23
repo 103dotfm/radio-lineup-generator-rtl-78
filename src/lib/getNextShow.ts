@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
@@ -8,7 +9,7 @@ interface NextShowInfo {
 
 /**
  * Gets the next show based on current show date and time
- * Prioritizes special programming (non-recurring slots) over master schedule entries
+ * Prioritizes finding the next show on the SAME day, looking at special programming first
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -47,146 +48,30 @@ export const getNextShow = async (
     // Format estimated end time as HH:mm for database query
     const endTimeStr = format(estimatedEndTime, 'HH:mm');
     
-    // Step 1: First check if there are any NON-RECURRING (special programming) slots for today
-    // that start after our show ends
-    const { data: specialSlots, error: specialError } = await supabase
+    // STEP 1: First and most important - check for ANY slots for THIS DAY 
+    // (recurring or non-recurring) that start after our show ends
+    const { data: allSlotsForToday, error: todaySlotsError } = await supabase
       .from('schedule_slots')
       .select('*')
       .eq('day_of_week', currentDayOfWeek)
-      .eq('is_recurring', false)
       .gt('start_time', endTimeStr)
       .not('is_deleted', 'eq', true)
       .order('start_time', { ascending: true })
       .limit(1);
     
-    if (specialError) {
-      console.error('Error fetching special programming slots:', specialError);
+    if (todaySlotsError) {
+      console.error('Error fetching slots for today:', todaySlotsError);
       return null;
     }
     
-    // If we found a special programming slot (non-recurring), use it
-    if (specialSlots && specialSlots.length > 0) {
-      console.log('Found special programming slot:', specialSlots[0].show_name);
-      return extractShowInfo(specialSlots[0]);
+    // If we found ANY slot for today, use it
+    if (allSlotsForToday && allSlotsForToday.length > 0) {
+      console.log('Found next show slot for today:', allSlotsForToday[0].show_name);
+      return extractShowInfo(allSlotsForToday[0]);
     }
     
-    // Step 2: If no special programming, check for recurring slots (master schedule)
-    const { data: recurringSlots, error: recurringError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('day_of_week', currentDayOfWeek)
-      .eq('is_recurring', true)
-      .gt('start_time', endTimeStr)
-      .not('is_deleted', 'eq', true)
-      .order('start_time', { ascending: true })
-      .limit(1);
-    
-    if (recurringError) {
-      console.error('Error fetching recurring slots:', recurringError);
-      return null;
-    }
-    
-    // If we found a recurring slot (master schedule), check if it's not overridden
-    if (recurringSlots && recurringSlots.length > 0) {
-      const recurringSlot = recurringSlots[0];
-      
-      // Check for a deletion marker for this slot on this specific day
-      const { data: deletionMarkers } = await supabase
-        .from('schedule_slots')
-        .select('*')
-        .eq('day_of_week', currentDayOfWeek)
-        .eq('start_time', recurringSlot.start_time)
-        .eq('is_recurring', false)
-        .eq('is_deleted', true);
-      
-      // If there's a deletion marker, this slot is not available today
-      if (deletionMarkers && deletionMarkers.length > 0) {
-        console.log('Recurring slot is deleted for today:', recurringSlot.show_name);
-      } else {
-        // Check for a modified version of this slot for today
-        const { data: modifiedSlots } = await supabase
-          .from('schedule_slots')
-          .select('*')
-          .eq('day_of_week', currentDayOfWeek)
-          .eq('start_time', recurringSlot.start_time)
-          .eq('is_recurring', false)
-          .not('is_deleted', 'eq', true);
-        
-        // If there's a modified version, use that instead
-        if (modifiedSlots && modifiedSlots.length > 0) {
-          console.log('Found modified version of recurring slot:', modifiedSlots[0].show_name);
-          return extractShowInfo(modifiedSlots[0]);
-        }
-        
-        // Otherwise use the recurring slot
-        console.log('Using recurring slot:', recurringSlot.show_name);
-        return extractShowInfo(recurringSlot);
-      }
-    }
-    
-    // Step 3: If no slots found for today, check the first slot for tomorrow
-    // This logic is for overnight shows or the last show of the day
-    const nextDayOfWeek = (currentDayOfWeek + 1) % 7;
-    console.log(`No more shows today. Checking for tomorrow (day ${nextDayOfWeek})`);
-    
-    // First check for special programming tomorrow
-    const { data: specialTomorrow } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('day_of_week', nextDayOfWeek)
-      .eq('is_recurring', false)
-      .not('is_deleted', 'eq', true)
-      .order('start_time', { ascending: true })
-      .limit(1);
-    
-    if (specialTomorrow && specialTomorrow.length > 0) {
-      console.log('Found special programming for tomorrow:', specialTomorrow[0].show_name);
-      return extractShowInfo(specialTomorrow[0]);
-    }
-    
-    // Then check master schedule for tomorrow
-    const { data: recurringTomorrow } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('day_of_week', nextDayOfWeek)
-      .eq('is_recurring', true)
-      .not('is_deleted', 'eq', true)
-      .order('start_time', { ascending: true })
-      .limit(1);
-    
-    if (recurringTomorrow && recurringTomorrow.length > 0) {
-      // Check for deletion markers or modified versions
-      const { data: tomorrowDeletions } = await supabase
-        .from('schedule_slots')
-        .select('*')
-        .eq('day_of_week', nextDayOfWeek)
-        .eq('start_time', recurringTomorrow[0].start_time)
-        .eq('is_recurring', false)
-        .eq('is_deleted', true);
-      
-      if (tomorrowDeletions && tomorrowDeletions.length > 0) {
-        console.log('First slot tomorrow is deleted');
-      } else {
-        // Check for modified version
-        const { data: tomorrowModified } = await supabase
-          .from('schedule_slots')
-          .select('*')
-          .eq('day_of_week', nextDayOfWeek)
-          .eq('start_time', recurringTomorrow[0].start_time)
-          .eq('is_recurring', false)
-          .not('is_deleted', 'eq', true);
-        
-        if (tomorrowModified && tomorrowModified.length > 0) {
-          console.log('Found modified version of first slot tomorrow:', tomorrowModified[0].show_name);
-          return extractShowInfo(tomorrowModified[0]);
-        }
-        
-        console.log('First slot tomorrow from master schedule:', recurringTomorrow[0].show_name);
-        return extractShowInfo(recurringTomorrow[0]);
-      }
-    }
-    
-    console.log('No next show found for today or tomorrow');
+    // If we get here, there are no more shows scheduled for today
+    console.log('No more shows found for today');
     return null;
   } catch (error) {
     console.error('Error getting next show:', error);
