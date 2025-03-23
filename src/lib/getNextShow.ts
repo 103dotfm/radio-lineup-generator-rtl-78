@@ -9,7 +9,7 @@ interface NextShowInfo {
 
 /**
  * Gets the next show based on current show date and time
- * Prioritizes finding the next show on the SAME day, looking at special programming first
+ * Focuses only on finding the very next show on the SAME DAY
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -48,8 +48,8 @@ export const getNextShow = async (
     // Format estimated end time as HH:mm for database query
     const endTimeStr = format(estimatedEndTime, 'HH:mm');
     
-    // STEP 1: First and most important - check for ANY slots for THIS DAY 
-    // (recurring or non-recurring) that start after our show ends
+    // Query for ALL slots for this specific day that start after our show ends
+    // This will include both special programming and regular slots
     const { data: allSlotsForToday, error: todaySlotsError } = await supabase
       .from('schedule_slots')
       .select('*')
@@ -70,7 +70,7 @@ export const getNextShow = async (
       return extractShowInfo(allSlotsForToday[0]);
     }
     
-    // If we get here, there are no more shows scheduled for today
+    // No more shows found for today
     console.log('No more shows found for today');
     return null;
   } catch (error) {
