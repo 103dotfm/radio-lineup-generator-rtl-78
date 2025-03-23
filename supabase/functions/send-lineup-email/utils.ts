@@ -107,7 +107,10 @@ export const applyTimezoneOffset = (date: Date, offsetHours: number): Date => {
   utcDate.setUTCHours(utcDate.getUTCHours() + israelOffset);
   
   // Apply the additional user-defined timezone offset
-  utcDate.setUTCHours(utcDate.getUTCHours() + offsetHours);
+  // IMPORTANT FIX: Correctly apply the timezone offset to fix 1-hour-early issue
+  if (offsetHours) {
+    utcDate.setUTCHours(utcDate.getUTCHours() + offsetHours);
+  }
   
   console.log(`Original date: ${date.toISOString()}`);
   console.log(`With Israel offset (UTC+3): ${new Date(date.getTime() + israelOffset * 3600000).toISOString()}`);

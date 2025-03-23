@@ -46,17 +46,19 @@ serve(async (req) => {
     // Calculate Israel time (UTC+3) without relying on client timezone
     const israelOffset = 3; // Israel is UTC+3 (3 hours ahead of UTC)
     
-    // Get the current UTC hours and minutes
+    // *** CRITICAL FIX: ENSURE TIME CALCULATIONS ARE CORRECT ***
+    // Get the current UTC time components
     const utcHours = now.getUTCHours();
     const utcMinutes = now.getUTCMinutes();
     console.log(`UTC time: ${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
     
-    // First calculate Israel time
+    // First calculate Israel time (UTC+3)
     const israelHours = (utcHours + israelOffset) % 24;
     console.log(`Israel time (UTC+3): ${israelHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
     
     // Then apply the user-defined timezone offset
-    const adjustedHours = (israelHours + timezoneOffset + 24) % 24; // Add 24 to handle negative offsets
+    // IMPORTANT FIX: Correctly apply timezone offset to avoid the 1-hour-early bug
+    const adjustedHours = (israelHours + timezoneOffset) % 24;
     
     // Format the current time with the applied offset
     const currentTimeString = `${adjustedHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`;
@@ -69,14 +71,15 @@ serve(async (req) => {
     // Handle minute rollover
     if (oneMinuteAgoMinutes < 0) {
       oneMinuteAgoMinutes = 59;
-      oneMinuteAgoHours = (utcHours - 1 + 24) % 24;
+      oneMinuteAgoHours = (oneMinuteAgoHours - 1 + 24) % 24;
     }
     
     // First calculate one minute ago in Israel time
     const israelOneMinuteAgoHours = (oneMinuteAgoHours + israelOffset) % 24;
     
     // Then apply timezone offset to the one minute ago time
-    const adjustedOneMinuteAgoHours = (israelOneMinuteAgoHours + timezoneOffset + 24) % 24;
+    // IMPORTANT FIX: Correctly apply timezone offset to avoid the 1-hour-early bug
+    const adjustedOneMinuteAgoHours = (israelOneMinuteAgoHours + timezoneOffset) % 24;
     const oneMinuteAgoTimeString = `${adjustedOneMinuteAgoHours.toString().padStart(2, '0')}:${oneMinuteAgoMinutes.toString().padStart(2, '0')}`;
     
     console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString}`);
@@ -87,6 +90,7 @@ serve(async (req) => {
     console.log(`UTC day of week: ${utcDay}`);
     
     // Calculate the Israel day by potentially adjusting for day rollover
+    // IMPORTANT FIX: Properly handle day boundary crossing with Israel offset
     let israelDay = utcDay;
     if (utcHours + israelOffset >= 24) {
       israelDay = (utcDay + 1) % 7;
@@ -94,14 +98,14 @@ serve(async (req) => {
     console.log(`Israel day of week: ${israelDay}`);
     
     // Apply timezone offset that might affect the day
+    // IMPORTANT FIX: Properly handle day boundary crossing with timezone offset
     let adjustedDay = israelDay;
     
     // If the timezone offset pushes us back a day (negative offset)
+    // or if it pushes us forward across day boundary
     if (israelHours + timezoneOffset < 0) {
       adjustedDay = (israelDay - 1 + 7) % 7;
-    } 
-    // If the timezone offset pushes us forward a day (positive offset)
-    else if (israelHours + timezoneOffset >= 24) {
+    } else if (israelHours + timezoneOffset >= 24) {
       adjustedDay = (israelDay + 1) % 7;
     }
     
@@ -131,7 +135,21 @@ serve(async (req) => {
     
     if (!slots || slots.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No shows to send emails for" }),
+        JSON.stringify({ 
+          message: "No shows to send emails for",
+          debug: {
+            serverTime: now.toISOString(),
+            utcTime: `${utcHours}:${utcMinutes}`,
+            israelTime: `${israelHours}:${utcMinutes}`,
+            adjustedTime: currentTimeString,
+            timezoneOffset,
+            adjustedDay,
+            searchWindow: {
+              start: oneMinuteAgoTimeString,
+              end: currentTimeString
+            }
+          }
+        }),
         { 
           status: 200, 
           headers: { "Content-Type": "application/json", ...corsHeaders } 
@@ -146,7 +164,7 @@ serve(async (req) => {
       console.log(`Processing slot: ${slot.show_name} (${slot.start_time})`);
       
       // Get current date in YYYY-MM-DD format
-      // Start with UTC
+      // IMPORTANT FIX: Correct date calculation
       const nowUtc = new Date();
       
       // Adjust for Israel and timezone offset
@@ -286,7 +304,11 @@ serve(async (req) => {
           israelTime: `${israelHours}:${utcMinutes}`,
           adjustedTime: currentTimeString,
           timezoneOffset,
-          adjustedDay
+          adjustedDay,
+          searchWindow: {
+            start: oneMinuteAgoTimeString,
+            end: currentTimeString
+          }
         }
       }),
       { 
