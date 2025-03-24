@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -53,12 +52,13 @@ const Index = () => {
   const fetchNextShowInfo = useCallback(async () => {
     if (showDate && showTime) {
       try {
-        console.log('Fetching next show info for:', format(showDate, 'yyyy-MM-dd'), showTime);
+        console.log('Fetching next show info for exact date:', format(showDate, 'yyyy-MM-dd'), showTime);
         const nextShow = await getNextShow(showDate, showTime);
         console.log('Next show info result:', nextShow);
         setNextShowInfo(nextShow);
       } catch (error) {
         console.error('Error fetching next show:', error);
+        setNextShowInfo(null);
       }
     }
   }, [showDate, showTime]);
@@ -481,7 +481,7 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
             <AlertDialogDescription>
-              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
+              יש ��ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -8,8 +8,8 @@ interface NextShowInfo {
 }
 
 /**
- * Gets the next show from the EXACT SAME DATE's schedule
- * Only looks at non-recurring slots (specific to that date) that start after the current show time
+ * Gets the next show for the EXACT SAME DATE as the current show
+ * Only looks at shows scheduled on the specified date
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -21,37 +21,65 @@ export const getNextShow = async (
       return null;
     }
     
-    // Format the date to match the DB format
-    const dateStr = format(currentShowDate, 'yyyy-MM-dd');
-    console.log('Finding next show for EXACT date:', dateStr, 'after time:', currentShowTime);
+    // Format the date to match the DB format (YYYY-MM-DD)
+    const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
+    console.log('Finding next show for EXACT date:', formattedDate, 'after time:', currentShowTime);
     
-    // Get the day of week (0 = Sunday, 1 = Monday, etc.)
-    const dayOfWeek = currentShowDate.getDay();
-    
-    // Query ONLY for slots on this EXACT date that start AFTER the current show time
-    const { data: slots, error } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('day_of_week', dayOfWeek)
-      .gt('start_time', currentShowTime)
-      .not('is_deleted', 'eq', true)
-      .order('start_time', { ascending: true })
+    // Get shows directly from the shows table for this exact date
+    // This is more reliable than trying to match schedule_slots
+    const { data: shows, error: showsError } = await supabase
+      .from('shows')
+      .select(`
+        id,
+        name,
+        time,
+        date,
+        slot_id
+      `)
+      .eq('date', formattedDate)
+      .gt('time', currentShowTime)
+      .order('time', { ascending: true })
       .limit(1);
     
-    if (error) {
-      console.error('Error fetching next show:', error);
+    if (showsError) {
+      console.error('Error fetching next show from shows table:', showsError);
       return null;
     }
     
-    if (!slots || slots.length === 0) {
-      console.log('No next show found in daily schedule');
+    if (!shows || shows.length === 0) {
+      console.log('No next show found for date:', formattedDate);
       return null;
     }
     
-    const nextShow = slots[0];
-    console.log('Found next show:', nextShow.show_name, 'at', nextShow.start_time);
+    const nextShow = shows[0];
+    console.log('Found next show from shows table:', nextShow.name, 'at', nextShow.time);
     
-    return extractShowInfo(nextShow);
+    // Get slot details if available
+    if (nextShow.slot_id) {
+      const { data: slot } = await supabase
+        .from('schedule_slots')
+        .select('*')
+        .eq('id', nextShow.slot_id)
+        .single();
+        
+      if (slot) {
+        console.log('Found slot details for next show:', slot.show_name);
+        return extractShowInfo(slot);
+      }
+    }
+    
+    // If no slot or slot details not available, use show name directly
+    const hostMatch = nextShow.name.match(/(.*?)\s+עם\s+(.*)/);
+    if (hostMatch) {
+      return {
+        name: hostMatch[1].trim(),
+        host: hostMatch[2].trim()
+      };
+    }
+    
+    return {
+      name: nextShow.name
+    };
   } catch (error) {
     console.error('Error getting next show:', error);
     return null;
