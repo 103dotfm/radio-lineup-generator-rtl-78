@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
 import { AlertCircle } from 'lucide-react';
@@ -39,52 +38,56 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
   
   // Update component when next show info changes
   useEffect(() => {
-    if (nextShowName) {
-      const text = nextShowHost && nextShowName !== nextShowHost 
-        ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
-        : `מיד אחרינו: ${nextShowName}`;
+    if (!nextShowName) {
+      // If there's no next show info, hide the component
+      setShowComponent(false);
+      return;
+    }
+    
+    const text = nextShowHost && nextShowName !== nextShowHost 
+      ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
+      : `מיד אחרינו: ${nextShowName}`;
+    
+    // Generate a unique ID for the next show
+    const nextShowId = nextShowHost ? `${nextShowName}-${nextShowHost}` : nextShowName;
+    
+    // First check if there's an existing line
+    const existingLine = checkForExistingLine();
+    
+    // If next show info has changed from what we previously had
+    if (nextShowId !== previousNextShow) {
+      console.log('Next show has changed:', nextShowId, 'vs previous:', previousNextShow);
       
-      // Generate a unique ID for the next show
-      const nextShowId = nextShowHost ? `${nextShowName}-${nextShowHost}` : nextShowName;
-      
-      // First check if there's an existing line
-      const existingLine = checkForExistingLine();
-      
-      // If next show info has changed from what we previously had
-      if (nextShowId !== previousNextShow) {
-        console.log('Next show has changed:', nextShowId, 'vs previous:', previousNextShow);
-        
-        // If there's an existing line but the show info has changed, we should
-        // remove the old line and suggest the new one
-        if (existingLine) {
-          // Only if the existing content doesn't match the new text
-          if (!existingLine.includes(nextShowName)) {
-            console.log('Removing old next show line and suggesting new one');
-            if (editor) {
-              // Remove the existing line
-              removeNextShowLine();
-              
-              // Reset states to suggest the new line
-              setApproved(false);
-              setNeedsAttention(true);
-              setShowComponent(true);
-            }
-          } else {
-            // The existing line matches the current next show, so mark as approved
-            setApproved(true);
-            setNeedsAttention(false);
-            setShowComponent(false);
+      // If there's an existing line but the show info has changed, we should
+      // remove the old line and suggest the new one
+      if (existingLine) {
+        // Only if the existing content doesn't match the new text
+        if (!existingLine.includes(nextShowName)) {
+          console.log('Removing old next show line and suggesting new one');
+          if (editor) {
+            // Remove the existing line
+            removeNextShowLine();
+            
+            // Reset states to suggest the new line
+            setApproved(false);
+            setNeedsAttention(true);
+            setShowComponent(true);
           }
         } else {
-          // No existing line, suggest the new one
-          setApproved(false);
-          setNeedsAttention(true);
-          setShowComponent(true);
+          // The existing line matches the current next show, so mark as approved
+          setApproved(true);
+          setNeedsAttention(false);
+          setShowComponent(true); // Changed to true to keep showing the component
         }
-        
-        setEditedText(text);
-        setPreviousNextShow(nextShowId);
+      } else {
+        // No existing line, suggest the new one
+        setApproved(false);
+        setNeedsAttention(true);
+        setShowComponent(true);
       }
+      
+      setEditedText(text);
+      setPreviousNextShow(nextShowId);
     }
   }, [nextShowName, nextShowHost, previousNextShow, editor, checkForExistingLine]);
 
@@ -96,15 +99,11 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
       if (existingLine) {
         console.log('Next show line already exists in editor');
         // Check if the existing line matches the current next show info
-        const expectedText = nextShowHost && nextShowName !== nextShowHost
-          ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
-          : `מיד אחרינו: ${nextShowName}`;
-          
         if (existingLine.includes(nextShowName)) {
-          // The existing line matches, mark as approved
+          // The existing line matches, mark as approved but keep showing for edit option
           setApproved(true);
           setNeedsAttention(false);
-          setShowComponent(false);
+          setShowComponent(true);
         } else {
           // The existing line doesn't match, suggest replacing it
           setApproved(false);
@@ -136,7 +135,8 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
     
     setApproved(true);
     setNeedsAttention(false);
-    setShowComponent(false); // Hide component after approval
+    // Keep showing the component after approval so user can remove it if needed
+    setShowComponent(true);
   };
 
   const removeNextShowLine = () => {
@@ -170,7 +170,8 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
     
     setApproved(false);
     setNeedsAttention(true);
-    setShowComponent(true); // Show component after removal
+    // Show component after removal so user can add it again if needed
+    setShowComponent(true);
     
     // Notify parent that line was removed
     if (onRemoveLine) {
@@ -178,8 +179,8 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
     }
   };
 
-  // Don't render if no next show info or already approved and doesn't need attention
-  if (!nextShowName || (!showComponent && approved && !needsAttention)) {
+  // Don't render if no next show info
+  if (!nextShowName || !showComponent) {
     return null;
   }
 
