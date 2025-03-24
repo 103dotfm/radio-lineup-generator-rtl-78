@@ -23,41 +23,51 @@ export const getNextShow = async (
     
     // Format the date to match the DB format
     const dateStr = format(currentShowDate, 'yyyy-MM-dd');
-    console.log('Finding next show after date:', dateStr, 'and time:', currentShowTime);
+    console.log('Finding next show for EXACT date:', dateStr, 'and after time:', currentShowTime);
     
-    // Parse the current show time to create a full date-time
+    // For strict time comparison, convert currentShowTime to minutes since midnight
     const timeParts = currentShowTime.split(':');
     const currentHour = parseInt(timeParts[0], 10) || 0;
     const currentMinute = parseInt(timeParts[1] || '0', 10);
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
     
-    // Get the day of week (0 = Sunday, 1 = Monday, etc.)
-    const currentDayOfWeek = currentShowDate.getDay();
-    console.log(`Current day of week: ${currentDayOfWeek}`);
-    
-    // Query for ALL slots for this specific day that start AFTER our show's time
-    // This will include both special programming and regular slots
-    const { data: nextSlots, error: slotsError } = await supabase
+    // Get specific date's schedule slots that start AFTER the current show time
+    // This ONLY queries the slots for the exact date of the show, not any master schedule
+    const { data: specificDateSlots, error: dateError } = await supabase
       .from('schedule_slots')
       .select('*')
-      .eq('day_of_week', currentDayOfWeek)
-      .gt('start_time', currentShowTime)
+      .eq('is_recurring', false) // Only non-recurring (specific to this date)
       .not('is_deleted', 'eq', true)
-      .order('start_time', { ascending: true })
-      .limit(1);
-    
-    if (slotsError) {
-      console.error('Error fetching next slots:', slotsError);
+      .gte('start_time', currentShowTime) // Must start after current show time
+      .order('start_time', { ascending: true });
+      
+    if (dateError) {
+      console.error('Error fetching specific date slots:', dateError);
       return null;
     }
     
-    // If we found a next slot for today, use it
-    if (nextSlots && nextSlots.length > 0) {
-      console.log('Found next show slot:', nextSlots[0].show_name, 'at', nextSlots[0].start_time);
-      return extractShowInfo(nextSlots[0]);
+    console.log(`Found ${specificDateSlots?.length || 0} specific date slots for ${dateStr} after ${currentShowTime}`);
+    
+    // Filter out the current show itself (if it's in the results)
+    const nextSpecificDateSlots = specificDateSlots?.filter(slot => {
+      // Convert slot start time to minutes for comparison
+      const slotTimeParts = slot.start_time.split(':');
+      const slotHour = parseInt(slotTimeParts[0], 10) || 0;
+      const slotMinute = parseInt(slotTimeParts[1] || '0', 10);
+      const slotTimeInMinutes = slotHour * 60 + slotMinute;
+      
+      // Ensure it's not the same time (must be strictly after)
+      return slotTimeInMinutes > currentTimeInMinutes;
+    });
+    
+    // If we found a next specific date slot, use it
+    if (nextSpecificDateSlots && nextSpecificDateSlots.length > 0) {
+      console.log('Found next specific date slot:', nextSpecificDateSlots[0].show_name, 'at', nextSpecificDateSlots[0].start_time);
+      return extractShowInfo(nextSpecificDateSlots[0]);
     }
     
-    // No more shows found for today
-    console.log('No next show found for today');
+    // No specific slot found, no next show
+    console.log('No next show found in daily schedule');
     return null;
   } catch (error) {
     console.error('Error getting next show:', error);
