@@ -1,6 +1,6 @@
 
-import { supabase } from '@/lib/supabase';
 import { format, parseJSON } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 
 interface NextShowInfo {
   name: string;
@@ -21,7 +21,7 @@ type ScheduleCache = {
 
 /**
  * Gets the next show from the schedule for the EXACT SAME DATE as the current show
- * Uses the schedule cache for reliable and consistent data
+ * Uses the schedule cache file for reliable and consistent data
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -37,32 +37,37 @@ export const getNextShow = async (
     const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
     console.log('Finding next show for EXACT date:', formattedDate, 'after time:', currentShowTime);
     
-    // Get the schedule cache from the system_settings table
-    const { data: cacheSetting, error: cacheError } = await supabase
-      .from('system_settings')
-      .select('value, updated_at')
-      .eq('key', 'schedule_cache')
-      .single();
-    
-    if (cacheError) {
-      console.error('Error fetching schedule cache:', cacheError);
-      return null;
-    }
-    
-    if (!cacheSetting || !cacheSetting.value) {
-      console.log('No schedule cache found or cache is empty');
-      return null;
-    }
-    
-    const cacheAge = new Date().getTime() - new Date(cacheSetting.updated_at).getTime();
-    console.log('Cache age (minutes):', Math.floor(cacheAge / (1000 * 60)));
-    
-    // Parse the cache
+    // Try to fetch schedule cache from public directory
     let scheduleCache: ScheduleCache;
+    
     try {
-      scheduleCache = JSON.parse(cacheSetting.value);
+      // Fetch the schedule cache from the public directory with a cache-busting query parameter
+      const response = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
+      
+      if (!response.ok) {
+        console.log('Schedule cache file not found or not accessible');
+        
+        // Fall back to database cache if file is not available
+        const { data: cacheSetting, error: cacheError } = await supabase
+          .from('system_settings')
+          .select('value, updated_at')
+          .eq('key', 'schedule_cache')
+          .single();
+        
+        if (cacheError || !cacheSetting || !cacheSetting.value) {
+          console.log('No schedule cache found in database either');
+          return null;
+        }
+        
+        console.log('Using database cache as fallback');
+        scheduleCache = JSON.parse(cacheSetting.value);
+      } else {
+        // Parse the file data
+        scheduleCache = await response.json();
+        console.log('Successfully loaded schedule cache from file');
+      }
     } catch (e) {
-      console.error('Error parsing schedule cache:', e);
+      console.error('Error loading schedule cache:', e);
       return null;
     }
     
