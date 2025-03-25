@@ -1,10 +1,10 @@
-
 import React, { memo } from 'react';
 import { Editor } from '@tiptap/react';
 import HeaderSection from './editor/HeaderSection';
 import MainContent from './editor/MainContent';
 import FooterSection from './editor/FooterSection';
 import FloatingHeader from './editor/FloatingHeader';
+import NextShowCredits from '../show/next-show/NextShowCredits';
 
 interface LineupEditorProps {
   showName: string;
@@ -38,7 +38,6 @@ interface LineupEditorProps {
   onRemoveNextShowLine?: () => void;
 }
 
-// Using React.memo to prevent unnecessary re-renders
 const LineupEditor = memo(({
   showName,
   showTime,
@@ -121,7 +120,6 @@ const LineupEditor = memo(({
   );
 });
 
-// Add display name for debugging
 LineupEditor.displayName = 'LineupEditor';
 
 export default LineupEditor;
