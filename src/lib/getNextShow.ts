@@ -79,7 +79,8 @@ export const getNextShow = async (
     const currentShowIndex = showsForDate.findIndex(show => show.time === currentShowTime);
     
     if (currentShowIndex === -1) {
-      console.log('Current show not found in schedule for date:', formattedDate);
+      console.log('Current show not found in schedule for date:', formattedDate, 'time:', currentShowTime);
+      console.log('Available shows:', showsForDate.map(s => `${s.name} at ${s.time}`).join(', '));
       return null;
     }
     
@@ -89,17 +90,7 @@ export const getNextShow = async (
       console.log('Found next show in schedule:', nextShow);
       
       // Extract host from show name if applicable
-      const hostMatch = nextShow.name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
-      return {
-        name: nextShow.name
-      };
+      return extractShowInfo(nextShow.name);
     } else {
       console.log('No next show found, this is the last show of the day');
       return null;
