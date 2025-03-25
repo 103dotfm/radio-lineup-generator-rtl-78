@@ -1,5 +1,5 @@
 
-import { format, parseJSON } from 'date-fns';
+import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 
 interface NextShowInfo {
@@ -45,7 +45,7 @@ export const getNextShow = async (
       const response = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
       
       if (!response.ok) {
-        console.log('Schedule cache file not found or not accessible');
+        console.log('Schedule cache file not found or not accessible:', response.status, response.statusText);
         
         // Fall back to database cache if file is not available
         const { data: cacheSetting, error: cacheError } = await supabase
@@ -64,7 +64,7 @@ export const getNextShow = async (
       } else {
         // Parse the file data
         scheduleCache = await response.json();
-        console.log('Successfully loaded schedule cache from file');
+        console.log('Successfully loaded schedule cache from file:', scheduleCache);
       }
     } catch (e) {
       console.error('Error loading schedule cache:', e);
@@ -79,6 +79,7 @@ export const getNextShow = async (
     
     // Find the shows for this date
     const showsForDate = scheduleCache[formattedDate];
+    console.log('Shows for date:', showsForDate);
     
     // Find the current show in the list
     const currentShowIndex = showsForDate.findIndex(show => show.time === currentShowTime);
