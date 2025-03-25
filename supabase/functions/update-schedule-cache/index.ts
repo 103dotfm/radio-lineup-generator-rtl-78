@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     // Store the cache in Supabase storage or database
     const cacheData = JSON.stringify(scheduleCache);
     
-    // Option 1: Store in database as a system setting
+    // Option 1: Store in database as a system setting (as fallback)
     const { error: upsertError } = await supabase
       .from('system_settings')
       .upsert(
@@ -129,8 +129,43 @@ Deno.serve(async (req) => {
       throw upsertError;
     }
     
+    // Option 2: Store in Supabase Storage as a physical JSON file
+    const { data: storageData, error: storageError } = await supabase
+      .storage
+      .from('public')
+      .upload('schedule-cache.json', new Blob([cacheData], { type: 'application/json' }), {
+        cacheControl: '3600',
+        upsert: true
+      });
+    
+    if (storageError) {
+      console.error('Error storing cache in storage:', storageError);
+      // Continue even if storage upload fails, since we have the database fallback
+      console.log('Will rely on database cache as fallback');
+    } else {
+      // Create a public URL for the cache file
+      const { data: publicUrl } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
+      
+      // Also copy the file to the public directory via Supabase function
+      // Create directories if they don't exist (this requires appropriate storage permissions)
+      try {
+        await Deno.mkdir('./public', { recursive: true });
+        await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
+        console.log('Successfully wrote cache to public directory');
+      } catch (dirError) {
+        console.error('Error creating directory or writing file:', dirError);
+        // This is not critical as we have database fallback
+      }
+      
+      console.log('Cache file public URL:', publicUrl?.publicUrl);
+    }
+    
     return new Response(
-      JSON.stringify({ success: true, message: "Schedule cache updated successfully" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Schedule cache updated successfully",
+        timestamp: new Date().toISOString()
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 

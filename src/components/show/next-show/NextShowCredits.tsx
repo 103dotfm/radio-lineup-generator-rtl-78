@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { Editor } from '@tiptap/react';
 import { AlertCircle } from 'lucide-react';
@@ -77,7 +78,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
           // The existing line matches the current next show, so mark as approved
           setApproved(true);
           setNeedsAttention(false);
-          setShowComponent(true); // Changed to true to keep showing the component
+          setShowComponent(true); // Keep showing the component
         }
       } else {
         // No existing line, suggest the new one
@@ -100,7 +101,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
         console.log('Next show line already exists in editor');
         // Check if the existing line matches the current next show info
         if (existingLine.includes(nextShowName)) {
-          // The existing line matches, mark as approved but keep showing for edit option
+          // The existing line matches, mark as approved but still show it
           setApproved(true);
           setNeedsAttention(false);
           setShowComponent(true);
