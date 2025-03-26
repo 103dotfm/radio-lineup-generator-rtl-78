@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { Editor } from '@tiptap/react';
 import NextShowCredits from './next-show/NextShowCredits';
 import { useToast } from '@/hooks/use-toast';
 
@@ -11,6 +12,10 @@ interface ShowCreditsProps {
   showTime: string;
   isPrerecorded?: boolean;
   isCollection?: boolean;
+  editor?: Editor | null;
+  nextShowName?: string;
+  nextShowHost?: string;
+  onRemoveNextShowLine?: () => void;
 }
 
 const ShowCredits: React.FC<ShowCreditsProps> = ({
@@ -19,7 +24,11 @@ const ShowCredits: React.FC<ShowCreditsProps> = ({
   showDate,
   showTime,
   isPrerecorded = false,
-  isCollection = false
+  isCollection = false,
+  editor,
+  nextShowName,
+  nextShowHost,
+  onRemoveNextShowLine
 }) => {
   const { toast } = useToast();
   const [showNextShow, setShowNextShow] = useState<boolean>(false);
@@ -79,10 +88,12 @@ const ShowCredits: React.FC<ShowCreditsProps> = ({
         )}
       </div>
       
-      {showNextShow && (
+      {editor && nextShowName && (
         <NextShowCredits 
-          showDate={showDate} 
-          showTime={showTime} 
+          editor={editor} 
+          nextShowName={nextShowName} 
+          nextShowHost={nextShowHost}
+          onRemoveLine={onRemoveNextShowLine}
         />
       )}
     </div>
