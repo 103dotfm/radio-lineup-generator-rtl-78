@@ -42,29 +42,43 @@ export const getNextShow = async (
     
     try {
       // Fetch the schedule cache from the public directory with a cache-busting query parameter
-      const response = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
+      const publicUrl = import.meta.env.VITE_SUPABASE_URL + '/storage/v1/object/public/public/schedule-cache.json';
+      console.log('Attempting to fetch from:', publicUrl);
+      
+      const response = await fetch(`${publicUrl}?t=${new Date().getTime()}`);
       
       if (!response.ok) {
-        console.log('Schedule cache file not found or not accessible:', response.status, response.statusText);
+        console.log('Failed to fetch from storage URL, trying fallback path:', response.status);
         
-        // Fall back to database cache if file is not available
-        const { data: cacheSetting, error: cacheError } = await supabase
-          .from('system_settings')
-          .select('value, updated_at')
-          .eq('key', 'schedule_cache')
-          .single();
+        // Try local file as fallback
+        const localResponse = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
         
-        if (cacheError || !cacheSetting || !cacheSetting.value) {
-          console.log('No schedule cache found in database either');
-          return null;
+        if (!localResponse.ok) {
+          console.log('Local cache file not accessible either:', localResponse.status);
+          
+          // Fall back to database cache if file is not available
+          const { data: cacheSetting, error: cacheError } = await supabase
+            .from('system_settings')
+            .select('value, updated_at')
+            .eq('key', 'schedule_cache')
+            .single();
+          
+          if (cacheError || !cacheSetting || !cacheSetting.value) {
+            console.log('No schedule cache found in database either');
+            return null;
+          }
+          
+          console.log('Using database cache as fallback');
+          scheduleCache = JSON.parse(cacheSetting.value);
+        } else {
+          // Parse the local file data
+          scheduleCache = await localResponse.json();
+          console.log('Successfully loaded schedule cache from local file');
         }
-        
-        console.log('Using database cache as fallback');
-        scheduleCache = JSON.parse(cacheSetting.value);
       } else {
-        // Parse the file data
+        // Parse the storage file data
         scheduleCache = await response.json();
-        console.log('Successfully loaded schedule cache from file:', scheduleCache);
+        console.log('Successfully loaded schedule cache from storage URL');
       }
     } catch (e) {
       console.error('Error loading schedule cache:', e);

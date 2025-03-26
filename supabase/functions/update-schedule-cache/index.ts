@@ -141,30 +141,33 @@ Deno.serve(async (req) => {
     if (storageError) {
       console.error('Error storing cache in storage:', storageError);
       // Continue even if storage upload fails, since we have the database fallback
-      console.log('Will rely on database cache as fallback');
     } else {
-      // Create a public URL for the cache file
-      const { data: publicUrl } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
-      
-      // Also copy the file to the public directory via Supabase function
-      // Create directories if they don't exist (this requires appropriate storage permissions)
-      try {
-        await Deno.mkdir('./public', { recursive: true });
-        await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
-        console.log('Successfully wrote cache to public directory');
-      } catch (dirError) {
-        console.error('Error creating directory or writing file:', dirError);
-        // This is not critical as we have database fallback
-      }
-      
-      console.log('Cache file public URL:', publicUrl?.publicUrl);
+      console.log('Successfully stored cache in storage');
+      // Get the public URL of the cache file
+      const { data: urlData } = await supabase
+        .storage
+        .from('public')
+        .getPublicUrl('schedule-cache.json');
+        
+      console.log('Cache file public URL:', urlData?.publicUrl);
+    }
+
+    // Check if we're running in an environment where we can write to the filesystem
+    try {
+      console.log('Attempting to write to public directory');
+      await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
+      console.log('Successfully wrote cache to public directory');
+    } catch (fsError) {
+      console.error('Could not write to filesystem:', fsError);
+      // This is not critical as we have the storage and database fallbacks
     }
     
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Schedule cache updated successfully",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        publicUrl: supabaseUrl + '/storage/v1/object/public/public/schedule-cache.json'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
