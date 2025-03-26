@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     // Store the cache in Supabase storage or database
     const cacheData = JSON.stringify(scheduleCache);
     
-    // Option 1: Store in database as a system setting (as fallback)
+    // Store in database as a system setting (as fallback)
     const { error: upsertError } = await supabase
       .from('system_settings')
       .upsert(
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
       throw upsertError;
     }
     
-    // Option 2: Store in Supabase Storage as a physical JSON file
+    // Also store in Supabase Storage as a physical JSON file
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('public')
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
         upsert: true
       });
     
-    // Generate a public URL for the file - we'll use this for direct access
+    // Get the public URL for the file
     let publicUrl = '';
     if (!storageError) {
       console.log('Successfully stored cache in storage');
@@ -172,7 +172,6 @@ Deno.serve(async (req) => {
       console.error('Error storing cache in storage:', storageError);
     }
     
-    // Return success response with the public URL for reference
     return new Response(
       JSON.stringify({ 
         success: true, 

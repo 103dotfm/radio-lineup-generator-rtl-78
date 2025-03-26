@@ -1,5 +1,38 @@
-
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
+import { encode } from "https://deno.land/std@0.177.0/encoding/base64.ts";
+
+// Create a directory if it doesn't exist
+async function ensureDir(path) {
+  try {
+    const stat = await Deno.stat(path);
+    if (!stat.isDirectory) {
+      throw new Error(`Path exists but is not a directory: ${path}`);
+    }
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      await Deno.mkdir(path, { recursive: true });
+    } else {
+      throw error;
+    }
+  }
+}
+
+// Write the cache to a local file
+async function writeToLocalFile(data, filename) {
+  try {
+    // Ensure the public directory exists
+    await ensureDir("./public");
+    
+    // Write the file to the public directory
+    await Deno.writeTextFile(`./public/${filename}`, data);
+    console.log(`Successfully wrote to ./public/${filename}`);
+    
+    return true;
+  } catch (error) {
+    console.error(`Error writing to local file: ${error.message}`);
+    return false;
+  }
+}
 
 // This function makes a request to our update-schedule-cache function
 async function updateCache() {
@@ -30,13 +63,26 @@ async function updateCache() {
     console.log('Dates included in cache:', result.dates?.join(', '));
     console.log('Cache public URL:', result.publicUrl);
     
-    // Create a local copy of the schedule-cache.json file
-    // This will make it available under the app domain directly
+    // Get the cache file from storage
     try {
-      await fetch(result.publicUrl);
-      console.log('Successfully verified cache file is accessible');
+      const cacheResponse = await fetch(result.publicUrl);
+      
+      if (!cacheResponse.ok) {
+        throw new Error(`Failed to fetch cache file: ${cacheResponse.status}`);
+      }
+      
+      const cacheData = await cacheResponse.text();
+      
+      // Write the cache file to the public directory in this service
+      const writeSuccess = await writeToLocalFile(cacheData, 'schedule-cache.json');
+      
+      if (writeSuccess) {
+        console.log('Successfully wrote cache file to public directory');
+      } else {
+        console.error('Failed to write cache file to public directory');
+      }
     } catch (error) {
-      console.error('Error verifying cache file:', error);
+      console.error('Error copying cache file to public directory:', error);
     }
   } catch (error) {
     console.error('Error updating cache:', error);
@@ -46,8 +92,9 @@ async function updateCache() {
 // Run immediately on startup
 updateCache();
 
-// Schedule to run every 5 minutes
-cron('*/5 * * * *', () => {
+// Schedule to run every hour (not too frequent to avoid overwhelming the system)
+cron('0 * * * *', () => {
+  console.log('Running hourly cache update');
   updateCache();
 });
 
