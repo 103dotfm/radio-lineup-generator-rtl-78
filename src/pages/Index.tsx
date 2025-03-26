@@ -48,7 +48,6 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
-  // Fetch next show information based on current show date and time
   const fetchNextShowInfo = useCallback(async () => {
     if (showDate && showTime) {
       try {
@@ -138,8 +137,8 @@ const Index = () => {
     }
   }, [state, isNewLineup]);
 
-  // Fetch next show info when show date or time changes
   useEffect(() => {
+    console.log('Triggering fetchNextShowInfo due to date/time change');
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
 
@@ -344,6 +343,7 @@ const Index = () => {
     setShowTime(time);
     setHasUnsavedChanges(true);
     // Refresh next show when time changes
+    console.log('Time changed, fetching next show info');
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
 
@@ -351,7 +351,10 @@ const Index = () => {
     setShowDate(date || new Date());
     setHasUnsavedChanges(true);
     // Refresh next show when date changes
-    setTimeout(fetchNextShowInfo, 100);
+    setTimeout(() => {
+      console.log('Date changed, fetching next show info');
+      fetchNextShowInfo();
+    }, 100);
   }, [fetchNextShowInfo]);
 
   const handleDelete = useCallback((id: string) => {
@@ -426,6 +429,7 @@ const Index = () => {
 
   const handleRemoveNextShowLine = useCallback(() => {
     // Refresh next show info when line is removed
+    console.log('Next show line removed, refreshing data');
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 

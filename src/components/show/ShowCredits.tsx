@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Editor, EditorContent } from '@tiptap/react';
 import NextShowCredits from './next-show/NextShowCredits';
+import { supabase } from '@/lib/supabase';
 
 interface ShowCreditsProps {
   editor: Editor | null;
@@ -11,6 +12,30 @@ interface ShowCreditsProps {
 }
 
 const ShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveNextShowLine }: ShowCreditsProps) => {
+  // Trigger cache update when component mounts
+  useEffect(() => {
+    const updateCache = async () => {
+      try {
+        console.log('Triggering schedule cache update from ShowCredits component');
+        
+        // Invoke the update-schedule-cache function
+        const { data, error } = await supabase.functions.invoke('update-schedule-cache', {
+          body: { timestamp: new Date().toISOString() }
+        });
+        
+        if (error) {
+          console.error('Error triggering cache update:', error);
+        } else {
+          console.log('Cache update response:', data);
+        }
+      } catch (err) {
+        console.error('Exception when triggering cache update:', err);
+      }
+    };
+    
+    updateCache();
+  }, []);
+
   if (!editor) return null;
 
   return (

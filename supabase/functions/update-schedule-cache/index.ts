@@ -81,6 +81,8 @@ Deno.serve(async (req) => {
   }
   
   try {
+    console.log('Starting schedule cache update process');
+    
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -96,6 +98,8 @@ Deno.serve(async (req) => {
       throw showsError;
     }
     
+    console.log(`Fetched ${shows?.length || 0} shows from database`);
+    
     // Fetch schedule slots
     const { data: slots, error: slotsError } = await supabase
       .from('schedule_slots')
@@ -106,11 +110,14 @@ Deno.serve(async (req) => {
       throw slotsError;
     }
     
+    console.log(`Fetched ${slots?.length || 0} schedule slots from database`);
+    
     // Process the data to create the cache
     const scheduleCache = processScheduleData(shows, slots);
     
     // Store the cache in Supabase storage or database
-    const cacheData = JSON.stringify(scheduleCache);
+    const cacheData = JSON.stringify(scheduleCache, null, 2);
+    console.log('Generated schedule cache:', cacheData.substring(0, 200) + '...');
     
     // Option 1: Store in database as a system setting (as fallback)
     const { error: upsertError } = await supabase
@@ -129,6 +136,8 @@ Deno.serve(async (req) => {
       throw upsertError;
     }
     
+    console.log('Successfully stored cache in database');
+    
     // Option 2: Store in Supabase Storage as a physical JSON file
     const { data: storageData, error: storageError } = await supabase
       .storage
@@ -140,24 +149,52 @@ Deno.serve(async (req) => {
     
     if (storageError) {
       console.error('Error storing cache in storage:', storageError);
-      // Continue even if storage upload fails, since we have the database fallback
       console.log('Will rely on database cache as fallback');
     } else {
+      console.log('Successfully stored cache in storage');
       // Create a public URL for the cache file
       const { data: publicUrl } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
+      console.log('Cache file public URL:', publicUrl?.publicUrl);
+    }
+    
+    // Also try to directly write to public directory
+    try {
+      const jsonResponse = await fetch(`${supabaseUrl}/storage/v1/object/public/public/schedule-cache.json`);
       
-      // Also copy the file to the public directory via Supabase function
-      // Create directories if they don't exist (this requires appropriate storage permissions)
-      try {
-        await Deno.mkdir('./public', { recursive: true });
-        await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
-        console.log('Successfully wrote cache to public directory');
-      } catch (dirError) {
-        console.error('Error creating directory or writing file:', dirError);
-        // This is not critical as we have database fallback
+      if (jsonResponse.ok) {
+        console.log('Successfully checked public JSON file');
+      } else {
+        console.error('Error checking public JSON file:', jsonResponse.status, jsonResponse.statusText);
       }
       
-      console.log('Cache file public URL:', publicUrl?.publicUrl);
+      // Write a copy to the public directory in the app
+      const publicDirResponse = await fetch(`${supabaseUrl}/rest/v1/schedule-cache-json`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: cacheData
+      });
+      
+      if (!publicDirResponse.ok) {
+        console.error('Error writing to public directory:', publicDirResponse.status, publicDirResponse.statusText);
+      } else {
+        console.log('Successfully wrote cache to public directory');
+      }
+    } catch (dirError) {
+      console.error('Error accessing or writing file:', dirError);
+    }
+    
+    // Update the public/schedule-cache.json file in the project directly
+    const { data: writeResult, error: writeError } = await supabase
+      .rpc('write_schedule_cache', { cache_content: cacheData });
+    
+    if (writeError) {
+      console.error('Error using RPC to write cache:', writeError);
+    } else {
+      console.log('RPC write result:', writeResult);
     }
     
     return new Response(

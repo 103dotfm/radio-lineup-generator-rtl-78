@@ -1,3 +1,4 @@
+
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
 
 // This function makes a request to our update-schedule-cache function every 5 minutes
@@ -15,7 +16,8 @@ async function updateCache() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${supabaseKey}`
-        }
+        },
+        body: JSON.stringify({ timestamp: new Date().toISOString() })
       }
     );
     
