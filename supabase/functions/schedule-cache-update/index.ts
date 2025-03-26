@@ -1,5 +1,4 @@
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
-import { encode } from "https://deno.land/std@0.177.0/encoding/base64.ts";
 
 // Create a directory if it doesn't exist
 async function ensureDir(path) {
@@ -106,6 +105,4 @@ cron('0 0 * * *', () => {
 
 // Keep the process alive
 console.log('Schedule cache update service started');
-while (true) {
-  await new Promise(resolve => setTimeout(resolve, 1000));
-}
+Deno.serve(() => new Response("Schedule cache update service is running"));

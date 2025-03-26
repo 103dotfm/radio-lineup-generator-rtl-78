@@ -7,7 +7,7 @@ import NextShowEdit from './NextShowEdit';
 
 interface NextShowCreditsProps {
   editor: Editor | null;
-  nextShowName?: string;
+  nextShowName: string;
   nextShowHost?: string;
   onRemoveLine?: () => void;
 }
@@ -186,7 +186,7 @@ const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: N
   }
 
   return (
-    <Card className={`p-4 mb-4 border ${needsAttention ? 'border-orange-400 bg-orange-50' : 'border-dashed bg-muted/50'}`}>
+    <Card className={`p-4 mt-3 border ${needsAttention ? 'border-orange-400 bg-orange-50' : 'border-dashed bg-muted/50'}`}>
       <div className="flex items-center space-x-2 rtl:space-x-reverse">
         {needsAttention && (
           <AlertCircle className="h-5 w-5 text-orange-500 shrink-0" />
