@@ -7,16 +7,11 @@ interface NextShowInfo {
   host?: string;
 }
 
-interface CachedShow {
-  id: string;
-  name: string;
-  time: string;
-  hasLineup: boolean;
-  slotId: string | null;
-}
-
 type ScheduleCache = {
-  [date: string]: CachedShow[];
+  [date: string]: Array<{
+    name: string;
+    time: string;
+  }>;
 };
 
 /**
@@ -47,31 +42,20 @@ export const getNextShow = async (
       if (!response.ok) {
         console.log('Schedule cache file not found or not accessible:', response.status, response.statusText);
         
-        // Try the sample file as a fallback
-        const sampleResponse = await fetch(`/schedule-cache-sample.json?t=${new Date().getTime()}`);
+        // Fall back to database cache if file is not available
+        const { data: cacheSetting, error: cacheError } = await supabase
+          .from('system_settings')
+          .select('value, updated_at')
+          .eq('key', 'schedule_cache')
+          .single();
         
-        if (!sampleResponse.ok) {
-          console.log('Sample cache file not found either');
-          
-          // Fall back to database cache if file is not available
-          const { data: cacheSetting, error: cacheError } = await supabase
-            .from('system_settings')
-            .select('value, updated_at')
-            .eq('key', 'schedule_cache')
-            .single();
-          
-          if (cacheError || !cacheSetting || !cacheSetting.value) {
-            console.log('No schedule cache found in database either');
-            return null;
-          }
-          
-          console.log('Using database cache as fallback');
-          scheduleCache = JSON.parse(cacheSetting.value);
-        } else {
-          // Parse the sample file data
-          scheduleCache = await sampleResponse.json();
-          console.log('Using sample schedule cache file:', scheduleCache);
+        if (cacheError || !cacheSetting || !cacheSetting.value) {
+          console.log('No schedule cache found in database either');
+          return null;
         }
+        
+        console.log('Using database cache as fallback');
+        scheduleCache = JSON.parse(cacheSetting.value);
       } else {
         // Parse the file data
         scheduleCache = await response.json();
