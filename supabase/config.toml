@@ -23,7 +23,6 @@ enabled = true
 file_size_limit = "50MiB"
 
 # The correct format for storage buckets is to use a map-like structure
-# where each bucket is defined with proper nesting
 [[storage.buckets]]
 name = "public"
 public = true
