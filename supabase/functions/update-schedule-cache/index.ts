@@ -141,27 +141,6 @@ Deno.serve(async (req) => {
       throw upsertError;
     }
     
-    // Option 2: Store in Supabase Storage as a physical JSON file
-    console.log('Uploading cache to storage...');
-    const { data: storageData, error: storageError } = await supabase
-      .storage
-      .from('public')
-      .upload('schedule-cache.json', new Blob([cacheData], { type: 'application/json' }), {
-        cacheControl: '3600',
-        upsert: true
-      });
-    
-    if (storageError) {
-      console.error('Error storing cache in storage:', storageError);
-      console.log('Will rely on database cache as fallback');
-    } else {
-      console.log('Cache file uploaded to storage successfully');
-      
-      // Create a public URL for the cache file
-      const { data: publicUrlData } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
-      console.log('Cache file public URL:', publicUrlData?.publicUrl);
-    }
-    
     // Make a copy in the public directory
     try {
       console.log('Writing cache to public directory');
