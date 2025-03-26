@@ -1,92 +1,90 @@
 
 import React, { useEffect, useState } from 'react';
-import { Editor, EditorContent } from '@tiptap/react';
-import NextShowCredits from './next-show/NextShowCredits';
-import { getNextShow } from '@/lib/getNextShow';
 import { format } from 'date-fns';
+import NextShowCredits from './next-show/NextShowCredits';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShowCreditsProps {
-  editor: Editor | null;
-  nextShowName?: string;
-  nextShowHost?: string;
-  onRemoveNextShowLine?: () => void;
-  showDate?: Date;
-  showTime?: string;
+  showName: string;
+  showHost?: string;
+  showDate: Date;
+  showTime: string;
+  isPrerecorded?: boolean;
+  isCollection?: boolean;
 }
 
-const ShowCredits = ({ 
-  editor, 
-  nextShowName: propNextShowName, 
-  nextShowHost: propNextShowHost, 
-  onRemoveNextShowLine, 
+const ShowCredits: React.FC<ShowCreditsProps> = ({
+  showName,
+  showHost,
   showDate,
-  showTime
-}: ShowCreditsProps) => {
-  const [nextShowInfo, setNextShowInfo] = useState<{name?: string, host?: string} | null>(
-    propNextShowName ? { name: propNextShowName, host: propNextShowHost } : null
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastFetch, setLastFetch] = useState<string>('');
-
+  showTime,
+  isPrerecorded = false,
+  isCollection = false
+}) => {
+  const { toast } = useToast();
+  const [showNextShow, setShowNextShow] = useState<boolean>(false);
+  
   useEffect(() => {
-    if (propNextShowName) {
-      console.log('Using provided next show props:', { name: propNextShowName, host: propNextShowHost });
-      setNextShowInfo({ name: propNextShowName, host: propNextShowHost });
-      return;
-    }
-
-    const fetchNextShow = async () => {
-      if (!showDate || !showTime) {
-        console.log('Show date or time not provided, cannot fetch next show');
-        return;
-      }
-
-      // Create a unique key for this fetch to avoid duplicate fetches
-      const fetchKey = `${format(showDate, 'yyyy-MM-dd')}-${showTime}`;
-      if (fetchKey === lastFetch) {
-        console.log('Already fetched next show for this date/time');
-        return;
-      }
-
+    // Check if the component should show the "Next show" section
+    async function checkShowNext() {
       try {
-        setIsLoading(true);
-        console.log('Fetching next show for date:', showDate, 'time:', showTime);
-        const nextShow = await getNextShow(showDate, showTime);
-        console.log('Next show result:', nextShow);
-        
-        if (nextShow) {
-          setNextShowInfo(nextShow);
-        } else {
-          setNextShowInfo(null);
+        if (!showDate || !showTime) {
+          console.log('ShowCredits: Missing showDate or showTime, not showing next show');
+          setShowNextShow(false);
+          return;
         }
-        setLastFetch(fetchKey);
+        
+        console.log(`ShowCredits: Checking next show for ${format(showDate, 'yyyy-MM-dd')} at ${showTime}`);
+        setShowNextShow(true);
       } catch (error) {
-        console.error('Error fetching next show:', error);
-        setNextShowInfo(null);
-      } finally {
-        setIsLoading(false);
+        console.error('Error in ShowCredits:', error);
+        setShowNextShow(false);
       }
-    };
-
-    fetchNextShow();
-  }, [propNextShowName, propNextShowHost, showDate, showTime, lastFetch]);
-
-  if (!editor) return null;
+    }
+    
+    checkShowNext();
+  }, [showDate, showTime]);
 
   return (
-    <div className="col-span-2 space-y-4">
-      <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
+    <div className="mb-4 px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+      <div className="font-bold text-lg">{showName}</div>
       
-      {isLoading ? (
-        <div className="text-sm text-muted-foreground text-center">טוען מידע על התוכנית הבאה...</div>
-      ) : nextShowInfo?.name ? (
-        <NextShowCredits
-          editor={editor}
-          nextShowName={nextShowInfo.name}
-          nextShowHost={nextShowInfo.host}
-          onRemoveLine={onRemoveNextShowLine}
+      {showHost && (
+        <div className="text-sm mb-1">בהגשת {showHost}</div>
+      )}
+      
+      <div className="text-sm text-gray-600 dark:text-gray-400 flex flex-wrap gap-x-3">
+        {showDate && (
+          <span>
+            {format(showDate, 'dd/MM/yyyy')}
+          </span>
+        )}
+        
+        {showTime && (
+          <span>
+            {showTime}
+          </span>
+        )}
+        
+        {isPrerecorded && (
+          <span className="text-amber-600 dark:text-amber-400">
+            תוכנית מוקלטת
+          </span>
+        )}
+        
+        {isCollection && (
+          <span className="text-blue-600 dark:text-blue-400">
+            לקט
+          </span>
+        )}
+      </div>
+      
+      {showNextShow && (
+        <NextShowCredits 
+          showDate={showDate} 
+          showTime={showTime} 
         />
-      ) : null}
+      )}
     </div>
   );
 };

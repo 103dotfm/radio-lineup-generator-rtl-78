@@ -1,222 +1,54 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Editor } from '@tiptap/react';
-import { Check, AlertCircle } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import React from 'react';
+import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { getNextShow } from '@/lib/getNextShow';
 
 interface NextShowCreditsProps {
-  editor: Editor | null;
-  nextShowName?: string;
-  nextShowHost?: string;
-  onRemoveLine?: () => void;
+  showDate: Date;
+  showTime: string;
 }
 
-const NextShowCredits = ({ editor, nextShowName, nextShowHost, onRemoveLine }: NextShowCreditsProps) => {
-  const [approved, setApproved] = useState(false);
-  const [editedText, setEditedText] = useState('');
-  const [needsAttention, setNeedsAttention] = useState(true);
-  const [showComponent, setShowComponent] = useState(true);
-  const [previousNextShow, setPreviousNextShow] = useState<string | undefined>(undefined);
-  const [existingLineText, setExistingLineText] = useState<string | null>(null);
-  
-  // Check if editor already has a next show line and extract it
-  const checkForExistingLine = useCallback(() => {
-    if (!editor) return null;
-    
-    const content = editor.getHTML();
-    const regex = /<strong>מיד אחרינו:(.*?)<\/strong>/;
-    const match = content.match(regex);
-    
-    if (match) {
-      console.log('Found existing next show line:', match[0]);
-      setExistingLineText(match[0]);
-      return match[0];
-    }
-    
-    return null;
-  }, [editor]);
-  
-  // Update component when next show info changes
+const NextShowCredits: React.FC<NextShowCreditsProps> = ({ showDate, showTime }) => {
+  const [nextShow, setNextShow] = useState<{ name: string; host?: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    if (nextShowName) {
-      const text = nextShowHost && nextShowName !== nextShowHost 
-        ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
-        : `מיד אחרינו: ${nextShowName}`;
-      
-      // Generate a unique ID for the next show
-      const nextShowId = nextShowHost ? `${nextShowName}-${nextShowHost}` : nextShowName;
-      
-      // First check if there's an existing line
-      const existingLine = checkForExistingLine();
-      
-      // If next show info has changed from what we previously had
-      if (nextShowId !== previousNextShow) {
-        console.log('Next show has changed:', nextShowId, 'vs previous:', previousNextShow);
-        
-        // If there's an existing line but the show info has changed, we should
-        // remove the old line and suggest the new one
-        if (existingLine) {
-          // Only if the existing content doesn't match the new text
-          if (!existingLine.includes(nextShowName)) {
-            console.log('Removing old next show line and suggesting new one');
-            if (editor) {
-              // Remove the existing line
-              removeNextShowLine();
-              
-              // Reset states to suggest the new line
-              setApproved(false);
-              setNeedsAttention(true);
-              setShowComponent(true);
-            }
-          } else {
-            // The existing line matches the current next show, so mark as approved
-            setApproved(true);
-            setNeedsAttention(false);
-            setShowComponent(false);
-          }
-        } else {
-          // No existing line, suggest the new one
-          setApproved(false);
-          setNeedsAttention(true);
-          setShowComponent(true);
-        }
-        
-        setEditedText(text);
-        setPreviousNextShow(nextShowId);
+    async function fetchNextShow() {
+      try {
+        setIsLoading(true);
+        const nextShowInfo = await getNextShow(showDate, showTime);
+        setNextShow(nextShowInfo);
+      } catch (error) {
+        console.error('Error fetching next show:', error);
+        setNextShow(null);
+      } finally {
+        setIsLoading(false);
       }
     }
-  }, [nextShowName, nextShowHost, previousNextShow, editor, checkForExistingLine]);
 
-  // Check if next show line already exists in editor on initial load
-  useEffect(() => {
-    if (editor && nextShowName) {
-      const existingLine = checkForExistingLine();
-      
-      if (existingLine) {
-        console.log('Next show line already exists in editor');
-        // Check if the existing line matches the current next show info
-        const expectedText = nextShowHost && nextShowName !== nextShowHost
-          ? `מיד אחרינו: ${nextShowName} עם ${nextShowHost}`
-          : `מיד אחרינו: ${nextShowName}`;
-          
-        if (existingLine.includes(nextShowName)) {
-          // The existing line matches, mark as approved
-          setApproved(true);
-          setNeedsAttention(false);
-          setShowComponent(false);
-        } else {
-          // The existing line doesn't match, suggest replacing it
-          setApproved(false);
-          setNeedsAttention(true);
-          setShowComponent(true);
-        }
-      }
+    if (showDate && showTime) {
+      fetchNextShow();
     }
-  }, [editor, nextShowName, nextShowHost, checkForExistingLine]);
+  }, [showDate, showTime]);
 
-  const handleApprove = () => {
-    if (!editor || !editedText) return;
+  if (isLoading) {
+    return <div className="text-xs opacity-70 italic">טוען תוכנית הבאה...</div>;
+  }
 
-    // First remove any existing next show line
-    removeNextShowLine();
-    
-    // Add a line break if content already exists
-    if (editor.getText().trim().length > 0) {
-      // Append to the end with an empty line above
-      editor.commands.focus('end');
-      
-      // Add two line breaks - one for empty line and one for the text
-      editor.commands.insertContent('<br><br>');
-      editor.commands.insertContent(`<strong>${editedText}</strong>`);
-    } else {
-      // If editor is empty, just insert content
-      editor.commands.insertContent(`<strong>${editedText}</strong>`);
-    }
-    
-    setApproved(true);
-    setNeedsAttention(false);
-    setShowComponent(false); // Hide component after approval
-  };
-
-  const removeNextShowLine = () => {
-    if (!editor) return;
-    
-    // Remove the next show line and the empty line above it from the editor
-    const content = editor.getHTML();
-    
-    // More specific regex to match both the empty line and the next show line
-    const regex = /<br><br><strong>מיד אחרינו:.*?<\/strong>/;
-    const newContent = content.replace(regex, '');
-    
-    // If the pattern doesn't match with double breaks, try with single break
-    const fallbackRegex = /<br><strong>מיד אחרינו:.*?<\/strong>/;
-    const finalContent = regex.test(content) 
-      ? newContent 
-      : content.replace(fallbackRegex, '');
-    
-    // Clean up any standalone "מיד אחרינו" text as well
-    const cleanupRegex = /<strong>מיד אחרינו:.*?<\/strong>/;
-    const cleanedContent = finalContent.replace(cleanupRegex, '').trim();
-    
-    // Clean up consecutive break tags that might be left
-    const finalCleanedContent = cleanedContent.replace(/<br><br><br>/g, '<br><br>');
-    
-    editor.commands.setContent(finalCleanedContent);
-  };
-
-  const handleRemove = () => {
-    removeNextShowLine();
-    
-    setApproved(false);
-    setNeedsAttention(true);
-    setShowComponent(true); // Show component after removal
-    
-    // Notify parent that line was removed
-    if (onRemoveLine) {
-      onRemoveLine();
-    }
-  };
-
-  // Don't render if no next show info or already approved and doesn't need attention
-  if (!nextShowName || (!showComponent && approved && !needsAttention)) {
+  if (!nextShow) {
     return null;
   }
 
   return (
-    <Card className={`p-4 mb-4 border ${needsAttention ? 'border-orange-400 bg-orange-50' : 'border-dashed bg-muted/50'}`}>
-      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-        {needsAttention && (
-          <AlertCircle className="h-5 w-5 text-orange-500 shrink-0" />
-        )}
-        <input
-          className="flex-1 p-2 border rounded text-sm"
-          value={editedText}
-          onChange={(e) => setEditedText(e.target.value)}
-          disabled={approved}
-          dir="rtl"
-        />
-        
-        {approved ? (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleRemove}
-          >
-            הסר מהקרדיטים
-          </Button>
-        ) : (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleApprove}
-          >
-            <Check className="h-4 w-4 ml-2" />
-            הוסף לקרדיטים
-          </Button>
-        )}
-      </div>
-    </Card>
+    <div className="mt-3 border-t pt-2 dark:border-gray-700 text-sm">
+      <div className="font-medium">בהמשך היום: {nextShow.name}</div>
+      {nextShow.host && (
+        <div className="text-xs text-gray-600 dark:text-gray-400">
+          בהגשת {nextShow.host}
+        </div>
+      )}
+    </div>
   );
 };
 
