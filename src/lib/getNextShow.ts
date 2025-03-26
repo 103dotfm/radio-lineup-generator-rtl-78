@@ -100,7 +100,7 @@ export const getNextShow = async (
     console.log(`Using cache source: ${cacheSource}`);
     
     // Check if we have data for this date
-    if (!scheduleCache[formattedDate] || !scheduleByDate[formattedDate].length) {
+    if (!scheduleCache[formattedDate] || !scheduleCache[formattedDate].length) {
       console.log('No schedule data found for date:', formattedDate);
       return null;
     }
