@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Editor, EditorContent } from '@tiptap/react';
 import NextShowCredits from './next-show/NextShowCredits';
 import { getNextShow } from '@/lib/getNextShow';
+import { format } from 'date-fns';
 
 interface ShowCreditsProps {
   editor: Editor | null;
