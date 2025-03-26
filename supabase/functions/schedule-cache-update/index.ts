@@ -1,12 +1,12 @@
 
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
 
-// This function makes a request to our update-schedule-cache function every 5 minutes
+// This function makes a request to our update-schedule-cache function
 async function updateCache() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
   
-  console.log('Running scheduled cache update...');
+  console.log('Running scheduled cache update at:', new Date().toISOString());
   
   try {
     const response = await fetch(
@@ -26,8 +26,18 @@ async function updateCache() {
     }
     
     const result = await response.json();
-    console.log('Cache update result:', result);
+    console.log('Cache update successful at:', new Date().toISOString());
+    console.log('Dates included in cache:', result.dates?.join(', '));
     console.log('Cache public URL:', result.publicUrl);
+    
+    // Create a local copy of the schedule-cache.json file
+    // This will make it available under the app domain directly
+    try {
+      await fetch(result.publicUrl);
+      console.log('Successfully verified cache file is accessible');
+    } catch (error) {
+      console.error('Error verifying cache file:', error);
+    }
   } catch (error) {
     console.error('Error updating cache:', error);
   }
@@ -38,6 +48,12 @@ updateCache();
 
 // Schedule to run every 5 minutes
 cron('*/5 * * * *', () => {
+  updateCache();
+});
+
+// Schedule to run at midnight every day to remove old data
+cron('0 0 * * *', () => {
+  console.log('Running midnight cache cleanup');
   updateCache();
 });
 

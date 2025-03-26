@@ -1,5 +1,6 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { addDays, format, isAfter, isBefore, parseISO } from 'https://esm.sh/date-fns@3.4.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,10 +11,27 @@ const corsHeaders = {
 function processScheduleData(shows, slots) {
   // Create an object to organize shows by date
   const scheduleByDate = {};
+  const today = new Date();
+  const threeWeeksLater = addDays(today, 21); // 3 weeks from today
+  
+  // Format today's date to match the cache format (YYYY-MM-DD)
+  const formattedToday = format(today, 'yyyy-MM-dd');
+  console.log('Processing schedule data from today:', formattedToday, 'to', format(threeWeeksLater, 'yyyy-MM-dd'));
 
-  // First, add existing shows from the shows table
+  // First, add existing shows from the shows table (only if they're from today or in the future)
   shows.forEach(show => {
     if (!show.date) return;
+    
+    // Skip shows from before today
+    const showDate = parseISO(show.date);
+    if (isBefore(showDate, today) && format(showDate, 'yyyy-MM-dd') !== formattedToday) {
+      return;
+    }
+    
+    // Skip shows more than 3 weeks in the future
+    if (isAfter(showDate, threeWeeksLater)) {
+      return;
+    }
     
     if (!scheduleByDate[show.date]) {
       scheduleByDate[show.date] = [];
@@ -29,13 +47,12 @@ function processScheduleData(shows, slots) {
   });
 
   // Then, add recurring slots for upcoming dates
-  const today = new Date();
-  const daysToGenerate = 7; // Generate schedule for the next 7 days
+  const daysToGenerate = 21; // Generate schedule for the next 3 weeks
   
   for (let i = 0; i < daysToGenerate; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
-    const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const formattedDate = format(date, 'yyyy-MM-dd'); // YYYY-MM-DD
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
     // Find slots for this day of week
@@ -138,36 +155,31 @@ Deno.serve(async (req) => {
         upsert: true
       });
     
-    if (storageError) {
-      console.error('Error storing cache in storage:', storageError);
-      // Continue even if storage upload fails, since we have the database fallback
-    } else {
+    // Generate a public URL for the file - we'll use this for direct access
+    let publicUrl = '';
+    if (!storageError) {
       console.log('Successfully stored cache in storage');
-      // Get the public URL of the cache file
+      
+      // Get the public URL of the cache file from storage
       const { data: urlData } = await supabase
         .storage
         .from('public')
         .getPublicUrl('schedule-cache.json');
         
-      console.log('Cache file public URL:', urlData?.publicUrl);
-    }
-
-    // Check if we're running in an environment where we can write to the filesystem
-    try {
-      console.log('Attempting to write to public directory');
-      await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
-      console.log('Successfully wrote cache to public directory');
-    } catch (fsError) {
-      console.error('Could not write to filesystem:', fsError);
-      // This is not critical as we have the storage and database fallbacks
+      publicUrl = urlData?.publicUrl || '';
+      console.log('Storage cache file public URL:', publicUrl);
+    } else {
+      console.error('Error storing cache in storage:', storageError);
     }
     
+    // Return success response with the public URL for reference
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Schedule cache updated successfully",
         timestamp: new Date().toISOString(),
-        publicUrl: supabaseUrl + '/storage/v1/object/public/public/schedule-cache.json'
+        publicUrl: publicUrl,
+        dates: Object.keys(scheduleCache)
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

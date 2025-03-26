@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Editor, EditorContent } from '@tiptap/react';
 import NextShowCredits from './next-show/NextShowCredits';
@@ -23,9 +24,12 @@ const ShowCredits = ({
   const [nextShowInfo, setNextShowInfo] = useState<{name?: string, host?: string} | null>(
     propNextShowName ? { name: propNextShowName, host: propNextShowHost } : null
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState<string>('');
 
   useEffect(() => {
     if (propNextShowName) {
+      console.log('Using provided next show props:', { name: propNextShowName, host: propNextShowHost });
       setNextShowInfo({ name: propNextShowName, host: propNextShowHost });
       return;
     }
@@ -36,7 +40,15 @@ const ShowCredits = ({
         return;
       }
 
+      // Create a unique key for this fetch to avoid duplicate fetches
+      const fetchKey = `${format(showDate, 'yyyy-MM-dd')}-${showTime}`;
+      if (fetchKey === lastFetch) {
+        console.log('Already fetched next show for this date/time');
+        return;
+      }
+
       try {
+        setIsLoading(true);
         console.log('Fetching next show for date:', showDate, 'time:', showTime);
         const nextShow = await getNextShow(showDate, showTime);
         console.log('Next show result:', nextShow);
@@ -46,14 +58,17 @@ const ShowCredits = ({
         } else {
           setNextShowInfo(null);
         }
+        setLastFetch(fetchKey);
       } catch (error) {
         console.error('Error fetching next show:', error);
         setNextShowInfo(null);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchNextShow();
-  }, [propNextShowName, propNextShowHost, showDate, showTime]);
+  }, [propNextShowName, propNextShowHost, showDate, showTime, lastFetch]);
 
   if (!editor) return null;
 
@@ -61,14 +76,16 @@ const ShowCredits = ({
     <div className="col-span-2 space-y-4">
       <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
       
-      {nextShowInfo?.name && (
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground text-center">טוען מידע על התוכנית הבאה...</div>
+      ) : nextShowInfo?.name ? (
         <NextShowCredits
           editor={editor}
           nextShowName={nextShowInfo.name}
           nextShowHost={nextShowInfo.host}
           onRemoveLine={onRemoveNextShowLine}
         />
-      )}
+      ) : null}
     </div>
   );
 };
