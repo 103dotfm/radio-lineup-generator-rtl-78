@@ -9,12 +9,6 @@ interface FormActionsProps {
   onNoteAdd: () => void;
   onDividerAdd: () => void;
   isEditing: boolean;
-  onSave?: () => Promise<void>;
-  onShare?: () => Promise<void>;
-  onPrint?: () => void;
-  onExportPDF?: () => void;
-  onAdd?: (item: any) => void;
-  handleNameLookup?: (name: string) => Promise<any>;
 }
 
 const FormActions: React.FC<FormActionsProps> = ({
@@ -22,13 +16,7 @@ const FormActions: React.FC<FormActionsProps> = ({
   onBreakAdd,
   onNoteAdd,
   onDividerAdd,
-  isEditing,
-  onSave,
-  onShare,
-  onPrint,
-  onExportPDF,
-  onAdd,
-  handleNameLookup
+  isEditing
 }) => {
   return <div className="flex justify-end gap-2">
       <Button type="button" onClick={onBreakAdd} variant="secondary" className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200">
