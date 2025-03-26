@@ -25,7 +25,6 @@ interface LineupTableProps {
   onDragEnd: (result: any) => void;
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
-  onDividerAdd?: () => void;
 }
 
 const LineupTable = ({
@@ -37,8 +36,7 @@ const LineupTable = ({
   onDetailsChange,
   onDragEnd,
   showMinutes = false,
-  onToggleMinutes,
-  onDividerAdd
+  onToggleMinutes
 }: LineupTableProps) => {
   const [showMinutesLocal, setShowMinutesLocal] = useState(showMinutes);
   const { isAuthenticated } = useAuth();
