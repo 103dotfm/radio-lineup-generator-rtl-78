@@ -37,63 +37,39 @@ export const getNextShow = async (
     const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
     console.log('Finding next show for EXACT date:', formattedDate, 'after time:', currentShowTime);
     
-    // Try to fetch schedule cache from various sources
+    // Try to fetch schedule cache from public directory
     let scheduleCache: ScheduleCache;
-    let cacheSource = 'unknown';
     
     try {
-      // First attempt: Use fetch with a cache buster to avoid browser caching
-      const timestamp = new Date().getTime();
-      const localUrl = `/schedule-cache.json?t=${timestamp}`;
-      console.log('Attempting to fetch from local URL:', localUrl);
+      // Fetch the schedule cache from the public directory with a cache-busting query parameter
+      const response = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
       
-      const localResponse = await fetch(localUrl);
-      
-      if (localResponse.ok) {
-        scheduleCache = await localResponse.json();
-        cacheSource = 'local file';
-        console.log('Successfully loaded schedule cache from local file');
-      } else {
-        console.log('Local cache file not accessible, status:', localResponse.status);
-        throw new Error('Local cache not available');
-      }
-    } catch (localError) {
-      console.error('Error fetching from local cache:', localError);
-      
-      try {
-        // Fallback: Query database directly
-        console.log('Falling back to database lookup');
+      if (!response.ok) {
+        console.log('Schedule cache file not found or not accessible:', response.status, response.statusText);
         
-        // Get shows from this date that start after the current show
-        const { data: shows, error } = await supabase
-          .from('shows')
-          .select('id, name, time')
-          .eq('date', formattedDate)
-          .gt('time', currentShowTime)
-          .order('time', { ascending: true })
-          .limit(1);
+        // Fall back to database cache if file is not available
+        const { data: cacheSetting, error: cacheError } = await supabase
+          .from('system_settings')
+          .select('value, updated_at')
+          .eq('key', 'schedule_cache')
+          .single();
         
-        if (error) {
-          console.error('Error fetching shows from database:', error);
+        if (cacheError || !cacheSetting || !cacheSetting.value) {
+          console.log('No schedule cache found in database either');
           return null;
         }
         
-        if (shows && shows.length > 0) {
-          const nextShow = shows[0];
-          console.log('Found next show from database:', nextShow);
-          
-          return extractShowInfo(nextShow.name);
-        }
-        
-        console.log('No next show found in database');
-        return null;
-      } catch (dbError) {
-        console.error('All cache sources failed:', dbError);
-        return null;
+        console.log('Using database cache as fallback');
+        scheduleCache = JSON.parse(cacheSetting.value);
+      } else {
+        // Parse the file data
+        scheduleCache = await response.json();
+        console.log('Successfully loaded schedule cache from file:', scheduleCache);
       }
+    } catch (e) {
+      console.error('Error loading schedule cache:', e);
+      return null;
     }
-    
-    console.log(`Using cache source: ${cacheSource}`);
     
     // Check if we have data for this date
     if (!scheduleCache[formattedDate] || !scheduleCache[formattedDate].length) {
@@ -103,7 +79,7 @@ export const getNextShow = async (
     
     // Find the shows for this date
     const showsForDate = scheduleCache[formattedDate];
-    console.log(`Found ${showsForDate.length} shows for date:`, formattedDate);
+    console.log('Shows for date:', showsForDate);
     
     // Find the current show in the list
     const currentShowIndex = showsForDate.findIndex(show => show.time === currentShowTime);

@@ -1,6 +1,6 @@
 
 {
-  "2024-08-30": [
+  "2024-08-01": [
     {
       "id": "1",
       "name": "Morning News",
@@ -23,20 +23,13 @@
       "slotId": "talk-slot"
     }
   ],
-  "2024-08-31": [
+  "2024-08-02": [
     {
       "id": "4",
-      "name": "Weekend Special",
+      "name": "Friday Special",
       "time": "08:00",
       "hasLineup": true,
-      "slotId": "weekend-slot"
-    },
-    {
-      "id": "5",
-      "name": "Music Hour עם DJ Cool",
-      "time": "10:00",
-      "hasLineup": true,
-      "slotId": "music-slot"
+      "slotId": "friday-slot"
     }
   ]
 }
