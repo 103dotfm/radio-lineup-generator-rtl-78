@@ -85,10 +85,7 @@ const MainContent = memo(({
 
       <div className="space-y-8">
         <ShowCredits 
-          showName={showName}
-          showDate={showDate || new Date()}
-          showTime={showTime}
-          editor={editor}
+          editor={editor} 
           nextShowName={nextShowName}
           nextShowHost={nextShowHost}
           onRemoveNextShowLine={onRemoveNextShowLine}

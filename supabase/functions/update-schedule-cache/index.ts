@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-import { addDays, format, isAfter, isBefore, parseISO } from 'https://esm.sh/date-fns@3.4.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,27 +10,10 @@ const corsHeaders = {
 function processScheduleData(shows, slots) {
   // Create an object to organize shows by date
   const scheduleByDate = {};
-  const today = new Date();
-  const threeWeeksLater = addDays(today, 21); // 3 weeks from today
-  
-  // Format today's date to match the cache format (YYYY-MM-DD)
-  const formattedToday = format(today, 'yyyy-MM-dd');
-  console.log('Processing schedule data from today:', formattedToday, 'to', format(threeWeeksLater, 'yyyy-MM-dd'));
 
-  // First, add existing shows from the shows table (only if they're from today or in the future)
+  // First, add existing shows from the shows table
   shows.forEach(show => {
     if (!show.date) return;
-    
-    // Skip shows from before today
-    const showDate = parseISO(show.date);
-    if (isBefore(showDate, today) && format(showDate, 'yyyy-MM-dd') !== formattedToday) {
-      return;
-    }
-    
-    // Skip shows more than 3 weeks in the future
-    if (isAfter(showDate, threeWeeksLater)) {
-      return;
-    }
     
     if (!scheduleByDate[show.date]) {
       scheduleByDate[show.date] = [];
@@ -47,12 +29,13 @@ function processScheduleData(shows, slots) {
   });
 
   // Then, add recurring slots for upcoming dates
-  const daysToGenerate = 21; // Generate schedule for the next 3 weeks
+  const today = new Date();
+  const daysToGenerate = 7; // Generate schedule for the next 7 days
   
   for (let i = 0; i < daysToGenerate; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
-    const formattedDate = format(date, 'yyyy-MM-dd'); // YYYY-MM-DD
+    const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
     // Find slots for this day of week
@@ -129,7 +112,7 @@ Deno.serve(async (req) => {
     // Store the cache in Supabase storage or database
     const cacheData = JSON.stringify(scheduleCache);
     
-    // Store in database as a system setting (as fallback)
+    // Option 1: Store in database as a system setting (as fallback)
     const { error: upsertError } = await supabase
       .from('system_settings')
       .upsert(
@@ -146,7 +129,7 @@ Deno.serve(async (req) => {
       throw upsertError;
     }
     
-    // Also store in Supabase Storage as a physical JSON file
+    // Option 2: Store in Supabase Storage as a physical JSON file
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('public')
@@ -155,30 +138,33 @@ Deno.serve(async (req) => {
         upsert: true
       });
     
-    // Get the public URL for the file
-    let publicUrl = '';
-    if (!storageError) {
-      console.log('Successfully stored cache in storage');
-      
-      // Get the public URL of the cache file from storage
-      const { data: urlData } = await supabase
-        .storage
-        .from('public')
-        .getPublicUrl('schedule-cache.json');
-        
-      publicUrl = urlData?.publicUrl || '';
-      console.log('Storage cache file public URL:', publicUrl);
-    } else {
+    if (storageError) {
       console.error('Error storing cache in storage:', storageError);
+      // Continue even if storage upload fails, since we have the database fallback
+      console.log('Will rely on database cache as fallback');
+    } else {
+      // Create a public URL for the cache file
+      const { data: publicUrl } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
+      
+      // Also copy the file to the public directory via Supabase function
+      // Create directories if they don't exist (this requires appropriate storage permissions)
+      try {
+        await Deno.mkdir('./public', { recursive: true });
+        await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
+        console.log('Successfully wrote cache to public directory');
+      } catch (dirError) {
+        console.error('Error creating directory or writing file:', dirError);
+        // This is not critical as we have database fallback
+      }
+      
+      console.log('Cache file public URL:', publicUrl?.publicUrl);
     }
     
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Schedule cache updated successfully",
-        timestamp: new Date().toISOString(),
-        publicUrl: publicUrl,
-        dates: Object.keys(scheduleCache)
+        timestamp: new Date().toISOString()
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
