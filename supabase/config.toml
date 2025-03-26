@@ -22,7 +22,6 @@ api_url = "http://127.0.0.1"
 enabled = true
 file_size_limit = "50MiB"
 
-# The correct format for storage buckets is to use a nested table format
 [[storage.buckets]]
 name = "public"
 public = true

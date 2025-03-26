@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     // Store the cache in Supabase storage or database
     const cacheData = JSON.stringify(scheduleCache);
     
-    // Option 1: Store in database as a system setting (as fallback)
+    // Store in database as a system setting
     console.log('Storing cache in system_settings table...');
     const { error: upsertError } = await supabase
       .from('system_settings')
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       throw upsertError;
     }
     
-    // Make a copy in the public directory
+    // Write directly to the public directory
     try {
       console.log('Writing cache to public directory');
       await Deno.mkdir('./public', { recursive: true });
@@ -152,7 +152,6 @@ Deno.serve(async (req) => {
     }
     
     // Create a sample JSON file in the public directory as a fallback
-    // This ensures that there's always a valid JSON file even if uploads fail
     try {
       const today = new Date();
       const sampleCache = {};

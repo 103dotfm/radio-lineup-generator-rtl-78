@@ -1,6 +1,7 @@
+
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
 
-// This function makes a request to our update-schedule-cache function every 5 minutes
+// This function makes a request to our update-schedule-cache function every hour
 async function updateCache() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -34,8 +35,8 @@ async function updateCache() {
 // Run immediately on startup
 updateCache();
 
-// Schedule to run every 5 minutes
-cron('*/5 * * * *', () => {
+// Schedule to run every hour instead of every 5 minutes to reduce server load
+cron('0 * * * *', () => {
   updateCache();
 });
 
