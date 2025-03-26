@@ -37,14 +37,15 @@ export const getNextShow = async (
     const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
     console.log('Finding next show for EXACT date:', formattedDate, 'after time:', currentShowTime);
     
-    // Try to fetch schedule cache from public directory
+    // Try to fetch schedule cache from various sources
     let scheduleCache: ScheduleCache;
     let cacheSource = 'unknown';
     
     try {
-      // First attempt: Local file in public directory (fastest)
-      const localUrl = `/schedule-cache.json?t=${new Date().getTime()}`;
-      console.log('Attempting to fetch from local URL first:', localUrl);
+      // First attempt: Use fetch with a cache buster to avoid browser caching
+      const timestamp = new Date().getTime();
+      const localUrl = `/schedule-cache.json?t=${timestamp}`;
+      console.log('Attempting to fetch from local URL:', localUrl);
       
       const localResponse = await fetch(localUrl);
       
@@ -57,43 +58,38 @@ export const getNextShow = async (
         throw new Error('Local cache not available');
       }
     } catch (localError) {
+      console.error('Error fetching from local cache:', localError);
+      
       try {
-        // Second attempt: Supabase Storage
-        const publicUrl = import.meta.env.VITE_SUPABASE_URL + '/storage/v1/object/public/public/schedule-cache.json';
-        console.log('Attempting to fetch from storage URL:', publicUrl);
+        // Fallback: Query database directly
+        console.log('Falling back to database lookup');
         
-        const response = await fetch(`${publicUrl}?t=${new Date().getTime()}`);
+        // Get shows from this date that start after the current show
+        const { data: shows, error } = await supabase
+          .from('shows')
+          .select('id, name, time')
+          .eq('date', formattedDate)
+          .gt('time', currentShowTime)
+          .order('time', { ascending: true })
+          .limit(1);
         
-        if (response.ok) {
-          scheduleCache = await response.json();
-          cacheSource = 'storage';
-          console.log('Successfully loaded schedule cache from storage URL');
-        } else {
-          console.log('Storage cache file not accessible, status:', response.status);
-          throw new Error('Storage cache not available');
-        }
-      } catch (storageError) {
-        try {
-          // Fall back to database cache if file is not available
-          console.log('Falling back to database cache');
-          const { data: cacheSetting, error: cacheError } = await supabase
-            .from('system_settings')
-            .select('value, updated_at')
-            .eq('key', 'schedule_cache')
-            .single();
-          
-          if (cacheError || !cacheSetting || !cacheSetting.value) {
-            console.log('No schedule cache found in database either');
-            return null;
-          }
-          
-          scheduleCache = JSON.parse(cacheSetting.value);
-          cacheSource = 'database';
-          console.log('Successfully loaded schedule cache from database');
-        } catch (dbError) {
-          console.error('All cache sources failed:', dbError);
+        if (error) {
+          console.error('Error fetching shows from database:', error);
           return null;
         }
+        
+        if (shows && shows.length > 0) {
+          const nextShow = shows[0];
+          console.log('Found next show from database:', nextShow);
+          
+          return extractShowInfo(nextShow.name);
+        }
+        
+        console.log('No next show found in database');
+        return null;
+      } catch (dbError) {
+        console.error('All cache sources failed:', dbError);
+        return null;
       }
     }
     

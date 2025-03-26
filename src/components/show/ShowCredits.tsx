@@ -44,7 +44,14 @@ const ShowCredits: React.FC<ShowCreditsProps> = ({
         }
         
         console.log(`ShowCredits: Checking next show for ${format(showDate, 'yyyy-MM-dd')} at ${showTime}`);
-        setShowNextShow(true);
+        
+        if (nextShowName) {
+          console.log('ShowCredits: nextShowName provided directly:', nextShowName);
+          setShowNextShow(true);
+        } else {
+          console.log('ShowCredits: No nextShowName provided, not showing next show');
+          setShowNextShow(false);
+        }
       } catch (error) {
         console.error('Error in ShowCredits:', error);
         setShowNextShow(false);
@@ -52,7 +59,7 @@ const ShowCredits: React.FC<ShowCreditsProps> = ({
     }
     
     checkShowNext();
-  }, [showDate, showTime]);
+  }, [showDate, showTime, nextShowName]);
 
   return (
     <div className="mb-4 px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-md">
