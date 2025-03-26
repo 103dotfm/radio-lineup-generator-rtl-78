@@ -39,24 +39,43 @@ export const getNextShow = async (
     
     // Try to fetch schedule cache from public directory
     let scheduleCache: ScheduleCache;
+    let cacheSource = 'unknown';
     
     try {
-      // Fetch the schedule cache from the public directory with a cache-busting query parameter
-      const publicUrl = import.meta.env.VITE_SUPABASE_URL + '/storage/v1/object/public/public/schedule-cache.json';
-      console.log('Attempting to fetch from:', publicUrl);
+      // First attempt: Local file in public directory (fastest)
+      const localUrl = `/schedule-cache.json?t=${new Date().getTime()}`;
+      console.log('Attempting to fetch from local URL first:', localUrl);
       
-      const response = await fetch(`${publicUrl}?t=${new Date().getTime()}`);
+      const localResponse = await fetch(localUrl);
       
-      if (!response.ok) {
-        console.log('Failed to fetch from storage URL, trying fallback path:', response.status);
+      if (localResponse.ok) {
+        scheduleCache = await localResponse.json();
+        cacheSource = 'local file';
+        console.log('Successfully loaded schedule cache from local file');
+      } else {
+        console.log('Local cache file not accessible, status:', localResponse.status);
+        throw new Error('Local cache not available');
+      }
+    } catch (localError) {
+      try {
+        // Second attempt: Supabase Storage
+        const publicUrl = import.meta.env.VITE_SUPABASE_URL + '/storage/v1/object/public/public/schedule-cache.json';
+        console.log('Attempting to fetch from storage URL:', publicUrl);
         
-        // Try local file as fallback
-        const localResponse = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
+        const response = await fetch(`${publicUrl}?t=${new Date().getTime()}`);
         
-        if (!localResponse.ok) {
-          console.log('Local cache file not accessible either:', localResponse.status);
-          
+        if (response.ok) {
+          scheduleCache = await response.json();
+          cacheSource = 'storage';
+          console.log('Successfully loaded schedule cache from storage URL');
+        } else {
+          console.log('Storage cache file not accessible, status:', response.status);
+          throw new Error('Storage cache not available');
+        }
+      } catch (storageError) {
+        try {
           // Fall back to database cache if file is not available
+          console.log('Falling back to database cache');
           const { data: cacheSetting, error: cacheError } = await supabase
             .from('system_settings')
             .select('value, updated_at')
@@ -68,32 +87,27 @@ export const getNextShow = async (
             return null;
           }
           
-          console.log('Using database cache as fallback');
           scheduleCache = JSON.parse(cacheSetting.value);
-        } else {
-          // Parse the local file data
-          scheduleCache = await localResponse.json();
-          console.log('Successfully loaded schedule cache from local file');
+          cacheSource = 'database';
+          console.log('Successfully loaded schedule cache from database');
+        } catch (dbError) {
+          console.error('All cache sources failed:', dbError);
+          return null;
         }
-      } else {
-        // Parse the storage file data
-        scheduleCache = await response.json();
-        console.log('Successfully loaded schedule cache from storage URL');
       }
-    } catch (e) {
-      console.error('Error loading schedule cache:', e);
-      return null;
     }
     
+    console.log(`Using cache source: ${cacheSource}`);
+    
     // Check if we have data for this date
-    if (!scheduleCache[formattedDate] || !scheduleCache[formattedDate].length) {
+    if (!scheduleCache[formattedDate] || !scheduleByDate[formattedDate].length) {
       console.log('No schedule data found for date:', formattedDate);
       return null;
     }
     
     // Find the shows for this date
     const showsForDate = scheduleCache[formattedDate];
-    console.log('Shows for date:', showsForDate);
+    console.log(`Found ${showsForDate.length} shows for date:`, formattedDate);
     
     // Find the current show in the list
     const currentShowIndex = showsForDate.findIndex(show => show.time === currentShowTime);
