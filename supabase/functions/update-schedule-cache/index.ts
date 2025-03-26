@@ -30,7 +30,7 @@ function processScheduleData(shows, slots) {
 
   // Then, add recurring slots for upcoming dates
   const today = new Date();
-  const daysToGenerate = 7; // Generate schedule for the next 7 days
+  const daysToGenerate = 21; // Generate schedule for the next 3 weeks
   
   for (let i = 0; i < daysToGenerate; i++) {
     const date = new Date(today);
@@ -81,12 +81,20 @@ Deno.serve(async (req) => {
   }
   
   try {
+    console.log('Starting schedule cache update process');
+    
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Fetch shows from the shows table
+    console.log('Fetching shows data...');
     const { data: shows, error: showsError } = await supabase
       .from('shows')
       .select('id, name, time, date, slot_id');
@@ -97,6 +105,7 @@ Deno.serve(async (req) => {
     }
     
     // Fetch schedule slots
+    console.log('Fetching schedule slots data...');
     const { data: slots, error: slotsError } = await supabase
       .from('schedule_slots')
       .select('id, show_name, host_name, day_of_week, start_time, has_lineup, is_deleted');
@@ -106,6 +115,8 @@ Deno.serve(async (req) => {
       throw slotsError;
     }
     
+    console.log(`Processing ${shows.length} shows and ${slots.length} schedule slots`);
+    
     // Process the data to create the cache
     const scheduleCache = processScheduleData(shows, slots);
     
@@ -113,6 +124,7 @@ Deno.serve(async (req) => {
     const cacheData = JSON.stringify(scheduleCache);
     
     // Option 1: Store in database as a system setting (as fallback)
+    console.log('Storing cache in system_settings table...');
     const { error: upsertError } = await supabase
       .from('system_settings')
       .upsert(
@@ -130,6 +142,7 @@ Deno.serve(async (req) => {
     }
     
     // Option 2: Store in Supabase Storage as a physical JSON file
+    console.log('Uploading cache to storage...');
     const { data: storageData, error: storageError } = await supabase
       .storage
       .from('public')
@@ -140,24 +153,67 @@ Deno.serve(async (req) => {
     
     if (storageError) {
       console.error('Error storing cache in storage:', storageError);
-      // Continue even if storage upload fails, since we have the database fallback
       console.log('Will rely on database cache as fallback');
     } else {
-      // Create a public URL for the cache file
-      const { data: publicUrl } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
+      console.log('Cache file uploaded to storage successfully');
       
-      // Also copy the file to the public directory via Supabase function
-      // Create directories if they don't exist (this requires appropriate storage permissions)
-      try {
-        await Deno.mkdir('./public', { recursive: true });
-        await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
-        console.log('Successfully wrote cache to public directory');
-      } catch (dirError) {
-        console.error('Error creating directory or writing file:', dirError);
-        // This is not critical as we have database fallback
+      // Create a public URL for the cache file
+      const { data: publicUrlData } = await supabase.storage.from('public').getPublicUrl('schedule-cache.json');
+      console.log('Cache file public URL:', publicUrlData?.publicUrl);
+    }
+    
+    // Make a copy in the public directory
+    try {
+      console.log('Writing cache to public directory');
+      await Deno.mkdir('./public', { recursive: true });
+      await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
+      console.log('Successfully wrote cache to public directory');
+    } catch (dirError) {
+      console.error('Error creating directory or writing file:', dirError);
+    }
+    
+    // Create a sample JSON file in the public directory as a fallback
+    // This ensures that there's always a valid JSON file even if uploads fail
+    try {
+      const today = new Date();
+      const sampleCache = {};
+      
+      for (let i = 0; i < 21; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // Sample data for each day
+        sampleCache[formattedDate] = [
+          {
+            id: `sample-morning-${i}`,
+            name: "תכנית בוקר",
+            time: "08:00",
+            hasLineup: true,
+            slotId: "morning-slot"
+          },
+          {
+            id: `sample-noon-${i}`,
+            name: "תכנית צהריים עם מנחה",
+            time: "12:00",
+            hasLineup: true,
+            slotId: "noon-slot"
+          },
+          {
+            id: `sample-evening-${i}`,
+            name: "תכנית ערב",
+            time: "18:00",
+            hasLineup: true,
+            slotId: "evening-slot"
+          }
+        ];
       }
       
-      console.log('Cache file public URL:', publicUrl?.publicUrl);
+      const sampleCacheData = JSON.stringify(sampleCache);
+      await Deno.writeTextFile('./public/schedule-cache-sample.json', sampleCacheData);
+      console.log('Successfully wrote sample cache to public directory');
+    } catch (sampleError) {
+      console.error('Error creating sample cache file:', sampleError);
     }
     
     return new Response(
