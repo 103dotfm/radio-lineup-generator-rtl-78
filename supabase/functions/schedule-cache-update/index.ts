@@ -1,3 +1,4 @@
+
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
 
 // This function makes a request to our update-schedule-cache function every 5 minutes
@@ -26,6 +27,7 @@ async function updateCache() {
     
     const result = await response.json();
     console.log('Cache update result:', result);
+    console.log('Cache public URL:', result.publicUrl);
   } catch (error) {
     console.error('Error updating cache:', error);
   }
