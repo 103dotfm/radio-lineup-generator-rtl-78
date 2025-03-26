@@ -78,6 +78,15 @@ const MainContent = ({
 }: MainContentProps) => {
   const { register } = useForm();
 
+  // Create a mock function for form submissions that will be passed to FormActions
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onAdd) {
+      // This is just a placeholder since the actual form submission is handled elsewhere
+      console.log("Form submission handled by parent component");
+    }
+  };
+
   return (
     <div className="mb-8">
       <Card className="mb-6">
@@ -146,6 +155,7 @@ const MainContent = ({
               onEdit={onEdit}
               onBreakTextChange={onBreakTextChange}
               onDetailsChange={onDetailsChange}
+              onDragEnd={onDragEnd}
               showMinutes={showMinutes}
               onToggleMinutes={onToggleMinutes}
               onDividerAdd={onDividerAdd}
@@ -169,6 +179,11 @@ const MainContent = ({
         onExportPDF={onExportPDF}
         onAdd={onAdd}
         handleNameLookup={handleNameLookup}
+        onSubmit={handleFormSubmit}
+        onBreakAdd={() => console.log("Break add handled by parent")}
+        onNoteAdd={() => console.log("Note add handled by parent")}
+        onDividerAdd={onDividerAdd || (() => console.log("Divider add handled by parent"))}
+        isEditing={!!editingItem}
       />
     </div>
   );
