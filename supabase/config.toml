@@ -22,7 +22,8 @@ api_url = "http://127.0.0.1"
 enabled = true
 file_size_limit = "50MiB"
 
-[[storage.buckets]]
+# Use proper format for storage buckets
+[storage.buckets.public]
 name = "public"
 public = true
 file_size_limit = "10MiB"

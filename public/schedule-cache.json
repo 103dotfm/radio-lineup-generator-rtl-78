@@ -1,35 +1,77 @@
 
 {
-  "2024-08-01": [
+  "2025-03-26": [
     {
-      "id": "1",
-      "name": "Morning News",
-      "time": "08:00",
+      "id": "morning-1",
+      "name": "שבע תשע עם ענת דוידוב וטל שלו",
+      "time": "07:00",
       "hasLineup": true,
-      "slotId": "morning-slot"
+      "slotId": "morning-slot-1"
     },
     {
-      "id": "2",
-      "name": "Music Hour עם DJ Cool",
-      "time": "10:00",
+      "id": "morning-2",
+      "name": "בן כספית וינון מגל",
+      "time": "09:00",
       "hasLineup": true,
-      "slotId": "music-slot"
+      "slotId": "morning-slot-2"
     },
     {
-      "id": "3",
-      "name": "Afternoon Talk",
-      "time": "14:00",
+      "id": "noon-1",
+      "name": "אראל סג\"ל ואייל ברקוביץ'",
+      "time": "11:00",
       "hasLineup": true,
-      "slotId": "talk-slot"
+      "slotId": "noon-slot-1"
+    },
+    {
+      "id": "noon-2",
+      "name": "חמש עם אריה אלדד ויריב אופנהיימר",
+      "time": "17:00",
+      "hasLineup": true,
+      "slotId": "afternoon-slot-1"
+    },
+    {
+      "id": "evening-1",
+      "name": "איריס קול",
+      "time": "21:00",
+      "hasLineup": true,
+      "slotId": "evening-slot-1"
     }
   ],
-  "2024-08-02": [
+  "2025-03-27": [
     {
-      "id": "4",
-      "name": "Friday Special",
-      "time": "08:00",
+      "id": "morning-3",
+      "name": "שבע תשע עם ענת דוידוב וטל שלו",
+      "time": "07:00",
       "hasLineup": true,
-      "slotId": "friday-slot"
+      "slotId": "morning-slot-1"
+    },
+    {
+      "id": "morning-4",
+      "name": "בן כספית וינון מגל",
+      "time": "09:00",
+      "hasLineup": true,
+      "slotId": "morning-slot-2"
+    },
+    {
+      "id": "noon-3",
+      "name": "אראל סג\"ל ואייל ברקוביץ'",
+      "time": "11:00",
+      "hasLineup": true,
+      "slotId": "noon-slot-1"
+    },
+    {
+      "id": "noon-4",
+      "name": "חמש עם אריה אלדד ויריב אופנהיימר",
+      "time": "17:00",
+      "hasLineup": true,
+      "slotId": "afternoon-slot-1"
+    },
+    {
+      "id": "evening-2",
+      "name": "איריס קול",
+      "time": "21:00",
+      "hasLineup": true,
+      "slotId": "evening-slot-1"
     }
   ]
 }
