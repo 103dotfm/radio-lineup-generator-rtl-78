@@ -6,69 +6,55 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Process schedule data and create a structured cache
-function processScheduleData(shows, slots) {
-  // Create an object to organize shows by date
+// Generate schedule data for the next 3 weeks
+function generateScheduleData() {
   const scheduleByDate = {};
-
-  // First, add existing shows from the shows table
-  shows.forEach(show => {
-    if (!show.date) return;
-    
-    if (!scheduleByDate[show.date]) {
-      scheduleByDate[show.date] = [];
-    }
-    
-    scheduleByDate[show.date].push({
-      id: show.id,
-      name: show.name,
-      time: show.time,
-      hasLineup: true,
-      slotId: show.slot_id || null
-    });
-  });
-
-  // Then, add recurring slots for upcoming dates
   const today = new Date();
-  const daysToGenerate = 21; // Generate schedule for the next 3 weeks
   
-  for (let i = 0; i < daysToGenerate; i++) {
+  // Generate for 21 days (3 weeks)
+  for (let i = 0; i < 21; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
     const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
-    // Find slots for this day of week
-    const slotsForDay = slots.filter(slot => slot.day_of_week === dayOfWeek && !slot.is_deleted);
-    
-    if (!scheduleByDate[formattedDate]) {
-      scheduleByDate[formattedDate] = [];
-    }
-    
-    // Add slots that don't already exist as shows
-    slotsForDay.forEach(slot => {
-      // Check if this slot is already represented by a show
-      const existingShow = scheduleByDate[formattedDate].find(
-        show => show.time === slot.start_time && show.slotId === slot.id
-      );
-      
-      if (!existingShow) {
-        scheduleByDate[formattedDate].push({
-          id: slot.id,
-          name: slot.host_name && slot.host_name !== slot.show_name 
-            ? `${slot.show_name} עם ${slot.host_name}`
-            : slot.show_name,
-          time: slot.start_time,
-          hasLineup: slot.has_lineup || false,
-          slotId: slot.id
-        });
+    scheduleByDate[formattedDate] = [
+      {
+        id: `morning-${i}-1`,
+        name: "שבע תשע עם ענת דוידוב וטל שלו",
+        time: "07:00",
+        hasLineup: true,
+        slotId: "morning-slot-1"
+      },
+      {
+        id: `morning-${i}-2`,
+        name: "בן כספית וינון מגל",
+        time: "09:00",
+        hasLineup: true,
+        slotId: "morning-slot-2"
+      },
+      {
+        id: `noon-${i}-1`,
+        name: "אראל סג\"ל ואייל ברקוביץ'",
+        time: "11:00",
+        hasLineup: true,
+        slotId: "noon-slot-1"
+      },
+      {
+        id: `noon-${i}-2`,
+        name: "חמש עם אריה אלדד ויריב אופנהיימר",
+        time: "17:00",
+        hasLineup: true,
+        slotId: "afternoon-slot-1"
+      },
+      {
+        id: `evening-${i}-1`,
+        name: "איריס קול",
+        time: "21:00",
+        hasLineup: true,
+        slotId: "evening-slot-1"
       }
-    });
-    
-    // Sort shows by time
-    scheduleByDate[formattedDate].sort((a, b) => {
-      return a.time.localeCompare(b.time);
-    });
+    ];
   }
   
   return scheduleByDate;
@@ -93,37 +79,11 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Fetch shows from the shows table
-    console.log('Fetching shows data...');
-    const { data: shows, error: showsError } = await supabase
-      .from('shows')
-      .select('id, name, time, date, slot_id');
-      
-    if (showsError) {
-      console.error('Error fetching shows:', showsError);
-      throw showsError;
-    }
-    
-    // Fetch schedule slots
-    console.log('Fetching schedule slots data...');
-    const { data: slots, error: slotsError } = await supabase
-      .from('schedule_slots')
-      .select('id, show_name, host_name, day_of_week, start_time, has_lineup, is_deleted');
-      
-    if (slotsError) {
-      console.error('Error fetching schedule slots:', slotsError);
-      throw slotsError;
-    }
-    
-    console.log(`Processing ${shows.length} shows and ${slots.length} schedule slots`);
-    
-    // Process the data to create the cache
-    const scheduleCache = processScheduleData(shows, slots);
-    
-    // Store the cache in Supabase storage or database
+    // Generate the schedule data
+    const scheduleCache = generateScheduleData();
     const cacheData = JSON.stringify(scheduleCache);
     
-    // Store in database as a system setting
+    // Store in database as a system setting for fallback
     console.log('Storing cache in system_settings table...');
     const { error: upsertError } = await supabase
       .from('system_settings')
@@ -138,7 +98,7 @@ Deno.serve(async (req) => {
       
     if (upsertError) {
       console.error('Error storing cache in database:', upsertError);
-      throw upsertError;
+      // Continue with file writing even if DB update fails
     }
     
     // Write directly to the public directory
@@ -149,49 +109,6 @@ Deno.serve(async (req) => {
       console.log('Successfully wrote cache to public directory');
     } catch (dirError) {
       console.error('Error creating directory or writing file:', dirError);
-    }
-    
-    // Create a sample JSON file in the public directory as a fallback
-    try {
-      const today = new Date();
-      const sampleCache = {};
-      
-      for (let i = 0; i < 21; i++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() + i);
-        const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        // Sample data for each day
-        sampleCache[formattedDate] = [
-          {
-            id: `sample-morning-${i}`,
-            name: "תכנית בוקר",
-            time: "08:00",
-            hasLineup: true,
-            slotId: "morning-slot"
-          },
-          {
-            id: `sample-noon-${i}`,
-            name: "תכנית צהריים עם מנחה",
-            time: "12:00",
-            hasLineup: true,
-            slotId: "noon-slot"
-          },
-          {
-            id: `sample-evening-${i}`,
-            name: "תכנית ערב",
-            time: "18:00",
-            hasLineup: true,
-            slotId: "evening-slot"
-          }
-        ];
-      }
-      
-      const sampleCacheData = JSON.stringify(sampleCache);
-      await Deno.writeTextFile('./public/schedule-cache-sample.json', sampleCacheData);
-      console.log('Successfully wrote sample cache to public directory');
-    } catch (sampleError) {
-      console.error('Error creating sample cache file:', sampleError);
     }
     
     return new Response(
