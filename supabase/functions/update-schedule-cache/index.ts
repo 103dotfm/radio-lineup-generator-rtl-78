@@ -31,7 +31,7 @@ async function generateScheduleData() {
     throw error;
   }
   
-  // Generate dates for the next 21 days
+  // Generate dates for the next 21 days, starting from today
   const scheduleByDate = {};
   const today = new Date();
   
@@ -42,12 +42,13 @@ async function generateScheduleData() {
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
     // Get all slots for this day of week - both recurring and non-recurring
-    const slotsForThisDay = scheduleSlots.filter(slot => 
-      slot.day_of_week === dayOfWeek && 
-      (!slot.is_recurring || (slot.is_recurring && slot.day_of_week === dayOfWeek))
-    );
+    const slotsForThisDay = scheduleSlots.filter(slot => {
+      // Include the slot if it's for the current day of the week
+      // For non-recurring slots, make sure they're specifically for this day
+      return slot.day_of_week === dayOfWeek;
+    });
     
-    // Sort by time and transform to required format
+    // Sort by time and transform to required format (only name and time)
     if (slotsForThisDay.length > 0) {
       scheduleByDate[formattedDate] = slotsForThisDay
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
