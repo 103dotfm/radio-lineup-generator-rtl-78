@@ -32,17 +32,27 @@ export const getNextShow = async (
     const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
     console.log('Finding next show for EXACT date:', formattedDate, 'after time:', currentShowTime);
     
-    // Try to fetch schedule cache from public directory
-    let scheduleCache: ScheduleCache;
+    // Try to fetch schedule cache from public directory with a cache-busting query parameter
+    let scheduleCache: ScheduleCache | null = null;
     
     try {
-      // Fetch the schedule cache from the public directory with a cache-busting query parameter
+      // First try: Fetch from public file with cache busting
       const response = await fetch(`/schedule-cache.json?t=${new Date().getTime()}`);
       
-      if (!response.ok) {
-        console.log('Schedule cache file not found or not accessible:', response.status, response.statusText);
-        
-        // Fall back to database cache if file is not available
+      if (response.ok) {
+        scheduleCache = await response.json();
+        console.log('Successfully loaded schedule cache from file:', scheduleCache);
+      } else {
+        console.log('Schedule cache file not accessible:', response.status, response.statusText);
+      }
+    } catch (fileError) {
+      console.error('Error loading schedule cache from file:', fileError);
+    }
+    
+    // Fall back to database if file cache failed
+    if (!scheduleCache) {
+      try {
+        console.log('Falling back to database cache...');
         const { data: cacheSetting, error: cacheError } = await supabase
           .from('system_settings')
           .select('value, updated_at')
@@ -54,16 +64,25 @@ export const getNextShow = async (
           return null;
         }
         
-        console.log('Using database cache as fallback');
+        console.log('Using database cache as fallback, updated at:', cacheSetting.updated_at);
         scheduleCache = JSON.parse(cacheSetting.value);
-      } else {
-        // Parse the file data
-        scheduleCache = await response.json();
-        console.log('Successfully loaded schedule cache from file:', scheduleCache);
+      } catch (dbError) {
+        console.error('Error retrieving cache from database:', dbError);
+        return null;
       }
-    } catch (e) {
-      console.error('Error loading schedule cache:', e);
-      return null;
+    }
+    
+    // Last resort: use hardcoded data if everything else failed
+    if (!scheduleCache) {
+      console.log('All cache methods failed, using hardcoded fallback data');
+      scheduleCache = {
+        [formattedDate]: [
+          { name: "Morning Show", time: "07:00" },
+          { name: "Midday Program", time: "12:00" },
+          { name: "Evening News", time: "18:00" },
+          { name: "Night Talk", time: "21:00" }
+        ]
+      };
     }
     
     // Check if we have data for this date
