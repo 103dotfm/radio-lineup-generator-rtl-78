@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 
@@ -11,6 +10,7 @@ type ScheduleCache = {
   [date: string]: Array<{
     name: string;
     time: string;
+    host?: string;
   }>;
 };
 
@@ -41,7 +41,15 @@ export const getNextShow = async (
       
       if (response.ok) {
         scheduleCache = await response.json();
-        console.log('Successfully loaded schedule cache from file:', scheduleCache);
+        console.log('Successfully loaded schedule cache from file:', Object.keys(scheduleCache));
+        
+        // Validate the schedule data
+        if (!scheduleCache[formattedDate]) {
+          console.log(`No schedule data found for date: ${formattedDate} in cache file`);
+          console.log(`Available dates in cache: ${Object.keys(scheduleCache).join(', ')}`);
+        } else {
+          console.log(`Found ${scheduleCache[formattedDate].length} shows for date ${formattedDate} in cache file`);
+        }
       } else {
         console.log('Schedule cache file not accessible:', response.status, response.statusText);
       }
@@ -50,7 +58,7 @@ export const getNextShow = async (
     }
     
     // Fall back to database if file cache failed
-    if (!scheduleCache) {
+    if (!scheduleCache || !scheduleCache[formattedDate]) {
       try {
         console.log('Falling back to database cache...');
         const { data: cacheSetting, error: cacheError } = await supabase
@@ -66,6 +74,12 @@ export const getNextShow = async (
         
         console.log('Using database cache as fallback, updated at:', cacheSetting.updated_at);
         scheduleCache = JSON.parse(cacheSetting.value);
+        
+        if (!scheduleCache[formattedDate]) {
+          console.log(`No schedule data found for date: ${formattedDate} in database cache`);
+          console.log(`Available dates in database cache: ${Object.keys(scheduleCache).join(', ')}`);
+          return null;
+        }
       } catch (dbError) {
         console.error('Error retrieving cache from database:', dbError);
         return null;
@@ -73,7 +87,7 @@ export const getNextShow = async (
     }
     
     // Last resort: use hardcoded data if everything else failed
-    if (!scheduleCache) {
+    if (!scheduleCache || !scheduleCache[formattedDate]) {
       console.log('All cache methods failed, using hardcoded fallback data');
       scheduleCache = {
         [formattedDate]: [
@@ -93,7 +107,7 @@ export const getNextShow = async (
     
     // Find the shows for this date
     const showsForDate = scheduleCache[formattedDate];
-    console.log('Shows for date:', showsForDate);
+    console.log('Shows for date:', showsForDate.map(s => `${s.name} at ${s.time}`).join(', '));
     
     // Find the current show in the list
     const currentShowIndex = showsForDate.findIndex(show => show.time === currentShowTime);
@@ -109,7 +123,15 @@ export const getNextShow = async (
       const nextShow = showsForDate[currentShowIndex + 1];
       console.log('Found next show in schedule:', nextShow);
       
-      // Extract host from show name if applicable
+      // Use host directly from the cache if available
+      if (nextShow.host) {
+        return {
+          name: nextShow.name,
+          host: nextShow.host
+        };
+      }
+      
+      // Otherwise, extract host from show name if applicable
       return extractShowInfo(nextShow.name);
     } else {
       console.log('No next show found, this is the last show of the day');
