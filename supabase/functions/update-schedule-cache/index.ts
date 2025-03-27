@@ -18,7 +18,9 @@ async function generateScheduleData() {
   
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  // Get all schedule slots (including ones without lineups)
+  console.log('Fetching all schedule slots...');
+  
+  // Get all schedule slots (not just ones with lineups)
   const { data: scheduleSlots, error } = await supabase
     .from('schedule_slots')
     .select('*')
@@ -30,6 +32,8 @@ async function generateScheduleData() {
     console.error('Error fetching schedule slots:', error);
     throw error;
   }
+  
+  console.log(`Retrieved ${scheduleSlots.length} schedule slots`);
   
   // Generate dates for the next 21 days, starting from today
   const scheduleByDate = {};
@@ -82,7 +86,7 @@ Deno.serve(async (req) => {
   }
   
   try {
-    console.log('Starting schedule cache update process');
+    console.log(`Starting schedule cache update process at ${new Date().toISOString()}`);
     
     // Generate the schedule data from the actual schedule
     const scheduleCache = await generateScheduleData();
@@ -118,10 +122,19 @@ Deno.serve(async (req) => {
     
     // Write directly to the public directory
     try {
-      console.log('Writing cache to public directory');
+      console.log('Writing cache to public directory...');
       await Deno.mkdir('./public', { recursive: true });
-      await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
-      console.log('Successfully wrote cache to public directory');
+      const filePath = './public/schedule-cache.json';
+      await Deno.writeTextFile(filePath, cacheData);
+      
+      // Verify the file was written correctly
+      try {
+        const fileContent = await Deno.readTextFile(filePath);
+        const fileSize = fileContent.length;
+        console.log(`Successfully wrote cache to ${filePath} (${fileSize} bytes)`);
+      } catch (readError) {
+        console.error('Error verifying written file:', readError);
+      }
     } catch (dirError) {
       console.error('Error creating directory or writing file:', dirError);
     }
@@ -130,7 +143,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: "Schedule cache updated successfully",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        dates: Object.keys(scheduleCache).length
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
