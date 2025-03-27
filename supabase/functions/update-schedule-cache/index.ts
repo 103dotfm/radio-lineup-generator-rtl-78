@@ -18,7 +18,7 @@ async function generateScheduleData() {
   
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  // Get all schedule slots
+  // Get all schedule slots (including ones without lineups)
   const { data: scheduleSlots, error } = await supabase
     .from('schedule_slots')
     .select('*')
@@ -34,6 +34,9 @@ async function generateScheduleData() {
   // Generate dates for the next 21 days, starting from today
   const scheduleByDate = {};
   const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to start of day
+  
+  console.log(`Generating schedule starting from ${today.toISOString()}`);
   
   for (let i = 0; i < 21; i++) {
     const date = new Date(today);
@@ -41,12 +44,14 @@ async function generateScheduleData() {
     const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
-    // Get all slots for this day of week - both recurring and non-recurring
+    console.log(`Processing day ${formattedDate}, day of week ${dayOfWeek}`);
+    
+    // Get all slots for this day of week
     const slotsForThisDay = scheduleSlots.filter(slot => {
-      // Include the slot if it's for the current day of the week
-      // For non-recurring slots, make sure they're specifically for this day
       return slot.day_of_week === dayOfWeek;
     });
+    
+    console.log(`Found ${slotsForThisDay.length} slots for day ${formattedDate}`);
     
     // Sort by time and transform to required format (only name and time)
     if (slotsForThisDay.length > 0) {
