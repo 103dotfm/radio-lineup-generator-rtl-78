@@ -22,8 +22,7 @@ api_url = "http://127.0.0.1"
 enabled = true
 file_size_limit = "50MiB"
 
-# The correct format for storage buckets definition:
-# Each bucket should be defined with [[storage.buckets]] and then key-value pairs below it
+# Storage buckets
 [[storage.buckets]]
 name = "public"
 public = true
