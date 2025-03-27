@@ -1,3 +1,4 @@
+
 import { cron } from 'https://deno.land/x/deno_cron@v1.0.0/cron.ts';
 
 // This function makes a request to our update-schedule-cache function every 10 minutes
@@ -8,6 +9,8 @@ async function updateCache() {
   console.log(`Running scheduled cache update at ${new Date().toISOString()}...`);
   
   try {
+    console.log(`Making request to ${supabaseUrl}/functions/v1/update-schedule-cache`);
+    
     const response = await fetch(
       `${supabaseUrl}/functions/v1/update-schedule-cache`,
       {
@@ -20,13 +23,29 @@ async function updateCache() {
       }
     );
     
+    console.log(`Received response with status: ${response.status}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to update cache: ${response.status} ${errorText}`);
     }
     
     const result = await response.json();
-    console.log('Cache update result:', result);
+    console.log('Cache update success:', result);
+    
+    // Verify the file exists after update
+    try {
+      const fileResponse = await fetch(`${supabaseUrl}/storage/v1/object/public/schedule-cache.json?t=${Date.now()}`);
+      console.log(`Verification file check status: ${fileResponse.status}`);
+      
+      if (fileResponse.ok) {
+        console.log('Verification: File exists and is accessible');
+      } else {
+        console.warn('Verification: File may not exist or is not accessible');
+      }
+    } catch (verifyError) {
+      console.error('Error verifying file:', verifyError);
+    }
   } catch (error) {
     console.error('Error updating cache:', error);
   }
@@ -36,8 +55,8 @@ async function updateCache() {
 console.log(`Starting schedule cache update service at ${new Date().toISOString()}`);
 updateCache();
 
-// Schedule to run every 10 minutes
-cron('*/10 * * * *', () => {
+// Schedule to run every 5 minutes for more frequent updates
+cron('*/5 * * * *', () => {
   updateCache();
 });
 
