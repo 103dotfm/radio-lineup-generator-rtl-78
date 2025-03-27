@@ -22,7 +22,6 @@ async function generateScheduleData() {
   const { data: scheduleSlots, error } = await supabase
     .from('schedule_slots')
     .select('*')
-    .eq('is_recurring', true)
     .eq('is_deleted', false)
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
@@ -42,79 +41,28 @@ async function generateScheduleData() {
     const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
-    // Get all slots for this day of week
-    const slotsForThisDay = scheduleSlots.filter(slot => slot.day_of_week === dayOfWeek);
+    // Get all slots for this day of week - both recurring and non-recurring
+    const slotsForThisDay = scheduleSlots.filter(slot => 
+      slot.day_of_week === dayOfWeek && 
+      (!slot.is_recurring || (slot.is_recurring && slot.day_of_week === dayOfWeek))
+    );
     
+    // Sort by time and transform to required format
     if (slotsForThisDay.length > 0) {
-      scheduleByDate[formattedDate] = slotsForThisDay.map(slot => {
-        // Extract just the time part (HH:MM:SS) and convert to HH:MM format
-        const timeString = slot.start_time.split(':').slice(0, 2).join(':');
-        
-        return {
-          name: slot.show_name,
-          time: timeString
-        };
-      });
+      scheduleByDate[formattedDate] = slotsForThisDay
+        .sort((a, b) => a.start_time.localeCompare(b.start_time))
+        .map(slot => {
+          // Extract just the time part (HH:MM:SS) and convert to HH:MM format
+          const timeString = slot.start_time.split(':').slice(0, 2).join(':');
+          
+          return {
+            name: slot.show_name,
+            time: timeString
+          };
+        });
     } else {
       // Ensure we always have an entry for each date, even if empty
       scheduleByDate[formattedDate] = [];
-    }
-  }
-  
-  // Check for any weekly modifications in the next 21 days
-  for (let i = 0; i < 21; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-    const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Get the weekly modifications for this date
-    const { data: modifications, error: modError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('is_recurring', false)
-      .eq('is_deleted', false)
-      .gte('created_at', date.toISOString().split('T')[0]);
-    
-    if (modError) {
-      console.error('Error fetching schedule modifications:', modError);
-      continue; // Skip this date if there's an error
-    }
-    
-    // Apply modifications for this date if any
-    if (modifications && modifications.length > 0) {
-      const dayOfWeek = date.getDay();
-      const modsForThisDay = modifications.filter(mod => mod.day_of_week === dayOfWeek);
-      
-      if (modsForThisDay.length > 0) {
-        // For each modification, add or update the corresponding show
-        modsForThisDay.forEach(mod => {
-          const timeString = mod.start_time.split(':').slice(0, 2).join(':');
-          
-          // Check if we need to add or update
-          const existingIndex = scheduleByDate[formattedDate].findIndex(
-            show => show.time === timeString
-          );
-          
-          if (existingIndex >= 0) {
-            // Update existing show
-            scheduleByDate[formattedDate][existingIndex] = {
-              name: mod.show_name,
-              time: timeString
-            };
-          } else {
-            // Add new show
-            scheduleByDate[formattedDate].push({
-              name: mod.show_name,
-              time: timeString
-            });
-            
-            // Sort shows by time
-            scheduleByDate[formattedDate].sort((a, b) => 
-              a.time.localeCompare(b.time)
-            );
-          }
-        });
-      }
     }
   }
   
