@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Generate a daily schedule from 6am to 2am organized by date
 async function generateScheduleData() {
-  console.log('Starting schedule data generation...');
+  console.log('Starting schedule data generation with corrected approach...');
   
   // Create Supabase client
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -32,61 +32,21 @@ async function generateScheduleData() {
     
     console.log(`Processing date ${formattedDate}, day of week ${dayOfWeek}`);
     
-    // Get all recurring schedule slots for this day of week
-    const { data: recurringSlots, error: recurringError } = await supabase
-      .from('schedule_slots')
+    // Directly query all slots for this specific day, joining both recurring and date-specific slots
+    const { data: daySlots, error } = await supabase
+      .rpc('get_daily_schedule_for_date', { target_date: formattedDate, target_day_of_week: dayOfWeek })
       .select('*')
-      .eq('day_of_week', dayOfWeek)
-      .eq('is_recurring', true)
-      .eq('is_deleted', false)
       .order('start_time', { ascending: true });
     
-    if (recurringError) {
-      console.error('Error fetching recurring slots:', recurringError);
+    if (error) {
+      console.error(`Error fetching slots for date ${formattedDate}:`, error);
+      // Create empty structure if we couldn't get data
+      scheduleByDate[formattedDate] = createEmptyDaySchedule();
       continue;
     }
     
-    // Check if there are any date-specific overrides for this date
-    const { data: dateSpecificSlots, error: dateSpecificError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('is_recurring', false)
-      .eq('is_deleted', false)
-      .like('date', `%${formattedDate}%`)
-      .order('start_time', { ascending: true });
-    
-    if (dateSpecificError) {
-      console.error('Error fetching date-specific slots:', dateSpecificError);
-    }
-    
-    console.log(`Found ${recurringSlots?.length || 0} recurring slots and ${dateSpecificSlots?.length || 0} date-specific slots`);
-    
-    // Combine slots, with date-specific ones taking precedence over recurring ones
-    const allSlots = [...(recurringSlots || [])];
-    
-    // If there are date-specific slots, they should override recurring slots at the same time
-    if (dateSpecificSlots?.length) {
-      for (const dateSlot of dateSpecificSlots) {
-        // Format the time to match our standard format
-        const startTime = dateSlot.start_time.substring(0, 5); // HH:MM format
-        
-        // Check if there's a recurring slot at the same time
-        const existingSlotIndex = allSlots.findIndex(slot => 
-          slot.start_time.substring(0, 5) === startTime
-        );
-        
-        if (existingSlotIndex >= 0) {
-          // Replace the recurring slot with the date-specific one
-          allSlots[existingSlotIndex] = dateSlot;
-        } else {
-          // Add the date-specific slot
-          allSlots.push(dateSlot);
-        }
-      }
-      
-      // Re-sort the slots by start time
-      allSlots.sort((a, b) => a.start_time.localeCompare(b.start_time));
-    }
+    console.log(`Retrieved ${daySlots?.length || 0} slots for date ${formattedDate}`);
+    console.log('Sample slot data:', daySlots && daySlots.length > 0 ? JSON.stringify(daySlots[0]) : 'No slots');
     
     // Create structured hourly slots from 6:00 to 2:00
     const hourlySlots = [];
@@ -96,9 +56,19 @@ async function generateScheduleData() {
       '22:00', '23:00', '00:00', '01:00', '02:00'
     ];
     
+    // If we couldn't get day slots, create empty structure
+    if (!daySlots || daySlots.length === 0) {
+      scheduleByDate[formattedDate] = hours.map(hour => ({
+        name: '',
+        time: hour
+      }));
+      continue;
+    }
+    
+    // Map slots to their corresponding hours
     for (const hour of hours) {
       // Find a slot that starts at this hour
-      const matchingSlot = allSlots.find(slot => {
+      const matchingSlot = daySlots.find(slot => {
         const slotTime = slot.start_time.substring(0, 5); // Extract HH:MM part
         return slotTime === hour;
       });
@@ -122,6 +92,20 @@ async function generateScheduleData() {
   }
   
   return scheduleByDate;
+}
+
+// Create an empty daily schedule structure
+function createEmptyDaySchedule() {
+  const hours = [
+    '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
+    '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
+    '22:00', '23:00', '00:00', '01:00', '02:00'
+  ];
+  
+  return hours.map(hour => ({
+    name: '',
+    time: hour
+  }));
 }
 
 Deno.serve(async (req) => {
