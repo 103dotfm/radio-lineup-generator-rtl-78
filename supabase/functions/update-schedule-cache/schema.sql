@@ -13,7 +13,7 @@ BEGIN
   SELECT * FROM schedule_slots
   WHERE is_recurring = false 
     AND is_deleted = false
-    AND date::text LIKE '%' || target_date || '%';
+    AND date(created_at) = formatted_date;
 
   -- Then union with recurring slots for this day of the week 
   -- that don't have a date-specific override
@@ -26,7 +26,7 @@ BEGIN
       SELECT 1 FROM schedule_slots s2
       WHERE s2.is_recurring = false 
         AND s2.is_deleted = false
-        AND s2.date::text LIKE '%' || target_date || '%'
+        AND date(s2.created_at) = formatted_date
         AND s2.start_time = schedule_slots.start_time
     );
 END;

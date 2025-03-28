@@ -32,64 +32,59 @@ async function generateScheduleData() {
     
     console.log(`Processing date ${formattedDate}, day of week ${dayOfWeek}`);
     
-    // Directly query all slots for this specific day, joining both recurring and date-specific slots
-    const { data: daySlots, error } = await supabase
-      .rpc('get_daily_schedule_for_date', { target_date: formattedDate, target_day_of_week: dayOfWeek })
-      .select('*')
+    // Fetch the dashboard data directly - this should match what users see on their dashboard
+    const { data: slotsByTime, error } = await supabase
+      .from('schedule_slots')
+      .select('show_name, start_time, host_name')
+      .or(`and(is_recurring.eq.true,day_of_week.eq.${dayOfWeek}),and(is_recurring.eq.false,date(created_at).eq.${formattedDate})`)
+      .eq('is_deleted', false)
       .order('start_time', { ascending: true });
     
     if (error) {
       console.error(`Error fetching slots for date ${formattedDate}:`, error);
-      // Create empty structure if we couldn't get data
       scheduleByDate[formattedDate] = createEmptyDaySchedule();
       continue;
     }
     
-    console.log(`Retrieved ${daySlots?.length || 0} slots for date ${formattedDate}`);
-    console.log('Sample slot data:', daySlots && daySlots.length > 0 ? JSON.stringify(daySlots[0]) : 'No slots');
+    console.log(`Retrieved ${slotsByTime?.length || 0} slots for ${formattedDate}`);
     
     // Create structured hourly slots from 6:00 to 2:00
-    const hourlySlots = [];
     const hours = [
       '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
       '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
       '22:00', '23:00', '00:00', '01:00', '02:00'
     ];
     
-    // If we couldn't get day slots, create empty structure
-    if (!daySlots || daySlots.length === 0) {
-      scheduleByDate[formattedDate] = hours.map(hour => ({
-        name: '',
-        time: hour
-      }));
-      continue;
-    }
-    
     // Map slots to their corresponding hours
-    for (const hour of hours) {
+    const hourlySlots = hours.map(hour => {
       // Find a slot that starts at this hour
-      const matchingSlot = daySlots.find(slot => {
-        const slotTime = slot.start_time.substring(0, 5); // Extract HH:MM part
+      const matchingSlot = slotsByTime?.find(slot => {
+        // Extract HH:MM part and compare
+        const slotTime = slot.start_time ? slot.start_time.substring(0, 5) : null;
         return slotTime === hour;
       });
       
       if (matchingSlot) {
-        hourlySlots.push({
+        console.log(`Found slot for ${hour}: ${matchingSlot.show_name}`);
+        return {
           name: matchingSlot.show_name || '',
           time: hour,
           host: matchingSlot.host_name || undefined
-        });
+        };
       } else {
-        // If no show starts at this hour, add an empty slot
-        hourlySlots.push({
+        return {
           name: '',
           time: hour
-        });
+        };
       }
-    }
+    });
     
     scheduleByDate[formattedDate] = hourlySlots;
   }
+
+  console.log('Schedule generation complete. Sample data:', 
+    Object.keys(scheduleByDate).length > 0 ? 
+    JSON.stringify(scheduleByDate[Object.keys(scheduleByDate)[0]]) : 'No data');
   
   return scheduleByDate;
 }
@@ -151,7 +146,7 @@ Deno.serve(async (req) => {
       console.error('Error storing cache in database:', upsertError);
     }
     
-    // Create required directories if they don't exist
+    // Ensure the public directory exists
     try {
       await Deno.mkdir('./public', { recursive: true });
       console.log('Created public directory or confirmed it exists');
@@ -159,49 +154,33 @@ Deno.serve(async (req) => {
       console.error('Error creating public directory:', mkdirError);
     }
     
-    // Write to file using multiple methods for redundancy
-    let fileWriteSuccess = false;
-    const encoder = new TextEncoder();
-    
-    // Method 1: Using Deno.writeTextFile
+    // Write the file directly with high verbosity for debugging
     try {
-      console.log('Writing cache to file (method 1)...');
-      await Deno.writeTextFile('./public/schedule-cache.json', cacheData);
-      console.log('Successfully wrote cache file using method 1');
-      fileWriteSuccess = true;
-    } catch (fileError1) {
-      console.error('Error writing file (method 1):', fileError1);
+      console.log('Writing cache to file...');
+      console.log(`Cache data length: ${cacheData.length}`);
       
-      // Method 2: Using Deno.writeFile with encoder
-      try {
-        console.log('Trying alternative file writing method (method 2)...');
-        await Deno.writeFile('./public/schedule-cache.json', encoder.encode(cacheData));
-        console.log('Successfully wrote cache file using method 2');
-        fileWriteSuccess = true;
-      } catch (fileError2) {
-        console.error('Error writing file (method 2):', fileError2);
-        
-        // Method 3: Using file handle
-        try {
-          console.log('Trying final file writing method (method 3)...');
-          const filePath = './public/schedule-cache.json';
-          const file = await Deno.open(filePath, { write: true, create: true, truncate: true });
-          await file.write(encoder.encode(cacheData));
-          file.close();
-          console.log('Successfully wrote cache file using method 3');
-          fileWriteSuccess = true;
-        } catch (fileError3) {
-          console.error('All file writing methods failed:', fileError3);
-        }
+      // Log first day of cache data for debugging
+      const firstDay = Object.keys(scheduleCache)[0];
+      console.log(`First day in cache: ${firstDay}`);
+      if (firstDay) {
+        console.log(`Sample data for ${firstDay}:`, JSON.stringify(scheduleCache[firstDay].slice(0, 3)));
       }
-    }
-    
-    // Attempt to verify the file was written correctly
-    try {
-      const fileContent = await Deno.readTextFile('./public/schedule-cache.json');
-      console.log(`Verification: Read file with size ${fileContent.length} bytes`);
-    } catch (readError) {
-      console.error('Error verifying file was written:', readError);
+      
+      const encoder = new TextEncoder();
+      const data = encoder.encode(cacheData);
+      
+      await Deno.writeFile('./public/schedule-cache.json', data);
+      console.log('Successfully wrote cache file');
+      
+      // Verify the file was written
+      try {
+        const fileInfo = await Deno.stat('./public/schedule-cache.json');
+        console.log(`Verified file exists with size: ${fileInfo.size} bytes`);
+      } catch (statError) {
+        console.error('Error verifying file:', statError);
+      }
+    } catch (fileError) {
+      console.error('Error writing cache file:', fileError);
     }
     
     return new Response(
@@ -210,7 +189,6 @@ Deno.serve(async (req) => {
         message: "Schedule cache updated successfully",
         timestamp: new Date().toISOString(),
         days: Object.keys(scheduleCache).length,
-        fileWriteSuccess: fileWriteSuccess,
         format: "Structured by hour of day from 6:00 to 2:00"
       }),
       { 
