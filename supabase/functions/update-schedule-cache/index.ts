@@ -20,22 +20,6 @@ async function generateScheduleData() {
   
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  console.log('Fetching all schedule slots...');
-  
-  // Get all recurring schedule slots (the master schedule)
-  const { data: scheduleSlots, error } = await supabase
-    .from('schedule_slots')
-    .select('*')
-    .eq('is_recurring', true)
-    .eq('is_deleted', false);
-  
-  if (error) {
-    console.error('Error fetching schedule slots:', error);
-    throw error;
-  }
-  
-  console.log(`Retrieved ${scheduleSlots?.length || 0} recurring schedule slots`);
-  
   // Generate dates for the next 14 days, starting from today
   const today = new Date();
   const scheduleByDate = {};
@@ -46,14 +30,63 @@ async function generateScheduleData() {
     const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
     const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
     
-    console.log(`Processing day ${formattedDate}, day of week ${dayOfWeek}`);
+    console.log(`Processing date ${formattedDate}, day of week ${dayOfWeek}`);
     
-    // Filter slots for this day of week and sort by start time
-    const slotsForDay = (scheduleSlots || [])
-      .filter(slot => slot.day_of_week === dayOfWeek)
-      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+    // Get all recurring schedule slots for this day of week
+    const { data: recurringSlots, error: recurringError } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_recurring', true)
+      .eq('is_deleted', false)
+      .order('start_time', { ascending: true });
     
-    console.log(`Found ${slotsForDay.length} slots for day ${formattedDate}`);
+    if (recurringError) {
+      console.error('Error fetching recurring slots:', recurringError);
+      continue;
+    }
+    
+    // Check if there are any date-specific overrides for this date
+    const { data: dateSpecificSlots, error: dateSpecificError } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('is_recurring', false)
+      .eq('is_deleted', false)
+      .like('date', `%${formattedDate}%`)
+      .order('start_time', { ascending: true });
+    
+    if (dateSpecificError) {
+      console.error('Error fetching date-specific slots:', dateSpecificError);
+    }
+    
+    console.log(`Found ${recurringSlots?.length || 0} recurring slots and ${dateSpecificSlots?.length || 0} date-specific slots`);
+    
+    // Combine slots, with date-specific ones taking precedence over recurring ones
+    const allSlots = [...(recurringSlots || [])];
+    
+    // If there are date-specific slots, they should override recurring slots at the same time
+    if (dateSpecificSlots?.length) {
+      for (const dateSlot of dateSpecificSlots) {
+        // Format the time to match our standard format
+        const startTime = dateSlot.start_time.substring(0, 5); // HH:MM format
+        
+        // Check if there's a recurring slot at the same time
+        const existingSlotIndex = allSlots.findIndex(slot => 
+          slot.start_time.substring(0, 5) === startTime
+        );
+        
+        if (existingSlotIndex >= 0) {
+          // Replace the recurring slot with the date-specific one
+          allSlots[existingSlotIndex] = dateSlot;
+        } else {
+          // Add the date-specific slot
+          allSlots.push(dateSlot);
+        }
+      }
+      
+      // Re-sort the slots by start time
+      allSlots.sort((a, b) => a.start_time.localeCompare(b.start_time));
+    }
     
     // Create structured hourly slots from 6:00 to 2:00
     const hourlySlots = [];
@@ -65,7 +98,7 @@ async function generateScheduleData() {
     
     for (const hour of hours) {
       // Find a slot that starts at this hour
-      const matchingSlot = slotsForDay.find(slot => {
+      const matchingSlot = allSlots.find(slot => {
         const slotTime = slot.start_time.substring(0, 5); // Extract HH:MM part
         return slotTime === hour;
       });
