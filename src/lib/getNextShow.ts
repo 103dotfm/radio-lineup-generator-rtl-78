@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 
@@ -109,11 +110,13 @@ export const getNextShow = async (
     const showsForDate = scheduleCache[formattedDate];
     console.log('Shows for date:', showsForDate.map(s => `${s.name} at ${s.time}`).join(', '));
     
-    // Find the current show in the list
-    const currentShowIndex = showsForDate.findIndex(show => show.time === currentShowTime);
+    // Find the current show in the list - match by time
+    // First standardize the time format (strip seconds if present)
+    const standardizedCurrentTime = currentShowTime.substring(0, 5); // Take only HH:MM part
+    const currentShowIndex = showsForDate.findIndex(show => show.time.substring(0, 5) === standardizedCurrentTime);
     
     if (currentShowIndex === -1) {
-      console.log('Current show not found in schedule for date:', formattedDate, 'time:', currentShowTime);
+      console.log('Current show not found in schedule for date:', formattedDate, 'time:', standardizedCurrentTime);
       console.log('Available shows:', showsForDate.map(s => `${s.name} at ${s.time}`).join(', '));
       return null;
     }
@@ -121,18 +124,23 @@ export const getNextShow = async (
     // Get the next show (if any)
     if (currentShowIndex < showsForDate.length - 1) {
       const nextShow = showsForDate[currentShowIndex + 1];
-      console.log('Found next show in schedule:', nextShow);
       
-      // Use host directly from the cache if available
-      if (nextShow.host) {
-        return {
-          name: nextShow.name,
-          host: nextShow.host
-        };
+      // Skip if next show is empty
+      if (!nextShow.name) {
+        console.log('Next show slot is empty, looking further ahead');
+        // Look for the next non-empty show
+        for (let i = currentShowIndex + 2; i < showsForDate.length; i++) {
+          if (showsForDate[i].name) {
+            console.log('Found next non-empty show:', showsForDate[i]);
+            return extractShowInfo(showsForDate[i].name, showsForDate[i].host);
+          }
+        }
+        console.log('No more shows with content found today');
+        return null;
       }
       
-      // Otherwise, extract host from show name if applicable
-      return extractShowInfo(nextShow.name);
+      console.log('Found next show in schedule:', nextShow);
+      return extractShowInfo(nextShow.name, nextShow.host);
     } else {
       console.log('No next show found, this is the last show of the day');
       return null;
@@ -144,7 +152,15 @@ export const getNextShow = async (
 };
 
 // Helper function to extract name and host from a slot
-function extractShowInfo(showName: string): NextShowInfo {
+function extractShowInfo(showName: string, host?: string): NextShowInfo {
+  // If host is provided directly, use it
+  if (host) {
+    return {
+      name: showName.trim(),
+      host: host.trim()
+    };
+  }
+  
   // Try to extract host from show name if applicable
   const hostMatch = showName.match(/(.*?)\s+עם\s+(.*)/);
   if (hostMatch) {
@@ -155,6 +171,6 @@ function extractShowInfo(showName: string): NextShowInfo {
   }
   
   return {
-    name: showName
+    name: showName.trim()
   };
 }

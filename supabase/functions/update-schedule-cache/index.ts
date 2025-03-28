@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Direct implementation with focus on simplicity and reliability
+// Generate a daily schedule from 6am to 2am organized by date
 async function generateScheduleData() {
   console.log('Starting schedule data generation...');
   
@@ -81,7 +81,7 @@ async function generateScheduleData() {
   }
   
   console.log(`Retrieved ${deletionMarkers?.length || 0} deletion markers`);
-  
+
   // Generate dates for the next 14 days, starting from today
   const scheduleByDate = {};
   
@@ -93,12 +93,15 @@ async function generateScheduleData() {
     
     console.log(`Processing day ${formattedDate}, day of week ${dayOfWeek}`);
     
-    // Start with recurring slots for this day of week
-    let slotsForThisDay = (scheduleSlots || [])
+    // Create time slots from 6:00 to 2:00 (next day)
+    const timeSlots = [];
+    
+    // First, collect all relevant slots for this day
+    let daySlots = (scheduleSlots || [])
       .filter(slot => slot.day_of_week === dayOfWeek)
       .map(slot => ({ ...slot }));
     
-    console.log(`Found ${slotsForThisDay.length} recurring slots for day ${formattedDate}`);
+    console.log(`Found ${daySlots.length} recurring slots for day ${formattedDate}`);
     
     // Apply non-recurring overrides and additions
     if (nonRecurringSlots && nonRecurringSlots.length > 0) {
@@ -138,40 +141,59 @@ async function generateScheduleData() {
       // Apply deletions (remove slots that have deletion markers)
       if (deletionsForThisDay.length > 0) {
         const deletionTimes = deletionsForThisDay.map(d => d.start_time);
-        slotsForThisDay = slotsForThisDay.filter(slot => !deletionTimes.includes(slot.start_time));
+        daySlots = daySlots.filter(slot => !deletionTimes.includes(slot.start_time));
       }
       
       // Apply overrides and additions
       for (const nonRecurringSlot of nonRecurringForThisDay) {
         // Check if this is an override to an existing slot
-        const existingIndex = slotsForThisDay.findIndex(s => s.start_time === nonRecurringSlot.start_time);
+        const existingIndex = daySlots.findIndex(s => s.start_time === nonRecurringSlot.start_time);
         
         if (existingIndex >= 0) {
           // Replace the existing slot with the non-recurring version
-          slotsForThisDay[existingIndex] = nonRecurringSlot;
+          daySlots[existingIndex] = nonRecurringSlot;
         } else {
           // Add as a new slot
-          slotsForThisDay.push(nonRecurringSlot);
+          daySlots.push(nonRecurringSlot);
         }
       }
       
       // Sort by start time again after all modifications
-      slotsForThisDay.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      daySlots.sort((a, b) => a.start_time.localeCompare(b.start_time));
     }
     
-    // Format and add to result
-    scheduleByDate[formattedDate] = slotsForThisDay.map(slot => {
-      // Extract just the time part (HH:MM:SS) and convert to HH:MM format
-      const timeString = slot.start_time.split(':').slice(0, 2).join(':');
-      
-      return {
-        name: slot.show_name,
-        time: timeString,
-        host: slot.host_name || undefined // Include host if available
-      };
-    });
+    // Create a structured schedule with all hours from 6:00 to 2:00
+    const hours = [
+      '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
+      '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
+      '22:00', '23:00', '00:00', '01:00', '02:00'
+    ];
     
-    console.log(`Final schedule for ${formattedDate} has ${scheduleByDate[formattedDate].length} shows`);
+    for (const hour of hours) {
+      // Find a show that starts at this hour
+      const slot = daySlots.find(slot => {
+        const slotHour = slot.start_time.substring(0, 5); // Extract HH:MM part
+        return slotHour === hour;
+      });
+      
+      if (slot) {
+        timeSlots.push({
+          name: slot.show_name,
+          time: hour,
+          host: slot.host_name || undefined
+        });
+      } else {
+        // If no show starts at this hour, add an empty slot
+        timeSlots.push({
+          name: '',
+          time: hour
+        });
+      }
+    }
+    
+    scheduleByDate[formattedDate] = timeSlots;
+    
+    console.log(`Processed ${timeSlots.length} time slots for ${formattedDate}`);
   }
   
   return scheduleByDate;
@@ -298,7 +320,8 @@ Deno.serve(async (req) => {
         days: Object.keys(scheduleCache).length,
         fileWriteSuccess: fileWriteSuccess,
         firstDay: Object.keys(scheduleCache)[0],
-        entriesInFirstDay: scheduleCache[Object.keys(scheduleCache)[0]]?.length || 0
+        entriesInFirstDay: scheduleCache[Object.keys(scheduleCache)[0]]?.length || 0,
+        format: "Structured by hour of day from 6:00 to 2:00"
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
