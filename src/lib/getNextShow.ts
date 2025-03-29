@@ -26,7 +26,7 @@ export const getNextShow = async (
     console.log('Finding next show for EXACT date:', formattedDate, 'after time:', currentShowTime);
     
     // Get shows directly from the shows table for this exact date
-    // This is more reliable than trying to match schedule_slots
+    // This query finds any show that happens after the current time, regardless of whether it has a lineup
     const { data: shows, error: showsError } = await supabase
       .from('shows')
       .select(`
@@ -47,8 +47,41 @@ export const getNextShow = async (
     }
     
     if (!shows || shows.length === 0) {
-      console.log('No next show found for date:', formattedDate);
-      return null;
+      console.log('No next show found in shows table for date:', formattedDate);
+      
+      // If no show is found in the shows table, check the schedule_slots table for recurring shows on this day
+      // Get the day of week (0-6, where 0 is Sunday)
+      const dayOfWeek = currentShowDate.getDay();
+      
+      console.log('Checking schedule_slots for day of week:', dayOfWeek);
+      
+      // Convert current time to a comparable format (HH:MM)
+      const timeForComparison = currentShowTime.substring(0, 5);
+      
+      const { data: slots, error: slotsError } = await supabase
+        .from('schedule_slots')
+        .select('*')
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_recurring', true)
+        .not('is_deleted', 'eq', true)
+        .gt('start_time', timeForComparison)
+        .order('start_time', { ascending: true })
+        .limit(1);
+      
+      if (slotsError) {
+        console.error('Error fetching from schedule_slots:', slotsError);
+        return null;
+      }
+      
+      if (!slots || slots.length === 0) {
+        console.log('No recurring slots found for day:', dayOfWeek);
+        return null;
+      }
+      
+      const nextSlot = slots[0];
+      console.log('Found next slot from schedule:', nextSlot.show_name);
+      
+      return extractShowInfo(nextSlot);
     }
     
     const nextShow = shows[0];
