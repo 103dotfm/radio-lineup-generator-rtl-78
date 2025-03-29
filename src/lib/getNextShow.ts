@@ -24,32 +24,33 @@ export const getNextShow = async (
     const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
     console.log('Finding next show for date:', formattedDate, 'after time:', currentShowTime);
     
-    // Only check the shows table for any shows scheduled on this exact date
-    // that come after the current show's time
-    const { data: nextShows, error: showsError } = await supabase
+    // Query the shows table for all shows on this specific date
+    const { data: showsOnDate, error: showsError } = await supabase
       .from('shows')
-      .select(`
-        id,
-        name,
-        time,
-        date
-      `)
+      .select('id, name, time, date')
       .eq('date', formattedDate)
-      .gt('time', currentShowTime)
       .order('time', { ascending: true });
     
     if (showsError) {
-      console.error('Error fetching next show from shows table:', showsError);
+      console.error('Error fetching shows for date:', showsError);
       return null;
     }
     
-    if (!nextShows || nextShows.length === 0) {
-      console.log('No next show found for date:', formattedDate);
+    if (!showsOnDate || showsOnDate.length === 0) {
+      console.log('No shows found for date:', formattedDate);
+      return null;
+    }
+
+    console.log('All shows on date:', showsOnDate);
+    
+    // Find the first show that comes after the current show time
+    const nextShow = showsOnDate.find(show => show.time > currentShowTime);
+    
+    if (!nextShow) {
+      console.log('No next show found after time:', currentShowTime);
       return null;
     }
     
-    // Get the immediate next show (the first one after sorting by time)
-    const nextShow = nextShows[0];
     console.log('Found next show:', nextShow.name, 'at', nextShow.time);
     
     // Extract name and host if applicable
