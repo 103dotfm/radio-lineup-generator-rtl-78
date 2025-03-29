@@ -150,13 +150,6 @@ body {
   pointer-events: none;
 }
 
-/* Next show box - fixed width for desktop views */
-@media (min-width: 1350px) {
-.width100Percent {
-  width: 1147px !important;
-}
-}
-
 /* Mobile Schedule Styles - Enhanced */
 @media (max-width: 768px) {
   .schedule-page .topLogo {
