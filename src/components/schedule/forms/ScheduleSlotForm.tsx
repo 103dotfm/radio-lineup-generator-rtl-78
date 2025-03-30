@@ -14,7 +14,6 @@ import {
 import { ColorSelector } from "../ui/ColorSelector"
 import { DaySelector } from "../ui/DaySelector"
 import { DialogFooter } from "@/components/ui/dialog"
-import { format } from "date-fns"
 
 interface ScheduleSlotFormProps {
   onSubmit: (slotData: any) => void;
@@ -34,7 +33,7 @@ export function ScheduleSlotForm({
   const [startTime, setStartTime] = useState(editingSlot?.start_time?.slice(0, 5) || '');
   const [endTime, setEndTime] = useState(editingSlot?.end_time?.slice(0, 5) || '');
   const [selectedDays, setSelectedDays] = useState<number[]>(
-    editingSlot ? [new Date(editingSlot.date).getDay()] : []
+    editingSlot ? [editingSlot.day_of_week] : []
   );
   const [isPrerecorded, setIsPrerecorded] = useState(editingSlot?.is_prerecorded || false);
   const [isCollection, setIsCollection] = useState(editingSlot?.is_collection || false);
@@ -47,14 +46,7 @@ export function ScheduleSlotForm({
       setHostName(editingSlot.host_name || '');
       setStartTime(editingSlot.start_time?.slice(0, 5) || '');
       setEndTime(editingSlot.end_time?.slice(0, 5) || '');
-      
-      if (editingSlot.date) {
-        const dayOfWeek = new Date(editingSlot.date).getDay();
-        setSelectedDays([dayOfWeek]);
-      } else {
-        setSelectedDays([]);
-      }
-      
+      setSelectedDays(editingSlot.day_of_week !== undefined ? [editingSlot.day_of_week] : []);
       setIsPrerecorded(editingSlot.is_prerecorded || false);
       setIsCollection(editingSlot.is_collection || false);
       
@@ -65,7 +57,7 @@ export function ScheduleSlotForm({
       console.log('Editing slot with data:', {
         id: editingSlot.id,
         show_name: editingSlot.show_name,
-        date: editingSlot.date,
+        day_of_week: editingSlot.day_of_week,
         start_time: editingSlot.start_time,
         color: editingSlot.color,
         has_lineup: editingSlot.has_lineup,
@@ -98,7 +90,7 @@ export function ScheduleSlotForm({
         host_name: hostName,
         start_time: `${startTime}:00`,
         end_time: `${endTime}:00`,
-        date: editingSlot.date,
+        day_of_week: editingSlot.day_of_week,
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
         color: isColorOverrideEnabled ? slotColor : null,
@@ -109,18 +101,12 @@ export function ScheduleSlotForm({
       onSubmit(updateData);
     } else {
       selectedDays.forEach(dayOfWeek => {
-        // Calculate the date for the selected day of week
-        const date = new Date();
-        const diff = (dayOfWeek - date.getDay() + 7) % 7;
-        date.setDate(date.getDate() + diff);
-        const formattedDate = format(date, 'yyyy-MM-dd');
-        
         const slotData = {
           show_name: showName,
           host_name: hostName,
           start_time: `${startTime}:00`,
           end_time: `${endTime}:00`,
-          date: formattedDate,
+          day_of_week: dayOfWeek,
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
@@ -221,13 +207,11 @@ export function ScheduleSlotForm({
           />
         )}
         
-        {!editingSlot && (
-          <DaySelector 
-            selectedDays={selectedDays} 
-            toggleDay={toggleDay} 
-            disabled={editingSlot !== undefined}
-          />
-        )}
+        <DaySelector 
+          selectedDays={selectedDays} 
+          toggleDay={toggleDay} 
+          disabled={editingSlot !== undefined}
+        />
       </div>
       
       <DialogFooter>
