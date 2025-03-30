@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -80,15 +79,13 @@ const ExportDataTab = () => {
         if (filteredShows && Array.isArray(filteredShows)) {
           // Safely type filter and extract IDs
           filteredShowIds = filteredShows
-            .filter(show => show !== null && typeof show === 'object' && 'id' in show)
-            .map(show => {
-              // Type assertion with explicit check
-              if (show !== null && typeof show === 'object' && 'id' in show && typeof show.id === 'string') {
-                return show.id;
-              }
-              return '';
-            })
-            .filter(id => id !== ''); // Remove any empty IDs
+            .filter((show): show is {id: string} => 
+              show !== null && 
+              typeof show === 'object' && 
+              'id' in show && 
+              typeof show.id === 'string'
+            )
+            .map(show => show.id);
           
           // Get show items for these shows to later filter interviewees
           if (filteredShowIds.length > 0) {
@@ -103,15 +100,13 @@ const ExportDataTab = () => {
             // Safely type filter and extract IDs
             if (filteredItems && Array.isArray(filteredItems)) {
               filteredShowItemIds = filteredItems
-                .filter(item => item !== null && typeof item === 'object' && 'id' in item)
-                .map(item => {
-                  // Type assertion with explicit check
-                  if (item !== null && typeof item === 'object' && 'id' in item && typeof item.id === 'string') {
-                    return item.id;
-                  }
-                  return '';
-                })
-                .filter(id => id !== ''); // Remove any empty IDs
+                .filter((item): item is {id: string} => 
+                  item !== null && 
+                  typeof item === 'object' && 
+                  'id' in item && 
+                  typeof item.id === 'string'
+                )
+                .map(item => item.id);
             }
           }
         }
@@ -197,7 +192,7 @@ const ExportDataTab = () => {
     } catch (error: any) {
       console.error('Export error:', error);
       toast({
-        title: "שגיאה בייצוא נתונים",
+        title: "שגי��ה בייצוא נתונים",
         description: error.message,
         variant: "destructive",
       });
