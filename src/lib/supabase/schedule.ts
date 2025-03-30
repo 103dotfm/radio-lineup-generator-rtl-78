@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO, isToday } from 'date-fns';
@@ -490,30 +489,31 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
           throw slotError || new Error('Slot not found');
         }
         
-        // Check if there's a show with this slot_id for this date
-        const { data: existingShowForSlot, error: showCheckError } = await supabase
+        // Check if there are shows with this slot_id for this date
+        const { data: existingShowsForSlot, error: showCheckError } = await supabase
           .from('shows')
           .select('*')
           .eq('slot_id', id)
-          .eq('date', formattedDate)
-          .maybeSingle();
+          .eq('date', formattedDate);
           
         if (showCheckError) {
-          console.error('Error checking for existing show with slot_id:', showCheckError);
+          console.error('Error checking for existing shows with slot_id:', showCheckError);
           throw showCheckError;
         }
         
-        if (existingShowForSlot) {
-          // If we have a show with this slot_id for this date, just delete that show
+        if (existingShowsForSlot && existingShowsForSlot.length > 0) {
+          // If we have shows with this slot_id for this date, delete those shows
           // This preserves any associated lineup while removing the slot from the schedule
-          const { error: deleteError } = await supabase
-            .from('shows')
-            .delete()
-            .eq('id', existingShowForSlot.id);
-            
-          if (deleteError) {
-            console.error('Error deleting show for slot:', deleteError);
-            throw deleteError;
+          for (const show of existingShowsForSlot) {
+            const { error: deleteError } = await supabase
+              .from('shows')
+              .delete()
+              .eq('id', show.id);
+              
+            if (deleteError) {
+              console.error(`Error deleting show ${show.id} for slot:`, deleteError);
+              throw deleteError;
+            }
           }
         } else {
           // Create a "deletion" marker in the shows table
