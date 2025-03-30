@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -79,8 +80,15 @@ const ExportDataTab = () => {
         if (filteredShows && Array.isArray(filteredShows)) {
           // Safely type filter and extract IDs
           filteredShowIds = filteredShows
-            .filter(show => typeof show === 'object' && show !== null && 'id' in show)
-            .map(show => (show as RecordWithId).id);
+            .filter(show => show !== null && typeof show === 'object' && 'id' in show)
+            .map(show => {
+              // Type assertion with explicit check
+              if (show !== null && typeof show === 'object' && 'id' in show && typeof show.id === 'string') {
+                return show.id;
+              }
+              return '';
+            })
+            .filter(id => id !== ''); // Remove any empty IDs
           
           // Get show items for these shows to later filter interviewees
           if (filteredShowIds.length > 0) {
@@ -95,8 +103,15 @@ const ExportDataTab = () => {
             // Safely type filter and extract IDs
             if (filteredItems && Array.isArray(filteredItems)) {
               filteredShowItemIds = filteredItems
-                .filter(item => typeof item === 'object' && item !== null && 'id' in item)
-                .map(item => (item as RecordWithId).id);
+                .filter(item => item !== null && typeof item === 'object' && 'id' in item)
+                .map(item => {
+                  // Type assertion with explicit check
+                  if (item !== null && typeof item === 'object' && 'id' in item && typeof item.id === 'string') {
+                    return item.id;
+                  }
+                  return '';
+                })
+                .filter(id => id !== ''); // Remove any empty IDs
             }
           }
         }
