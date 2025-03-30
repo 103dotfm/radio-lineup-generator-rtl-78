@@ -20,14 +20,6 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         isMasterSchedule
       });
       return getScheduleSlots(selectedDate, isMasterSchedule);
-    },
-    meta: {
-      onSuccess: (data: ScheduleSlot[]) => {
-        console.log('Successfully fetched slots:', data);
-      },
-      onError: (error: Error) => {
-        console.error('Error fetching slots:', error);
-      }
     }
   });
 
