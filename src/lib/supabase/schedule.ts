@@ -312,7 +312,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     };
   } else {
     // Create a show for a specific date directly in the shows table
-    // We won't create a lineup automatically
+    // Don't create a lineup, just the show/slot
     const showData = {
       name: slot.show_name,
       date: slot.date,
@@ -340,14 +340,14 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
       id: show.id,
       show_name: slot.show_name,
       host_name: slot.host_name,
-      start_time: slot.start_time,
-      end_time: slot.end_time || incrementTimeByHour(slot.start_time),
+      start_time: slot.start_time, 
+      end_time: slot.end_time, // Use the provided end time
       date: slot.date,
       is_prerecorded: slot.is_prerecorded || false,
       is_collection: slot.is_collection || false,
       color: slot.color || null,
       shows: [show],
-      has_lineup: false // Don't automatically create a lineup
+      has_lineup: false // No automatically created lineup
     };
   }
 };
@@ -473,7 +473,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_collection: updates.is_collection || false,
         color: updates.color || null,
         shows: [newShow],
-        has_lineup: false // Don't automatically create a lineup
+        has_lineup: false // No automatically created lineup
       };
     }
   }
