@@ -48,16 +48,16 @@ export default function ScheduleGridCell({
       }
     }
 
-    // Second priority: modified from master schedule (yellow)
-    if (slot.is_modified) {
-      console.log('Using yellow for modified slot');
-      return 'bg-[#FEF7CD]';
-    }
-
-    // Third priority: prerecorded or collection (blue)
+    // Second priority: prerecorded or collection (blue)
     if (slot.is_prerecorded || slot.is_collection) {
       console.log('Using blue for prerecorded/collection');
       return 'bg-[#D3E4FD]';
+    }
+
+    // Third priority: modified from master schedule (yellow)
+    if (slot.is_modified) {
+      console.log('Using yellow for modified slot');
+      return 'bg-[#FEF7CD]';
     }
 
     // Default: regular programming (green)

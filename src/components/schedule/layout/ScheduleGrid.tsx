@@ -1,8 +1,7 @@
-
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
-import { FileCheck, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { FileCheck, Pencil, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { getShowDisplay } from '@/utils/showDisplay';
 import ScheduleGridCell from './ScheduleGridCell';
@@ -21,7 +20,6 @@ interface ScheduleGridProps {
   hideHeaderDates: boolean;
   dayNotes: DayNote[];
   onDayNoteChange: () => void;
-  isLoading?: boolean;
 }
 
 export default function ScheduleGrid({
@@ -35,8 +33,7 @@ export default function ScheduleGrid({
   isAuthenticated,
   hideHeaderDates,
   dayNotes,
-  onDayNoteChange,
-  isLoading = false
+  onDayNoteChange
 }: ScheduleGridProps) {
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const [editingNoteDate, setEditingNoteDate] = useState<Date | null>(null);
@@ -115,18 +112,9 @@ export default function ScheduleGrid({
     }
   };
 
-  const getDateFromSlot = (slot: ScheduleSlot): Date => {
-    return new Date(slot.date);
-  };
-
-  const isSlotForDate = (slot: ScheduleSlot, date: Date): boolean => {
-    const slotDate = getDateFromSlot(slot);
-    return format(slotDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
-  };
-
-  const renderTimeCell = (date: Date, time: string, isCurrentMonth: boolean = true) => {
+  const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
     const relevantSlots = scheduleSlots.filter(
-      slot => isSlotForDate(slot, date) && isSlotStartTime(slot, time)
+      slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time)
     );
     
     return (
@@ -189,20 +177,7 @@ export default function ScheduleGrid({
     );
   };
 
-  const renderLoadingState = () => (
-    <div className="flex items-center justify-center p-12 min-h-[300px]">
-      <div className="text-center">
-        <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" />
-        <p className="text-gray-500">טוען את לוח השידורים...</p>
-      </div>
-    </div>
-  );
-
   const renderGrid = () => {
-    if (isLoading) {
-      return renderLoadingState();
-    }
-
     switch (viewMode) {
       case 'daily':
         return (
@@ -216,7 +191,7 @@ export default function ScheduleGrid({
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {renderTimeCell(selectedDate, time)}
+                {renderTimeCell(selectedDate.getDay(), time)}
               </React.Fragment>
             ))}
           </div>
@@ -234,14 +209,11 @@ export default function ScheduleGrid({
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {Array.from({length: 7}).map((_, dayIndex) => {
-                  const currentDate = addDays(startOfWeek(selectedDate, { weekStartsOn: 0 }), dayIndex);
-                  return (
-                    <React.Fragment key={`${time}-${dayIndex}`}>
-                      {renderTimeCell(currentDate, time)}
-                    </React.Fragment>
-                  );
-                })}
+                {Array.from({length: 7}).map((_, dayIndex) => (
+                  <React.Fragment key={`${time}-${dayIndex}`}>
+                    {renderTimeCell(dayIndex, time)}
+                  </React.Fragment>
+                ))}
               </React.Fragment>
             ))}
           </div>
@@ -266,8 +238,7 @@ export default function ScheduleGrid({
                 {weekDays.map((_, dayIndex) => {
                   const relevantDates = dates.filter(date => date.getDay() === dayIndex);
                   const isCurrentMonth = relevantDates.length > 0;
-                  const currentDate = relevantDates.length > 0 ? relevantDates[0] : new Date();
-                  return renderTimeCell(currentDate, time, isCurrentMonth);
+                  return renderTimeCell(dayIndex, time, isCurrentMonth);
                 })}
               </React.Fragment>
             ))}

@@ -3,21 +3,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleSlot } from '@/types/schedule';
-import { format } from 'date-fns';
 
 export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // Create a stable query key
-  const queryKey = ['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule];
 
   const {
     data: scheduleSlots = [],
-    isLoading,
-    refetch
+    isLoading
   } = useQuery({
-    queryKey,
+    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
     queryFn: () => {
       console.log('Fetching slots with params:', {
         selectedDate,
@@ -25,20 +20,22 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       });
       return getScheduleSlots(selectedDate, isMasterSchedule);
     },
-    staleTime: 60000 // Consider data fresh for 1 minute
+    meta: {
+      onSuccess: (data: ScheduleSlot[]) => {
+        console.log('Successfully fetched slots:', data);
+      },
+      onError: (error: Error) => {
+        console.error('Error fetching slots:', error);
+      }
+    }
   });
 
   const createSlotMutation = useMutation({
-    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
-      // Ensure we have a date string
-      if (!slotData.date && selectedDate) {
-        slotData.date = format(selectedDate, 'yyyy-MM-dd');
-      }
-      return createScheduleSlot(slotData, isMasterSchedule, selectedDate);
-    },
+    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
+      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey
+        queryKey: ['scheduleSlots']
       });
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
@@ -69,7 +66,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey
+        queryKey: ['scheduleSlots']
       });
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
@@ -86,33 +83,10 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
 
   const deleteSlotMutation = useMutation({
     mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onSuccess: (_, deletedId) => {
-      // Optimistic UI update - remove the deleted slot from the cache immediately
-      queryClient.setQueryData(queryKey, (oldData: ScheduleSlot[] | undefined) => {
-        if (!oldData) return [];
-        return oldData.filter(slot => {
-          // For master schedule slots, filter by ID directly
-          if (isMasterSchedule) {
-            return slot.id !== deletedId;
-          }
-          
-          // For regular slots, we need to check both the slot ID and any shows with the slot_id
-          if (slot.id === deletedId) return false;
-          
-          // For slots with shows, check if any show has this ID
-          if (slot.shows && slot.shows.some(show => show.id === deletedId)) {
-            return false;
-          }
-          
-          return true;
-        });
-      });
-      
-      // Also invalidate the query to fetch fresh data
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey
+        queryKey: ['scheduleSlots']
       });
-      
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
       });
@@ -126,21 +100,11 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     }
   });
 
-  // Function to explicitly refetch the schedule slots
-  const refetchSlots = async () => {
-    try {
-      await refetch();
-    } catch (error) {
-      console.error('Error refetching slots:', error);
-    }
-  };
-
   return {
     scheduleSlots,
     isLoading,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
-    deleteSlot: deleteSlotMutation.mutateAsync,
-    refetchSlots
+    deleteSlot: deleteSlotMutation.mutateAsync
   };
 };
