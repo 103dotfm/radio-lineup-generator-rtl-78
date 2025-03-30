@@ -8,8 +8,9 @@ import ScheduleGrid from './layout/ScheduleGrid';
 import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
-import { format, startOfWeek, addDays, parse } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -36,6 +37,7 @@ export default function ScheduleView({
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
   const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -79,7 +81,6 @@ export default function ScheduleView({
     if (e.ctrlKey) {
       try {
         await deleteSlot(slot.id);
-        // Immediately filter out the deleted slot from UI
         toast({
           title: "משבצת נמחקה",
           description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
@@ -100,7 +101,10 @@ export default function ScheduleView({
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       try {
         await deleteSlot(slot.id);
-        // Immediately filter out the deleted slot from UI
+        // Invalidate queries to force a refresh
+        const queryKey = ['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule];
+        queryClient.invalidateQueries({ queryKey });
+        
         toast({
           title: "משבצת נמחקה",
           description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
@@ -175,6 +179,7 @@ export default function ScheduleView({
       show_name: slot.show_name,
       host_name: slot.host_name,
       start_time: slot.start_time,
+      end_time: slot.end_time,
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection
     });
@@ -188,15 +193,15 @@ export default function ScheduleView({
       const slotDate = new Date(slot.date);
       
       const generatedShowName = slot.show_name === slot.host_name 
-        ? slot.host_name 
-        : `${slot.show_name} עם ${slot.host_name}`;
+        ? slot.show_name 
+        : `${slot.show_name} עם ${slot.host_name || ''}`.trim();
       
       console.log('Navigating to new lineup with generated name:', generatedShowName);
       navigate('/new', {
         state: {
           generatedShowName,
           showName: slot.show_name,
-          hostName: slot.host_name,
+          hostName: slot.host_name || '',
           time: slot.start_time,
           date: slotDate,
           isPrerecorded: slot.is_prerecorded,

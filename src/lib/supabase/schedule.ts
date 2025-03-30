@@ -89,6 +89,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     
   if (deletionError) {
     console.error('Error fetching deletion markers:', deletionError);
+    throw deletionError;
   }
   
   // Create a lookup map for deletion markers
@@ -96,8 +97,10 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   if (deletionMarkers && deletionMarkers.length > 0) {
     console.log('Found deletion markers:', deletionMarkers);
     deletionMarkers.forEach(marker => {
-      const key = `${marker.slot_id}-${marker.date}`;
-      deletionMap.set(key, true);
+      if (marker.slot_id) {
+        const key = `${marker.slot_id}-${marker.date}`;
+        deletionMap.set(key, true);
+      }
     });
   }
   
@@ -234,8 +237,14 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     return a.start_time.localeCompare(b.start_time);
   });
   
-  console.log('Final transformed slots:', transformedSlots);
-  return transformedSlots;
+  // Last step: filter out slots that have deletion markers
+  const filteredSlots = transformedSlots.filter(slot => {
+    const deletionKey = `${slot.id}-${slot.date}`;
+    return !deletionMap.has(deletionKey);
+  });
+  
+  console.log('Final transformed slots count:', filteredSlots.length);
+  return filteredSlots;
 };
 
 // Helper function to increment time by 1 hour (e.g. "14:00" -> "15:00")
@@ -243,6 +252,19 @@ function incrementTimeByHour(timeStr: string): string {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const newHours = (hours + 1) % 24;
   return `${newHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+// Calculate duration between two time strings in minutes
+function calculateDuration(startTime: string, endTime: string): number {
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  let [endHours, endMinutes] = endTime.split(':').map(Number);
+  
+  // Handle crossing midnight
+  if (endHours < startHours || (endHours === startHours && endMinutes < startMinutes)) {
+    endHours += 24;
+  }
+  
+  return (endHours - startHours) * 60 + (endMinutes - startMinutes);
 }
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
@@ -290,11 +312,12 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     };
   } else {
     // Create a show for a specific date directly in the shows table
+    // We won't create a lineup automatically
     const showData = {
       name: slot.show_name,
       date: slot.date,
       time: slot.start_time,
-      notes: `Host: ${slot.host_name || ''}\nIs prerecorded: ${slot.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${slot.is_collection ? 'Yes' : 'No'}`
+      notes: `Host: ${slot.host_name || ''}\nStart Time: ${slot.start_time}\nEnd Time: ${slot.end_time}\nIs prerecorded: ${slot.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${slot.is_collection ? 'Yes' : 'No'}`
     };
     
     console.log('Creating show for specific date:', showData);
@@ -318,13 +341,13 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
       show_name: slot.show_name,
       host_name: slot.host_name,
       start_time: slot.start_time,
-      end_time: slot.end_time,
+      end_time: slot.end_time || incrementTimeByHour(slot.start_time),
       date: slot.date,
       is_prerecorded: slot.is_prerecorded || false,
       is_collection: slot.is_collection || false,
       color: slot.color || null,
       shows: [show],
-      has_lineup: true
+      has_lineup: false // Don't automatically create a lineup
     };
   }
 };
@@ -383,7 +406,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       const showUpdateData = {
         name: updates.show_name,
         time: updates.start_time,
-        notes: `Host: ${updates.host_name || ''}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`
+        notes: `Host: ${updates.host_name || ''}\nStart Time: ${updates.start_time}\nEnd Time: ${updates.end_time}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`
       };
       
       console.log('Updating show with data:', showUpdateData);
@@ -412,7 +435,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_collection: updates.is_collection || false,
         color: updates.color || null,
         shows: [updatedShow],
-        has_lineup: true
+        has_lineup: !!updatedShow.slot_id
       };
     } else {
       // This might be a slot_id from the master schedule
@@ -421,7 +444,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         name: updates.show_name,
         date: updates.date,
         time: updates.start_time,
-        notes: `Host: ${updates.host_name || ''}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`,
+        notes: `Host: ${updates.host_name || ''}\nStart Time: ${updates.start_time}\nEnd Time: ${updates.end_time}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`,
         slot_id: id // Associate with the original slot
       };
       
@@ -450,7 +473,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_collection: updates.is_collection || false,
         color: updates.color || null,
         shows: [newShow],
-        has_lineup: true
+        has_lineup: false // Don't automatically create a lineup
       };
     }
   }
@@ -552,49 +575,49 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
             }
             
             console.log(`Successfully deleted shows for slot ${id}`);
-          } else {
-            // Check if a deletion marker already exists
-            const { data: existingMarker, error: markerCheckError } = await supabase
-              .from('shows')
-              .select('id')
-              .eq('slot_id', id)
-              .eq('date', formattedDate)
-              .eq('name', 'DELETED');
-              
-            if (markerCheckError) {
-              console.error('Error checking for existing deletion marker:', markerCheckError);
-              throw markerCheckError;
-            }
+          } 
+          
+          // Check if a deletion marker already exists
+          const { data: existingMarker, error: markerCheckError } = await supabase
+            .from('shows')
+            .select('id')
+            .eq('slot_id', id)
+            .eq('date', formattedDate)
+            .eq('name', 'DELETED');
             
-            // If a deletion marker already exists, we don't need to do anything
-            if (existingMarker && existingMarker.length > 0) {
-              console.log(`Deletion marker already exists for slot ${id} on date ${formattedDate}`);
-              return;
-            }
-            
-            // Create a "deletion" marker in the shows table
-            // This ensures the master slot won't appear on this date
-            console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);
-            
-            const deletionShow = {
-              name: "DELETED",
-              date: formattedDate,
-              time: slotData.start_time,
-              notes: "This slot was deleted from the weekly schedule",
-              slot_id: id
-            };
-            
-            const { error } = await supabase
-              .from('shows')
-              .insert(deletionShow);
-              
-            if (error) {
-              console.error('Error creating deletion marker:', error);
-              throw error;
-            }
-            
-            console.log(`Successfully created deletion marker for slot ${id}`);
+          if (markerCheckError) {
+            console.error('Error checking for existing deletion marker:', markerCheckError);
+            throw markerCheckError;
           }
+          
+          // If a deletion marker already exists, we don't need to do anything
+          if (existingMarker && existingMarker.length > 0) {
+            console.log(`Deletion marker already exists for slot ${id} on date ${formattedDate}`);
+            return;
+          }
+          
+          // Create a "deletion" marker in the shows table
+          // This ensures the master slot won't appear on this date
+          console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);
+          
+          const deletionShow = {
+            name: "DELETED",
+            date: formattedDate,
+            time: slotData.start_time,
+            notes: "This slot was deleted from the weekly schedule",
+            slot_id: id
+          };
+          
+          const { error } = await supabase
+            .from('shows')
+            .insert(deletionShow);
+            
+          if (error) {
+            console.error('Error creating deletion marker:', error);
+            throw error;
+          }
+          
+          console.log(`Successfully created deletion marker for slot ${id}`);
         } catch (error: any) {
           console.error('Error in slot deletion process:', error);
           throw error;
