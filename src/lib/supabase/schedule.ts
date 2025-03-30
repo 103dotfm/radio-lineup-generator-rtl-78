@@ -1,7 +1,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO, addWeeks } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -22,6 +22,18 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     }
     console.log('Retrieved master schedule slots:', slots);
     
+    // Get all shows to associate with slots later
+    const { data: showsData, error: showsError } = await supabase
+      .from('shows')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (showsError) {
+      console.error('Error fetching shows for master slots:', showsError);
+    }
+    
+    const shows = showsData || [];
+    
     // Transform slots to match ScheduleSlot type
     const transformedSlots = slots?.map(slot => {
       // Calculate date based on day_of_week for display purposes
@@ -30,12 +42,14 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       const slotDate = addDays(currentWeekStart, slot.day_of_week);
       const formattedDate = format(slotDate, 'yyyy-MM-dd');
       
+      // Find shows for this slot, matching by slot_id
+      const slotShows = shows.filter(show => show.slot_id === slot.id);
+      
       return {
         ...slot,
         date: formattedDate,
-        shows: [],
-        has_lineup: false,
-        fromMaster: true
+        shows: slotShows || [],
+        has_lineup: slotShows && slotShows.length > 0
       };
     }) || [];
     
@@ -49,7 +63,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   const endDate = addDays(startDate, 6);
   const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-  // Get shows directly from the shows table for this week - these are actual shows that will override master schedule
+  // Get weekly shows for the date range
   const { data: shows, error: showsError } = await supabase
     .from('shows')
     .select('*')
@@ -64,7 +78,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   
   console.log('Retrieved shows for week:', shows);
   
-  // Get master slots from schedule_slots_old
+  // Now get master slots from schedule_slots_old
   const { data: masterSlots, error: masterSlotsError } = await supabase
     .from('schedule_slots_old')
     .select('*')
@@ -75,125 +89,78 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     console.error('Error fetching master slots:', masterSlotsError);
     throw masterSlotsError;
   }
-
-  // Map to track which time slots are filled by shows (to avoid duplicates)
-  // The key will be a combination of date and time
-  const filledSlots = new Map();
-  const resultSlots: ScheduleSlot[] = [];
   
-  // First, process the actual shows for this week (these take precedence)
-  if (shows && shows.length > 0) {
-    for (const show of shows) {
-      // For each show, create a virtual slot
-      const slotKey = `${show.date}-${show.time}`;
+  // Transform master slots to weekly slots based on the selected week
+  const transformedSlots: ScheduleSlot[] = [];
+  
+  // For each day in the week
+  for (let i = 0; i < 7; i++) {
+    const currentDate = addDays(startDate, i);
+    const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const formattedDate = format(currentDate, 'yyyy-MM-dd');
+    
+    // Filter master slots for this day of week
+    const daySlotsFromMaster = masterSlots?.filter(slot => slot.day_of_week === dayOfWeek) || [];
+    
+    // Transform each slot to have the correct date
+    const dateSlotsFromMaster = daySlotsFromMaster.map(slot => {
+      // Find any shows for this slot on this date
+      const slotShows = shows?.filter(show => {
+        // Match by date and time and slot_id if available
+        return show.date === formattedDate && 
+               (show.time === slot.start_time || 
+               (show.slot_id && show.slot_id === slot.id));
+      }) || [];
       
-      // Check if this is a "DELETED" marker
-      const isDeleted = show.name === "DELETED";
-      
-      if (isDeleted) {
-        // If it's a deletion marker, just record this time slot as filled
-        // but don't create a slot for it
-        filledSlots.set(slotKey, true);
-        continue;
-      }
-      
-      // If not a deletion marker, create a slot for this show
-      const showSlot: ScheduleSlot = {
-        id: show.id,
+      return {
+        ...slot,
+        id: slot.id,
+        date: formattedDate,
+        shows: slotShows,
+        has_lineup: slotShows.length > 0
+      };
+    });
+    
+    // Now find any shows for this date that aren't associated with a master slot
+    const showsForDate = shows?.filter(show => show.date === formattedDate && !show.slot_id) || [];
+    
+    // Create virtual slots for these shows
+    const showSlots = showsForDate.map(show => {
+      return {
+        id: show.id, // Use the show ID as the slot ID for these virtual slots
         show_name: show.name,
-        host_name: show.notes ? extractHostName(show.notes) : null,
-        start_time: show.time || "00:00",
-        end_time: incrementTimeByHour(show.time || "00:00"),
-        date: show.date,
+        host_name: null,
+        start_time: show.time || "00:00", // Default if no time
+        end_time: show.time ? incrementTimeByHour(show.time) : "01:00", // Add 1 hour by default
+        date: formattedDate,
         is_recurring: false,
-        is_prerecorded: show.notes ? extractPrerecorded(show.notes) : false,
-        is_collection: show.notes ? extractCollection(show.notes) : false,
-        is_deleted: false,
-        color: null,
+        is_prerecorded: false,
+        is_collection: false,
         shows: [show],
         has_lineup: true
       };
-      
-      resultSlots.push(showSlot);
-      filledSlots.set(slotKey, true);
-    }
+    });
+    
+    transformedSlots.push(...dateSlotsFromMaster, ...showSlots);
   }
   
-  // Now, fill in slots from the master schedule for any time slots that aren't already filled
-  if (masterSlots && masterSlots.length > 0) {
-    for (let i = 0; i < 7; i++) {
-      const currentDate = addDays(startDate, i);
-      const formattedDate = format(currentDate, 'yyyy-MM-dd');
-      const dayOfWeek = currentDate.getDay(); // 0 = Sunday
-      
-      // Get master slots for this day of week
-      const daySlotsFromMaster = masterSlots.filter(slot => slot.day_of_week === dayOfWeek);
-      
-      // For each master slot on this day
-      for (const masterSlot of daySlotsFromMaster) {
-        const slotKey = `${formattedDate}-${masterSlot.start_time}`;
-        
-        // Skip if we already have a show for this time slot
-        if (filledSlots.has(slotKey)) {
-          continue;
-        }
-        
-        // Only apply master schedule to current and future weeks, not past weeks
-        const isDateBeforeToday = isBefore(new Date(formattedDate), startOfDay(new Date()));
-        const selectedDateInFuture = selectedDate && isAfter(selectedDate, new Date());
-
-        // If it's a past date and not selected in the future, don't use master schedule
-        if (isDateBeforeToday && !selectedDateInFuture) {
-          continue;
-        }
-        
-        // Create a slot from the master schedule
-        const masterScheduleSlot: ScheduleSlot = {
-          ...masterSlot,
-          date: formattedDate,
-          shows: [],
-          has_lineup: false,
-          fromMaster: true
-        };
-        
-        resultSlots.push(masterScheduleSlot);
-        filledSlots.set(slotKey, true);
-      }
-    }
-  }
-  
-  // Sort all slots by date and then time
-  resultSlots.sort((a, b) => {
+  // Sort all slots by time
+  transformedSlots.sort((a, b) => {
     if (a.date !== b.date) {
       return a.date.localeCompare(b.date);
     }
     return a.start_time.localeCompare(b.start_time);
   });
   
-  console.log('Final transformed slots:', resultSlots);
-  return resultSlots;
+  console.log('Final transformed slots:', transformedSlots);
+  return transformedSlots;
 };
 
-// Helper functions
+// Helper function to increment time by 1 hour (e.g. "14:00" -> "15:00")
 function incrementTimeByHour(timeStr: string): string {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const newHours = (hours + 1) % 24;
   return `${newHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-}
-
-function extractHostName(notes: string): string | null {
-  const match = notes.match(/Host:\s*([^\n]*)/);
-  return match ? match[1].trim() : null;
-}
-
-function extractPrerecorded(notes: string): boolean {
-  const match = notes.match(/Is prerecorded:\s*(Yes|No)/i);
-  return match ? match[1].toLowerCase() === 'yes' : false;
-}
-
-function extractCollection(notes: string): boolean {
-  const match = notes.match(/Is collection:\s*(Yes|No)/i);
-  return match ? match[1].toLowerCase() === 'yes' : false;
 }
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
