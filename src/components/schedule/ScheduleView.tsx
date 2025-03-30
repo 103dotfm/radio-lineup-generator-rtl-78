@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -128,7 +127,7 @@ export default function ScheduleView({
       is_collection: slot.is_collection
     });
     
-    if (slot.shows && slot.shows.length > 0) {
+    if (slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0 && slot.shows[0]?.id) {
       const show = slot.shows[0];
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);

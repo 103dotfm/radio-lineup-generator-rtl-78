@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -223,6 +222,7 @@ export const saveShow = async (
 
       if (showError) throw showError;
       
+      // For existing shows, clean up existing items to avoid orphaned data
       const { data: existingItems, error: fetchError } = await supabase
         .from('show_items')
         .select('id')
@@ -255,6 +255,7 @@ export const saveShow = async (
       finalShowId = newShow.id;
     }
 
+    // Update the schedule slot to indicate it has a lineup
     if (show.slot_id) {
       const { error: slotError } = await supabase
         .from('schedule_slots_old')
@@ -266,6 +267,7 @@ export const saveShow = async (
       if (slotError) throw slotError;
     }
 
+    // Only proceed with item insertion if we have a valid show ID
     if (items.length > 0 && finalShowId) {
       console.log('RAW ITEMS BEFORE PROCESSING:', items.map(item => ({
         name: item.name,
@@ -310,7 +312,7 @@ export const saveShow = async (
         
         return cleanedItem;
       });
-
+      
       console.log('Original items before mapping:', JSON.stringify(items.map(item => ({
         name: item.name,
         is_divider: item.is_divider,
@@ -320,16 +322,6 @@ export const saveShow = async (
       })), null, 2));
       
       console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
-      
-      const insertRawSql = `
-        INSERT INTO show_items(show_id, position, name, title, details, phone, duration, is_break, is_note, is_divider)
-        VALUES ${itemsToInsert.map((item, i) => 
-          `('${item.show_id}', ${item.position}, '${item.name}', ${item.title ? `'${item.title}'` : 'NULL'}, ${item.details ? `'${item.details}'` : 'NULL'}, ${item.phone ? `'${item.phone}'` : 'NULL'}, ${item.duration}, ${item.is_break}, ${item.is_note}, ${item.is_divider})`
-        ).join(', ')}
-        RETURNING *
-      `;
-      
-      console.log('SQL to be executed:', insertRawSql);
       
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
