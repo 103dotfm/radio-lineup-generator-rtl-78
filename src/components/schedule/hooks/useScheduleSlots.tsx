@@ -8,24 +8,19 @@ import { format } from 'date-fns';
 export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // Create a stable query key
-  const queryKey = ['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule];
 
   const {
     data: scheduleSlots = [],
-    isLoading,
-    refetch
+    isLoading
   } = useQuery({
-    queryKey,
+    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
     queryFn: () => {
       console.log('Fetching slots with params:', {
         selectedDate,
         isMasterSchedule
       });
       return getScheduleSlots(selectedDate, isMasterSchedule);
-    },
-    staleTime: 0 // Consider data always stale to ensure fresh data after mutations
+    }
   });
 
   const createSlotMutation = useMutation({
@@ -38,7 +33,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey
+        queryKey: ['scheduleSlots']
       });
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
@@ -69,7 +64,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey
+        queryKey: ['scheduleSlots']
       });
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
@@ -86,70 +81,28 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
 
   const deleteSlotMutation = useMutation({
     mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onMutate: async (deletedId) => {
-      // Cancel any outgoing refetches to avoid overwriting our optimistic update
-      await queryClient.cancelQueries({ queryKey });
-      
-      // Snapshot the previous value
-      const previousSlots = queryClient.getQueryData<ScheduleSlot[]>(queryKey) || [];
-      
-      // Optimistically update the UI by removing the deleted slot
-      queryClient.setQueryData(queryKey, (oldData: ScheduleSlot[] | undefined) => {
-        if (!oldData) return [];
-        return oldData.filter(slot => slot.id !== deletedId);
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['scheduleSlots']
       });
-      
-      // Return the previous value for potential rollback
-      return { previousSlots };
-    },
-    onSuccess: (_, deletedId) => {
-      // Clear query cache completely to force a full refetch
-      queryClient.removeQueries({ queryKey });
-      
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
       });
-      
-      // Force refetch to ensure we get the latest data
-      setTimeout(() => {
-        refetch();
-      }, 300);
     },
-    onError: (error, deletedId, context) => {
+    onError: error => {
       console.error('Error deleting slot:', error);
-      // Roll back to the previous state if there's an error
-      if (context?.previousSlots) {
-        queryClient.setQueryData(queryKey, context.previousSlots);
-      }
-      
       toast({
         title: 'שגיאה במחיקת משבצת שידור',
         variant: 'destructive'
       });
-    },
-    onSettled: () => {
-      // Always invalidate the query to get fresh data after the mutation settles
-      queryClient.invalidateQueries({ queryKey });
     }
   });
-
-  // Function to explicitly refetch the schedule slots
-  const refetchSlots = async () => {
-    try {
-      // Clear cache first to ensure fresh data
-      queryClient.removeQueries({ queryKey });
-      await refetch();
-    } catch (error) {
-      console.error('Error refetching slots:', error);
-    }
-  };
 
   return {
     scheduleSlots,
     isLoading,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
-    deleteSlot: deleteSlotMutation.mutateAsync,
-    refetchSlots
+    deleteSlot: deleteSlotMutation.mutateAsync
   };
 };
