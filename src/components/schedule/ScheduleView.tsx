@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -138,74 +139,14 @@ export default function ScheduleView({
         console.log(`Found associated show ${showId} for slot ${slot.id} from slot.shows`);
         
         try {
-          // Try to load this show to verify it exists
-          const result = await getShowWithItems(showId);
-          if (result && result.show && result.show.id) {
-            console.log(`Verified show ${showId} exists, navigating...`);
-            navigate(`/show/${showId}`);
-            return;
-          } else {
-            console.warn(`Show ${showId} not found during verification`);
-          }
+          navigate(`/show/${showId}`);
+          return;
         } catch (showError) {
-          console.error(`Error verifying show ${showId}:`, showError);
+          console.error(`Error navigating to show ${showId}:`, showError);
         }
       } 
       
-      // Fallback: Query the database directly if slot.shows is not available or verification failed
-      if (slot.has_lineup === true) {
-        console.log("Slot has has_lineup=true, searching for shows with slot_id:", slot.id);
-        
-        const { data: shows, error: showError } = await supabase
-          .from('shows_backup')
-          .select('id')
-          .eq('slot_id', slot.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        if (showError) {
-          console.error('Error finding show for slot:', showError);
-          throw showError;
-        }
-        
-        if (shows && shows.length > 0 && shows[0].id) {
-          const showId = shows[0].id;
-          console.log(`Found show ID ${showId} for slot ${slot.id} from direct query`);
-          
-          try {
-            const result = await getShowWithItems(showId);
-            if (result && result.show && result.show.id) {
-              console.log(`Navigating to existing show: ${showId}`);
-              navigate(`/show/${showId}`);
-              return;
-            } else {
-              console.warn(`Show ${showId} found but has invalid data`, result);
-            }
-          } catch (loadError) {
-            console.error(`Error loading show ${showId}:`, loadError);
-          }
-        } else {
-          console.warn(`Slot ${slot.id} marked as has_lineup=true but no show found in db query`);
-          
-          // Fix inconsistency by updating has_lineup to false
-          try {
-            const { error: updateError } = await supabase
-              .from('schedule_slots_old')
-              .update({ has_lineup: false })
-              .eq('id', slot.id);
-              
-            if (updateError) {
-              console.error(`Error fixing has_lineup flag for slot ${slot.id}:`, updateError);
-            } else {
-              console.log(`Fixed has_lineup flag for slot ${slot.id} to false`);
-            }
-          } catch (updateError) {
-            console.error(`Error updating has_lineup flag:`, updateError);
-          }
-        }
-      }
-
-      // If we reach here, create a new lineup
+      // If we reach here, we need to create a new lineup
       console.log(`Creating new lineup for slot ${slot.id}`);
       
       const weekStart = new Date(selectedDate);
@@ -233,6 +174,7 @@ export default function ScheduleView({
       console.error("Error handling slot click:", error);
       toast.error("אירעה שגיאה בטעינת הליינאפ");
       
+      // Fall back to creating a new lineup if anything goes wrong
       navigate('/new');
     }
   };

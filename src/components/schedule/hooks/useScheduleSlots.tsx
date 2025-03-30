@@ -24,6 +24,11 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       
       // For each slot, check if there's an associated show in the shows_backup table
       const slotsWithShowInfo = await Promise.all(slots.map(async slot => {
+        if (!slot || !slot.id) {
+          console.error('Invalid slot found without ID:', slot);
+          return slot; // Return the slot as is if it's invalid
+        }
+        
         try {
           // Check if this slot has any associated shows, regardless of has_lineup flag
           const { data: shows, error } = await supabase
