@@ -9,6 +9,7 @@ import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays, parse } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -33,6 +34,8 @@ export default function ScheduleView({
   const [showSlotDialog, setShowSlotDialog] = useState(false);
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
+  const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -43,7 +46,14 @@ export default function ScheduleView({
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
 
   // Use custom hooks
-  const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
+  const { 
+    scheduleSlots, 
+    isLoading, 
+    createSlot, 
+    updateSlot, 
+    deleteSlot,
+    refetchSlots 
+  } = useScheduleSlots(
     selectedDate, 
     isMasterSchedule
   );
@@ -63,15 +73,50 @@ export default function ScheduleView({
 
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
+    setDeletingSlotId(slot.id);
 
     // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
-      await deleteSlot(slot.id);
+      try {
+        await deleteSlot(slot.id);
+        // Immediately filter out the deleted slot from UI
+        toast({
+          title: "משבצת נמחקה",
+          description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
+        });
+      } catch (error) {
+        console.error('Error during deletion:', error);
+        toast({
+          title: "שגיאה במחיקה",
+          description: "לא ניתן למחוק את המשבצת",
+          variant: "destructive"
+        });
+      } finally {
+        setDeletingSlotId(null);
+      }
       return;
     }
     
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
-      await deleteSlot(slot.id);
+      try {
+        await deleteSlot(slot.id);
+        // Immediately filter out the deleted slot from UI
+        toast({
+          title: "משבצת נמחקה",
+          description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
+        });
+      } catch (error) {
+        console.error('Error during deletion:', error);
+        toast({
+          title: "שגיאה במחיקה",
+          description: "לא ניתן למחוק את המשבצת",
+          variant: "destructive"
+        });
+      } finally {
+        setDeletingSlotId(null);
+      }
+    } else {
+      setDeletingSlotId(null);
     }
   };
 
@@ -113,8 +158,14 @@ export default function ScheduleView({
         await createSlot(slotData);
       }
       setShowSlotDialog(false);
+      refetchSlots(); // Force a refresh after save
     } catch (error) {
       console.error('Error saving slot:', error);
+      toast({
+        title: "שגיאה בשמירה",
+        description: "לא ניתן לשמור את המשבצת",
+        variant: "destructive"
+      });
     }
   };
 
@@ -177,7 +228,7 @@ export default function ScheduleView({
       />
 
       <ScheduleGrid 
-        scheduleSlots={scheduleSlots}
+        scheduleSlots={scheduleSlots.filter(slot => slot.id !== deletingSlotId)}
         selectedDate={selectedDate}
         viewMode={viewMode}
         handleSlotClick={handleSlotClick}
@@ -188,6 +239,7 @@ export default function ScheduleView({
         hideHeaderDates={hideHeaderDates}
         dayNotes={dayNotes}
         onDayNoteChange={refreshDayNotes}
+        isLoading={isLoading}
       />
 
       <ScheduleDialogs 

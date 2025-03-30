@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
 import { useQueryClient } from '@tanstack/react-query';
-import { createScheduleSlot, updateScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleSlot } from '@/types/schedule';
 import { format, startOfWeek } from 'date-fns';
+import { createScheduleSlot, updateScheduleSlot } from '@/lib/supabase/schedule';
 
 const MasterSchedule = () => {
   const [showSlotDialog, setShowSlotDialog] = useState(false);
