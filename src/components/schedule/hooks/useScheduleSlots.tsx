@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +35,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
             .from('shows_backup')
             .select('id, name')
             .eq('slot_id', slot.id)
+            .is('id', 'not.null')  // Only get shows with valid IDs
             .order('created_at', { ascending: false });
             
           if (error) {
@@ -43,8 +43,10 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
             return slot; // Return the slot as is if there's an error
           }
           
-          if (shows && shows.length > 0) {
-            console.log(`Found ${shows.length} shows for slot ${slot.id}:`, shows);
+          const validShows = (shows || []).filter(show => show && show.id);
+          
+          if (validShows && validShows.length > 0) {
+            console.log(`Found ${validShows.length} shows for slot ${slot.id}:`, validShows);
             // If shows exist, update the slot's has_lineup flag to true
             if (!slot.has_lineup) {
               console.log(`Slot ${slot.id} has shows but has_lineup=false, updating it`);
@@ -62,7 +64,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
             
             return {
               ...slot,
-              shows: shows,
+              shows: validShows,
               has_lineup: true // Ensure the flag is set in the returned data
             };
           } else if (slot.has_lineup) {

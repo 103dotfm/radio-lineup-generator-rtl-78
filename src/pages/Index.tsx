@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -7,7 +6,7 @@ import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { saveShow, getShowWithItems, getShowsByDate } from '@/lib/supabase/shows';
+import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';

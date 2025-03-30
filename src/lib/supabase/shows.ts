@@ -6,18 +6,22 @@ export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
   const { data: shows, error } = await supabase
     .from('shows_backup')
-    .select('*');
+    .select('*')
+    .is('id', 'not.null');  // Only get shows with valid IDs
 
   if (error) {
     console.error('Error fetching shows:', error);
     throw error;
   }
 
+  // Filter out shows without valid IDs before processing
+  const validShows = (shows || []).filter(show => show && show.id);
+  
   // Fetch items separately for each show
-  const showsWithItems = await Promise.all((shows || []).map(async (show) => {
+  const showsWithItems = await Promise.all(validShows.map(async (show) => {
     if (!show || !show.id) {
       console.error('Invalid show found without ID:', show);
-      return show;
+      return null; // Skip this show
     }
     
     try {
@@ -39,8 +43,10 @@ export const getShows = async (): Promise<Show[]> => {
     }
   }));
 
-  console.log('Fetched shows:', showsWithItems);
-  return showsWithItems || [];
+  // Filter out any null entries from failed processing
+  const cleanedShows = showsWithItems.filter(Boolean);
+  console.log('Fetched shows:', cleanedShows);
+  return cleanedShows || [];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
@@ -60,8 +66,10 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    // Get unique show IDs from matching items
-    const showIds = [...new Set((matchingItems || []).map(item => item.show_id))].filter(Boolean);
+    // Get unique show IDs from matching items and filter out null/undefined IDs
+    const showIds = [...new Set((matchingItems || [])
+      .map(item => item.show_id)
+      .filter(Boolean))];
     
     if (showIds.length === 0) {
       return [];
@@ -71,15 +79,19 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     const { data: shows, error: showsError } = await supabase
       .from('shows_backup')
       .select('*')
-      .in('id', showIds);
+      .in('id', showIds)
+      .is('id', 'not.null'); // Only select shows with valid IDs
       
     if (showsError) {
       console.error('Error fetching shows:', showsError);
       throw showsError;
     }
 
+    // Filter out shows without valid IDs
+    const validShows = (shows || []).filter(show => show && show.id);
+
     // Group items by show
-    const result = (shows || []).map(show => {
+    const result = validShows.map(show => {
       const showItems = (matchingItems || [])
         .filter(item => item.show_id === show.id)
         .map(item => ({
@@ -184,6 +196,7 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     .from('shows_backup')
     .select('*')
     .eq('date', date)
+    .is('id', 'not.null')  // Only include shows with valid IDs
     .order('time', { ascending: true });
 
   if (error) {
@@ -191,8 +204,10 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     throw error;
   }
 
-  console.log(`Found ${shows?.length || 0} shows for date ${date}:`, shows);
-  return shows || [];
+  // Filter out invalid shows
+  const validShows = (shows || []).filter(show => show && show.id);
+  console.log(`Found ${validShows.length} valid shows for date ${date}:`, validShows);
+  return validShows;
 };
 
 export const saveShow = async (
@@ -265,20 +280,21 @@ export const saveShow = async (
       }
       
     } else {
-      // Create new show with specific return handling
+      // Create new show with specific return handling and handle errors more robustly
       console.log('Creating new show with data:', show);
+      
+      const insertData = {
+        name: show.name,
+        time: show.time,
+        date: show.date,
+        notes: show.notes,
+        slot_id: show.slot_id
+      };
       
       const { data, error: createError } = await supabase
         .from('shows_backup')
-        .insert([{
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes,
-          slot_id: show.slot_id
-        }])
-        .select('*')
-        .single();
+        .insert([insertData])
+        .select('*');
 
       if (createError) {
         console.error('Error creating new show:', createError);
@@ -287,12 +303,12 @@ export const saveShow = async (
       
       console.log('Received response after show creation:', data);
       
-      if (!data || !data.id) {
+      if (!data || data.length === 0 || !data[0].id) {
         console.error('Failed to get ID for newly created show, data:', data);
         throw new Error('Failed to create show - no ID returned');
       }
       
-      finalShowId = data.id;
+      finalShowId = data[0].id;
       console.log('Created new show with id:', finalShowId);
     }
 
