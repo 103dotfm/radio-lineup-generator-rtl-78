@@ -8,7 +8,7 @@ import ScheduleGrid from './layout/ScheduleGrid';
 import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek, addDays, parse } from 'date-fns';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -133,10 +133,8 @@ export default function ScheduleView({
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);
     } else {
-      const weekStart = new Date(selectedDate);
-      weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
-      const slotDate = new Date(weekStart);
-      slotDate.setDate(weekStart.getDate() + slot.day_of_week);
+      // Get the day from the date string (YYYY-MM-DD)
+      const slotDate = new Date(slot.date);
       
       const generatedShowName = slot.show_name === slot.host_name 
         ? slot.host_name 
