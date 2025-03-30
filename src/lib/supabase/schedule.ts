@@ -40,17 +40,22 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   
   // Convert the date-based slots to a format compatible with our UI
   // which expects day_of_week based slots
-  const processedSlots = slots?.map(slot => {
+  const processedSlots: ScheduleSlot[] = slots?.map(slot => {
     // Get day of week (0-6, where 0 is Sunday)
     const slotDate = new Date(slot.date);
     const dayOfWeek = slotDate.getDay();
+    
+    // Ensure shows is properly typed as an array
+    const showsArray = Array.isArray(slot.shows) ? slot.shows : [];
     
     return {
       ...slot,
       day_of_week: dayOfWeek,
       is_modified: false,
       is_recurring: false,
-      has_lineup: slot.shows && slot.shows.length > 0
+      has_lineup: slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0,
+      // Ensure shows is always an array
+      shows: showsArray
     };
   }) || [];
 
@@ -114,7 +119,9 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     ...data,
     day_of_week: slot.day_of_week,
     is_modified: false,
-    is_recurring: false
+    is_recurring: false,
+    // Initialize shows as an empty array to ensure type compatibility
+    shows: []
   };
 };
 
@@ -182,7 +189,9 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     ...data,
     day_of_week: dayOfWeek,
     is_modified: false,
-    is_recurring: false
+    is_recurring: false,
+    // Initialize shows as an empty array to ensure type compatibility
+    shows: []
   };
 };
 
@@ -204,4 +213,3 @@ export const addMissingColumns = async () => {
   // This function is no longer needed with the new table structure
   return;
 };
-
