@@ -11,8 +11,8 @@ export interface ScheduleSlot {
   is_recurring?: boolean; // Added for backward compatibility with UI
   is_prerecorded?: boolean;
   is_collection?: boolean;
-  has_lineup?: boolean;
   is_modified?: boolean;
+  has_lineup?: boolean;
   color?: string;
   created_at?: string;
   updated_at?: string;
@@ -24,7 +24,7 @@ export interface ScheduleSlot {
     date?: string;
     notes?: string;
     created_at?: string;
-  }>;
+  }> | [];
 }
 
 export interface DayNote {
