@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
-import { useAuth } from '../contexts/AuthProvider';
+import { useAuth } from '../contexts/AuthContext';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import BreakItem from './lineup/BreakItem';

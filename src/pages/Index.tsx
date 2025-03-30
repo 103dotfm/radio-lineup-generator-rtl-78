@@ -29,7 +29,6 @@ const Index = () => {
   const [initialState, setInitialState] = useState(null);
   const [showMinutes, setShowMinutes] = useState(false);
   const [nextShowInfo, setNextShowInfo] = useState<{ name: string; host?: string } | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const isNewLineup = !showId;
 
@@ -49,6 +48,7 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
+  // Fetch next show information based on current show date and time
   const fetchNextShowInfo = useCallback(async () => {
     if (showDate && showTime) {
       try {
@@ -96,27 +96,25 @@ const Index = () => {
       if (showId) {
         try {
           const result = await getShowWithItems(showId);
-          if (!result || !result.show) {
-            const errorMsg = 'התוכנית לא נמצאה';
-            toast.error(errorMsg);
-            setLoadError(errorMsg);
+          if (!result) {
+            toast.error('התוכנית לא נמצאה');
+            navigate('/');
             return;
           }
-          
           const { show, items: showItems } = result;
           if (show) {
-            setShowName(show.name || '');
-            setShowTime(show.time || '');
+            setShowName(show.name);
+            setShowTime(show.time);
             setShowDate(show.date ? new Date(show.date) : new Date());
-            if (editor && show.notes) {
-              editor.commands.setContent(show.notes);
+            if (editor) {
+              editor.commands.setContent(show.notes || '');
             }
             setInitialState({
-              name: show.name || '',
-              time: show.time || '',
+              name: show.name,
+              time: show.time,
               date: show.date ? new Date(show.date) : new Date(),
               notes: show.notes || '',
-              items: showItems || []
+              items: showItems
             });
           }
           if (showItems) {
@@ -125,17 +123,25 @@ const Index = () => {
           setHasUnsavedChanges(false);
         } catch (error) {
           console.error('Error loading show:', error);
-          const errorMsg = 'שגיאה בטעינת התוכנית';
-          toast.error(errorMsg);
-          setLoadError(errorMsg);
+          toast.error('שגיאה בטעינת התוכנית');
+          navigate('/');
         }
       }
     };
 
-    if (showId && showId !== 'new') {
-      loadShow();
+    loadShow();
+  }, [showId, editor, navigate]);
+
+  useEffect(() => {
+    if (state && isNewLineup) {
+      setHasUnsavedChanges(false);
     }
-  }, [showId, editor]);
+  }, [state, isNewLineup]);
+
+  // Fetch next show info when show date or time changes
+  useEffect(() => {
+    fetchNextShowInfo();
+  }, [fetchNextShowInfo]);
 
   const handleEdit = useCallback(async (id: string, updatedItem: any) => {
     console.log(`Editing item ${id} with data:`, updatedItem);
@@ -246,6 +252,7 @@ const Index = () => {
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
       
+      // Refresh next show info after saving
       fetchNextShowInfo();
     } catch (error) {
       console.error('Error saving show:', error);
@@ -336,12 +343,14 @@ const Index = () => {
   const handleTimeChange = useCallback((time: string) => {
     setShowTime(time);
     setHasUnsavedChanges(true);
+    // Refresh next show when time changes
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setShowDate(date || new Date());
     setHasUnsavedChanges(true);
+    // Refresh next show when date changes
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
@@ -416,55 +425,44 @@ const Index = () => {
   }, [items]);
 
   const handleRemoveNextShowLine = useCallback(() => {
+    // Refresh next show info when line is removed
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
   return (
     <>
       <div className="container mx-auto py-8 px-4">
-        {loadError ? (
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">{loadError}</h2>
-            <button 
-              onClick={() => navigate('/')}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
-            >
-              חזרה לדף הבית
-            </button>
-          </div>
-        ) : (
-          <LineupEditor
-            showName={showName}
-            showTime={showTime}
-            showDate={showDate}
-            items={items}
-            editor={editor}
-            editingItem={editingItem}
-            onNameChange={handleNameChange}
-            onTimeChange={handleTimeChange}
-            onDateChange={handleDateChange}
-            onSave={handleSave}
-            onShare={handleShare}
-            onPrint={handlePrint}
-            onExportPDF={handleExportPDF}
-            onAdd={handleAdd}
-            onDelete={handleDelete}
-            onDurationChange={handleDurationChange}
-            onEdit={handleEdit}
-            onBreakTextChange={handleBreakTextChange}
-            onDragEnd={handleDragEnd}
-            handleNameLookup={async () => null}
-            onBackToDashboard={handleBackToDashboard}
-            onDetailsChange={handleDetailsChange}
-            showMinutes={showMinutes}
-            onToggleMinutes={handleToggleMinutes}
-            onDividerAdd={handleAddDivider}
-            isSaving={isSaving}
-            nextShowName={nextShowInfo?.name}
-            nextShowHost={nextShowInfo?.host}
-            onRemoveNextShowLine={handleRemoveNextShowLine}
-          />
-        )}
+        <LineupEditor
+          showName={showName}
+          showTime={showTime}
+          showDate={showDate}
+          items={items}
+          editor={editor}
+          editingItem={editingItem}
+          onNameChange={handleNameChange}
+          onTimeChange={handleTimeChange}
+          onDateChange={handleDateChange}
+          onSave={handleSave}
+          onShare={handleShare}
+          onPrint={handlePrint}
+          onExportPDF={handleExportPDF}
+          onAdd={handleAdd}
+          onDelete={handleDelete}
+          onDurationChange={handleDurationChange}
+          onEdit={handleEdit}
+          onBreakTextChange={handleBreakTextChange}
+          onDragEnd={handleDragEnd}
+          handleNameLookup={async () => null}
+          onBackToDashboard={handleBackToDashboard}
+          onDetailsChange={handleDetailsChange}
+          showMinutes={showMinutes}
+          onToggleMinutes={handleToggleMinutes}
+          onDividerAdd={handleAddDivider}
+          isSaving={isSaving}
+          nextShowName={nextShowInfo?.name}
+          nextShowHost={nextShowInfo?.host}
+          onRemoveNextShowLine={handleRemoveNextShowLine}
+        />
 
         <div ref={printRef} className="hidden print:block print:mt-0">
           <PrintPreview
