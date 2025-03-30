@@ -11,7 +11,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   if (isMasterSchedule) {
     console.log('Fetching master schedule slots...');
     const { data: slots, error } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .select(`
         *,
         shows (
@@ -37,7 +37,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   }
 
   const { data: allSlots, error } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .select(`
       *,
       shows (
@@ -145,7 +145,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
   
   // Check for existing slot at this time
   const { data: existingSlots } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .select('*')
     .eq('day_of_week', slot.day_of_week)
     .eq('start_time', slot.start_time);
@@ -167,7 +167,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
       
       // Delete the deletion marker since we're adding a new slot
       await supabase
-        .from('schedule_slots')
+        .from('schedule_slots_old')
         .delete()
         .eq('id', deletionMarker.id);
     } else {
@@ -204,7 +204,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
   console.log('Inserting new slot with data:', slotData);
 
   const { data, error } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .insert(slotData)
     .select()
     .single();
@@ -223,7 +223,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
 
   // Get the original slot
   const { data: originalSlot, error: fetchError } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .select('*')
     .eq('id', id)
     .single();
@@ -256,7 +256,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     console.log('Updating master slot with data:', updateData);
     
     const { data, error } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -287,7 +287,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     
     // Check if a non-recurring instance already exists for this slot in this week
     const { data: existingNonRecurring } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .select('*')
       .eq('day_of_week', originalSlot.day_of_week)
       .eq('start_time', originalSlot.start_time)
@@ -316,7 +316,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       };
       
       const { data, error } = await supabase
-        .from('schedule_slots')
+        .from('schedule_slots_old')
         .update(updateData)
         .eq('id', existingNonRecurring[0].id)
         .select()
@@ -350,7 +350,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     };
     
     const { data, error } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .insert(newSlotData)
       .select()
       .single();
@@ -419,7 +419,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   console.log('Updating with data:', updateData);
   
   const { data, error } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .update(updateData)
     .eq('id', id)
     .select()
@@ -439,7 +439,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
 
   // Get the original slot
   const { data: originalSlot } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .select('*')
     .eq('id', id)
     .single();
@@ -458,7 +458,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
   // If it's master schedule, perform actual deletion
   if (isMasterSchedule) {
     const { error } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .delete()
       .eq('id', id);
 
@@ -475,7 +475,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
     
     // Check if a deletion marker for this slot already exists for this week
     const { data: existingDeletions } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .select('*')
       .eq('day_of_week', originalSlot.day_of_week)
       .eq('start_time', originalSlot.start_time)
@@ -490,7 +490,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
     
     // Create a new deletion marker with the current week's start date
     const { error: insertError } = await supabase
-      .from('schedule_slots')
+      .from('schedule_slots_old')
       .insert({
         day_of_week: originalSlot.day_of_week,
         start_time: originalSlot.start_time,
@@ -516,7 +516,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
 
   // If it's already a non-recurring slot, just delete it
   const { error } = await supabase
-    .from('schedule_slots')
+    .from('schedule_slots_old')
     .delete()
     .eq('id', id);
 
