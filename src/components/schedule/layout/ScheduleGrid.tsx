@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
@@ -35,6 +36,7 @@ export default function ScheduleGrid({
   dayNotes,
   onDayNoteChange
 }: ScheduleGridProps) {
+  console.log("ScheduleGrid rendering with slots:", scheduleSlots);
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const [editingNoteDate, setEditingNoteDate] = useState<Date | null>(null);
 
@@ -113,9 +115,12 @@ export default function ScheduleGrid({
   };
 
   const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
+    // Filter slots for this specific day and time
     const relevantSlots = scheduleSlots.filter(
       slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time)
     );
+    
+    console.log(`Rendering time cell for day ${dayIndex}, time ${time}, found ${relevantSlots.length} slots`);
     
     return (
       <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
@@ -210,9 +215,9 @@ export default function ScheduleGrid({
                   {time}
                 </div>
                 {dates.map((date, dayIndex) => (
-                  <div key={`${time}-${dayIndex}`}>
+                  <React.Fragment key={`${time}-${dayIndex}`}>
                     {renderTimeCell(date.getDay(), time)}
-                  </div>
+                  </React.Fragment>
                 ))}
               </React.Fragment>
             ))}
@@ -239,9 +244,9 @@ export default function ScheduleGrid({
                   const relevantDates = dates.filter(date => date.getDay() === dayIndex);
                   const isCurrentMonth = relevantDates.length > 0;
                   return (
-                    <div key={`${time}-${dayIndex}`}>
+                    <React.Fragment key={`${time}-${dayIndex}`}>
                       {renderTimeCell(dayIndex, time, isCurrentMonth)}
-                    </div>
+                    </React.Fragment>
                   );
                 })}
               </React.Fragment>

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -19,9 +20,14 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         selectedDate,
         isMasterSchedule
       });
-      const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
-      console.log('Fetched slots:', slots);
-      return slots;
+      try {
+        const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
+        console.log('Fetched slots:', slots);
+        return slots;
+      } catch (error) {
+        console.error('Error in query function:', error);
+        return [];
+      }
     },
     retry: 1,
     refetchOnMount: true
