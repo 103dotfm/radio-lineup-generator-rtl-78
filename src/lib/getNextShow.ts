@@ -59,20 +59,28 @@ export const getNextShow = async (
       return null;
     }
     
-    // Safely type cast the data by filtering out invalid objects
-    const typedShows: ShowRecord[] = showsOnDate
-      .filter((show): show is ShowRecord => 
-        show !== null && 
-        typeof show === 'object' && 
-        'id' in show && 
-        'name' in show && 
-        'time' in show && 
-        'date' in show &&
-        typeof show.id === 'string' &&
-        typeof show.name === 'string' &&
-        typeof show.time === 'string' &&
-        typeof show.date === 'string'
-      );
+    // Safely filter and cast data to the correct type
+    const typedShows: ShowRecord[] = [];
+    
+    for (const show of showsOnDate) {
+      if (show && 
+          typeof show === 'object' && 
+          'id' in show && 
+          'name' in show && 
+          'time' in show && 
+          'date' in show &&
+          typeof show.id === 'string' &&
+          typeof show.name === 'string' &&
+          typeof show.time === 'string' &&
+          typeof show.date === 'string') {
+            typedShows.push({
+              id: show.id,
+              name: show.name, 
+              time: show.time,
+              date: show.date
+            });
+      }
+    }
     
     if (typedShows.length === 0) {
       console.error('No valid show data after filtering:', showsOnDate);

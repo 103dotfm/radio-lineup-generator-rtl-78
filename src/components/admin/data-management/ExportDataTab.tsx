@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -77,15 +78,18 @@ const ExportDataTab = () => {
         
         // Make sure we have valid data
         if (filteredShows && Array.isArray(filteredShows)) {
-          // Safely type filter and extract IDs
+          // Use type assertion after proper checks
           filteredShowIds = filteredShows
-            .filter((show): show is {id: string} => 
+            .filter(show => 
               show !== null && 
               typeof show === 'object' && 
               'id' in show && 
               typeof show.id === 'string'
             )
-            .map(show => show.id);
+            .map(show => {
+              // We've already filtered, so we know it has id
+              return (show as {id: string}).id;
+            });
           
           // Get show items for these shows to later filter interviewees
           if (filteredShowIds.length > 0) {
@@ -100,13 +104,16 @@ const ExportDataTab = () => {
             // Safely type filter and extract IDs
             if (filteredItems && Array.isArray(filteredItems)) {
               filteredShowItemIds = filteredItems
-                .filter((item): item is {id: string} => 
+                .filter(item => 
                   item !== null && 
                   typeof item === 'object' && 
                   'id' in item && 
                   typeof item.id === 'string'
                 )
-                .map(item => item.id);
+                .map(item => {
+                  // We've already filtered, so we know it has id
+                  return (item as {id: string}).id;
+                });
             }
           }
         }
@@ -192,7 +199,7 @@ const ExportDataTab = () => {
     } catch (error: any) {
       console.error('Export error:', error);
       toast({
-        title: "שגי��ה בייצוא נתונים",
+        title: "שגיאה בייצוא נתונים",
         description: error.message,
         variant: "destructive",
       });
