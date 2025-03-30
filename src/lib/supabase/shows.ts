@@ -253,24 +253,27 @@ export const saveShow = async (
       }
       
     } else {
-      // This is a new show, so we need to insert it
-      // Explicitly specify .select('id') to ensure we get the ID back
+      // Critical fix: Use .select() to get the ID back and unpack it properly
+      console.log('Creating new show with data:', show);
+      
       const { data, error: createError } = await supabase
         .from('shows_backup')
-        .insert({
+        .insert([{
           name: show.name,
           time: show.time,
           date: show.date,
           notes: show.notes,
           slot_id: show.slot_id
-        })
-        .select('id')
+        }])
+        .select()
         .single();
 
       if (createError) {
         console.error('Error creating new show:', createError);
         throw createError;
       }
+      
+      console.log('Received response after show creation:', data);
       
       if (!data || !data.id) {
         console.error('Failed to get ID for newly created show, data:', data);
