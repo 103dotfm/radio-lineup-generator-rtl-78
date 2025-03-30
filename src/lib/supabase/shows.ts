@@ -98,12 +98,12 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   }
 };
 
-export const getShowWithItems = async (showId: string) => {
+export const getShowWithItems = async (showId: string | undefined) => {
   console.log('Fetching show with ID:', showId);
   
   if (!showId) {
     console.error('No show ID provided');
-    throw new Error('No show ID provided');
+    return { show: null, items: [] };
   }
 
   const { data: show, error: showError } = await supabase
@@ -206,6 +206,10 @@ export const saveShow = async (
     console.log('Saving show. Is update?', isUpdate);
 
     if (isUpdate) {
+      if (!showId) {
+        throw new Error('No show ID provided for update');
+      }
+      
       const { error: showError } = await supabase
         .from('shows_backup')
         .update({
@@ -234,6 +238,7 @@ export const saveShow = async (
       if (deleteError) throw deleteError;
       
     } else {
+      // This is a new show, so we need to insert it
       const { data: newShow, error: createError } = await supabase
         .from('shows_backup')
         .insert({
@@ -261,7 +266,7 @@ export const saveShow = async (
       if (slotError) throw slotError;
     }
 
-    if (items.length > 0) {
+    if (items.length > 0 && finalShowId) {
       console.log('RAW ITEMS BEFORE PROCESSING:', items.map(item => ({
         name: item.name,
         is_divider: item.is_divider,
