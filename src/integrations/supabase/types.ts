@@ -157,12 +157,15 @@ export type Database = {
           color: string | null
           created_at: string
           date: string
+          day_of_week: number | null
           end_time: string
           has_lineup: boolean | null
           host_name: string | null
           id: string
           is_collection: boolean | null
+          is_modified: boolean | null
           is_prerecorded: boolean | null
+          is_recurring: boolean | null
           show_name: string
           start_time: string
           updated_at: string
@@ -171,12 +174,15 @@ export type Database = {
           color?: string | null
           created_at?: string
           date: string
+          day_of_week?: number | null
           end_time: string
           has_lineup?: boolean | null
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
+          is_modified?: boolean | null
           is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
           show_name: string
           start_time: string
           updated_at?: string
@@ -185,12 +191,15 @@ export type Database = {
           color?: string | null
           created_at?: string
           date?: string
+          day_of_week?: number | null
           end_time?: string
           has_lineup?: boolean | null
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
+          is_modified?: boolean | null
           is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
           show_name?: string
           start_time?: string
           updated_at?: string
@@ -369,7 +378,7 @@ export type Database = {
             foreignKeyName: "shows_slot_id_fkey"
             columns: ["slot_id"]
             isOneToOne: false
-            referencedRelation: "schedule_slots_old"
+            referencedRelation: "schedule_slots"
             referencedColumns: ["id"]
           },
         ]
