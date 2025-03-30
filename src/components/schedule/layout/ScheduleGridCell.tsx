@@ -1,10 +1,9 @@
 
-// src/components/schedule/layout/ScheduleGridCell.tsx
-// This update ensures we show slots correctly based on whether they're from master schedule or not
-
 import React from 'react';
-import { Pencil, Trash2, FileCheck } from 'lucide-react';
 import { ScheduleSlot } from '@/types/schedule';
+import { Button } from "@/components/ui/button";
+import { FileCheck, Pencil, Trash2 } from 'lucide-react';
+import { getShowDisplay } from '@/utils/showDisplay';
 
 interface ScheduleGridCellProps {
   slot: ScheduleSlot;
@@ -23,94 +22,103 @@ export default function ScheduleGridCell({
   isAdmin,
   isAuthenticated
 }: ScheduleGridCellProps) {
-  // Determine background color based on slot properties
-  const getSlotColor = () => {
+  const getSlotColor = (slot: ScheduleSlot) => {
+    console.log('Getting color for slot:', {
+      name: slot.show_name,
+      color: slot.color,
+      is_prerecorded: slot.is_prerecorded,
+      is_collection: slot.is_collection,
+      is_modified: slot.is_modified
+    });
+
+    // First priority: user-selected color (if explicitly set)
     if (slot.color) {
-      return `bg-${slot.color}-100 hover:bg-${slot.color}-200`;
+      console.log('Using user-selected color:', slot.color);
+      switch (slot.color) {
+        case 'green':
+          return 'bg-[#eff4ec]';
+        case 'yellow':
+          return 'bg-[#FEF7CD]';
+        case 'blue':
+          return 'bg-[#D3E4FD]';
+        case 'red':
+          return 'bg-[#FFDEE2]';
+        default:
+          return 'bg-[#eff4ec]';
+      }
     }
-    return 'bg-green-100 hover:bg-green-200';
+
+    // Second priority: prerecorded or collection (blue)
+    if (slot.is_prerecorded || slot.is_collection) {
+      console.log('Using blue for prerecorded/collection');
+      return 'bg-[#D3E4FD]';
+    }
+
+    // Third priority: modified from master schedule (yellow)
+    if (slot.is_modified) {
+      console.log('Using yellow for modified slot');
+      return 'bg-[#FEF7CD]';
+    }
+
+    // Default: regular programming (green)
+    console.log('Using default green color');
+    return 'bg-[#eff4ec]';
   };
 
-  // Flag to show if this is from master schedule or a specific show
-  const isFromMasterSchedule = slot.fromMaster === true;
-  const hasLineup = slot.has_lineup === true;
+  const getSlotHeight = (slot: ScheduleSlot) => {
+    const start = timeToMinutes(slot.start_time);
+    const end = timeToMinutes(slot.end_time);
+    const hoursDiff = (end - start) / 60;
+    return `${hoursDiff * 60}px`;
+  };
+
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
+  const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
 
   return (
     <div 
-      className={`slot-container p-2 mb-1 rounded-md cursor-pointer ${getSlotColor()} transition-colors text-xs md:text-sm`}
-      onClick={() => handleSlotClick(slot)}
+      onClick={slotClickHandler} 
+      className={`p-2 rounded ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
+      style={{
+        height: getSlotHeight(slot),
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        right: '0',
+        zIndex: 10
+      }}
     >
       <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <div className="font-bold text-xs md:text-sm">{slot.show_name}</div>
-          {slot.host_name && (
-            <div className="text-gray-700 text-xs">{slot.host_name}</div>
-          )}
-          <div className="text-gray-700 text-xs">
-            {slot.start_time}
-            {slot.end_time && ` - ${slot.end_time}`}
-          </div>
-        </div>
-        
-        {isAdmin && isAuthenticated && (
-          <div className="flex space-x-1">
-            <button 
-              onClick={(e) => handleEditSlot(slot, e)} 
-              className="p-1 text-gray-600 hover:text-blue-600 transition-colors"
-              title="ערוך משבצת"
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button 
-              onClick={(e) => handleDeleteSlot(slot, e)} 
-              className="p-1 text-gray-600 hover:text-red-600 transition-colors"
-              title="מחק משבצת"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-        )}
+        <div className="font-bold">{displayName}</div>
+        {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
       </div>
+      {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
       
-      {/* Indicators */}
-      <div className="flex mt-1 gap-1">
-        {hasLineup && (
-          <span 
-            className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-1 py-0.5 rounded"
-            title="יש ליינאפ"
+      {isAdmin && (
+        <div className="actions">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="p-1 h-8 w-8" 
+            onClick={e => handleEditSlot(slot, e)}
           >
-            <FileCheck className="h-2 w-2 mr-0.5" />
-            <span className="text-[0.6rem]">ליינאפ</span>
-          </span>
-        )}
-        
-        {isFromMasterSchedule && (
-          <span 
-            className="inline-flex items-center bg-purple-100 text-purple-800 text-xs px-1 py-0.5 rounded"
-            title="מלוח ראשי"
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="p-1 h-8 w-8 hover:bg-red-100" 
+            onClick={e => handleDeleteSlot(slot, e)}
           >
-            <span className="text-[0.6rem]">לוח ראשי</span>
-          </span>
-        )}
-        
-        {slot.is_prerecorded && (
-          <span 
-            className="inline-flex items-center bg-yellow-100 text-yellow-800 text-xs px-1 py-0.5 rounded"
-            title="מוקלט מראש"
-          >
-            <span className="text-[0.6rem]">מוקלט</span>
-          </span>
-        )}
-        
-        {slot.is_collection && (
-          <span 
-            className="inline-flex items-center bg-green-100 text-green-800 text-xs px-1 py-0.5 rounded"
-            title="אוסף"
-          >
-            <span className="text-[0.6rem]">אוסף</span>
-          </span>
-        )}
-      </div>
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
