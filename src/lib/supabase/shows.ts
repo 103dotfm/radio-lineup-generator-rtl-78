@@ -7,7 +7,7 @@ export const getShows = async (): Promise<Show[]> => {
   const { data: shows, error } = await supabase
     .from('shows_backup')
     .select('*')
-    .is('id', 'not.null');  // Only get shows with valid IDs
+    .not('id', 'is', null);  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
 
   if (error) {
     console.error('Error fetching shows:', error);
@@ -80,7 +80,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       .from('shows_backup')
       .select('*')
       .in('id', showIds)
-      .is('id', 'not.null'); // Only select shows with valid IDs
+      .not('id', 'is', null);  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
       
     if (showsError) {
       console.error('Error fetching shows:', showsError);

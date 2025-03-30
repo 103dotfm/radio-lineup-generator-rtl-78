@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -35,7 +36,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
             .from('shows_backup')
             .select('id, name')
             .eq('slot_id', slot.id)
-            .is('id', 'not.null')  // Only get shows with valid IDs
+            .not('id', 'is', null)  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
             .order('created_at', { ascending: false });
             
           if (error) {
