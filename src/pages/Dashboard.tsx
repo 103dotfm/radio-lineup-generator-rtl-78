@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -73,14 +74,17 @@ const Dashboard = () => {
     }
   }, [shows, sortBy]);
 
-  return <div className="container mx-auto py-8 px-4">
+  return (
+    <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
         <div className="flex gap-4">
-          {isAdmin && <Button onClick={() => navigate('/admin')} variant="outline" className="flex items-center gap-2">
+          {isAdmin && (
+            <Button onClick={() => navigate('/admin')} variant="outline" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               ניהול מערכת
-            </Button>}
+            </Button>
+          )}
           <Button onClick={() => navigate('/new')} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             ליינאפ חדש
@@ -100,7 +104,8 @@ const Dashboard = () => {
         </div>
 
         {/* Search Results */}
-        {searchQuery && <div className="mb-8">
+        {searchQuery && (
+          <div className="mb-8">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -113,7 +118,9 @@ const Dashboard = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedShows.flatMap(show => show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => <TableRow key={`${show.id}-${index}`}>
+                {sortedShows.flatMap(show => 
+                  show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => (
+                    <TableRow key={`${show.id}-${index}`}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.title}</TableCell>
                       <TableCell>{item.phone}</TableCell>
@@ -126,10 +133,13 @@ const Dashboard = () => {
                           צפייה בליינאפ
                         </Button>
                       </TableCell>
-                    </TableRow>) || [])}
+                    </TableRow>
+                  )) || []
+                )}
               </TableBody>
             </Table>
-          </div>}
+          </div>
+        )}
       </div>
 
       {/* Schedule View */}
@@ -163,8 +173,12 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {isLoading ? <div className="text-center py-8">טוען...</div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedShows.slice(0, 15).map(show => <Card key={show.id} className="p-4 hover:shadow-lg transition-shadow">
+        {isLoading ? (
+          <div className="text-center py-8">טוען...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sortedShows.slice(0, 15).map(show => (
+              <Card key={show.id} className="p-4 hover:shadow-lg transition-shadow">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-semibold text-lg">{show.name}</h3>
                   <div className="flex items-center gap-2">
@@ -172,12 +186,19 @@ const Dashboard = () => {
                       <Calendar className="h-4 w-4 ml-1" />
                       {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
                     </div>
-                    {isAdmin && <Button variant="ghost" size="icon" onClick={e => {
-                e.stopPropagation();
-                handleDelete(show.id);
-              }} className="text-red-500 hover:text-red-700">
+                    {isAdmin && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleDelete(show.id);
+                        }} 
+                        className="text-red-500 hover:text-red-700"
+                      >
                         <Trash2 className="h-4 w-4" />
-                      </Button>}
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="cursor-pointer" onClick={() => navigate(`/show/${show.id}`)}>
@@ -185,16 +206,33 @@ const Dashboard = () => {
                     <List className="h-4 w-4" />
                     <span>{show.time || 'ללא שעה'}</span>
                   </div>
-                  {show.notes && <p className="mt-2 text-sm text-gray-600 line-clamp-2" dangerouslySetInnerHTML={{
-              __html: show.notes
-            }} />}
+                  {show.notes && (
+                    <p 
+                      className="mt-2 text-sm text-gray-600 line-clamp-2" 
+                      dangerouslySetInnerHTML={{ __html: show.notes }} 
+                    />
+                  )}
                 </div>
-              </Card>)}
-          </div>}
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="flex justify-center mt-12">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo footer-logo" />
+        <img 
+          src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" 
+          alt="103FM" 
+          className="h-12 opacity-50 dashboard-logo footer-logo" 
+        />
       </div>
       <div className="flex justify-center mt-12">
         <div className="credit">
+          Made with ❤️ by Lovable
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
