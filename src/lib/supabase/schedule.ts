@@ -12,47 +12,33 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     console.log('Fetching master schedule slots...');
     const { data: slots, error } = await supabase
       .from('schedule_slots_old')
-      .select(`
-        *,
-        shows:shows_backup (
-          id,
-          name,
-          time,
-          date,
-          notes,
-          created_at,
-          slot_id
-        )
-      `)
-      .eq('is_recurring', true)
-      .order('day_of_week', { ascending: true })
-      .order('start_time', { ascending: true });
+      .select('*');
 
     if (error) {
       console.error('Error fetching master schedule:', error);
       throw error;
     }
-    console.log('Retrieved master schedule slots:', slots);
-    return (slots || []).map(slot => ({
-      ...slot,
-      shows: slot.shows || []
+
+    // Fetch shows separately for each slot
+    const slotsWithShows = await Promise.all((slots || []).map(async (slot) => {
+      const { data: slotShows, error: showsError } = await supabase
+        .from('shows_backup')
+        .select('id, name, time, date, notes, created_at')
+        .eq('slot_id', slot.id);
+        
+      return {
+        ...slot,
+        shows: showsError ? [] : (slotShows || [])
+      };
     }));
+    
+    console.log('Retrieved master schedule slots with shows:', slotsWithShows);
+    return slotsWithShows;
   }
 
   const { data: allSlots, error } = await supabase
     .from('schedule_slots_old')
-    .select(`
-      *,
-      shows:shows_backup (
-        id,
-        name,
-        time,
-        date,
-        notes,
-        created_at,
-        slot_id
-      )
-    `)
+    .select('*')
     .or(`is_recurring.eq.false,is_recurring.eq.true`)
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
@@ -75,7 +61,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
           acc.push({
             ...slot,
             is_modified: true,
-            shows: slot.shows || []
+            shows: [] // We'll populate this later
           });
         } else {
           console.log(`Skipping deleted slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
@@ -100,7 +86,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         acc.push({
           ...weekModification,
           is_modified: true,
-          shows: weekModification.shows || []
+          shows: [] // We'll populate this later
         });
       } else {
         console.log(`Skipping deleted recurring slot: ${slot.show_name} at ${slot.start_time} on day ${slot.day_of_week}`);
@@ -114,27 +100,30 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       acc.push({
         ...slot,
         is_modified: false,
-        shows: slot.shows || []
+        shows: [] // We'll populate this later
       });
     }
 
     return acc;
   }, []);
 
-  const finalSlots = processedSlots.map(slot => {
+  // Now fetch shows for all slots in a separate step
+  const finalSlots = await Promise.all(processedSlots.map(async (slot) => {
     const slotDate = addDays(startDate, slot.day_of_week);
-    const showsInWeek = (slot.shows || []).filter(show => {
-      if (!show.date) return false;
-      const showDate = new Date(show.date);
-      return isSameDay(showDate, slotDate);
-    });
-
+    const dateString = format(slotDate, 'yyyy-MM-dd');
+    
+    const { data: showsInWeek, error: showsError } = await supabase
+      .from('shows_backup')
+      .select('id, name, time, date, notes, created_at')
+      .eq('slot_id', slot.id)
+      .eq('date', dateString);
+      
     return {
       ...slot,
-      shows: showsInWeek,
-      has_lineup: showsInWeek.length > 0
+      shows: showsError ? [] : (showsInWeek || []),
+      has_lineup: !showsError && (showsInWeek?.length || 0) > 0
     };
-  });
+  }));
 
   console.log('Final processed slots:', finalSlots);
   return finalSlots;
