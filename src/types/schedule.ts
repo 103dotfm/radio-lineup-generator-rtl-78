@@ -1,4 +1,3 @@
-
 export type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleSlot {
@@ -7,16 +6,15 @@ export interface ScheduleSlot {
   host_name?: string;
   start_time: string;
   end_time: string;
-  day_of_week: number; // Added for backward compatibility with UI
-  is_recurring?: boolean; // Added for backward compatibility with UI
+  day_of_week: number;
+  is_recurring: boolean;
   is_prerecorded?: boolean;
   is_collection?: boolean;
-  is_modified?: boolean;
   has_lineup?: boolean;
+  is_modified?: boolean;
   color?: string;
   created_at?: string;
   updated_at?: string;
-  date?: string; // New field from updated schema
   shows?: Array<{
     id: string;
     name: string;
@@ -24,7 +22,7 @@ export interface ScheduleSlot {
     date?: string;
     notes?: string;
     created_at?: string;
-  }> | [];
+  }>;
 }
 
 export interface DayNote {

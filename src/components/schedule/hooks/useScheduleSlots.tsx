@@ -10,29 +10,24 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
 
   const {
     data: scheduleSlots = [],
-    isLoading,
-    error,
-    refetch
+    isLoading
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
-    queryFn: async () => {
+    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
+    queryFn: () => {
       console.log('Fetching slots with params:', {
         selectedDate,
         isMasterSchedule
       });
-      try {
-        const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
-        console.log('Fetched slots:', slots);
-        return slots;
-      } catch (error) {
-        console.error('Error in query function:', error);
-        // Instead of returning an empty array which might not match the expected type,
-        // we throw the error to be handled by React Query's error states
-        throw error;
-      }
+      return getScheduleSlots(selectedDate, isMasterSchedule);
     },
-    retry: 1,
-    refetchOnMount: true
+    meta: {
+      onSuccess: (data: ScheduleSlot[]) => {
+        console.log('Successfully fetched slots:', data);
+      },
+      onError: (error: Error) => {
+        console.error('Error fetching slots:', error);
+      }
+    }
   });
 
   const createSlotMutation = useMutation({
@@ -108,8 +103,6 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   return {
     scheduleSlots,
     isLoading,
-    error,
-    refetch,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
     deleteSlot: deleteSlotMutation.mutateAsync
