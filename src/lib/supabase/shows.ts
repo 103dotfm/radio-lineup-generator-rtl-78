@@ -1,10 +1,11 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
   const { data: shows, error } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .select(`
       *,
       items:show_items(
@@ -87,7 +88,7 @@ export const getShowWithItems = async (showId: string) => {
   }
 
   const { data: show, error: showError } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .select('*')
     .eq('id', showId)
     .single();
@@ -129,7 +130,7 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
   console.log('Fetching shows for date:', date);
   
   const { data: shows, error } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .select('*')
     .eq('date', date)
     .order('time', { ascending: true });
@@ -177,7 +178,7 @@ export const saveShow = async (
 
     if (isUpdate) {
       const { error: showError } = await supabase
-        .from('shows')
+        .from('shows_backup')
         .update({
           name: show.name,
           time: show.time,
@@ -205,7 +206,7 @@ export const saveShow = async (
       
     } else {
       const { data: newShow, error: createError } = await supabase
-        .from('shows')
+        .from('shows_backup')
         .insert({
           name: show.name,
           time: show.time,
@@ -222,7 +223,7 @@ export const saveShow = async (
 
     if (show.slot_id) {
       const { error: slotError } = await supabase
-        .from('schedule_slots')
+        .from('schedule_slots_old')
         .update({ 
           has_lineup: true
         })
@@ -352,7 +353,7 @@ export const saveShow = async (
 
 export const deleteShow = async (showId: string) => {
   const { error } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .delete()
     .eq('id', showId);
 
