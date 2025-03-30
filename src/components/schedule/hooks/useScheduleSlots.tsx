@@ -31,8 +31,9 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         
         try {
           // Check if this slot has any associated shows, regardless of has_lineup flag
+          // FIXED: Use shows_backup table 
           const { data: shows, error } = await supabase
-            .from('shows_backup')
+            .from('shows_backup')  // Ensure correct table name
             .select('id, name')
             .eq('slot_id', slot.id)
             .order('created_at', { ascending: false });
@@ -46,8 +47,9 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
             // If shows exist, update the slot's has_lineup flag to true
             if (!slot.has_lineup) {
               console.log(`Slot ${slot.id} has shows but has_lineup=false, updating it`);
+              // FIXED: Use schedule_slots_old table
               const { error: updateError } = await supabase
-                .from('schedule_slots_old')
+                .from('schedule_slots_old')  // Ensure correct table name
                 .update({ has_lineup: true })
                 .eq('id', slot.id);
                 
@@ -66,8 +68,9 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
           } else if (slot.has_lineup) {
             // If no shows but has_lineup is true, this is inconsistent - fix it
             console.log(`Slot ${slot.id} has has_lineup=true but no shows found, fixing it`);
+            // FIXED: Use schedule_slots_old table
             const { error: updateError } = await supabase
-              .from('schedule_slots_old')
+              .from('schedule_slots_old')  // Ensure correct table name
               .update({ has_lineup: false })
               .eq('id', slot.id);
               

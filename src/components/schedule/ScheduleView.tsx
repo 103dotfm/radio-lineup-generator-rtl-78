@@ -139,12 +139,28 @@ export default function ScheduleView({
         console.log(`Found associated show ${showId} for slot ${slot.id} from slot.shows`);
         
         try {
+          // Navigate to the show page
           navigate(`/show/${showId}`);
           return;
         } catch (showError) {
           console.error(`Error navigating to show ${showId}:`, showError);
         }
-      } 
+      } else {
+        // If we don't have shows from slot.shows, check directly in the database
+        // FIXED: Use shows_backup table
+        const { data: slotShows, error: slotShowsError } = await supabase
+          .from('shows_backup')  // Ensure correct table name
+          .select('id, name')
+          .eq('slot_id', slot.id)
+          .order('created_at', { ascending: false });
+          
+        if (!slotShowsError && slotShows && slotShows.length > 0) {
+          const showId = slotShows[0].id;
+          console.log(`Found show ${showId} for slot ${slot.id} from direct database query`);
+          navigate(`/show/${showId}`);
+          return;
+        }
+      }
       
       // If we reach here, we need to create a new lineup
       console.log(`Creating new lineup for slot ${slot.id}`);
