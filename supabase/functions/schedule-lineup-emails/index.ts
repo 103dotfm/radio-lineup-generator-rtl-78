@@ -46,7 +46,6 @@ serve(async (req) => {
     // Calculate Israel time (UTC+3) without relying on client timezone
     const israelOffset = 3; // Israel is UTC+3 (3 hours ahead of UTC)
     
-    // *** CRITICAL FIX: ENSURE TIME CALCULATIONS ARE CORRECT ***
     // Get the current UTC time components
     const utcHours = now.getUTCHours();
     const utcMinutes = now.getUTCMinutes();
@@ -57,7 +56,6 @@ serve(async (req) => {
     console.log(`Israel time (UTC+3): ${israelHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
     
     // Then apply the user-defined timezone offset
-    // IMPORTANT FIX: Correctly apply timezone offset to avoid the 1-hour-early bug
     const adjustedHours = (israelHours + timezoneOffset) % 24;
     
     // Format the current time with the applied offset
@@ -78,7 +76,6 @@ serve(async (req) => {
     const israelOneMinuteAgoHours = (oneMinuteAgoHours + israelOffset) % 24;
     
     // Then apply timezone offset to the one minute ago time
-    // IMPORTANT FIX: Correctly apply timezone offset to avoid the 1-hour-early bug
     const adjustedOneMinuteAgoHours = (israelOneMinuteAgoHours + timezoneOffset) % 24;
     const oneMinuteAgoTimeString = `${adjustedOneMinuteAgoHours.toString().padStart(2, '0')}:${oneMinuteAgoMinutes.toString().padStart(2, '0')}`;
     
@@ -90,7 +87,6 @@ serve(async (req) => {
     console.log(`UTC day of week: ${utcDay}`);
     
     // Calculate the Israel day by potentially adjusting for day rollover
-    // IMPORTANT FIX: Properly handle day boundary crossing with Israel offset
     let israelDay = utcDay;
     if (utcHours + israelOffset >= 24) {
       israelDay = (utcDay + 1) % 7;
@@ -98,7 +94,6 @@ serve(async (req) => {
     console.log(`Israel day of week: ${israelDay}`);
     
     // Apply timezone offset that might affect the day
-    // IMPORTANT FIX: Properly handle day boundary crossing with timezone offset
     let adjustedDay = israelDay;
     
     // If the timezone offset pushes us back a day (negative offset)
@@ -111,10 +106,9 @@ serve(async (req) => {
     
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
-    // FIXED TABLE NAME: schedule_slots_old
     // Get all shows from Schedule slots for today that match the time window
     const { data: slots, error: slotsError } = await supabase
-      .from("schedule_slots_old")  // Ensure correct table name
+      .from("schedule_slots_old")
       .select("id, show_name, start_time")
       .eq("day_of_week", adjustedDay)
       .eq("has_lineup", true)
@@ -165,7 +159,6 @@ serve(async (req) => {
       console.log(`Processing slot: ${slot.show_name} (${slot.start_time})`);
       
       // Get current date in YYYY-MM-DD format
-      // IMPORTANT FIX: Correct date calculation
       const nowUtc = new Date();
       
       // Adjust for Israel and timezone offset
@@ -192,10 +185,9 @@ serve(async (req) => {
       
       console.log(`Looking for shows on date: ${todayDate}`);
       
-      // FIXED TABLE NAME: shows_backup
       // Get the most recent show associated with this slot for today's date
       const { data: shows, error: showsError } = await supabase
-        .from("shows_backup")  // Ensure correct table name
+        .from("shows_backup")
         .select("id, name, date")
         .eq("slot_id", slot.id)
         .eq("date", todayDate) // Filter for today's date explicitly

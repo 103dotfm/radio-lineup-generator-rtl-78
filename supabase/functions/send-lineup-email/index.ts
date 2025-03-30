@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { 
@@ -153,7 +154,7 @@ async function handleRequest(req: Request) {
     try {
       console.log("Fetching show details...");
       const { data: show, error: showError } = await supabase
-        .from("shows")
+        .from("shows_backup") // Updated table name
         .select(`
           id,
           name,
