@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -124,14 +125,18 @@ export default function ScheduleView({
       host_name: slot.host_name,
       start_time: slot.start_time,
       is_prerecorded: slot.is_prerecorded,
-      is_collection: slot.is_collection
+      is_collection: slot.is_collection,
+      has_lineup: slot.has_lineup,
+      id: slot.id
     });
     
+    // First check if the slot has associated shows
     if (slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0 && slot.shows[0]?.id) {
       const show = slot.shows[0];
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);
     } else {
+      // If no shows exist for this slot, create a new lineup
       const weekStart = new Date(selectedDate);
       weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
       const slotDate = new Date(weekStart);
@@ -141,7 +146,7 @@ export default function ScheduleView({
         ? slot.host_name 
         : `${slot.show_name} עם ${slot.host_name}`;
       
-      console.log('Navigating to new lineup with generated name:', generatedShowName);
+      console.log('Navigating to new lineup with slot ID:', slot.id);
       navigate('/new', {
         state: {
           generatedShowName,

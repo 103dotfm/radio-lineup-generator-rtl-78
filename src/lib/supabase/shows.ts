@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -78,8 +79,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
           details: item.details,
           duration: item.duration,
           is_break: item.is_break,
-          is_note: item.is_note,
-          created_at: item.created_at
+          is_note: item.is_note
         }));
         
       return {
@@ -105,53 +105,58 @@ export const getShowWithItems = async (showId: string | undefined) => {
     return { show: null, items: [] };
   }
 
-  const { data: show, error: showError } = await supabase
-    .from('shows_backup')
-    .select('*')
-    .eq('id', showId)
-    .single();
-
-  if (showError) {
-    console.error('Error fetching show:', showError);
-    throw showError;
-  }
-
-  const { data: items, error: itemsError } = await supabase
-    .from('show_items')
-    .select('*')
-    .eq('show_id', showId)
-    .order('position', { ascending: true });
-
-  if (itemsError) {
-    console.error('Error fetching show items:', itemsError);
-    throw itemsError;
-  }
-
-  // Fetch interviewees separately for each item
-  const itemsWithInterviewees = await Promise.all((items || []).map(async (item) => {
-    const { data: interviewees, error: intervieweesError } = await supabase
-      .from('interviewees')
+  try {
+    const { data: show, error: showError } = await supabase
+      .from('shows_backup')
       .select('*')
-      .eq('item_id', item.id);
-      
+      .eq('id', showId)
+      .single();
+
+    if (showError) {
+      console.error('Error fetching show:', showError);
+      throw showError;
+    }
+
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select('*')
+      .eq('show_id', showId)
+      .order('position', { ascending: true });
+
+    if (itemsError) {
+      console.error('Error fetching show items:', itemsError);
+      throw itemsError;
+    }
+
+    // Fetch interviewees separately for each item
+    const itemsWithInterviewees = await Promise.all((items || []).map(async (item) => {
+      const { data: interviewees, error: intervieweesError } = await supabase
+        .from('interviewees')
+        .select('*')
+        .eq('item_id', item.id);
+        
+      return {
+        ...item,
+        interviewees: intervieweesError ? [] : (interviewees || [])
+      };
+    }));
+
+    console.log('Retrieved items from database:', itemsWithInterviewees?.map(item => ({
+      id: item.id,
+      name: item.name,
+      is_divider: item.is_divider,
+      is_break: item.is_break,
+      is_note: item.is_note
+    })));
+
     return {
-      ...item,
-      interviewees: intervieweesError ? [] : (interviewees || [])
+      show,
+      items: itemsWithInterviewees || []
     };
-  }));
-
-  console.log('Retrieved items from database:', itemsWithInterviewees?.map(item => ({
-    id: item.id,
-    name: item.name,
-    is_divider: item.is_divider,
-    is_break: item.is_break,
-    is_note: item.is_note
-  })));
-
-  return {
-    show,
-    items: itemsWithInterviewees || []
-  };
+  } catch (error) {
+    console.error('Error getting show with items:', error);
+    throw error;
+  }
 };
 
 export const getShowsByDate = async (date: string): Promise<Show[]> => {
@@ -203,6 +208,7 @@ export const saveShow = async (
     let finalShowId = showId;
     let isUpdate = Boolean(showId);
     console.log('Saving show. Is update?', isUpdate);
+    console.log('Show data:', { ...show, showId });
 
     if (isUpdate) {
       if (!showId) {
@@ -253,10 +259,12 @@ export const saveShow = async (
 
       if (createError) throw createError;
       finalShowId = newShow.id;
+      console.log('Created new show with id:', finalShowId);
     }
 
     // Update the schedule slot to indicate it has a lineup
     if (show.slot_id) {
+      console.log('Updating schedule slot with has_lineup=true:', show.slot_id);
       const { error: slotError } = await supabase
         .from('schedule_slots_old')
         .update({ 
@@ -264,7 +272,10 @@ export const saveShow = async (
         })
         .eq('id', show.slot_id);
 
-      if (slotError) throw slotError;
+      if (slotError) {
+        console.error('Error updating slot has_lineup:', slotError);
+        throw slotError;
+      }
     }
 
     // Only proceed with item insertion if we have a valid show ID

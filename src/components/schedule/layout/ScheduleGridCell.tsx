@@ -28,7 +28,8 @@ export default function ScheduleGridCell({
       color: slot.color,
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection,
-      is_modified: slot.is_modified
+      is_modified: slot.is_modified,
+      has_lineup: slot.has_lineup
     });
 
     // First priority: user-selected color (if explicitly set)
@@ -79,6 +80,13 @@ export default function ScheduleGridCell({
 
   const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
   const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
+  
+  // Check if the slot has a connected show properly
+  const hasValidLineup = slot.has_lineup && 
+    slot.shows && 
+    Array.isArray(slot.shows) && 
+    slot.shows.length > 0 && 
+    slot.shows[0]?.id;
 
   return (
     <div 
@@ -92,10 +100,12 @@ export default function ScheduleGridCell({
         right: '0',
         zIndex: 10
       }}
+      data-slot-id={slot.id}
+      data-has-lineup={hasValidLineup ? 'true' : 'false'}
     >
       <div className="flex justify-between items-start">
         <div className="font-bold">{displayName}</div>
-        {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
+        {hasValidLineup && <FileCheck className="h-4 w-4 text-green-600" />}
       </div>
       {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
       

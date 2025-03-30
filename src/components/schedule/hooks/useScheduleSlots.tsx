@@ -23,6 +23,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     meta: {
       onSuccess: (data: ScheduleSlot[]) => {
         console.log('Successfully fetched slots:', data);
+        // Add additional logging to help debug show connections
+        data.forEach(slot => {
+          if (slot.has_lineup) {
+            console.log(`Slot ${slot.id} (${slot.show_name}) has lineup:`, slot.shows);
+          }
+        });
       },
       onError: (error: Error) => {
         console.error('Error fetching slots:', error);
@@ -33,7 +39,8 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   const createSlotMutation = useMutation({
     mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
       createScheduleSlot(slotData, isMasterSchedule, selectedDate),
-    onSuccess: () => {
+    onSuccess: (newSlot) => {
+      console.log('Successfully created slot:', newSlot);
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
       });
@@ -64,7 +71,8 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       });
       return updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
     },
-    onSuccess: () => {
+    onSuccess: (updatedSlot) => {
+      console.log('Successfully updated slot:', updatedSlot);
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
       });
