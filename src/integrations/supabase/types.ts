@@ -156,13 +156,12 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
-          day_of_week: number
+          date: string
           end_time: string
           has_lineup: boolean | null
           host_name: string | null
           id: string
           is_collection: boolean | null
-          is_deleted: boolean | null
           is_modified: boolean | null
           is_prerecorded: boolean | null
           is_recurring: boolean | null
@@ -173,13 +172,12 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
-          day_of_week: number
+          date: string
           end_time: string
           has_lineup?: boolean | null
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
-          is_deleted?: boolean | null
           is_modified?: boolean | null
           is_prerecorded?: boolean | null
           is_recurring?: boolean | null
@@ -190,13 +188,12 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
-          day_of_week?: number
+          date?: string
           end_time?: string
           has_lineup?: boolean | null
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
-          is_deleted?: boolean | null
           is_modified?: boolean | null
           is_prerecorded?: boolean | null
           is_recurring?: boolean | null
@@ -257,16 +254,17 @@ export type Database = {
         }
         Relationships: []
       }
-      schedule_slots_todelete: {
+      schedule_slots_old: {
         Row: {
           color: string | null
           created_at: string
-          date: string
+          day_of_week: number
           end_time: string
           has_lineup: boolean | null
           host_name: string | null
           id: string
           is_collection: boolean | null
+          is_deleted: boolean | null
           is_modified: boolean | null
           is_prerecorded: boolean | null
           is_recurring: boolean | null
@@ -277,12 +275,13 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
-          date: string
+          day_of_week: number
           end_time: string
           has_lineup?: boolean | null
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
+          is_deleted?: boolean | null
           is_modified?: boolean | null
           is_prerecorded?: boolean | null
           is_recurring?: boolean | null
@@ -293,12 +292,13 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
-          date?: string
+          day_of_week?: number
           end_time?: string
           has_lineup?: boolean | null
           host_name?: string | null
           id?: string
           is_collection?: boolean | null
+          is_deleted?: boolean | null
           is_modified?: boolean | null
           is_prerecorded?: boolean | null
           is_recurring?: boolean | null
@@ -335,7 +335,7 @@ export type Database = {
             foreignKeyName: "show_email_logs_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: true
-            referencedRelation: "shows_todelete"
+            referencedRelation: "shows"
             referencedColumns: ["id"]
           },
         ]
@@ -388,42 +388,12 @@ export type Database = {
             foreignKeyName: "show_items_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: false
-            referencedRelation: "shows_todelete"
+            referencedRelation: "shows"
             referencedColumns: ["id"]
           },
         ]
       }
       shows: {
-        Row: {
-          created_at: string | null
-          date: string | null
-          id: string | null
-          name: string | null
-          notes: string | null
-          slot_id: string | null
-          time: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          date?: string | null
-          id?: string | null
-          name?: string | null
-          notes?: string | null
-          slot_id?: string | null
-          time?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          date?: string | null
-          id?: string | null
-          name?: string | null
-          notes?: string | null
-          slot_id?: string | null
-          time?: string | null
-        }
-        Relationships: []
-      }
-      shows_todelete: {
         Row: {
           created_at: string | null
           date: string | null
@@ -456,10 +426,40 @@ export type Database = {
             foreignKeyName: "shows_slot_id_fkey"
             columns: ["slot_id"]
             isOneToOne: false
-            referencedRelation: "schedule_slots_todelete"
+            referencedRelation: "schedule_slots"
             referencedColumns: ["id"]
           },
         ]
+      }
+      shows_backup: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          slot_id: string | null
+          time: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Relationships: []
       }
       system_settings: {
         Row: {
