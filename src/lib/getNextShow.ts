@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
@@ -8,8 +7,7 @@ interface NextShowInfo {
 }
 
 /**
- * Gets the next show for the specified date prioritizing actual shows with lineups
- * over scheduled slots, and handling special programming correctly
+ * Gets the next show for the specified date by looking at both the daily schedule and existing lineups
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -27,144 +25,118 @@ export const getNextShow = async (
     
     // Get the day of week (0 = Sunday, 1 = Monday, etc.)
     const dayOfWeek = currentShowDate.getDay();
+    console.log('Day of week:', dayOfWeek);
     
-    // 1. First priority: Check for actual shows with lineups for this specific date
-    const { data: actualShows, error: showsError } = await supabase
+    // First, query the shows table for all shows with lineups on this specific date
+    const { data: showsOnDate, error: showsError } = await supabase
       .from('shows')
       .select('id, name, time, date')
       .eq('date', formattedDate)
-      .gt('time', currentShowTime)
-      .order('time', { ascending: true })
-      .limit(1);
+      .order('time', { ascending: true });
     
     if (showsError) {
-      console.error('Error fetching actual shows:', showsError);
-    } else if (actualShows && actualShows.length > 0) {
-      // We found an actual show with lineup after the current time
-      console.log('Found actual show with lineup:', actualShows[0].name);
-      
-      // Check if the show name contains host information
-      const hostMatch = actualShows[0].name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
-      return {
-        name: actualShows[0].name
-      };
+      console.error('Error fetching shows for date:', showsError);
+      return null;
     }
     
-    // 2. Second priority: Check the schedule slots for this specific day of week
+    // Then, query the schedule_slots table for all slots on this day of week
     const { data: scheduledSlots, error: slotsError } = await supabase
       .from('schedule_slots')
       .select('id, show_name, host_name, start_time')
       .eq('day_of_week', dayOfWeek)
       .eq('is_deleted', false)
-      .gt('start_time', currentShowTime)
-      .order('start_time', { ascending: true })
-      .limit(1);
+      .order('start_time', { ascending: true });
     
     if (slotsError) {
       console.error('Error fetching schedule slots:', slotsError);
       return null;
-    } 
+    }
     
-    if (scheduledSlots && scheduledSlots.length > 0) {
-      console.log('Found scheduled slot:', scheduledSlots[0].show_name);
+    // Combine and normalize the data from both sources
+    const allShows = [
+      // From shows table
+      ...(showsOnDate || []).map(show => ({
+        id: show.id,
+        name: show.name,
+        time: show.time,
+        host: undefined
+      })),
       
-      // If we have host information
-      if (scheduledSlots[0].host_name) {
-        return {
-          name: scheduledSlots[0].show_name,
-          host: scheduledSlots[0].host_name
-        };
+      // From schedule_slots table
+      ...(scheduledSlots || []).map(slot => ({
+        id: slot.id,
+        name: slot.show_name,
+        time: slot.start_time.substring(0, 8), // Convert HH:MM:SS format
+        host: slot.host_name
+      }))
+    ];
+    
+    // Sort by time and remove duplicates (prefer lineups over schedule entries)
+    const uniqueShows = [];
+    const timeMap = new Map();
+    
+    // First add shows from lineups (higher priority)
+    showsOnDate?.forEach(show => {
+      timeMap.set(show.time, {
+        id: show.id,
+        name: show.name,
+        time: show.time,
+        host: undefined
+      });
+    });
+    
+    // Then add schedule slots if no lineup exists for that time
+    scheduledSlots?.forEach(slot => {
+      const timeKey = slot.start_time.substring(0, 8);
+      if (!timeMap.has(timeKey)) {
+        timeMap.set(timeKey, {
+          id: slot.id,
+          name: slot.show_name,
+          time: timeKey,
+          host: slot.host_name
+        });
       }
-      
-      // Check if the show name contains host information
-      const hostMatch = scheduledSlots[0].show_name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
+    });
+    
+    // Convert map to array and sort by time
+    const combinedShows = Array.from(timeMap.values()).sort((a, b) => {
+      if (a.time < b.time) return -1;
+      if (a.time > b.time) return 1;
+      return 0;
+    });
+    
+    console.log('All combined shows for today:', combinedShows);
+    
+    // Find the first show that comes after the current show time
+    const nextShow = combinedShows.find(show => show.time > currentShowTime);
+    
+    if (!nextShow) {
+      console.log('No next show found after time:', currentShowTime);
+      return null;
+    }
+    
+    console.log('Found next show:', nextShow.name, 'at', nextShow.time);
+    
+    // If we have host information from the schedule slot
+    if (nextShow.host) {
       return {
-        name: scheduledSlots[0].show_name
+        name: nextShow.name,
+        host: nextShow.host
       };
     }
     
-    // 3. No next show today, need to look at the first show of tomorrow
-    // First try actual shows for tomorrow
-    const tomorrow = new Date(currentShowDate);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowFormatted = format(tomorrow, 'yyyy-MM-dd');
-    const tomorrowDayOfWeek = tomorrow.getDay();
-    
-    // Check for actual shows tomorrow
-    const { data: tomorrowShows } = await supabase
-      .from('shows')
-      .select('id, name, time, date')
-      .eq('date', tomorrowFormatted)
-      .order('time', { ascending: true })
-      .limit(1);
-      
-    if (tomorrowShows && tomorrowShows.length > 0) {
-      console.log('Found first show for tomorrow (actual):', tomorrowShows[0].name);
-      
-      // Check if the show name contains host information
-      const hostMatch = tomorrowShows[0].name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
+    // Otherwise check if the show name contains host information
+    const hostMatch = nextShow.name.match(/(.*?)\s+עם\s+(.*)/);
+    if (hostMatch) {
       return {
-        name: tomorrowShows[0].name
+        name: hostMatch[1].trim(),
+        host: hostMatch[2].trim()
       };
     }
     
-    // If no actual shows tomorrow, check schedule slots
-    const { data: tomorrowSlots } = await supabase
-      .from('schedule_slots')
-      .select('id, show_name, host_name, start_time')
-      .eq('day_of_week', tomorrowDayOfWeek)
-      .eq('is_deleted', false)
-      .order('start_time', { ascending: true })
-      .limit(1);
-      
-    if (tomorrowSlots && tomorrowSlots.length > 0) {
-      console.log('Found first show for tomorrow (scheduled):', tomorrowSlots[0].show_name);
-      
-      // If we have host information
-      if (tomorrowSlots[0].host_name) {
-        return {
-          name: tomorrowSlots[0].show_name,
-          host: tomorrowSlots[0].host_name
-        };
-      }
-      
-      // Check if the show name contains host information
-      const hostMatch = tomorrowSlots[0].show_name.match(/(.*?)\s+עם\s+(.*)/);
-      if (hostMatch) {
-        return {
-          name: hostMatch[1].trim(),
-          host: hostMatch[2].trim()
-        };
-      }
-      
-      return {
-        name: tomorrowSlots[0].show_name
-      };
-    }
-    
-    console.log('No next show found for today or tomorrow');
-    return null;
+    return {
+      name: nextShow.name
+    };
     
   } catch (error) {
     console.error('Error getting next show:', error);
