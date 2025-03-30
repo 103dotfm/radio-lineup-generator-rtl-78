@@ -9,6 +9,8 @@ import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays } from 'date-fns';
+import { toast } from "sonner";
+import { getShowWithItems } from '@/lib/supabase/shows';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -118,25 +120,57 @@ export default function ScheduleView({
     }
   };
 
-  const handleSlotClick = (slot: ScheduleSlot) => {
+  const handleSlotClick = async (slot: ScheduleSlot) => {
     if (!isAuthenticated) return;
+    
     console.log('Clicked slot details:', {
+      id: slot.id,
       show_name: slot.show_name,
       host_name: slot.host_name,
       start_time: slot.start_time,
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection,
-      has_lineup: slot.has_lineup,
-      id: slot.id
+      has_lineup: slot.has_lineup
     });
     
-    // First check if the slot has associated shows
-    if (slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0 && slot.shows[0]?.id) {
-      const show = slot.shows[0];
-      console.log('Found existing show, navigating to:', show.id);
-      navigate(`/show/${show.id}`);
-    } else {
-      // If no shows exist for this slot, create a new lineup
+    try {
+      // First, check if there's an associated show ID in shows_backup for this slot
+      if (slot.has_lineup === true) {
+        console.log("Slot has a lineup, trying to find associated show");
+        
+        // Query shows_backup for shows with this slot_id
+        const { data: shows, error: showError } = await supabase
+          .from('shows_backup')
+          .select('id')
+          .eq('slot_id', slot.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (showError) {
+          console.error("Error finding show for slot:", showError);
+          throw showError;
+        }
+        
+        if (shows && shows.length > 0) {
+          const showId = shows[0].id;
+          console.log(`Found show ID ${showId} for slot ${slot.id}`);
+          
+          // Verify that the show exists and has proper data
+          const result = await getShowWithItems(showId);
+          if (result && result.show && result.show.id) {
+            console.log(`Navigating to existing show: ${showId}`);
+            navigate(`/show/${showId}`);
+            return;
+          } else {
+            console.warn(`Show ${showId} found but has invalid data`, result);
+          }
+        } else {
+          console.warn(`Slot ${slot.id} marked as has_lineup=true but no show found`);
+        }
+      }
+
+      // If we reach here, either the slot doesn't have a lineup or we couldn't find a valid show
+      // Create a new lineup (whether the slot has_lineup is true or false)
       const weekStart = new Date(selectedDate);
       weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
       const slotDate = new Date(weekStart);
@@ -146,7 +180,7 @@ export default function ScheduleView({
         ? slot.host_name 
         : `${slot.show_name} עם ${slot.host_name}`;
       
-      console.log('Navigating to new lineup with slot ID:', slot.id);
+      console.log(`Creating new lineup for slot ${slot.id}`);
       navigate('/new', {
         state: {
           generatedShowName,
@@ -159,6 +193,12 @@ export default function ScheduleView({
           slotId: slot.id
         }
       });
+    } catch (error) {
+      console.error("Error handling slot click:", error);
+      toast.error("אירעה שגיאה בטעינת הליינאפ");
+      
+      // Fall back to creating a new lineup
+      navigate('/new');
     }
   };
 

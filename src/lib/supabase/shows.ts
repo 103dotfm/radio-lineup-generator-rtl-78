@@ -100,8 +100,8 @@ export const searchShows = async (query: string): Promise<Show[]> => {
 export const getShowWithItems = async (showId: string | undefined) => {
   console.log('Fetching show with ID:', showId);
   
-  if (!showId) {
-    console.error('No show ID provided');
+  if (!showId || showId === "null" || showId === "undefined") {
+    console.error('Invalid show ID provided:', showId);
     return { show: null, items: [] };
   }
 
@@ -211,11 +211,13 @@ export const saveShow = async (
     console.log('Show data:', { ...show, showId });
 
     if (isUpdate) {
-      if (!showId) {
-        throw new Error('No show ID provided for update');
+      // Update existing show
+      if (!showId || showId === "null" || showId === "undefined") {
+        console.error('Invalid show ID for update:', showId);
+        throw new Error('Invalid show ID provided for update');
       }
       
-      const { error: showError } = await supabase
+      const { data: updateData, error: showError } = await supabase
         .from('shows_backup')
         .update({
           name: show.name,
@@ -224,24 +226,26 @@ export const saveShow = async (
           notes: show.notes,
           slot_id: show.slot_id
         })
-        .eq('id', showId);
+        .eq('id', showId)
+        .select();
 
-      if (showError) throw showError;
+      if (showError) {
+        console.error('Error updating show:', showError);
+        throw showError;
+      }
+      
+      console.log('Updated show successfully:', updateData);
       
       // For existing shows, clean up existing items to avoid orphaned data
-      const { data: existingItems, error: fetchError } = await supabase
-        .from('show_items')
-        .select('id')
-        .eq('show_id', showId);
-        
-      if (fetchError) throw fetchError;
-      
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
         .eq('show_id', showId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Error deleting existing items:', deleteError);
+        throw deleteError;
+      }
       
     } else {
       // This is a new show, so we need to insert it
@@ -257,7 +261,16 @@ export const saveShow = async (
         .select()
         .single();
 
-      if (createError) throw createError;
+      if (createError) {
+        console.error('Error creating new show:', createError);
+        throw createError;
+      }
+      
+      if (!newShow || !newShow.id) {
+        console.error('Failed to get ID for newly created show');
+        throw new Error('Failed to create show - no ID returned');
+      }
+      
       finalShowId = newShow.id;
       console.log('Created new show with id:', finalShowId);
     }
@@ -265,43 +278,34 @@ export const saveShow = async (
     // Update the schedule slot to indicate it has a lineup
     if (show.slot_id) {
       console.log('Updating schedule slot with has_lineup=true:', show.slot_id);
-      const { error: slotError } = await supabase
+      const { data: slotData, error: slotError } = await supabase
         .from('schedule_slots_old')
         .update({ 
           has_lineup: true
         })
-        .eq('id', show.slot_id);
+        .eq('id', show.slot_id)
+        .select();
 
       if (slotError) {
         console.error('Error updating slot has_lineup:', slotError);
         throw slotError;
       }
+      
+      console.log('Updated slot successfully:', slotData);
     }
 
     // Only proceed with item insertion if we have a valid show ID
-    if (items.length > 0 && finalShowId) {
-      console.log('RAW ITEMS BEFORE PROCESSING:', items.map(item => ({
-        name: item.name,
-        is_divider: item.is_divider,
-        type: typeof item.is_divider,
-        is_break: item.is_break,
-        is_note: item.is_note
-      })));
-
+    if (finalShowId && items.length > 0) {
+      console.log('Inserting items for show ID:', finalShowId);
+      
       const itemsToInsert = items.map((item, index) => {
         const isDivider = Boolean(item.is_divider);
         const isBreak = Boolean(item.is_break);
         const isNote = Boolean(item.is_note);
         
-        console.log(`DIRECT ACCESS - Item ${index} (${item.name}):`, {
-          isDivider,
-          is_divider_value: item.is_divider,
-          is_divider_type: typeof item.is_divider
-        });
-        
         const { interviewees, ...itemData } = item;
         
-        const cleanedItem = {
+        return {
           show_id: finalShowId,
           position: index,
           name: item.name,
@@ -313,26 +317,7 @@ export const saveShow = async (
           is_note: isNote,
           is_divider: isDivider
         };
-        
-        console.log(`Processed item ${index} (${cleanedItem.name}):`, {
-          is_break: cleanedItem.is_break,
-          is_note: cleanedItem.is_note,
-          is_divider: cleanedItem.is_divider,
-          preserved_is_divider: isDivider
-        });
-        
-        return cleanedItem;
       });
-      
-      console.log('Original items before mapping:', JSON.stringify(items.map(item => ({
-        name: item.name,
-        is_divider: item.is_divider,
-        is_divider_type: typeof item.is_divider,
-        is_break: item.is_break,
-        is_note: item.is_note
-      })), null, 2));
-      
-      console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
       
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
@@ -344,13 +329,7 @@ export const saveShow = async (
         throw itemsError;
       }
 
-      console.log('Successfully inserted items:', insertedItems?.map(item => ({
-        id: item.id,
-        name: item.name,
-        is_divider: item.is_divider,
-        is_break: item.is_break,
-        is_note: item.is_note
-      })));
+      console.log('Successfully inserted items:', insertedItems?.length || 0);
 
       if (insertedItems) {
         for (let i = 0; i < insertedItems.length; i++) {
@@ -366,7 +345,7 @@ export const saveShow = async (
               duration: interviewee.duration || null
             }));
 
-            console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}:`, intervieweesToInsert);
+            console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}`);
             
             const { error: intervieweesError } = await supabase
               .from('interviewees')
