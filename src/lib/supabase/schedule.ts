@@ -94,6 +94,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   // Create a lookup map for deletion markers
   const deletionMap = new Map();
   if (deletionMarkers && deletionMarkers.length > 0) {
+    console.log('Found deletion markers:', deletionMarkers);
     deletionMarkers.forEach(marker => {
       const key = `${marker.slot_id}-${marker.date}`;
       deletionMap.set(key, true);
@@ -198,7 +199,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         
         // Skip if we already processed this time slot
         if (processedSlots.has(slotKey)) continue;
-        processedSlots.add(slotKey);
         
         // Check if there's a deletion marker for this slot on this date
         const deletionKey = `${masterSlot.id}-${formattedDate}`;
@@ -206,6 +206,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
           console.log(`Skipping master slot with ID ${masterSlot.id} on ${formattedDate} due to deletion marker`);
           continue;
         }
+        
+        processedSlots.add(slotKey);
         
         // Find any shows for this master slot on this date (non-deletion markers)
         const slotShows = shows?.filter(show => 
@@ -528,14 +530,15 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
             throw showCheckError;
           }
           
-          console.log(`Found ${existingShowsForSlot?.length || 0} shows for slot ${id} on date ${formattedDate}`);
+          const validShows = existingShowsForSlot?.filter(show => show.name !== 'DELETED') || [];
+          console.log(`Found ${validShows.length} shows for slot ${id} on date ${formattedDate}`);
           
-          if (existingShowsForSlot && existingShowsForSlot.length > 0) {
+          if (validShows.length > 0) {
             // If we have shows with this slot_id for this date, delete those shows directly
             // This preserves any associated lineup while removing the slot from the schedule
-            console.log(`Deleting ${existingShowsForSlot.length} shows for slot ${id}`);
+            console.log(`Deleting ${validShows.length} shows for slot ${id}`);
             
-            for (const show of existingShowsForSlot) {
+            for (const show of validShows) {
               console.log(`Deleting show ${show.id}`);
               const { error: deleteError } = await supabase
                 .from('shows')
@@ -550,6 +553,25 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
             
             console.log(`Successfully deleted shows for slot ${id}`);
           } else {
+            // Check if a deletion marker already exists
+            const { data: existingMarker, error: markerCheckError } = await supabase
+              .from('shows')
+              .select('id')
+              .eq('slot_id', id)
+              .eq('date', formattedDate)
+              .eq('name', 'DELETED');
+              
+            if (markerCheckError) {
+              console.error('Error checking for existing deletion marker:', markerCheckError);
+              throw markerCheckError;
+            }
+            
+            // If a deletion marker already exists, we don't need to do anything
+            if (existingMarker && existingMarker.length > 0) {
+              console.log(`Deletion marker already exists for slot ${id} on date ${formattedDate}`);
+              return;
+            }
+            
             // Create a "deletion" marker in the shows table
             // This ensures the master slot won't appear on this date
             console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);

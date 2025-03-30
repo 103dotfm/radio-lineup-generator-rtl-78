@@ -38,7 +38,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
+        queryKey
       });
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
@@ -69,7 +69,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
+        queryKey
       });
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
@@ -86,10 +86,33 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
 
   const deleteSlotMutation = useMutation({
     mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
+    onSuccess: (_, deletedId) => {
+      // Optimistic UI update - remove the deleted slot from the cache immediately
+      queryClient.setQueryData(queryKey, (oldData: ScheduleSlot[] | undefined) => {
+        if (!oldData) return [];
+        return oldData.filter(slot => {
+          // For master schedule slots, filter by ID directly
+          if (isMasterSchedule) {
+            return slot.id !== deletedId;
+          }
+          
+          // For regular slots, we need to check both the slot ID and any shows with the slot_id
+          if (slot.id === deletedId) return false;
+          
+          // For slots with shows, check if any show has this ID
+          if (slot.shows && slot.shows.some(show => show.id === deletedId)) {
+            return false;
+          }
+          
+          return true;
+        });
       });
+      
+      // Also invalidate the query to fetch fresh data
+      queryClient.invalidateQueries({
+        queryKey
+      });
+      
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
       });

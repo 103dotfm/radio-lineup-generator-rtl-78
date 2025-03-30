@@ -34,6 +34,7 @@ export default function ScheduleView({
   const [showSlotDialog, setShowSlotDialog] = useState(false);
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
+  const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
   const { toast } = useToast();
   
   const navigate = useNavigate();
@@ -72,12 +73,13 @@ export default function ScheduleView({
 
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
+    setDeletingSlotId(slot.id);
 
     // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
       try {
         await deleteSlot(slot.id);
-        refetchSlots(); // Force a refresh after deletion
+        // Immediately filter out the deleted slot from UI
         toast({
           title: "משבצת נמחקה",
           description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
@@ -89,6 +91,8 @@ export default function ScheduleView({
           description: "לא ניתן למחוק את המשבצת",
           variant: "destructive"
         });
+      } finally {
+        setDeletingSlotId(null);
       }
       return;
     }
@@ -96,7 +100,7 @@ export default function ScheduleView({
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       try {
         await deleteSlot(slot.id);
-        refetchSlots(); // Force a refresh after deletion
+        // Immediately filter out the deleted slot from UI
         toast({
           title: "משבצת נמחקה",
           description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
@@ -108,7 +112,11 @@ export default function ScheduleView({
           description: "לא ניתן למחוק את המשבצת",
           variant: "destructive"
         });
+      } finally {
+        setDeletingSlotId(null);
       }
+    } else {
+      setDeletingSlotId(null);
     }
   };
 
@@ -220,7 +228,7 @@ export default function ScheduleView({
       />
 
       <ScheduleGrid 
-        scheduleSlots={scheduleSlots}
+        scheduleSlots={scheduleSlots.filter(slot => slot.id !== deletingSlotId)}
         selectedDate={selectedDate}
         viewMode={viewMode}
         handleSlotClick={handleSlotClick}
@@ -231,6 +239,7 @@ export default function ScheduleView({
         hideHeaderDates={hideHeaderDates}
         dayNotes={dayNotes}
         onDayNoteChange={refreshDayNotes}
+        isLoading={isLoading}
       />
 
       <ScheduleDialogs 
