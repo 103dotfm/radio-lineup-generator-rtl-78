@@ -13,7 +13,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     data: scheduleSlots = [],
     isLoading
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
+    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
     queryFn: () => {
       console.log('Fetching slots with params:', {
         selectedDate,

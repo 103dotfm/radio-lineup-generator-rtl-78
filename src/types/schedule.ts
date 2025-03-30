@@ -16,6 +16,8 @@ export interface ScheduleSlot {
   color?: string;
   created_at?: string;
   updated_at?: string;
+  day_of_week?: number;
+  is_deleted?: boolean;
   shows?: Array<{
     id: string;
     name: string;
@@ -23,6 +25,7 @@ export interface ScheduleSlot {
     date?: string;
     notes?: string;
     created_at?: string;
+    slot_id?: string;
   }>;
 }
 
