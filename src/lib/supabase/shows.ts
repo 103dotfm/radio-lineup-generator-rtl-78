@@ -222,8 +222,9 @@ export const saveShow = async (
         throw new Error('Invalid show ID provided for update');
       }
       
+      // FIXED TABLE NAME: shows_backup
       const { data: updateData, error: showError } = await supabase
-        .from('shows_backup')
+        .from('shows_backup')  // Ensure correct table name
         .update({
           name: show.name,
           time: show.time,
@@ -241,9 +242,9 @@ export const saveShow = async (
       
       console.log('Updated show successfully:', updateData);
       
-      // For existing shows, clean up existing items to avoid orphaned data
+      // FIXED TABLE NAME: show_items
       const { error: deleteError } = await supabase
-        .from('show_items')
+        .from('show_items')  // Ensure correct table name
         .delete()
         .eq('show_id', showId);
 
@@ -256,8 +257,9 @@ export const saveShow = async (
       // Critical fix: Use .select() to get the ID back and unpack it properly
       console.log('Creating new show with data:', show);
       
+      // FIXED TABLE NAME: shows_backup
       const { data, error: createError } = await supabase
-        .from('shows_backup')
+        .from('shows_backup')  // Ensure correct table name
         .insert([{
           name: show.name,
           time: show.time,
@@ -287,8 +289,9 @@ export const saveShow = async (
     // Update the schedule slot to indicate it has a lineup
     if (show.slot_id) {
       console.log('Updating schedule slot with has_lineup=true:', show.slot_id);
+      // FIXED TABLE NAME: schedule_slots_old
       const { data: slotData, error: slotError } = await supabase
-        .from('schedule_slots_old')
+        .from('schedule_slots_old')  // Ensure correct table name
         .update({ 
           has_lineup: true
         })
@@ -328,8 +331,9 @@ export const saveShow = async (
         };
       });
       
+      // FIXED TABLE NAME: show_items
       const { data: insertedItems, error: itemsError } = await supabase
-        .from('show_items')
+        .from('show_items')  // Ensure correct table name
         .insert(itemsToInsert)
         .select();
 
@@ -356,8 +360,9 @@ export const saveShow = async (
 
             console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}`);
             
+            // FIXED TABLE NAME: interviewees
             const { error: intervieweesError } = await supabase
-              .from('interviewees')
+              .from('interviewees')  // Ensure correct table name
               .insert(intervieweesToInsert);
 
             if (intervieweesError) {
@@ -377,8 +382,9 @@ export const saveShow = async (
 };
 
 export const deleteShow = async (showId: string) => {
+  // FIXED TABLE NAME: shows_backup
   const { error } = await supabase
-    .from('shows_backup')
+    .from('shows_backup')  // Ensure correct table name
     .delete()
     .eq('id', showId);
 

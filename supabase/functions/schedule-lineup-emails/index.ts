@@ -111,9 +111,10 @@ serve(async (req) => {
     
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
+    // FIXED TABLE NAME: schedule_slots_old
     // Get all shows from Schedule slots for today that match the time window
     const { data: slots, error: slotsError } = await supabase
-      .from("schedule_slots")
+      .from("schedule_slots_old")  // Ensure correct table name
       .select("id, show_name, start_time")
       .eq("day_of_week", adjustedDay)
       .eq("has_lineup", true)
@@ -191,9 +192,10 @@ serve(async (req) => {
       
       console.log(`Looking for shows on date: ${todayDate}`);
       
+      // FIXED TABLE NAME: shows_backup
       // Get the most recent show associated with this slot for today's date
       const { data: shows, error: showsError } = await supabase
-        .from("shows")
+        .from("shows_backup")  // Ensure correct table name
         .select("id, name, date")
         .eq("slot_id", slot.id)
         .eq("date", todayDate) // Filter for today's date explicitly
