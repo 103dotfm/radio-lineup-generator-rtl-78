@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { Upload, FileUp, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -213,7 +214,8 @@ const ImportDataTab = () => {
     }
   };
 
-  const resolveCurrentConflict = (resolution: 'overwrite' | 'keep') => {
+  // Fix: Make this function async
+  const resolveCurrentConflict = async (resolution: 'overwrite' | 'keep') => {
     const updatedConflicts = [...conflicts];
     updatedConflicts[currentConflictIndex].resolution = resolution;
     setConflicts(updatedConflicts);
@@ -223,6 +225,7 @@ const ImportDataTab = () => {
     } else {
       setShowConflictDialog(false);
       
+      // Now this await is valid because the function is async
       await processIndividualConflicts();
     }
   };
