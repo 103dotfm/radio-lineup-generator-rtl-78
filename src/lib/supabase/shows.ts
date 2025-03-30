@@ -4,23 +4,29 @@ import { Show } from "@/types/show";
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
   const { data: shows, error } = await supabase
-    .from('shows')
-    .select(`
-      *,
-      items:show_items(
-        *,
-        interviewees(*)
-      )
-    `)
-    .order('created_at', { ascending: false });
+    .from('shows_backup')
+    .select('*');
 
   if (error) {
     console.error('Error fetching shows:', error);
     throw error;
   }
 
-  console.log('Fetched shows:', shows);
-  return shows || [];
+  // Fetch items separately for each show
+  const showsWithItems = await Promise.all((shows || []).map(async (show) => {
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select('*')
+      .eq('show_id', show.id);
+      
+    return {
+      ...show,
+      items: itemsError ? [] : (items || [])
+    };
+  }));
+
+  console.log('Fetched shows:', showsWithItems);
+  return showsWithItems || [];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
@@ -29,7 +35,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   try {
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
-      .select('*, show:show_id(*)')
+      .select('*, show_id')
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
@@ -40,37 +46,50 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
-      if (!item.show) return acc;
+    // Get unique show IDs from matching items
+    const showIds = [...new Set((matchingItems || []).map(item => item.show_id))].filter(Boolean);
+    
+    if (showIds.length === 0) {
+      return [];
+    }
+    
+    // Fetch the shows for these IDs
+    const { data: shows, error: showsError } = await supabase
+      .from('shows_backup')
+      .select('*')
+      .in('id', showIds);
       
-      const showId = item.show.id;
-      if (!acc[showId]) {
-        acc[showId] = {
-          ...item.show,
-          items: []
-        };
-      }
-      
-      acc[showId].items = acc[showId].items || [];
-      acc[showId].items.push({
-        id: item.id,
-        show_id: item.show_id,
-        position: item.position,
-        name: item.name,
-        title: item.title,
-        phone: item.phone,
-        details: item.details,
-        duration: item.duration,
-        is_break: item.is_break,
-        is_note: item.is_note,
-        created_at: item.created_at
-      });
+    if (showsError) {
+      console.error('Error fetching shows:', showsError);
+      throw showsError;
+    }
 
-      return acc;
-    }, {});
+    // Group items by show
+    const result = (shows || []).map(show => {
+      const showItems = (matchingItems || [])
+        .filter(item => item.show_id === show.id)
+        .map(item => ({
+          id: item.id,
+          show_id: item.show_id,
+          position: item.position,
+          name: item.name,
+          title: item.title,
+          phone: item.phone,
+          details: item.details,
+          duration: item.duration,
+          is_break: item.is_break,
+          is_note: item.is_note,
+          created_at: item.created_at
+        }));
+        
+      return {
+        ...show,
+        items: showItems
+      };
+    });
 
-    console.log('Search results:', Object.values(shows));
-    return Object.values(shows || {});
+    console.log('Search results:', result);
+    return result;
 
   } catch (error) {
     console.error('Error searching shows:', error);
@@ -87,7 +106,7 @@ export const getShowWithItems = async (showId: string) => {
   }
 
   const { data: show, error: showError } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .select('*')
     .eq('id', showId)
     .single();
@@ -99,10 +118,7 @@ export const getShowWithItems = async (showId: string) => {
 
   const { data: items, error: itemsError } = await supabase
     .from('show_items')
-    .select(`
-      *,
-      interviewees(*)
-    `)
+    .select('*')
     .eq('show_id', showId)
     .order('position', { ascending: true });
 
@@ -111,7 +127,20 @@ export const getShowWithItems = async (showId: string) => {
     throw itemsError;
   }
 
-  console.log('Retrieved items from database:', items?.map(item => ({
+  // Fetch interviewees separately for each item
+  const itemsWithInterviewees = await Promise.all((items || []).map(async (item) => {
+    const { data: interviewees, error: intervieweesError } = await supabase
+      .from('interviewees')
+      .select('*')
+      .eq('item_id', item.id);
+      
+    return {
+      ...item,
+      interviewees: intervieweesError ? [] : (interviewees || [])
+    };
+  }));
+
+  console.log('Retrieved items from database:', itemsWithInterviewees?.map(item => ({
     id: item.id,
     name: item.name,
     is_divider: item.is_divider,
@@ -121,7 +150,7 @@ export const getShowWithItems = async (showId: string) => {
 
   return {
     show,
-    items: items || []
+    items: itemsWithInterviewees || []
   };
 };
 
@@ -129,7 +158,7 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
   console.log('Fetching shows for date:', date);
   
   const { data: shows, error } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .select('*')
     .eq('date', date)
     .order('time', { ascending: true });
@@ -177,7 +206,7 @@ export const saveShow = async (
 
     if (isUpdate) {
       const { error: showError } = await supabase
-        .from('shows')
+        .from('shows_backup')
         .update({
           name: show.name,
           time: show.time,
@@ -205,7 +234,7 @@ export const saveShow = async (
       
     } else {
       const { data: newShow, error: createError } = await supabase
-        .from('shows')
+        .from('shows_backup')
         .insert({
           name: show.name,
           time: show.time,
@@ -222,7 +251,7 @@ export const saveShow = async (
 
     if (show.slot_id) {
       const { error: slotError } = await supabase
-        .from('schedule_slots')
+        .from('schedule_slots_old')
         .update({ 
           has_lineup: true
         })
@@ -352,7 +381,7 @@ export const saveShow = async (
 
 export const deleteShow = async (showId: string) => {
   const { error } = await supabase
-    .from('shows')
+    .from('shows_backup')
     .delete()
     .eq('id', showId);
 
