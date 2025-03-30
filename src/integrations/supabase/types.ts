@@ -152,57 +152,6 @@ export type Database = {
           },
         ]
       }
-      schedule_slots: {
-        Row: {
-          color: string | null
-          created_at: string
-          date: string
-          end_time: string
-          has_lineup: boolean | null
-          host_name: string | null
-          id: string
-          is_collection: boolean | null
-          is_modified: boolean | null
-          is_prerecorded: boolean | null
-          is_recurring: boolean | null
-          show_name: string
-          start_time: string
-          updated_at: string
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string
-          date: string
-          end_time: string
-          has_lineup?: boolean | null
-          host_name?: string | null
-          id?: string
-          is_collection?: boolean | null
-          is_modified?: boolean | null
-          is_prerecorded?: boolean | null
-          is_recurring?: boolean | null
-          show_name: string
-          start_time: string
-          updated_at?: string
-        }
-        Update: {
-          color?: string | null
-          created_at?: string
-          date?: string
-          end_time?: string
-          has_lineup?: boolean | null
-          host_name?: string | null
-          id?: string
-          is_collection?: boolean | null
-          is_modified?: boolean | null
-          is_prerecorded?: boolean | null
-          is_recurring?: boolean | null
-          show_name?: string
-          start_time?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       schedule_slots_backup: {
         Row: {
           color: string | null
@@ -308,6 +257,57 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_slots_todelete: {
+        Row: {
+          color: string | null
+          created_at: string
+          date: string
+          end_time: string
+          has_lineup: boolean | null
+          host_name: string | null
+          id: string
+          is_collection: boolean | null
+          is_modified: boolean | null
+          is_prerecorded: boolean | null
+          is_recurring: boolean | null
+          show_name: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          date: string
+          end_time: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          date?: string
+          end_time?: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       show_email_logs: {
         Row: {
           error_message: string | null
@@ -335,7 +335,7 @@ export type Database = {
             foreignKeyName: "show_email_logs_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: true
-            referencedRelation: "shows"
+            referencedRelation: "shows_todelete"
             referencedColumns: ["id"]
           },
         ]
@@ -388,45 +388,7 @@ export type Database = {
             foreignKeyName: "show_items_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: false
-            referencedRelation: "shows"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shows: {
-        Row: {
-          created_at: string | null
-          date: string | null
-          id: string
-          name: string
-          notes: string | null
-          slot_id: string | null
-          time: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          date?: string | null
-          id?: string
-          name: string
-          notes?: string | null
-          slot_id?: string | null
-          time?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          date?: string | null
-          id?: string
-          name?: string
-          notes?: string | null
-          slot_id?: string | null
-          time?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shows_slot_id_fkey"
-            columns: ["slot_id"]
-            isOneToOne: false
-            referencedRelation: "schedule_slots"
+            referencedRelation: "shows_todelete"
             referencedColumns: ["id"]
           },
         ]
@@ -460,6 +422,44 @@ export type Database = {
           time?: string | null
         }
         Relationships: []
+      }
+      shows_todelete: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string
+          name: string
+          notes: string | null
+          slot_id: string | null
+          time: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shows_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_slots_todelete"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
