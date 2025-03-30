@@ -47,7 +47,10 @@ export const getNextShow = async (
     console.log('All shows on date:', showsOnDate);
     
     // Find the first show that comes after the current show time
-    const nextShow = showsOnDate.find(show => show.time > currentShowTime);
+    // Type assertion to handle the TypeScript error
+    const typedShows = showsOnDate as { id: string; name: string; time: string; date: string }[];
+    
+    const nextShow = typedShows.find(show => show.time > currentShowTime);
     
     if (!nextShow) {
       console.log('No next show found after time:', currentShowTime);

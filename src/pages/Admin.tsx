@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthProvider';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import AdminHeader from '@/components/admin/AdminHeader';

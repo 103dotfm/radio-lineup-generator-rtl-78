@@ -8,10 +8,12 @@ import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut, Settings, Trash2 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from 'date-fns';
 import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthProvider';
 import { toast } from "sonner";
 import ScheduleView from '@/components/schedule/ScheduleView';
+
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
@@ -70,6 +72,7 @@ const Dashboard = () => {
         return sortedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
   }, [shows, sortBy]);
+
   return <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
@@ -194,8 +197,4 @@ const Dashboard = () => {
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo footer-logo" />
       </div>
       <div className="flex justify-center mt-12">
-        <div className="credit">הקמת מערכת: <a href="https://Yaniv.TV" target="_blank">יניב מורוזובסקי</a></div>
-      </div>
-    </div>;
-};
-export default Dashboard;
+        <div className="credit">
