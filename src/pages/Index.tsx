@@ -103,8 +103,8 @@ const Index = () => {
           }
           const { show, items: showItems } = result;
           if (show) {
-            setShowName(show.name || '');
-            setShowTime(show.time || '');
+            setShowName(show.name);
+            setShowTime(show.time);
             setShowDate(show.date ? new Date(show.date) : new Date());
             if (editor) {
               editor.commands.setContent(show.notes || '');
@@ -147,7 +147,7 @@ const Index = () => {
     console.log(`Editing item ${id} with data:`, updatedItem);
     
     setItems(prevItems => {
-      const updatedItems = prevItems.map((item: any) => 
+      const updatedItems = prevItems.map(item => 
         item.id === id 
           ? {
               ...item,
@@ -160,7 +160,7 @@ const Index = () => {
           : item
       );
       
-      console.log('After edit, items are:', updatedItems.map((item: any) => ({
+      console.log('After edit, items are:', updatedItems.map(item => ({
         id: item.id,
         name: item.name,
         is_divider: item.is_divider,
@@ -179,7 +179,7 @@ const Index = () => {
     
     try {
       setIsSaving(true);
-      console.log('Items before saving:', items.map((item: any) => ({
+      console.log('Items before saving:', items.map(item => ({
         name: item.name,
         is_divider: item.is_divider,
         is_divider_type: typeof item.is_divider,
@@ -195,7 +195,7 @@ const Index = () => {
         slot_id: state?.slotId
       };
 
-      const itemsToSave = items.map(({ id: itemId, ...item }: any) => {
+      const itemsToSave = items.map(({ id: itemId, ...item }) => {
         console.log(`Preparing item to save: ${item.name}`, {
           is_divider: item.is_divider,
           is_divider_type: typeof item.is_divider,
@@ -216,7 +216,7 @@ const Index = () => {
         };
       });
       
-      console.log('Final items to save:', itemsToSave.map((item: any) => ({
+      console.log('Final items to save:', itemsToSave.map(item => ({
         name: item.name,
         is_divider: item.is_divider,
         is_divider_type: typeof item.is_divider,
@@ -232,7 +232,7 @@ const Index = () => {
       
       const result = await getShowWithItems(showId || savedShow.id);
       if (result) {
-        console.log('Items after reloading:', result.items.map((item: any) => ({
+        console.log('Items after reloading:', result.items.map(item => ({
           name: item.name,
           is_divider: item.is_divider,
           is_break: item.is_break,
@@ -264,7 +264,7 @@ const Index = () => {
 
   const handleAdd = useCallback((newItem) => {
     if (editingItem) {
-      setItems(items.map((item: any) => 
+      setItems(items.map(item => 
         item.id === editingItem.id 
           ? { ...newItem, id: editingItem.id }
           : item
@@ -281,7 +281,7 @@ const Index = () => {
   }, [editingItem, items]);
 
   const handleDetailsChange = useCallback((id: string, details: string) => {
-    setItems(items.map((item: any) => 
+    setItems(items.map(item => 
       item.id === id ? { ...item, details } : item
     ));
     setHasUnsavedChanges(true);
@@ -355,20 +355,20 @@ const Index = () => {
   }, [fetchNextShowInfo]);
 
   const handleDelete = useCallback((id: string) => {
-    setItems(items.filter((item: any) => item.id !== id));
+    setItems(items.filter(item => item.id !== id));
     setHasUnsavedChanges(true);
     toast.success('פריט נמחק בהצלחה');
   }, [items]);
 
   const handleDurationChange = useCallback((id: string, duration: number) => {
-    setItems(items.map((item: any) => 
+    setItems(items.map(item => 
       item.id === id ? { ...item, duration } : item
     ));
     setHasUnsavedChanges(true);
   }, [items]);
 
   const handleBreakTextChange = useCallback((id: string, text: string) => {
-    setItems(items.map((item: any) => 
+    setItems(items.map(item => 
       item.id === id ? { ...item, name: text } : item
     ));
     setHasUnsavedChanges(true);
@@ -408,7 +408,18 @@ const Index = () => {
     console.log('Creating new divider with is_divider:', newDivider.is_divider);
     console.log('Full divider object:', newDivider);
     
-    setItems([...items, newDivider]);
+    setItems(prevItems => {
+      const updatedItems = [...prevItems, newDivider];
+      console.log('Updated items after adding divider:', updatedItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        is_divider: item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
+      return updatedItems;
+    });
+    
     setHasUnsavedChanges(true);
     toast.success('הפרדה נוספה בהצלחה');
   }, [items]);
@@ -470,7 +481,7 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
             <AlertDialogDescription>
-              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
+              יש ��ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

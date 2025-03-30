@@ -28,8 +28,7 @@ export const getNextShow = async (
     console.log(`Running query: SELECT * FROM shows WHERE date = '${formattedDate}' ORDER BY time ASC`);
     
     // Query the shows table for all shows on this specific date
-    // Using any type to bypass TypeScript's strict checking on the table name
-    const { data: showsOnDate, error: showsError } = await (supabase as any)
+    const { data: showsOnDate, error: showsError } = await supabase
       .from('shows')
       .select('id, name, time, date')
       .eq('date', formattedDate)
