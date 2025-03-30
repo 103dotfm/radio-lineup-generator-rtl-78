@@ -27,7 +27,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         )
       `)
       .eq('is_recurring', true)
-      .order('date', { ascending: true })
       .order('start_time', { ascending: true });
 
     if (error) {
