@@ -203,6 +203,57 @@ export type Database = {
         }
         Relationships: []
       }
+      schedule_slots_backup: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          date: string | null
+          end_time: string | null
+          has_lineup: boolean | null
+          host_name: string | null
+          id: string | null
+          is_collection: boolean | null
+          is_modified: boolean | null
+          is_prerecorded: boolean | null
+          is_recurring: boolean | null
+          show_name: string | null
+          start_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          date?: string | null
+          end_time?: string | null
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string | null
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name?: string | null
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          date?: string | null
+          end_time?: string | null
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string | null
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name?: string | null
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       schedule_slots_old: {
         Row: {
           color: string | null
@@ -379,6 +430,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shows_backup: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string | null
+          name: string | null
+          notes: string | null
+          slot_id: string | null
+          time: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string | null
+          name?: string | null
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Relationships: []
       }
       system_settings: {
         Row: {
