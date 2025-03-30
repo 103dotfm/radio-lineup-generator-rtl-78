@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable } from 'react-beautiful-dnd';
-import { useAuth } from '../../contexts/AuthProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import MinutesToggle from './table/MinutesToggle';
 import LineupTableGroup from './table/LineupTableGroup';
 

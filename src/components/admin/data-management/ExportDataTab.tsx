@@ -8,16 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
-import { safeTableQuery } from "@/lib/supabase-utils";
 
 type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots" | 
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
   "show_email_logs" | "system_settings" | "users";
-
-interface RecordWithId {
-  id: string;
-  [key: string]: any;
-}
 
 const ExportDataTab = () => {
   const { toast } = useToast();
@@ -57,7 +51,7 @@ const ExportDataTab = () => {
       
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = safeTableQuery('shows_backup').select('id');
+        let showsQuery = supabase.from('shows' as ValidTableName).select('id');
         
         if (exportStartDate) {
           const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -75,45 +69,30 @@ const ExportDataTab = () => {
           throw new Error(`Error filtering shows: ${showsError.message}`);
         }
         
-        // Make sure we have valid data
-        if (filteredShows && Array.isArray(filteredShows)) {
-          for (let i = 0; i < filteredShows.length; i++) {
-            const show = filteredShows[i];
-            if (show && typeof show === 'object' && 'id' in show && typeof show.id === 'string') {
-              filteredShowIds.push(show.id);
-            }
+        filteredShowIds = filteredShows?.map(show => show.id) || [];
+        
+        // Get show items for these shows to later filter interviewees
+        if (filteredShowIds.length > 0) {
+          // Need to cast to any before using .in()
+          const queryBuilder = supabase
+            .from('show_items' as ValidTableName)
+            .select('id');
+          
+          // Cast queryBuilder to any before calling .in()
+          const { data: filteredItems, error: itemsError } = await (queryBuilder as any)
+            .in('show_id', filteredShowIds);
+            
+          if (itemsError) {
+            throw new Error(`Error filtering show items: ${itemsError.message}`);
           }
           
-          // Get show items for these shows to later filter interviewees
-          if (filteredShowIds.length > 0) {
-            const { data: filteredItems, error: itemsError } = await safeTableQuery('show_items')
-              .select('id')
-              .in('show_id', filteredShowIds);
-              
-            if (itemsError) {
-              throw new Error(`Error filtering show items: ${itemsError.message}`);
-            }
-            
-            // Safely type filter and extract IDs
-            if (filteredItems && Array.isArray(filteredItems)) {
-              for (let i = 0; i < filteredItems.length; i++) {
-                const item = filteredItems[i];
-                if (item && typeof item === 'object' && 'id' in item && typeof item.id === 'string') {
-                  filteredShowItemIds.push(item.id);
-                }
-              }
-            }
-          }
+          filteredShowItemIds = filteredItems?.map(item => item.id) || [];
         }
       }
       
       // Process each selected table
       for (const tableName of tables) {
-        const actualTableName = tableName === 'shows' ? 'shows_backup' : 
-                              tableName === 'schedule_slots' ? 'schedule_slots_old' : 
-                              tableName;
-        
-        let query = safeTableQuery(actualTableName).select('*');
+        let query = supabase.from(tableName as ValidTableName).select('*');
         
         // Apply filters based on date range for each table type
         if (exportStartDate || exportEndDate) {
@@ -142,10 +121,12 @@ const ExportDataTab = () => {
             }
           }
           else if (tableName === 'show_items' && filteredShowIds.length > 0) {
-            query = query.in('show_id', filteredShowIds);
+            // Cast query to any before calling .in()
+            query = (query as any).in('show_id', filteredShowIds);
           }
           else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
-            query = query.in('item_id', filteredShowItemIds);
+            // Cast query to any before calling .in()
+            query = (query as any).in('item_id', filteredShowItemIds);
           }
           // Other tables not filtered by date range
         }

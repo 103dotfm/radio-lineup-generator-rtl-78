@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CopyIcon, CheckIcon, UploadIcon } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthProvider';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ArrangementType = 'producers' | 'engineers' | 'digital';
 
@@ -50,6 +51,7 @@ const WorkArrangements = () => {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   
+  // Load existing arrangements
   useEffect(() => {
     fetchArrangements();
   }, [currentWeek]);
@@ -112,9 +114,11 @@ const WorkArrangements = () => {
     if (!file) return null;
     
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
+    // Sanitize file name to prevent URL encoding issues
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
     const fileName = `${type}_${weekStartStr}_${sanitizedFileName}`;
     
+    // Upload to Storage
     try {
       const { data, error } = await supabase.storage
         .from('arrangements')
@@ -128,6 +132,7 @@ const WorkArrangements = () => {
         throw error;
       }
       
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('arrangements')
         .getPublicUrl(fileName);
@@ -176,6 +181,7 @@ const WorkArrangements = () => {
       
       const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
       
+      // Check if there's an existing record for this type and week
       try {
         const { data: existingData, error: queryError } = await supabase
           .from('work_arrangements')
@@ -192,6 +198,7 @@ const WorkArrangements = () => {
         const url = await uploadFile(file, type);
         
         if (existingData?.id) {
+          // Update existing record
           const { error: updateError } = await supabase
             .from('work_arrangements')
             .update({
@@ -206,6 +213,7 @@ const WorkArrangements = () => {
             throw updateError;
           }
         } else {
+          // Insert new record
           const { error: insertError } = await supabase
             .from('work_arrangements')
             .insert({
@@ -226,6 +234,7 @@ const WorkArrangements = () => {
           description: `קובץ סידור עבודה ${getHebrewTypeName(type)} הועלה בהצלחה`,
         });
         
+        // Reset file state
         switch (type) {
           case 'producers':
             setProducersFile(null);
@@ -238,6 +247,7 @@ const WorkArrangements = () => {
             break;
         }
         
+        // Refresh arrangements
         fetchArrangements();
       } catch (error) {
         console.error('Database operation error:', error);

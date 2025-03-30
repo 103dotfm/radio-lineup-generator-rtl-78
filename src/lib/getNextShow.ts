@@ -1,18 +1,10 @@
 
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
-import { safeTableQuery } from './supabase-utils';
 
 interface NextShowInfo {
   name: string;
   host?: string;
-}
-
-interface ShowRecord {
-  id: string;
-  name: string;
-  time: string;
-  date: string;
 }
 
 /**
@@ -33,10 +25,11 @@ export const getNextShow = async (
     console.log('Finding next show for date:', formattedDate, 'after time:', currentShowTime);
     
     // Debug: Log the query we're about to make
-    console.log(`Running query: SELECT * FROM shows_backup WHERE date = '${formattedDate}' ORDER BY time ASC`);
+    console.log(`Running query: SELECT * FROM shows WHERE date = '${formattedDate}' ORDER BY time ASC`);
     
     // Query the shows table for all shows on this specific date
-    const { data: showsOnDate, error: showsError } = await safeTableQuery('shows_backup')
+    const { data: showsOnDate, error: showsError } = await supabase
+      .from('shows')
       .select('id, name, time, date')
       .eq('date', formattedDate)
       .order('time', { ascending: true });
@@ -53,50 +46,8 @@ export const getNextShow = async (
 
     console.log('All shows on date:', showsOnDate);
     
-    // Ensure we have valid data with the required properties before proceeding
-    if (!Array.isArray(showsOnDate)) {
-      console.error('Invalid show data structure (not an array):', showsOnDate);
-      return null;
-    }
-    
-    // Safely filter and cast data to the correct type
-    const typedShows: ShowRecord[] = [];
-    
-    if (showsOnDate && Array.isArray(showsOnDate)) {
-      for (let i = 0; i < showsOnDate.length; i++) {
-        const currentItem = showsOnDate[i];
-        
-        // Only process items that match our expected structure
-        if (!currentItem) continue;
-        
-        // Safe type checking before accessing properties
-        if (
-          typeof currentItem === 'object' && 
-          'id' in currentItem && 
-          'name' in currentItem && 
-          'time' in currentItem && 
-          'date' in currentItem &&
-          typeof currentItem.id === 'string' &&
-          typeof currentItem.name === 'string' &&
-          typeof currentItem.time === 'string' &&
-          typeof currentItem.date === 'string'
-        ) {
-          typedShows.push({
-            id: currentItem.id,
-            name: currentItem.name, 
-            time: currentItem.time,
-            date: currentItem.date
-          });
-        }
-      }
-    }
-    
-    if (typedShows.length === 0) {
-      console.error('No valid show data after filtering:', showsOnDate);
-      return null;
-    }
-    
-    const nextShow = typedShows.find(show => show.time > currentShowTime);
+    // Find the first show that comes after the current show time
+    const nextShow = showsOnDate.find(show => show.time > currentShowTime);
     
     if (!nextShow) {
       console.log('No next show found after time:', currentShowTime);

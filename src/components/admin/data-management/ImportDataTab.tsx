@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { ConflictDialog } from './ConflictDialog';
 import { GlobalResolutionDialog } from './GlobalResolutionDialog';
-import { safeTableQuery } from "@/lib/supabase-utils";
 
 type ConflictResolution = 'overwrite' | 'keep' | 'ask';
 type ConflictItem = {
@@ -101,7 +100,8 @@ const ImportDataTab = () => {
         if (!record.id) continue;
         
         // Check if record already exists
-        const { data: existingData, error } = await safeTableQuery(tableName)
+        const { data: existingData, error } = await supabase
+          .from(tableName as ValidTableName)
           .select('*')
           .eq('id', record.id)
           .single();
@@ -142,7 +142,8 @@ const ImportDataTab = () => {
           if (!record.id) continue;
           
           // Check if record exists
-          const { data: existingData, error: checkError } = await safeTableQuery(tableName)
+          const { data: existingData, error: checkError } = await supabase
+            .from(tableName as ValidTableName)
             .select('id')
             .eq('id', record.id)
             .single();
@@ -150,10 +151,11 @@ const ImportDataTab = () => {
           if (!checkError && existingData) {
             // Record exists, handle based on resolution
             if (resolution === 'overwrite') {
-              const { error: updateError } = await safeTableQuery(tableName)
+              const { error: updateError } = await supabase
+                .from(tableName as ValidTableName)
                 .update(record)
                 .eq('id', record.id);
-            
+              
               if (updateError) {
                 console.error(`Error updating ${tableName} record:`, updateError);
               }
@@ -161,7 +163,8 @@ const ImportDataTab = () => {
             // If 'keep', do nothing
           } else {
             // Record doesn't exist, insert it
-            const { error: insertError } = await safeTableQuery(tableName)
+            const { error: insertError } = await supabase
+              .from(tableName as ValidTableName)
               .insert(record);
             
             if (insertError) {
@@ -245,7 +248,8 @@ const ImportDataTab = () => {
       // Save data by table
       for (const [tableName, records] of Object.entries(tableData)) {
         for (const record of records) {
-          const { error } = await safeTableQuery(tableName)
+          const { error } = await supabase
+            .from(tableName as ValidTableName)
             .update(record)
             .eq('id', record.id);
           
