@@ -82,11 +82,11 @@ export default function ScheduleGridCell({
   const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
   
   // Check if the slot has a connected show properly
-  const hasValidLineup = slot.has_lineup && 
-    slot.shows && 
+  const hasValidLineup = slot.has_lineup === true && 
+    (slot.shows && 
     Array.isArray(slot.shows) && 
     slot.shows.length > 0 && 
-    slot.shows[0]?.id;
+    slot.shows[0]?.id);
 
   return (
     <div 
@@ -102,6 +102,7 @@ export default function ScheduleGridCell({
       }}
       data-slot-id={slot.id}
       data-has-lineup={slot.has_lineup ? 'true' : 'false'}
+      data-show-id={hasValidLineup ? slot.shows[0].id : 'none'}
     >
       <div className="flex justify-between items-start">
         <div className="font-bold">{displayName}</div>

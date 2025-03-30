@@ -102,7 +102,7 @@ export const getShowWithItems = async (showId: string | undefined) => {
   
   if (!showId || showId === "null" || showId === "undefined") {
     console.error('Invalid show ID provided:', showId);
-    return { show: null, items: [] };
+    throw new Error(`Invalid show ID provided: ${showId}`);
   }
 
   try {
@@ -115,6 +115,11 @@ export const getShowWithItems = async (showId: string | undefined) => {
     if (showError) {
       console.error('Error fetching show:', showError);
       throw showError;
+    }
+
+    if (!show || !show.id) {
+      console.error('Show not found or invalid:', showId);
+      throw new Error(`Show not found: ${showId}`);
     }
 
     const { data: items, error: itemsError } = await supabase
@@ -258,7 +263,7 @@ export const saveShow = async (
           notes: show.notes,
           slot_id: show.slot_id
         })
-        .select()
+        .select('id')
         .single();
 
       if (createError) {
