@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +10,7 @@ import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { toast } from "sonner";
 import { getShowWithItems } from '@/lib/supabase/shows';
+import { supabase } from '@/lib/supabase';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -39,12 +39,10 @@ export default function ScheduleView({
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
-  // Format the date range for print header
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const weekEnd = addDays(weekStart, 6);
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
 
-  // Use custom hooks
   const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
     selectedDate, 
     isMasterSchedule
@@ -66,7 +64,6 @@ export default function ScheduleView({
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
       await deleteSlot(slot.id);
       return;
@@ -134,11 +131,9 @@ export default function ScheduleView({
     });
     
     try {
-      // First, check if there's an associated show ID in shows_backup for this slot
       if (slot.has_lineup === true) {
         console.log("Slot has a lineup, trying to find associated show");
         
-        // Query shows_backup for shows with this slot_id
         const { data: shows, error: showError } = await supabase
           .from('shows_backup')
           .select('id')
@@ -155,7 +150,6 @@ export default function ScheduleView({
           const showId = shows[0].id;
           console.log(`Found show ID ${showId} for slot ${slot.id}`);
           
-          // Verify that the show exists and has proper data
           const result = await getShowWithItems(showId);
           if (result && result.show && result.show.id) {
             console.log(`Navigating to existing show: ${showId}`);
@@ -169,8 +163,6 @@ export default function ScheduleView({
         }
       }
 
-      // If we reach here, either the slot doesn't have a lineup or we couldn't find a valid show
-      // Create a new lineup (whether the slot has_lineup is true or false)
       const weekStart = new Date(selectedDate);
       weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
       const slotDate = new Date(weekStart);
@@ -197,14 +189,12 @@ export default function ScheduleView({
       console.error("Error handling slot click:", error);
       toast.error("אירעה שגיאה בטעינת הליינאפ");
       
-      // Fall back to creating a new lineup
       navigate('/new');
     }
   };
 
   return (
     <div className="space-y-4">
-      {/* Print Header - Only visible when printing */}
       <div className="print-schedule-header">
         לוח שידורים שבועי 103fm - {dateRangeDisplay}
       </div>
