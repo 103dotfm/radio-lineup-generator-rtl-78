@@ -8,19 +8,24 @@ import { format } from 'date-fns';
 export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Create a stable query key
+  const queryKey = ['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule];
 
   const {
     data: scheduleSlots = [],
-    isLoading
+    isLoading,
+    refetch
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
+    queryKey,
     queryFn: () => {
       console.log('Fetching slots with params:', {
         selectedDate,
         isMasterSchedule
       });
       return getScheduleSlots(selectedDate, isMasterSchedule);
-    }
+    },
+    staleTime: 60000 // Consider data fresh for 1 minute
   });
 
   const createSlotMutation = useMutation({
@@ -98,11 +103,21 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
     }
   });
 
+  // Function to explicitly refetch the schedule slots
+  const refetchSlots = async () => {
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Error refetching slots:', error);
+    }
+  };
+
   return {
     scheduleSlots,
     isLoading,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
-    deleteSlot: deleteSlotMutation.mutateAsync
+    deleteSlot: deleteSlotMutation.mutateAsync,
+    refetchSlots
   };
 };

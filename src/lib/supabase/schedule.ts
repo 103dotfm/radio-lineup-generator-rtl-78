@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO, isToday } from 'date-fns';
@@ -77,6 +78,27 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   }
   
   console.log('Retrieved shows for week:', shows);
+  
+  // Get deletion markers for the date range
+  const { data: deletionMarkers, error: deletionError } = await supabase
+    .from('shows')
+    .select('slot_id, date')
+    .gte('date', formattedStartDate)
+    .lte('date', formattedEndDate)
+    .eq('name', 'DELETED');
+    
+  if (deletionError) {
+    console.error('Error fetching deletion markers:', deletionError);
+  }
+  
+  // Create a lookup map for deletion markers
+  const deletionMap = new Map();
+  if (deletionMarkers && deletionMarkers.length > 0) {
+    deletionMarkers.forEach(marker => {
+      const key = `${marker.slot_id}-${marker.date}`;
+      deletionMap.set(key, true);
+    });
+  }
   
   // Now get master slots from schedule_slots_old
   const { data: masterSlots, error: masterSlotsError } = await supabase
@@ -178,16 +200,9 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         if (processedSlots.has(slotKey)) continue;
         processedSlots.add(slotKey);
         
-        // Get deletion markers for this slot on this date
-        const { data: deletionMarkers } = await supabase
-          .from('shows')
-          .select('*')
-          .eq('date', formattedDate)
-          .eq('slot_id', masterSlot.id)
-          .eq('name', 'DELETED');
-        
-        // Skip this master slot if there's a deletion marker
-        if (deletionMarkers && deletionMarkers.length > 0) {
+        // Check if there's a deletion marker for this slot on this date
+        const deletionKey = `${masterSlot.id}-${formattedDate}`;
+        if (deletionMap.has(deletionKey)) {
           console.log(`Skipping master slot with ID ${masterSlot.id} on ${formattedDate} due to deletion marker`);
           continue;
         }
@@ -486,75 +501,81 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         const formattedDate = format(selectedDate, 'yyyy-MM-dd');
         console.log(`Checking for slot ID ${id} on date ${formattedDate}`);
         
-        const { data: slotData, error: slotError } = await supabase
-          .from('schedule_slots_old')
-          .select('*')
-          .eq('id', id)
-          .single();
-          
-        if (slotError) {
-          console.error('Error fetching slot data for deletion:', slotError);
-          throw slotError || new Error('Slot not found');
-        }
-        
-        console.log('Found master slot:', slotData);
-        
-        // Check if there are shows with this slot_id for this date
-        const { data: existingShowsForSlot, error: showCheckError } = await supabase
-          .from('shows')
-          .select('*')
-          .eq('slot_id', id)
-          .eq('date', formattedDate);
-          
-        if (showCheckError) {
-          console.error('Error checking for existing shows with slot_id:', showCheckError);
-          throw showCheckError;
-        }
-        
-        console.log(`Found ${existingShowsForSlot?.length || 0} shows for slot ${id} on date ${formattedDate}`);
-        
-        if (existingShowsForSlot && existingShowsForSlot.length > 0) {
-          // If we have shows with this slot_id for this date, delete those shows directly
-          // This preserves any associated lineup while removing the slot from the schedule
-          console.log(`Deleting ${existingShowsForSlot.length} shows for slot ${id}`);
-          
-          for (const show of existingShowsForSlot) {
-            console.log(`Deleting show ${show.id}`);
-            const { error: deleteError } = await supabase
-              .from('shows')
-              .delete()
-              .eq('id', show.id);
-              
-            if (deleteError) {
-              console.error(`Error deleting show ${show.id} for slot:`, deleteError);
-              throw deleteError;
-            }
-          }
-          
-          console.log(`Successfully deleted shows for slot ${id}`);
-        } else {
-          // Create a "deletion" marker in the shows table
-          // This ensures the master slot won't appear on this date
-          console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);
-          
-          const deletionShow = {
-            name: "DELETED",
-            date: formattedDate,
-            time: slotData.start_time,
-            notes: "This slot was deleted from the weekly schedule",
-            slot_id: id
-          };
-          
-          const { error } = await supabase
-            .from('shows')
-            .insert(deletionShow);
+        try {
+          // First, verify this is a valid master slot
+          const { data: slotData, error: slotError } = await supabase
+            .from('schedule_slots_old')
+            .select('*')
+            .eq('id', id)
+            .single();
             
-          if (error) {
-            console.error('Error creating deletion marker:', error);
-            throw error;
+          if (slotError) {
+            console.error('Error fetching slot data for deletion:', slotError);
+            throw slotError;
           }
           
-          console.log(`Successfully created deletion marker for slot ${id}`);
+          console.log('Found master slot:', slotData);
+          
+          // Check if there are shows with this slot_id for this date
+          const { data: existingShowsForSlot, error: showCheckError } = await supabase
+            .from('shows')
+            .select('*')
+            .eq('slot_id', id)
+            .eq('date', formattedDate);
+            
+          if (showCheckError) {
+            console.error('Error checking for existing shows with slot_id:', showCheckError);
+            throw showCheckError;
+          }
+          
+          console.log(`Found ${existingShowsForSlot?.length || 0} shows for slot ${id} on date ${formattedDate}`);
+          
+          if (existingShowsForSlot && existingShowsForSlot.length > 0) {
+            // If we have shows with this slot_id for this date, delete those shows directly
+            // This preserves any associated lineup while removing the slot from the schedule
+            console.log(`Deleting ${existingShowsForSlot.length} shows for slot ${id}`);
+            
+            for (const show of existingShowsForSlot) {
+              console.log(`Deleting show ${show.id}`);
+              const { error: deleteError } = await supabase
+                .from('shows')
+                .delete()
+                .eq('id', show.id);
+                
+              if (deleteError) {
+                console.error(`Error deleting show ${show.id} for slot:`, deleteError);
+                throw deleteError;
+              }
+            }
+            
+            console.log(`Successfully deleted shows for slot ${id}`);
+          } else {
+            // Create a "deletion" marker in the shows table
+            // This ensures the master slot won't appear on this date
+            console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);
+            
+            const deletionShow = {
+              name: "DELETED",
+              date: formattedDate,
+              time: slotData.start_time,
+              notes: "This slot was deleted from the weekly schedule",
+              slot_id: id
+            };
+            
+            const { error } = await supabase
+              .from('shows')
+              .insert(deletionShow);
+              
+            if (error) {
+              console.error('Error creating deletion marker:', error);
+              throw error;
+            }
+            
+            console.log(`Successfully created deletion marker for slot ${id}`);
+          }
+        } catch (error: any) {
+          console.error('Error in slot deletion process:', error);
+          throw error;
         }
       }
     }
