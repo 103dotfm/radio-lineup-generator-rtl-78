@@ -1,12 +1,12 @@
 
-import { PostgrestQueryBuilder } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
 /**
  * Helper function to safely query supabase tables that might not be in the TypeScript definitions
  * This allows us to query tables that exist in the database but aren't in the generated types
  */
-export function safeTableQuery(tableName: string): PostgrestQueryBuilder<any, any, any> {
+export function safeTableQuery(tableName: string) {
   return supabase.from(tableName as any);
 }
 

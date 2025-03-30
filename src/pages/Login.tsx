@@ -1,33 +1,31 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthProvider';
 import { useNavigate, useLocation } from 'react-router-dom';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const {
-    login,
-    isAuthenticated
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { login, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const from = new URLSearchParams(location.search).get('from') || '/';
+  
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from, {
-        replace: true
-      });
+      navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
     if (!email || !password) {
       toast({
         variant: 'destructive',
@@ -37,16 +35,18 @@ const Login = () => {
       setIsLoading(false);
       return;
     }
+    
     try {
-      const {
-        error
-      } = await login(email, password);
+      const { error } = await login(email, password);
+      
       if (error) {
         console.error('Login error details:', error);
         let errorMessage = 'אנא בדוק את פרטי ההתחברות ונסה שוב';
+        
         if (error.message?.includes('Invalid login credentials')) {
           errorMessage = 'שם משתמש או סיסמה שגויים';
         }
+        
         toast({
           variant: 'destructive',
           title: 'שגיאה בהתחברות',
@@ -68,7 +68,9 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-  return <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-sky-300 to-teal-400">
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-sky-300 to-teal-400">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg transform transition-all duration-500 hover:shadow-xl">
         <div className="text-center">
           <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="mx-auto h-16 w-auto loginLogo" />
@@ -95,6 +97,8 @@ const Login = () => {
           </Button>
         </form>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Login;

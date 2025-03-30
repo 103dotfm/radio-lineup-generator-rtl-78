@@ -1,6 +1,6 @@
 
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/AuthProvider";
 import { format, startOfWeek } from 'date-fns';
 import Index from "./pages/Index";
 import Print from "./pages/Print";
