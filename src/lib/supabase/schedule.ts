@@ -95,15 +95,19 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   // Keep track of slots we've already processed to avoid duplicates
   const processedSlots = new Set<string>();
   
-  // Process custom schedule entries first (higher priority)
-  // If there's a custom schedule entry for a slot, it should override the master slot
+  // Current date for determining if we should apply master schedule changes
   const currentDate = new Date();
+  const today = startOfDay(currentDate);
   
   // For each day in the week
   for (let i = 0; i < 7; i++) {
     const currentDate = addDays(startDate, i);
     const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const formattedDate = format(currentDate, 'yyyy-MM-dd');
+    
+    // Check if this date is in the future (starting from tomorrow)
+    // This is the key change - only apply master schedule edits to future dates
+    const isFutureDate = isAfter(currentDate, today);
     
     // Filter shows for this date (these are highest priority)
     const showsForDate = shows?.filter(show => show.date === formattedDate) || [];
@@ -177,12 +181,17 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         show.slot_id === masterSlot.id
       ) || [];
       
-      transformedSlots.push({
-        ...masterSlot,
-        date: formattedDate,
-        shows: slotShows,
-        has_lineup: slotShows.length > 0
-      });
+      // Check if we're dealing with a past/current date or a future date
+      // For future dates, use the master schedule
+      // For past/current dates, only use the master schedule if there's no specific show override
+      if (isFutureDate || slotShows.length === 0) {
+        transformedSlots.push({
+          ...masterSlot,
+          date: formattedDate,
+          shows: slotShows,
+          has_lineup: slotShows.length > 0
+        });
+      }
     }
   }
   
