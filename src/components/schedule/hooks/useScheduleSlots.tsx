@@ -25,7 +25,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       });
       return getScheduleSlots(selectedDate, isMasterSchedule);
     },
-    staleTime: 60000 // Consider data fresh for 1 minute
+    staleTime: 30000 // Consider data fresh for 30 seconds (reduced from 60s)
   });
 
   const createSlotMutation = useMutation({
@@ -86,43 +86,43 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
 
   const deleteSlotMutation = useMutation({
     mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onSuccess: (_, deletedId) => {
-      // Optimistic UI update - remove the deleted slot from the cache immediately
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches to avoid overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey });
+      
+      // Snapshot the previous value
+      const previousSlots = queryClient.getQueryData<ScheduleSlot[]>(queryKey) || [];
+      
+      // Optimistically update the UI by removing the deleted slot
       queryClient.setQueryData(queryKey, (oldData: ScheduleSlot[] | undefined) => {
         if (!oldData) return [];
-        return oldData.filter(slot => {
-          // For master schedule slots, filter by ID directly
-          if (isMasterSchedule) {
-            return slot.id !== deletedId;
-          }
-          
-          // For regular slots, we need to check both the slot ID and any shows with the slot_id
-          if (slot.id === deletedId) return false;
-          
-          // For slots with shows, check if any show has this ID
-          if (slot.shows && slot.shows.some(show => show.id === deletedId)) {
-            return false;
-          }
-          
-          return true;
-        });
+        return oldData.filter(slot => slot.id !== deletedId);
       });
       
-      // Also invalidate the query to fetch fresh data
-      queryClient.invalidateQueries({
-        queryKey
-      });
-      
+      // Return the previous value for potential rollback
+      return { previousSlots };
+    },
+    onSuccess: (_, deletedId) => {
+      // No need to update cache again since we did it optimistically
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
       });
     },
-    onError: error => {
+    onError: (error, deletedId, context) => {
       console.error('Error deleting slot:', error);
+      // Roll back to the previous state if there's an error
+      if (context?.previousSlots) {
+        queryClient.setQueryData(queryKey, context.previousSlots);
+      }
+      
       toast({
         title: 'שגיאה במחיקת משבצת שידור',
         variant: 'destructive'
       });
+    },
+    onSettled: () => {
+      // Always invalidate the query to get fresh data after the mutation settles
+      queryClient.invalidateQueries({ queryKey });
     }
   });
 

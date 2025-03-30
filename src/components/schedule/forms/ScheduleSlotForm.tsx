@@ -67,6 +67,7 @@ export function ScheduleSlotForm({
         show_name: editingSlot.show_name,
         date: editingSlot.date,
         start_time: editingSlot.start_time,
+        end_time: editingSlot.end_time,
         color: editingSlot.color,
         has_lineup: editingSlot.has_lineup,
         is_prerecorded: editingSlot.is_prerecorded,
@@ -89,6 +90,9 @@ export function ScheduleSlotForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // If end time is not set, auto-calculate it to be 1 hour after start time
+    const finalEndTime = endTime || calculateEndTime(startTime);
+    
     if (editingSlot) {
       console.log("Updating existing slot:", editingSlot.id);
       
@@ -97,17 +101,22 @@ export function ScheduleSlotForm({
         show_name: showName,
         host_name: hostName,
         start_time: `${startTime}:00`,
-        end_time: `${endTime}:00`,
+        end_time: `${finalEndTime}:00`,
         date: editingSlot.date,
         is_prerecorded: isPrerecorded,
         is_collection: isCollection,
         color: isColorOverrideEnabled ? slotColor : null,
-        has_lineup: editingSlot.has_lineup
+        has_lineup: editingSlot.has_lineup || false
       };
       
       console.log("Updating slot with data:", updateData);
       onSubmit(updateData);
     } else {
+      if (selectedDays.length === 0) {
+        alert('יש לבחור לפחות יום אחד');
+        return;
+      }
+      
       selectedDays.forEach(dayOfWeek => {
         // Calculate the date for the selected day of week
         const date = new Date();
@@ -119,18 +128,28 @@ export function ScheduleSlotForm({
           show_name: showName,
           host_name: hostName,
           start_time: `${startTime}:00`,
-          end_time: `${endTime}:00`,
+          end_time: `${finalEndTime}:00`,
           date: formattedDate,
           is_recurring: isMasterSchedule,
           is_prerecorded: isPrerecorded,
           is_collection: isCollection,
           color: isColorOverrideEnabled ? slotColor : null
         };
+        
+        console.log('Submitting new slot data:', slotData);
         onSubmit(slotData);
       });
     }
     
     onClose();
+  };
+
+  const calculateEndTime = (start: string): string => {
+    if (!start) return '';
+    
+    const [hours, minutes] = start.split(':').map(Number);
+    const endHour = (hours + 1) % 24;
+    return `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
   const toggleDay = (dayId: number) => {
@@ -159,7 +178,6 @@ export function ScheduleSlotForm({
             id="host-name"
             value={hostName}
             onChange={(e) => setHostName(e.target.value)}
-            required
           />
         </div>
         
@@ -180,14 +198,14 @@ export function ScheduleSlotForm({
               id="end-time"
               type="time"
               value={endTime}
+              placeholder={startTime ? calculateEndTime(startTime) : ''}
               onChange={(e) => setEndTime(e.target.value)}
-              required
             />
           </div>
         </div>
         
         <div className="flex flex-col space-y-4">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <Checkbox
               id="is_prerecorded"
               checked={isPrerecorded}
@@ -195,7 +213,7 @@ export function ScheduleSlotForm({
             />
             <Label htmlFor="is_prerecorded">הוקלט מראש</Label>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <Checkbox
               id="is_collection"
               checked={isCollection}
@@ -203,7 +221,7 @@ export function ScheduleSlotForm({
             />
             <Label htmlFor="is_collection">לקט</Label>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <Checkbox
               id="enable_color_override"
               checked={isColorOverrideEnabled}
