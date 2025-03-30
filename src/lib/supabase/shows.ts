@@ -15,15 +15,28 @@ export const getShows = async (): Promise<Show[]> => {
 
   // Fetch items separately for each show
   const showsWithItems = await Promise.all((shows || []).map(async (show) => {
-    const { data: items, error: itemsError } = await supabase
-      .from('show_items')
-      .select('*')
-      .eq('show_id', show.id);
-      
-    return {
-      ...show,
-      items: itemsError ? [] : (items || [])
-    };
+    if (!show || !show.id) {
+      console.error('Invalid show found without ID:', show);
+      return show;
+    }
+    
+    try {
+      const { data: items, error: itemsError } = await supabase
+        .from('show_items')
+        .select('*')
+        .eq('show_id', show.id);
+        
+      return {
+        ...show,
+        items: itemsError ? [] : (items || [])
+      };
+    } catch (err) {
+      console.error(`Error fetching items for show ${show.id}:`, err);
+      return {
+        ...show,
+        items: []
+      };
+    }
   }));
 
   console.log('Fetched shows:', showsWithItems);
@@ -264,7 +277,7 @@ export const saveShow = async (
           notes: show.notes,
           slot_id: show.slot_id
         }])
-        .select()
+        .select('*')
         .single();
 
       if (createError) {

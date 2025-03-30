@@ -10,8 +10,6 @@ import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { toast } from "sonner";
-import { getShowWithItems } from '@/lib/supabase/shows';
-import { supabase } from '@/lib/supabase';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -144,21 +142,7 @@ export default function ScheduleView({
           return;
         } catch (showError) {
           console.error(`Error navigating to show ${showId}:`, showError);
-        }
-      } else {
-        // If we don't have shows from slot.shows, check directly in the database
-        // FIXED: Use shows_backup table
-        const { data: slotShows, error: slotShowsError } = await supabase
-          .from('shows_backup')  // Ensure correct table name
-          .select('id, name')
-          .eq('slot_id', slot.id)
-          .order('created_at', { ascending: false });
-          
-        if (!slotShowsError && slotShows && slotShows.length > 0) {
-          const showId = slotShows[0].id;
-          console.log(`Found show ${showId} for slot ${slot.id} from direct database query`);
-          navigate(`/show/${showId}`);
-          return;
+          // If navigation fails, continue to create new lineup
         }
       }
       
