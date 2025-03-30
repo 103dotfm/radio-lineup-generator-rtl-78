@@ -26,7 +26,9 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         return slots;
       } catch (error) {
         console.error('Error in query function:', error);
-        return [];
+        // Instead of returning an empty array which might not match the expected type,
+        // we throw the error to be handled by React Query's error states
+        throw error;
       }
     },
     retry: 1,
