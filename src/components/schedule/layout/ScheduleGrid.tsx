@@ -209,10 +209,10 @@ export default function ScheduleGrid({
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {Array.from({length: 7}).map((_, dayIndex) => (
-                  <React.Fragment key={`${time}-${dayIndex}`}>
-                    {renderTimeCell(dayIndex, time)}
-                  </React.Fragment>
+                {dates.map((date, dayIndex) => (
+                  <div key={`${time}-${dayIndex}`}>
+                    {renderTimeCell(date.getDay(), time)}
+                  </div>
                 ))}
               </React.Fragment>
             ))}
@@ -238,12 +238,18 @@ export default function ScheduleGrid({
                 {weekDays.map((_, dayIndex) => {
                   const relevantDates = dates.filter(date => date.getDay() === dayIndex);
                   const isCurrentMonth = relevantDates.length > 0;
-                  return renderTimeCell(dayIndex, time, isCurrentMonth);
+                  return (
+                    <div key={`${time}-${dayIndex}`}>
+                      {renderTimeCell(dayIndex, time, isCurrentMonth)}
+                    </div>
+                  );
                 })}
               </React.Fragment>
             ))}
           </div>
         );
+      default:
+        return null;
     }
   };
 

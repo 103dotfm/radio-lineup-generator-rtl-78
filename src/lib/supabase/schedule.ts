@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
@@ -11,56 +10,66 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   
   console.log('Fetching slots for week:', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
 
-  // Query all slots for the selected week
-  const { data: slots, error } = await supabase
-    .from('schedule_slots')
-    .select(`
-      *,
-      shows (
-        id,
-        name,
-        time,
-        date,
-        notes,
-        created_at,
-        slot_id
-      )
-    `)
-    .gte('date', format(startDate, 'yyyy-MM-dd'))
-    .lte('date', format(endDate, 'yyyy-MM-dd'))
-    .order('date', { ascending: true })
-    .order('start_time', { ascending: true });
+  try {
+    // Query all slots for the selected week
+    const { data: slots, error } = await supabase
+      .from('schedule_slots')
+      .select(`
+        *,
+        shows (
+          id,
+          name,
+          time,
+          date,
+          notes,
+          created_at,
+          slot_id
+        )
+      `)
+      .gte('date', format(startDate, 'yyyy-MM-dd'))
+      .lte('date', format(endDate, 'yyyy-MM-dd'))
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching schedule:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching schedule:', error);
+      throw error;
+    }
+
+    console.log('Retrieved slots:', slots);
+    
+    if (!slots || slots.length === 0) {
+      console.log('No slots found for the selected week');
+      return [];
+    }
+    
+    // Convert the date-based slots to a format compatible with our UI
+    // which expects day_of_week based slots
+    const processedSlots: ScheduleSlot[] = slots.map(slot => {
+      // Get day of week (0-6, where 0 is Sunday)
+      const slotDate = new Date(slot.date);
+      const dayOfWeek = slotDate.getDay();
+      
+      // Ensure shows is properly typed as an array
+      const showsArray = Array.isArray(slot.shows) ? slot.shows : [];
+      
+      return {
+        ...slot,
+        day_of_week: dayOfWeek,
+        is_modified: false,
+        is_recurring: false,
+        has_lineup: slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0,
+        // Ensure shows is always an array
+        shows: showsArray
+      };
+    });
+
+    console.log('Final processed slots:', processedSlots);
+    return processedSlots;
+  } catch (err) {
+    console.error('Unexpected error fetching schedule slots:', err);
+    return [];
   }
-
-  console.log('Retrieved slots:', slots);
-  
-  // Convert the date-based slots to a format compatible with our UI
-  // which expects day_of_week based slots
-  const processedSlots: ScheduleSlot[] = slots?.map(slot => {
-    // Get day of week (0-6, where 0 is Sunday)
-    const slotDate = new Date(slot.date);
-    const dayOfWeek = slotDate.getDay();
-    
-    // Ensure shows is properly typed as an array
-    const showsArray = Array.isArray(slot.shows) ? slot.shows : [];
-    
-    return {
-      ...slot,
-      day_of_week: dayOfWeek,
-      is_modified: false,
-      is_recurring: false,
-      has_lineup: slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0,
-      // Ensure shows is always an array
-      shows: showsArray
-    };
-  }) || [];
-
-  console.log('Final processed slots:', processedSlots);
-  return processedSlots;
 };
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
