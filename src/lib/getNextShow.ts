@@ -54,14 +54,30 @@ export const getNextShow = async (
     console.log('All shows on date:', showsOnDate);
     
     // Ensure we have valid data with the required properties before proceeding
-    if (!Array.isArray(showsOnDate) || !showsOnDate.every(show => 
-      typeof show === 'object' && show !== null && 'id' in show && 'name' in show && 'time' in show)) {
-      console.error('Invalid show data structure:', showsOnDate);
+    if (!Array.isArray(showsOnDate)) {
+      console.error('Invalid show data structure (not an array):', showsOnDate);
       return null;
     }
     
-    // Safely type cast the data
-    const typedShows = showsOnDate as ShowRecord[];
+    // Safely type cast the data by filtering out invalid objects
+    const typedShows: ShowRecord[] = showsOnDate
+      .filter((show): show is ShowRecord => 
+        show !== null && 
+        typeof show === 'object' && 
+        'id' in show && 
+        'name' in show && 
+        'time' in show && 
+        'date' in show &&
+        typeof show.id === 'string' &&
+        typeof show.name === 'string' &&
+        typeof show.time === 'string' &&
+        typeof show.date === 'string'
+      );
+    
+    if (typedShows.length === 0) {
+      console.error('No valid show data after filtering:', showsOnDate);
+      return null;
+    }
     
     const nextShow = typedShows.find(show => show.time > currentShowTime);
     
