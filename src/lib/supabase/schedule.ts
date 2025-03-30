@@ -12,7 +12,37 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   console.log('Fetching slots for week:', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
 
   try {
-    // Query schedule slots without trying to join the shows table
+    // For master schedule, query by day_of_week directly
+    if (isMasterSchedule) {
+      const { data: slots, error } = await supabase
+        .from('schedule_slots')
+        .select('*')
+        .eq('is_recurring', true)
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching master schedule:', error);
+        throw error;
+      }
+
+      console.log('Retrieved master schedule slots:', slots);
+      
+      if (!slots || slots.length === 0) {
+        console.log('No master schedule slots found');
+        return [];
+      }
+      
+      return slots.map(slot => ({
+        ...slot,
+        is_modified: false,
+        is_recurring: true,
+        has_lineup: slot.has_lineup || false,
+        shows: []
+      }));
+    }
+    
+    // For weekly schedule, query by date range
     const { data: slots, error } = await supabase
       .from('schedule_slots')
       .select('*')
@@ -68,8 +98,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       return {
         ...slot,
         day_of_week: dayOfWeek,
-        is_modified: false,
-        is_recurring: false,
+        is_modified: slot.is_modified || false,
+        is_recurring: slot.is_recurring || false,
         has_lineup: slot.has_lineup || (slotShows.length > 0),
         shows: slotShows
       };
@@ -86,6 +116,44 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
   console.log('Creating schedule slot:', { slot, isMasterSchedule, selectedDate });
   
+  // For master schedule, store with is_recurring = true
+  if (isMasterSchedule) {
+    console.log('Creating master schedule slot with day_of_week:', slot.day_of_week);
+    
+    const slotData = {
+      show_name: slot.show_name,
+      host_name: slot.host_name,
+      day_of_week: slot.day_of_week,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      is_prerecorded: slot.is_prerecorded || false,
+      is_collection: slot.is_collection || false,
+      is_recurring: true,
+      color: slot.color || null
+    };
+
+    console.log('Inserting new master slot with data:', slotData);
+
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .insert(slotData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating master slot:', error);
+      throw error;
+    }
+
+    console.log('Successfully created master slot:', data);
+    return {
+      ...data,
+      is_modified: false,
+      shows: []
+    };
+  }
+  
+  // For weekly schedule
   const currentWeekStart = selectedDate 
     ? startOfWeek(selectedDate, { weekStartsOn: 0 })
     : startOfWeek(new Date(), { weekStartsOn: 0 });
@@ -113,10 +181,12 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     show_name: slot.show_name,
     host_name: slot.host_name,
     date: format(slotDate, 'yyyy-MM-dd'),
+    day_of_week: slot.day_of_week,  // Store the day_of_week explicitly
     start_time: slot.start_time,
     end_time: slot.end_time,
     is_prerecorded: slot.is_prerecorded || false,
     is_collection: slot.is_collection || false,
+    is_recurring: false,
     color: slot.color || null
   };
 
@@ -134,13 +204,9 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
   }
 
   console.log('Successfully created slot:', data);
-  // Add the day_of_week to the returned data for UI compatibility
   return {
     ...data,
-    day_of_week: slot.day_of_week,
     is_modified: false,
-    is_recurring: false,
-    // Initialize shows as an empty array to ensure type compatibility
     shows: []
   };
 };
@@ -164,29 +230,36 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   
   // Calculate day of week from the date if we need to change day
   let slotDate = new Date(originalSlot.date);
-  let dayOfWeek = slotDate.getDay();
+  let dayOfWeek = originalSlot.day_of_week || slotDate.getDay();
   
   if (updates.day_of_week !== undefined && updates.day_of_week !== dayOfWeek) {
     // Need to change to a different day of the week
-    const currentWeekStart = selectedDate 
-      ? startOfWeek(selectedDate, { weekStartsOn: 0 }) 
-      : startOfWeek(new Date(), { weekStartsOn: 0 });
-      
-    slotDate = addDays(currentWeekStart, updates.day_of_week);
-    dayOfWeek = updates.day_of_week;
+    if (!isMasterSchedule && selectedDate) {
+      const currentWeekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+      slotDate = addDays(currentWeekStart, updates.day_of_week);
+      dayOfWeek = updates.day_of_week;
+    } else {
+      dayOfWeek = updates.day_of_week;
+    }
   }
 
   const updateData = {
     show_name: updates.show_name || originalSlot.show_name,
     host_name: updates.host_name || originalSlot.host_name,
-    date: format(slotDate, 'yyyy-MM-dd'),
+    day_of_week: dayOfWeek,
     start_time: updates.start_time || originalSlot.start_time,
     end_time: updates.end_time || originalSlot.end_time,
     is_prerecorded: updates.is_prerecorded !== undefined ? updates.is_prerecorded : originalSlot.is_prerecorded,
     is_collection: updates.is_collection !== undefined ? updates.is_collection : originalSlot.is_collection,
+    is_recurring: isMasterSchedule ? true : false,
     color: updates.color || originalSlot.color,
     updated_at: new Date().toISOString()
   };
+  
+  // Add date field only for non-master schedule slots
+  if (!isMasterSchedule) {
+    updateData['date'] = format(slotDate, 'yyyy-MM-dd');
+  }
   
   console.log('Updating with data:', updateData);
   
@@ -204,13 +277,10 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
   
   console.log('Successfully updated slot:', data);
   
-  // Return with day_of_week added for UI compatibility
   return {
     ...data,
     day_of_week: dayOfWeek,
     is_modified: false,
-    is_recurring: false,
-    // Initialize shows as an empty array to ensure type compatibility
     shows: []
   };
 };
