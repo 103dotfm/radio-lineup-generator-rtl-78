@@ -1,7 +1,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO, isToday } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO, addWeeks } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -22,18 +22,6 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     }
     console.log('Retrieved master schedule slots:', slots);
     
-    // Get all shows to associate with slots later
-    const { data: showsData, error: showsError } = await supabase
-      .from('shows')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (showsError) {
-      console.error('Error fetching shows for master slots:', showsError);
-    }
-    
-    const shows = showsData || [];
-    
     // Transform slots to match ScheduleSlot type
     const transformedSlots = slots?.map(slot => {
       // Calculate date based on day_of_week for display purposes
@@ -42,14 +30,12 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       const slotDate = addDays(currentWeekStart, slot.day_of_week);
       const formattedDate = format(slotDate, 'yyyy-MM-dd');
       
-      // Find shows for this slot, matching by slot_id
-      const slotShows = shows.filter(show => show.slot_id === slot.id);
-      
       return {
         ...slot,
         date: formattedDate,
-        shows: slotShows || [],
-        has_lineup: slotShows && slotShows.length > 0
+        shows: [],
+        has_lineup: false,
+        fromMaster: true
       };
     }) || [];
     
@@ -63,13 +49,12 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   const endDate = addDays(startDate, 6);
   const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
-  // Get weekly shows for the date range
+  // Get shows directly from the shows table for this week - these are actual shows that will override master schedule
   const { data: shows, error: showsError } = await supabase
     .from('shows')
     .select('*')
     .gte('date', formattedStartDate)
     .lte('date', formattedEndDate)
-    .not('name', 'eq', 'DELETED') // Filter out shows marked as DELETED
     .order('time', { ascending: true });
 
   if (showsError) {
@@ -79,32 +64,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   
   console.log('Retrieved shows for week:', shows);
   
-  // Get deletion markers for the date range
-  const { data: deletionMarkers, error: deletionError } = await supabase
-    .from('shows')
-    .select('slot_id, date')
-    .gte('date', formattedStartDate)
-    .lte('date', formattedEndDate)
-    .eq('name', 'DELETED');
-    
-  if (deletionError) {
-    console.error('Error fetching deletion markers:', deletionError);
-    throw deletionError;
-  }
-  
-  // Create a lookup map for deletion markers
-  const deletionMap = new Map();
-  if (deletionMarkers && deletionMarkers.length > 0) {
-    console.log('Found deletion markers:', deletionMarkers);
-    deletionMarkers.forEach(marker => {
-      if (marker.slot_id) {
-        const key = `${marker.slot_id}-${marker.date}`;
-        deletionMap.set(key, true);
-      }
-    });
-  }
-  
-  // Now get master slots from schedule_slots_old
+  // Get master slots from schedule_slots_old
   const { data: masterSlots, error: masterSlotsError } = await supabase
     .from('schedule_slots_old')
     .select('*')
@@ -115,156 +75,125 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     console.error('Error fetching master slots:', masterSlotsError);
     throw masterSlotsError;
   }
+
+  // Map to track which time slots are filled by shows (to avoid duplicates)
+  // The key will be a combination of date and time
+  const filledSlots = new Map();
+  const resultSlots: ScheduleSlot[] = [];
   
-  // Transform master slots to weekly slots based on the selected week
-  const transformedSlots: ScheduleSlot[] = [];
-  
-  // Keep track of slots we've already processed to avoid duplicates
-  const processedSlots = new Set<string>();
-  
-  // Current date for determining if we should apply master schedule changes
-  const currentDate = new Date();
-  const tomorrow = addDays(startOfDay(currentDate), 1);  // Use tomorrow as the cutoff
-  
-  // For each day in the week
-  for (let i = 0; i < 7; i++) {
-    const currentDate = addDays(startDate, i);
-    const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const formattedDate = format(currentDate, 'yyyy-MM-dd');
-    
-    // Check if this date is in the future (starting from tomorrow)
-    // Only apply master schedule changes to future dates (tomorrow onwards)
-    const isFutureDate = isAfter(currentDate, tomorrow) || isSameDay(currentDate, tomorrow);
-    
-    // Filter shows for this date (these are highest priority)
-    const showsForDate = shows?.filter(show => show.date === formattedDate) || [];
-    
-    // Process shows with slot_id first (modifications to master schedule)
-    const showsWithSlotId = showsForDate.filter(show => show.slot_id && show.name !== "DELETED");
-    
-    for (const show of showsWithSlotId) {
-      if (!show.slot_id) continue;
+  // First, process the actual shows for this week (these take precedence)
+  if (shows && shows.length > 0) {
+    for (const show of shows) {
+      // For each show, create a virtual slot
+      const slotKey = `${show.date}-${show.time}`;
       
-      // Find the master slot this show is derived from
-      const masterSlot = masterSlots?.find(slot => slot.id === show.slot_id);
-      if (!masterSlot) continue;
+      // Check if this is a "DELETED" marker
+      const isDeleted = show.name === "DELETED";
       
-      const slotKey = `${formattedDate}-${masterSlot.start_time}-${masterSlot.end_time}`;
-      if (processedSlots.has(slotKey)) continue;
-      processedSlots.add(slotKey);
+      if (isDeleted) {
+        // If it's a deletion marker, just record this time slot as filled
+        // but don't create a slot for it
+        filledSlots.set(slotKey, true);
+        continue;
+      }
       
-      transformedSlots.push({
-        id: masterSlot.id,
-        show_name: show.name,
-        host_name: masterSlot.host_name,
-        start_time: masterSlot.start_time,
-        end_time: masterSlot.end_time,
-        date: formattedDate,
-        is_recurring: masterSlot.is_recurring,
-        is_prerecorded: masterSlot.is_prerecorded,
-        is_collection: masterSlot.is_collection,
-        color: masterSlot.color,
-        is_modified: true,
-        shows: [show],
-        has_lineup: true
-      });
-    }
-    
-    // Add independent shows (ones without a slot_id)
-    const independentShows = showsForDate.filter(show => !show.slot_id && show.name !== "DELETED");
-    for (const show of independentShows) {
-      const slotKey = `${formattedDate}-${show.time}`;
-      if (processedSlots.has(slotKey)) continue;
-      processedSlots.add(slotKey);
-      
-      transformedSlots.push({
+      // If not a deletion marker, create a slot for this show
+      const showSlot: ScheduleSlot = {
         id: show.id,
         show_name: show.name,
-        host_name: null,
+        host_name: show.notes ? extractHostName(show.notes) : null,
         start_time: show.time || "00:00",
-        end_time: show.time ? incrementTimeByHour(show.time) : "01:00",
-        date: formattedDate,
+        end_time: incrementTimeByHour(show.time || "00:00"),
+        date: show.date,
         is_recurring: false,
-        is_prerecorded: false,
-        is_collection: false,
+        is_prerecorded: show.notes ? extractPrerecorded(show.notes) : false,
+        is_collection: show.notes ? extractCollection(show.notes) : false,
+        is_deleted: false,
+        color: null,
         shows: [show],
         has_lineup: true
-      });
-    }
-    
-    // Now add master slots for this day if they haven't been overridden,
-    // but ONLY for future dates
-    if (isFutureDate) {
-      const daySlotsFromMaster = masterSlots?.filter(slot => slot.day_of_week === dayOfWeek) || [];
+      };
       
+      resultSlots.push(showSlot);
+      filledSlots.set(slotKey, true);
+    }
+  }
+  
+  // Now, fill in slots from the master schedule for any time slots that aren't already filled
+  if (masterSlots && masterSlots.length > 0) {
+    for (let i = 0; i < 7; i++) {
+      const currentDate = addDays(startDate, i);
+      const formattedDate = format(currentDate, 'yyyy-MM-dd');
+      const dayOfWeek = currentDate.getDay(); // 0 = Sunday
+      
+      // Get master slots for this day of week
+      const daySlotsFromMaster = masterSlots.filter(slot => slot.day_of_week === dayOfWeek);
+      
+      // For each master slot on this day
       for (const masterSlot of daySlotsFromMaster) {
-        const slotKey = `${formattedDate}-${masterSlot.start_time}-${masterSlot.end_time}`;
+        const slotKey = `${formattedDate}-${masterSlot.start_time}`;
         
-        // Skip if we already processed this time slot
-        if (processedSlots.has(slotKey)) continue;
-        
-        // Check if there's a deletion marker for this slot on this date
-        const deletionKey = `${masterSlot.id}-${formattedDate}`;
-        if (deletionMap.has(deletionKey)) {
-          console.log(`Skipping master slot with ID ${masterSlot.id} on ${formattedDate} due to deletion marker`);
+        // Skip if we already have a show for this time slot
+        if (filledSlots.has(slotKey)) {
           continue;
         }
         
-        processedSlots.add(slotKey);
+        // Only apply master schedule to current and future weeks, not past weeks
+        const isDateBeforeToday = isBefore(new Date(formattedDate), startOfDay(new Date()));
+        const selectedDateInFuture = selectedDate && isAfter(selectedDate, new Date());
+
+        // If it's a past date and not selected in the future, don't use master schedule
+        if (isDateBeforeToday && !selectedDateInFuture) {
+          continue;
+        }
         
-        // Find any shows for this master slot on this date (non-deletion markers)
-        const slotShows = shows?.filter(show => 
-          show.date === formattedDate && 
-          show.slot_id === masterSlot.id &&
-          show.name !== "DELETED"
-        ) || [];
-        
-        transformedSlots.push({
+        // Create a slot from the master schedule
+        const masterScheduleSlot: ScheduleSlot = {
           ...masterSlot,
           date: formattedDate,
-          shows: slotShows,
-          has_lineup: slotShows.length > 0
-        });
+          shows: [],
+          has_lineup: false,
+          fromMaster: true
+        };
+        
+        resultSlots.push(masterScheduleSlot);
+        filledSlots.set(slotKey, true);
       }
     }
   }
   
-  // Sort all slots by date and time
-  transformedSlots.sort((a, b) => {
+  // Sort all slots by date and then time
+  resultSlots.sort((a, b) => {
     if (a.date !== b.date) {
       return a.date.localeCompare(b.date);
     }
     return a.start_time.localeCompare(b.start_time);
   });
   
-  // Last step: filter out slots that have deletion markers
-  const filteredSlots = transformedSlots.filter(slot => {
-    const deletionKey = `${slot.id}-${slot.date}`;
-    return !deletionMap.has(deletionKey);
-  });
-  
-  console.log('Final transformed slots count:', filteredSlots.length);
-  return filteredSlots;
+  console.log('Final transformed slots:', resultSlots);
+  return resultSlots;
 };
 
-// Helper function to increment time by 1 hour (e.g. "14:00" -> "15:00")
+// Helper functions
 function incrementTimeByHour(timeStr: string): string {
   const [hours, minutes] = timeStr.split(':').map(Number);
   const newHours = (hours + 1) % 24;
   return `${newHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
-// Calculate duration between two time strings in minutes
-function calculateDuration(startTime: string, endTime: string): number {
-  const [startHours, startMinutes] = startTime.split(':').map(Number);
-  let [endHours, endMinutes] = endTime.split(':').map(Number);
-  
-  // Handle crossing midnight
-  if (endHours < startHours || (endHours === startHours && endMinutes < startMinutes)) {
-    endHours += 24;
-  }
-  
-  return (endHours - startHours) * 60 + (endMinutes - startMinutes);
+function extractHostName(notes: string): string | null {
+  const match = notes.match(/Host:\s*([^\n]*)/);
+  return match ? match[1].trim() : null;
+}
+
+function extractPrerecorded(notes: string): boolean {
+  const match = notes.match(/Is prerecorded:\s*(Yes|No)/i);
+  return match ? match[1].toLowerCase() === 'yes' : false;
+}
+
+function extractCollection(notes: string): boolean {
+  const match = notes.match(/Is collection:\s*(Yes|No)/i);
+  return match ? match[1].toLowerCase() === 'yes' : false;
 }
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
@@ -312,12 +241,11 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     };
   } else {
     // Create a show for a specific date directly in the shows table
-    // Don't create a lineup, just the show/slot
     const showData = {
       name: slot.show_name,
       date: slot.date,
       time: slot.start_time,
-      notes: `Host: ${slot.host_name || ''}\nStart Time: ${slot.start_time}\nEnd Time: ${slot.end_time}\nIs prerecorded: ${slot.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${slot.is_collection ? 'Yes' : 'No'}`
+      notes: `Host: ${slot.host_name || ''}\nIs prerecorded: ${slot.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${slot.is_collection ? 'Yes' : 'No'}`
     };
     
     console.log('Creating show for specific date:', showData);
@@ -340,14 +268,14 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
       id: show.id,
       show_name: slot.show_name,
       host_name: slot.host_name,
-      start_time: slot.start_time, 
-      end_time: slot.end_time, // Use the provided end time
+      start_time: slot.start_time,
+      end_time: slot.end_time,
       date: slot.date,
       is_prerecorded: slot.is_prerecorded || false,
       is_collection: slot.is_collection || false,
       color: slot.color || null,
       shows: [show],
-      has_lineup: false // No automatically created lineup
+      has_lineup: true
     };
   }
 };
@@ -406,7 +334,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
       const showUpdateData = {
         name: updates.show_name,
         time: updates.start_time,
-        notes: `Host: ${updates.host_name || ''}\nStart Time: ${updates.start_time}\nEnd Time: ${updates.end_time}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`
+        notes: `Host: ${updates.host_name || ''}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`
       };
       
       console.log('Updating show with data:', showUpdateData);
@@ -435,7 +363,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_collection: updates.is_collection || false,
         color: updates.color || null,
         shows: [updatedShow],
-        has_lineup: !!updatedShow.slot_id
+        has_lineup: true
       };
     } else {
       // This might be a slot_id from the master schedule
@@ -444,7 +372,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         name: updates.show_name,
         date: updates.date,
         time: updates.start_time,
-        notes: `Host: ${updates.host_name || ''}\nStart Time: ${updates.start_time}\nEnd Time: ${updates.end_time}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`,
+        notes: `Host: ${updates.host_name || ''}\nIs prerecorded: ${updates.is_prerecorded ? 'Yes' : 'No'}\nIs collection: ${updates.is_collection ? 'Yes' : 'No'}`,
         slot_id: id // Associate with the original slot
       };
       
@@ -473,7 +401,7 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         is_collection: updates.is_collection || false,
         color: updates.color || null,
         shows: [newShow],
-        has_lineup: false // No automatically created lineup
+        has_lineup: true
       };
     }
   }
@@ -493,7 +421,6 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
       console.error('Error deleting master schedule slot:', error);
       throw error;
     }
-    console.log('Successfully marked master slot as deleted');
   } else {
     // Check if this is a show ID or a slot ID
     const { data: existingShow, error: showCheckError } = await supabase
@@ -508,8 +435,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
     }
     
     if (existingShow) {
-      // This is a show ID, delete the show directly
-      console.log(`Deleting show with ID ${id}`);
+      // This is a show ID, delete the show
       const { error } = await supabase
         .from('shows')
         .delete()
@@ -519,107 +445,36 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         console.error('Error deleting show:', error);
         throw error;
       }
-      console.log(`Successfully deleted show ${id}`);
     } else {
       // If no show with this ID exists, it might be referencing a master slot
+      // We should add a "deletion" show for this date/time
       if (selectedDate) {
-        const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-        console.log(`Checking for slot ID ${id} on date ${formattedDate}`);
+        const { data: slotData, error: slotError } = await supabase
+          .from('schedule_slots_old')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (slotError || !slotData) {
+          console.error('Error fetching slot data for deletion:', slotError);
+          throw slotError || new Error('Slot not found');
+        }
         
-        try {
-          // First, verify this is a valid master slot
-          const { data: slotData, error: slotError } = await supabase
-            .from('schedule_slots_old')
-            .select('*')
-            .eq('id', id)
-            .single();
-            
-          if (slotError) {
-            console.error('Error fetching slot data for deletion:', slotError);
-            throw slotError;
-          }
+        // Create a "deletion" marker in the shows table
+        const deletionShow = {
+          name: "DELETED",
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          time: slotData.start_time,
+          notes: "This slot was deleted from the weekly schedule",
+          slot_id: id
+        };
+        
+        const { error } = await supabase
+          .from('shows')
+          .insert(deletionShow);
           
-          console.log('Found master slot:', slotData);
-          
-          // Check if there are shows with this slot_id for this date
-          const { data: existingShowsForSlot, error: showCheckError } = await supabase
-            .from('shows')
-            .select('*')
-            .eq('slot_id', id)
-            .eq('date', formattedDate);
-            
-          if (showCheckError) {
-            console.error('Error checking for existing shows with slot_id:', showCheckError);
-            throw showCheckError;
-          }
-          
-          const validShows = existingShowsForSlot?.filter(show => show.name !== 'DELETED') || [];
-          console.log(`Found ${validShows.length} shows for slot ${id} on date ${formattedDate}`);
-          
-          if (validShows.length > 0) {
-            // If we have shows with this slot_id for this date, delete those shows directly
-            // This preserves any associated lineup while removing the slot from the schedule
-            console.log(`Deleting ${validShows.length} shows for slot ${id}`);
-            
-            for (const show of validShows) {
-              console.log(`Deleting show ${show.id}`);
-              const { error: deleteError } = await supabase
-                .from('shows')
-                .delete()
-                .eq('id', show.id);
-                
-              if (deleteError) {
-                console.error(`Error deleting show ${show.id} for slot:`, deleteError);
-                throw deleteError;
-              }
-            }
-            
-            console.log(`Successfully deleted shows for slot ${id}`);
-          } 
-          
-          // Check if a deletion marker already exists
-          const { data: existingMarker, error: markerCheckError } = await supabase
-            .from('shows')
-            .select('id')
-            .eq('slot_id', id)
-            .eq('date', formattedDate)
-            .eq('name', 'DELETED');
-            
-          if (markerCheckError) {
-            console.error('Error checking for existing deletion marker:', markerCheckError);
-            throw markerCheckError;
-          }
-          
-          // If a deletion marker already exists, we don't need to do anything
-          if (existingMarker && existingMarker.length > 0) {
-            console.log(`Deletion marker already exists for slot ${id} on date ${formattedDate}`);
-            return;
-          }
-          
-          // Create a "deletion" marker in the shows table
-          // This ensures the master slot won't appear on this date
-          console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);
-          
-          const deletionShow = {
-            name: "DELETED",
-            date: formattedDate,
-            time: slotData.start_time,
-            notes: "This slot was deleted from the weekly schedule",
-            slot_id: id
-          };
-          
-          const { error } = await supabase
-            .from('shows')
-            .insert(deletionShow);
-            
-          if (error) {
-            console.error('Error creating deletion marker:', error);
-            throw error;
-          }
-          
-          console.log(`Successfully created deletion marker for slot ${id}`);
-        } catch (error: any) {
-          console.error('Error in slot deletion process:', error);
+        if (error) {
+          console.error('Error creating deletion marker:', error);
           throw error;
         }
       }

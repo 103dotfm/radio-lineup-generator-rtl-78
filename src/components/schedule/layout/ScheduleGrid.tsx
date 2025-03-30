@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
-import { FileCheck, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { FileCheck, Pencil, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { getShowDisplay } from '@/utils/showDisplay';
 import ScheduleGridCell from './ScheduleGridCell';
@@ -21,7 +21,6 @@ interface ScheduleGridProps {
   hideHeaderDates: boolean;
   dayNotes: DayNote[];
   onDayNoteChange: () => void;
-  isLoading?: boolean;
 }
 
 export default function ScheduleGrid({
@@ -35,8 +34,7 @@ export default function ScheduleGrid({
   isAuthenticated,
   hideHeaderDates,
   dayNotes,
-  onDayNoteChange,
-  isLoading = false
+  onDayNoteChange
 }: ScheduleGridProps) {
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const [editingNoteDate, setEditingNoteDate] = useState<Date | null>(null);
@@ -189,20 +187,7 @@ export default function ScheduleGrid({
     );
   };
 
-  const renderLoadingState = () => (
-    <div className="flex items-center justify-center p-12 min-h-[300px]">
-      <div className="text-center">
-        <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" />
-        <p className="text-gray-500">טוען את לוח השידורים...</p>
-      </div>
-    </div>
-  );
-
   const renderGrid = () => {
-    if (isLoading) {
-      return renderLoadingState();
-    }
-
     switch (viewMode) {
       case 'daily':
         return (

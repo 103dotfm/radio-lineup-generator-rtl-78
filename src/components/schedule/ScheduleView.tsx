@@ -8,9 +8,7 @@ import ScheduleGrid from './layout/ScheduleGrid';
 import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
-import { format, startOfWeek, addDays } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
+import { format, startOfWeek, addDays, parse } from 'date-fns';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -35,9 +33,6 @@ export default function ScheduleView({
   const [showSlotDialog, setShowSlotDialog] = useState(false);
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
-  const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -48,14 +43,7 @@ export default function ScheduleView({
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
 
   // Use custom hooks
-  const { 
-    scheduleSlots, 
-    isLoading, 
-    createSlot, 
-    updateSlot, 
-    deleteSlot,
-    refetchSlots 
-  } = useScheduleSlots(
+  const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
     selectedDate, 
     isMasterSchedule
   );
@@ -68,11 +56,6 @@ export default function ScheduleView({
     }
   }, [externalSelectedDate]);
 
-  // Force a refetch when component mounts
-  useEffect(() => {
-    refetchSlots();
-  }, [selectedDate, isMasterSchedule]);
-
   const handleAddSlot = () => {
     setEditingSlot(undefined);
     setShowSlotDialog(true);
@@ -80,69 +63,15 @@ export default function ScheduleView({
 
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDeletingSlotId(slot.id);
 
     // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
-      try {
-        await deleteSlot(slot.id);
-        
-        // Immediately update UI optimistically
-        queryClient.setQueryData(['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule], 
-          (oldData: ScheduleSlot[] | undefined) => {
-            if (!oldData) return [];
-            return oldData.filter(s => s.id !== slot.id);
-          });
-        
-        toast({
-          title: "משבצת נמחקה",
-          description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
-        });
-      } catch (error) {
-        console.error('Error during deletion:', error);
-        toast({
-          title: "שגיאה במחיקה",
-          description: "לא ניתן למחוק את המשבצת",
-          variant: "destructive"
-        });
-      } finally {
-        setDeletingSlotId(null);
-        // Force refetch after a short delay
-        setTimeout(() => refetchSlots(), 500);
-      }
+      await deleteSlot(slot.id);
       return;
     }
     
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
-      try {
-        await deleteSlot(slot.id);
-        
-        // Immediately update UI optimistically
-        queryClient.setQueryData(['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule], 
-          (oldData: ScheduleSlot[] | undefined) => {
-            if (!oldData) return [];
-            return oldData.filter(s => s.id !== slot.id);
-          });
-        
-        toast({
-          title: "משבצת נמחקה",
-          description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
-        });
-        
-        // Force refetch after a short delay
-        setTimeout(() => refetchSlots(), 500);
-      } catch (error) {
-        console.error('Error during deletion:', error);
-        toast({
-          title: "שגיאה במחיקה",
-          description: "לא ניתן למחוק את המשבצת",
-          variant: "destructive"
-        });
-      } finally {
-        setDeletingSlotId(null);
-      }
-    } else {
-      setDeletingSlotId(null);
+      await deleteSlot(slot.id);
     }
   };
 
@@ -184,16 +113,8 @@ export default function ScheduleView({
         await createSlot(slotData);
       }
       setShowSlotDialog(false);
-      
-      // Force refetch after a short delay
-      setTimeout(() => refetchSlots(), 500);
     } catch (error) {
       console.error('Error saving slot:', error);
-      toast({
-        title: "שגיאה בשמירה",
-        description: "לא ניתן לשמור את המשבצת",
-        variant: "destructive"
-      });
     }
   };
 
@@ -203,7 +124,6 @@ export default function ScheduleView({
       show_name: slot.show_name,
       host_name: slot.host_name,
       start_time: slot.start_time,
-      end_time: slot.end_time,
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection
     });
@@ -217,15 +137,15 @@ export default function ScheduleView({
       const slotDate = new Date(slot.date);
       
       const generatedShowName = slot.show_name === slot.host_name 
-        ? slot.show_name 
-        : `${slot.show_name} עם ${slot.host_name || ''}`.trim();
+        ? slot.host_name 
+        : `${slot.show_name} עם ${slot.host_name}`;
       
       console.log('Navigating to new lineup with generated name:', generatedShowName);
       navigate('/new', {
         state: {
           generatedShowName,
           showName: slot.show_name,
-          hostName: slot.host_name || '',
+          hostName: slot.host_name,
           time: slot.start_time,
           date: slotDate,
           isPrerecorded: slot.is_prerecorded,
@@ -257,7 +177,7 @@ export default function ScheduleView({
       />
 
       <ScheduleGrid 
-        scheduleSlots={scheduleSlots.filter(slot => slot.id !== deletingSlotId)}
+        scheduleSlots={scheduleSlots}
         selectedDate={selectedDate}
         viewMode={viewMode}
         handleSlotClick={handleSlotClick}
@@ -268,7 +188,6 @@ export default function ScheduleView({
         hideHeaderDates={hideHeaderDates}
         dayNotes={dayNotes}
         onDayNoteChange={refreshDayNotes}
-        isLoading={isLoading}
       />
 
       <ScheduleDialogs 
