@@ -89,7 +89,7 @@ export default function ScheduleGridCell({
     slot.shows[0]?.id;
 
   const slotId = slot.id || '';
-  const showId = hasValidLineup ? slot.shows[0].id : 'none';
+  const showId = hasValidLineup && slot.shows && slot.shows[0]?.id ? slot.shows[0].id : 'none';
 
   return (
     <div 
@@ -104,12 +104,12 @@ export default function ScheduleGridCell({
         zIndex: 10
       }}
       data-slot-id={slotId}
-      data-has-lineup={slot.has_lineup ? 'true' : 'false'}
+      data-has-lineup={hasValidLineup ? 'true' : 'false'}
       data-show-id={showId}
     >
       <div className="flex justify-between items-start">
         <div className="font-bold">{displayName}</div>
-        {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
+        {hasValidLineup && <FileCheck className="h-4 w-4 text-green-600" />}
       </div>
       {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
       

@@ -191,6 +191,7 @@ serve(async (req) => {
         .select("id, name, date")
         .eq("slot_id", slot.id)
         .eq("date", todayDate) // Filter for today's date explicitly
+        .is("id", "not.null") // Only include shows with valid IDs 
         .order("created_at", { ascending: false })
         .limit(1);
       
@@ -204,14 +205,14 @@ serve(async (req) => {
         continue;
       }
       
-      if (!shows || shows.length === 0) {
-        console.log(`No shows found for slot ${slot.id} on date ${todayDate}`);
+      if (!shows || shows.length === 0 || !shows[0]?.id) {
+        console.log(`No valid shows found for slot ${slot.id} on date ${todayDate}`);
         
         // If no show found for today, log the issue and skip this slot
         results.push({
           slot: slot.id,
           success: false,
-          error: `No shows found for slot on date ${todayDate}`
+          error: `No valid shows found for slot on date ${todayDate}`
         });
         continue;
       }

@@ -154,7 +154,7 @@ async function handleRequest(req: Request) {
     try {
       console.log("Fetching show details...");
       const { data: show, error: showError } = await supabase
-        .from("shows_backup") // Correct table name
+        .from("shows_backup") 
         .select(`
           id,
           name,
@@ -171,6 +171,7 @@ async function handleRequest(req: Request) {
           )
         `)
         .eq("id", showId)
+        .is("id", "not.null")  // Only get shows with valid IDs
         .single();
 
       if (showError) {
