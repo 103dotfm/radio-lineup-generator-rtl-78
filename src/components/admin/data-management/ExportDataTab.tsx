@@ -14,6 +14,11 @@ type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots"
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
   "show_email_logs" | "system_settings" | "users";
 
+interface RecordWithId {
+  id: string;
+  [key: string]: any;
+}
+
 const ExportDataTab = () => {
   const { toast } = useToast();
   const [exportStartDate, setExportStartDate] = useState<Date | undefined>(undefined);
@@ -70,31 +75,38 @@ const ExportDataTab = () => {
           throw new Error(`Error filtering shows: ${showsError.message}`);
         }
         
-        // Use type assertion to handle TypeScript error
-        const typedShows = (filteredShows || []) as { id: string }[];
-        filteredShowIds = typedShows.map(show => show.id);
-        
-        // Get show items for these shows to later filter interviewees
-        if (filteredShowIds.length > 0) {
-          const { data: filteredItems, error: itemsError } = await safeTableQuery('show_items')
-            .select('id')
-            .in('show_id', filteredShowIds);
-            
-          if (itemsError) {
-            throw new Error(`Error filtering show items: ${itemsError.message}`);
-          }
+        // Make sure we have valid data
+        if (filteredShows && Array.isArray(filteredShows)) {
+          // Safely type filter and extract IDs
+          filteredShowIds = filteredShows
+            .filter(show => typeof show === 'object' && show !== null && 'id' in show)
+            .map(show => (show as RecordWithId).id);
           
-          // Use type assertion to handle TypeScript error
-          const typedItems = (filteredItems || []) as { id: string }[];
-          filteredShowItemIds = typedItems.map(item => item.id);
+          // Get show items for these shows to later filter interviewees
+          if (filteredShowIds.length > 0) {
+            const { data: filteredItems, error: itemsError } = await safeTableQuery('show_items')
+              .select('id')
+              .in('show_id', filteredShowIds);
+              
+            if (itemsError) {
+              throw new Error(`Error filtering show items: ${itemsError.message}`);
+            }
+            
+            // Safely type filter and extract IDs
+            if (filteredItems && Array.isArray(filteredItems)) {
+              filteredShowItemIds = filteredItems
+                .filter(item => typeof item === 'object' && item !== null && 'id' in item)
+                .map(item => (item as RecordWithId).id);
+            }
+          }
         }
       }
       
       // Process each selected table
       for (const tableName of tables) {
         const actualTableName = tableName === 'shows' ? 'shows_backup' : 
-                               tableName === 'schedule_slots' ? 'schedule_slots_old' : 
-                               tableName;
+                              tableName === 'schedule_slots' ? 'schedule_slots_old' : 
+                              tableName;
         
         let query = safeTableQuery(actualTableName).select('*');
         
