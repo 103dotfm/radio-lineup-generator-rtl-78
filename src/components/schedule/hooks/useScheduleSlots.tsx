@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -10,24 +9,22 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
 
   const {
     data: scheduleSlots = [],
-    isLoading
+    isLoading,
+    error,
+    refetch
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
-    queryFn: () => {
+    queryKey: ['scheduleSlots', selectedDate.toISOString(), isMasterSchedule],
+    queryFn: async () => {
       console.log('Fetching slots with params:', {
         selectedDate,
         isMasterSchedule
       });
-      return getScheduleSlots(selectedDate, isMasterSchedule);
+      const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
+      console.log('Fetched slots:', slots);
+      return slots;
     },
-    meta: {
-      onSuccess: (data: ScheduleSlot[]) => {
-        console.log('Successfully fetched slots:', data);
-      },
-      onError: (error: Error) => {
-        console.error('Error fetching slots:', error);
-      }
-    }
+    retry: 1,
+    refetchOnMount: true
   });
 
   const createSlotMutation = useMutation({
@@ -103,6 +100,8 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   return {
     scheduleSlots,
     isLoading,
+    error,
+    refetch,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
     deleteSlot: deleteSlotMutation.mutateAsync
