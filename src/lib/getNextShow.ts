@@ -62,23 +62,32 @@ export const getNextShow = async (
     // Safely filter and cast data to the correct type
     const typedShows: ShowRecord[] = [];
     
-    for (const item of showsOnDate) {
-      if (item && 
-          typeof item === 'object' && 
-          'id' in item && 
-          'name' in item && 
-          'time' in item && 
-          'date' in item &&
-          typeof item.id === 'string' &&
-          typeof item.name === 'string' &&
-          typeof item.time === 'string' &&
-          typeof item.date === 'string') {
-            typedShows.push({
-              id: item.id,
-              name: item.name, 
-              time: item.time,
-              date: item.date
-            });
+    if (showsOnDate && Array.isArray(showsOnDate)) {
+      for (let i = 0; i < showsOnDate.length; i++) {
+        const currentItem = showsOnDate[i];
+        
+        // Only process items that match our expected structure
+        if (!currentItem) continue;
+        
+        // Safe type checking before accessing properties
+        if (
+          typeof currentItem === 'object' && 
+          'id' in currentItem && 
+          'name' in currentItem && 
+          'time' in currentItem && 
+          'date' in currentItem &&
+          typeof currentItem.id === 'string' &&
+          typeof currentItem.name === 'string' &&
+          typeof currentItem.time === 'string' &&
+          typeof currentItem.date === 'string'
+        ) {
+          typedShows.push({
+            id: currentItem.id,
+            name: currentItem.name, 
+            time: currentItem.time,
+            date: currentItem.date
+          });
+        }
       }
     }
     
