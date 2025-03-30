@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
+import { addDays, startOfWeek, format } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -58,7 +58,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         day_of_week: dayOfWeek,
         is_modified: false,
         is_recurring: false,
-        has_lineup: slot.shows && Array.isArray(slot.shows) && slot.shows.length > 0,
+        has_lineup: slot.has_lineup || (showsArray.length > 0),
         // Ensure shows is always an array
         shows: showsArray
       };
