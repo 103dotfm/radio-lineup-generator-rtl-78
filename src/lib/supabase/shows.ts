@@ -254,7 +254,7 @@ export const saveShow = async (
       
     } else {
       // This is a new show, so we need to insert it
-      const { data: newShow, error: createError } = await supabase
+      const { data, error: createError } = await supabase
         .from('shows_backup')
         .insert({
           name: show.name,
@@ -271,12 +271,12 @@ export const saveShow = async (
         throw createError;
       }
       
-      if (!newShow || !newShow.id) {
+      if (!data || !data.id) {
         console.error('Failed to get ID for newly created show');
         throw new Error('Failed to create show - no ID returned');
       }
       
-      finalShowId = newShow.id;
+      finalShowId = data.id;
       console.log('Created new show with id:', finalShowId);
     }
 
