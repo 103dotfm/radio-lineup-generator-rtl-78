@@ -1,3 +1,4 @@
+
 export type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleSlot {
@@ -6,8 +7,8 @@ export interface ScheduleSlot {
   host_name?: string;
   start_time: string;
   end_time: string;
-  day_of_week: number;
-  is_recurring: boolean;
+  day_of_week: number; // Added for backward compatibility with UI
+  is_recurring?: boolean; // Added for backward compatibility with UI
   is_prerecorded?: boolean;
   is_collection?: boolean;
   has_lineup?: boolean;
@@ -15,6 +16,7 @@ export interface ScheduleSlot {
   color?: string;
   created_at?: string;
   updated_at?: string;
+  date?: string; // New field from updated schema
   shows?: Array<{
     id: string;
     name: string;
