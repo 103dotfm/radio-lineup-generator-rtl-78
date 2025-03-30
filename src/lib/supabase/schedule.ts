@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, parseISO, isToday } from 'date-fns';
@@ -113,7 +114,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     const showsForDate = shows?.filter(show => show.date === formattedDate) || [];
     
     // Process shows with slot_id first (modifications to master schedule)
-    const showsWithSlotId = showsForDate.filter(show => show.slot_id);
+    const showsWithSlotId = showsForDate.filter(show => show.slot_id && show.name !== "DELETED");
     
     for (const show of showsWithSlotId) {
       if (!show.slot_id) continue;
@@ -144,7 +145,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     }
     
     // Add independent shows (ones without a slot_id)
-    const independentShows = showsForDate.filter(show => !show.slot_id);
+    const independentShows = showsForDate.filter(show => !show.slot_id && show.name !== "DELETED");
     for (const show of independentShows) {
       const slotKey = `${formattedDate}-${show.time}`;
       if (processedSlots.has(slotKey)) continue;
@@ -177,10 +178,21 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         if (processedSlots.has(slotKey)) continue;
         processedSlots.add(slotKey);
         
-        // Find any shows for this master slot on this date
+        // Check if there are any deletion markers for this slot on this date
+        const deletionMarker = shows?.find(show => 
+          show.date === formattedDate && 
+          show.slot_id === masterSlot.id &&
+          show.name === "DELETED"
+        );
+        
+        // Skip this master slot if there's a deletion marker
+        if (deletionMarker) continue;
+        
+        // Find any shows for this master slot on this date (non-deletion markers)
         const slotShows = shows?.filter(show => 
           show.date === formattedDate && 
-          show.slot_id === masterSlot.id
+          show.slot_id === masterSlot.id &&
+          show.name !== "DELETED"
         ) || [];
         
         transformedSlots.push({
@@ -463,8 +475,10 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
       }
     } else {
       // If no show with this ID exists, it might be referencing a master slot
-      // We should add a "deletion" show for this date/time
+      // We should check if there's a show with this slot_id that has a lineup
       if (selectedDate) {
+        const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+        
         const { data: slotData, error: slotError } = await supabase
           .from('schedule_slots_old')
           .select('*')
@@ -476,22 +490,50 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
           throw slotError || new Error('Slot not found');
         }
         
-        // Create a "deletion" marker in the shows table
-        const deletionShow = {
-          name: "DELETED",
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          time: slotData.start_time,
-          notes: "This slot was deleted from the weekly schedule",
-          slot_id: id
-        };
-        
-        const { error } = await supabase
+        // Check if there's a show with this slot_id for this date
+        const { data: existingShowForSlot, error: showCheckError } = await supabase
           .from('shows')
-          .insert(deletionShow);
+          .select('*')
+          .eq('slot_id', id)
+          .eq('date', formattedDate)
+          .maybeSingle();
           
-        if (error) {
-          console.error('Error creating deletion marker:', error);
-          throw error;
+        if (showCheckError) {
+          console.error('Error checking for existing show with slot_id:', showCheckError);
+          throw showCheckError;
+        }
+        
+        if (existingShowForSlot) {
+          // If we have a show with this slot_id for this date, just delete that show
+          // This preserves any associated lineup while removing the slot from the schedule
+          const { error: deleteError } = await supabase
+            .from('shows')
+            .delete()
+            .eq('id', existingShowForSlot.id);
+            
+          if (deleteError) {
+            console.error('Error deleting show for slot:', deleteError);
+            throw deleteError;
+          }
+        } else {
+          // Create a "deletion" marker in the shows table
+          // This ensures the master slot won't appear on this date
+          const deletionShow = {
+            name: "DELETED",
+            date: formattedDate,
+            time: slotData.start_time,
+            notes: "This slot was deleted from the weekly schedule",
+            slot_id: id
+          };
+          
+          const { error } = await supabase
+            .from('shows')
+            .insert(deletionShow);
+            
+          if (error) {
+            console.error('Error creating deletion marker:', error);
+            throw error;
+          }
         }
       }
     }
