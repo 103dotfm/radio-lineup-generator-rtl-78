@@ -97,7 +97,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   
   // Current date for determining if we should apply master schedule changes
   const currentDate = new Date();
-  const today = startOfDay(currentDate);
+  const tomorrow = addDays(startOfDay(currentDate), 1);  // Use tomorrow as the cutoff
   
   // For each day in the week
   for (let i = 0; i < 7; i++) {
@@ -106,8 +106,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     const formattedDate = format(currentDate, 'yyyy-MM-dd');
     
     // Check if this date is in the future (starting from tomorrow)
-    // This is the key change - only apply master schedule edits to future dates
-    const isFutureDate = isAfter(currentDate, today);
+    // Only apply master schedule changes to future dates (tomorrow onwards)
+    const isFutureDate = isAfter(currentDate, tomorrow) || isSameDay(currentDate, tomorrow);
     
     // Filter shows for this date (these are highest priority)
     const showsForDate = shows?.filter(show => show.date === formattedDate) || [];
@@ -165,26 +165,24 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       });
     }
     
-    // Now add master slots for this day if they haven't been overridden
-    const daySlotsFromMaster = masterSlots?.filter(slot => slot.day_of_week === dayOfWeek) || [];
-    
-    for (const masterSlot of daySlotsFromMaster) {
-      const slotKey = `${formattedDate}-${masterSlot.start_time}-${masterSlot.end_time}`;
+    // Now add master slots for this day if they haven't been overridden,
+    // but ONLY for future dates
+    if (isFutureDate) {
+      const daySlotsFromMaster = masterSlots?.filter(slot => slot.day_of_week === dayOfWeek) || [];
       
-      // Skip if we already processed this time slot
-      if (processedSlots.has(slotKey)) continue;
-      processedSlots.add(slotKey);
-      
-      // Find any shows for this master slot on this date
-      const slotShows = shows?.filter(show => 
-        show.date === formattedDate && 
-        show.slot_id === masterSlot.id
-      ) || [];
-      
-      // Check if we're dealing with a past/current date or a future date
-      // For future dates, use the master schedule
-      // For past/current dates, only use the master schedule if there's no specific show override
-      if (isFutureDate || slotShows.length === 0) {
+      for (const masterSlot of daySlotsFromMaster) {
+        const slotKey = `${formattedDate}-${masterSlot.start_time}-${masterSlot.end_time}`;
+        
+        // Skip if we already processed this time slot
+        if (processedSlots.has(slotKey)) continue;
+        processedSlots.add(slotKey);
+        
+        // Find any shows for this master slot on this date
+        const slotShows = shows?.filter(show => 
+          show.date === formattedDate && 
+          show.slot_id === masterSlot.id
+        ) || [];
+        
         transformedSlots.push({
           ...masterSlot,
           date: formattedDate,
