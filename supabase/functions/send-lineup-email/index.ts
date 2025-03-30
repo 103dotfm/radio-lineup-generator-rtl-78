@@ -154,7 +154,7 @@ async function handleRequest(req: Request) {
     try {
       console.log("Fetching show details...");
       const { data: show, error: showError } = await supabase
-        .from("shows_backup") // Updated table name
+        .from("shows_backup") // Correct table name
         .select(`
           id,
           name,

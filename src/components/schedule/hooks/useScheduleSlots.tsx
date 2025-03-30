@@ -30,7 +30,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         }
         
         try {
-          // Check if this slot has any associated shows, regardless of has_lineup flag
+          // Check if this slot has any associated shows
           console.log('Checking for shows with slot_id:', slot.id);
           const { data: shows, error } = await supabase
             .from('shows_backup')

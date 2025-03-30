@@ -16,22 +16,23 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 
 const Index = () => {
-  const { id: showId } = useParams();
+  const { id: showId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state } = useLocation();
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState<any[]>([]);
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState<Date>(new Date());
-  const [editingItem, setEditingItem] = useState(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [initialState, setInitialState] = useState(null);
+  const [initialState, setInitialState] = useState<any>(null);
   const [showMinutes, setShowMinutes] = useState(false);
   const [nextShowInfo, setNextShowInfo] = useState<{ name: string; host?: string } | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const isNewLineup = !showId;
+  const [slotId, setSlotId] = useState<string | undefined>(undefined);
 
   const editor = useEditor({
     extensions: [
@@ -81,13 +82,19 @@ const Index = () => {
       if (state.date) {
         setShowDate(new Date(state.date));
       }
+      
+      if (state.slotId) {
+        setSlotId(state.slotId);
+        console.log('Setting slot ID from state:', state.slotId);
+      }
 
       setInitialState({
         name: displayName,
         time: state.time || '',
         date: state.date ? new Date(state.date) : new Date(),
         notes: '',
-        items: []
+        items: [],
+        slotId: state.slotId
       });
     }
   }, [isNewLineup, state]);
@@ -96,6 +103,7 @@ const Index = () => {
     const loadShow = async () => {
       if (showId) {
         try {
+          console.log('Loading show with ID:', showId);
           const result = await getShowWithItems(showId);
           if (!result || !result.show) {
             toast.error('התוכנית לא נמצאה');
@@ -107,6 +115,10 @@ const Index = () => {
             setShowName(show.name);
             setShowTime(show.time);
             setShowDate(show.date ? new Date(show.date) : new Date());
+            if (show.slot_id) {
+              setSlotId(show.slot_id);
+              console.log('Setting slot ID from loaded show:', show.slot_id);
+            }
             if (editor) {
               editor.commands.setContent(show.notes || '');
             }
@@ -115,7 +127,8 @@ const Index = () => {
               time: show.time,
               date: show.date ? new Date(show.date) : new Date(),
               notes: show.notes || '',
-              items: showItems
+              items: showItems,
+              slotId: show.slot_id
             });
           }
           if (showItems) {
@@ -193,8 +206,14 @@ const Index = () => {
         time: showTime,
         date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
         notes: editor?.getHTML() || '',
-        slot_id: state?.slotId
+        slot_id: slotId // Use the tracked slotId state
       };
+      
+      console.log('Saving show with data:', {
+        ...show,
+        showId,
+        itemsCount: items.length
+      });
 
       const itemsToSave = items.map(({ id: itemId, ...item }) => {
         console.log(`Preparing item to save: ${item.name}`, {
@@ -244,7 +263,8 @@ const Index = () => {
               time: showTime,
               date: showDate,
               notes: editor?.getHTML() || '',
-              items: result.items
+              items: result.items,
+              slotId: result.show.slot_id
             });
           }
         }
@@ -264,7 +284,7 @@ const Index = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, showName, showTime, showDate, editor, items, state, showId, navigate, fetchNextShowInfo]);
+  }, [isSaving, showName, showTime, showDate, editor, items, showId, navigate, fetchNextShowInfo, slotId]);
 
   const handleAdd = useCallback((newItem) => {
     if (editingItem) {
