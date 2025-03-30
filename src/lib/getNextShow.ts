@@ -8,6 +8,13 @@ interface NextShowInfo {
   host?: string;
 }
 
+interface ShowRecord {
+  id: string;
+  name: string;
+  time: string;
+  date: string;
+}
+
 /**
  * Gets the next show for the specified date by looking ONLY at the daily schedule
  */
@@ -46,9 +53,15 @@ export const getNextShow = async (
 
     console.log('All shows on date:', showsOnDate);
     
-    // Find the first show that comes after the current show time
-    // Type assertion to handle the TypeScript error
-    const typedShows = showsOnDate as { id: string; name: string; time: string; date: string }[];
+    // Ensure we have valid data with the required properties before proceeding
+    if (!Array.isArray(showsOnDate) || !showsOnDate.every(show => 
+      typeof show === 'object' && show !== null && 'id' in show && 'name' in show && 'time' in show)) {
+      console.error('Invalid show data structure:', showsOnDate);
+      return null;
+    }
+    
+    // Safely type cast the data
+    const typedShows = showsOnDate as ShowRecord[];
     
     const nextShow = typedShows.find(show => show.time > currentShowTime);
     
