@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,7 +43,7 @@ export default function ScheduleView({
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
 
   // Use custom hooks
-  const { scheduleSlots, isLoading, error, refetch, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
+  const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
     selectedDate, 
     isMasterSchedule
   );
@@ -54,11 +55,6 @@ export default function ScheduleView({
       setSelectedDate(externalSelectedDate);
     }
   }, [externalSelectedDate]);
-
-  useEffect(() => {
-    // Force refetch when the component mounts
-    refetch();
-  }, [refetch]);
 
   const handleAddSlot = () => {
     setEditingSlot(undefined);
@@ -182,33 +178,19 @@ export default function ScheduleView({
         hideDateControls={hideDateControls}
       />
 
-      {isLoading ? (
-        <div className="flex items-center justify-center p-12 border rounded-lg">
-          <div className="text-lg">טוען לוח שידורים...</div>
-        </div>
-      ) : error ? (
-        <div className="flex items-center justify-center p-12 border rounded-lg bg-red-50">
-          <div className="text-lg text-red-500">שגיאה בטעינת לוח השידורים</div>
-        </div>
-      ) : scheduleSlots.length === 0 ? (
-        <div className="flex items-center justify-center p-12 border rounded-lg">
-          <div className="text-lg">אין משבצות שידור לתצוגה בשבוע זה</div>
-        </div>
-      ) : (
-        <ScheduleGrid 
-          scheduleSlots={scheduleSlots}
-          selectedDate={selectedDate}
-          viewMode={viewMode}
-          handleSlotClick={handleSlotClick}
-          handleEditSlot={handleEditSlot}
-          handleDeleteSlot={handleDeleteSlot}
-          isAdmin={isAdmin}
-          isAuthenticated={isAuthenticated}
-          hideHeaderDates={hideHeaderDates}
-          dayNotes={dayNotes}
-          onDayNoteChange={refreshDayNotes}
-        />
-      )}
+      <ScheduleGrid 
+        scheduleSlots={scheduleSlots}
+        selectedDate={selectedDate}
+        viewMode={viewMode}
+        handleSlotClick={handleSlotClick}
+        handleEditSlot={handleEditSlot}
+        handleDeleteSlot={handleDeleteSlot}
+        isAdmin={isAdmin}
+        isAuthenticated={isAuthenticated}
+        hideHeaderDates={hideHeaderDates}
+        dayNotes={dayNotes}
+        onDayNoteChange={refreshDayNotes}
+      />
 
       <ScheduleDialogs 
         isAdmin={isAdmin}

@@ -23,6 +23,10 @@ export const getNextShow = async (
     const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
     console.log('Finding next show for date:', formattedDate, 'after time:', currentShowTime);
     
+    // Get the day of week (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = currentShowDate.getDay();
+    console.log('Day of week:', dayOfWeek);
+    
     // First, query the shows table for all shows with lineups on this specific date
     const { data: showsOnDate, error: showsError } = await supabase
       .from('shows')
@@ -35,11 +39,12 @@ export const getNextShow = async (
       return null;
     }
     
-    // Query the schedule_slots table for all slots on this specific date
+    // Then, query the schedule_slots table for all slots on this day of week
     const { data: scheduledSlots, error: slotsError } = await supabase
       .from('schedule_slots')
       .select('id, show_name, host_name, start_time')
-      .eq('date', formattedDate)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_deleted', false)
       .order('start_time', { ascending: true });
     
     if (slotsError) {
