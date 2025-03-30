@@ -227,12 +227,16 @@ const Index = () => {
 
       const savedShow = await saveShow(show, itemsToSave, showId);
       
-      if (savedShow && savedShow.id && !showId) {
-        navigate(`/show/${savedShow.id}`, { replace: true });
-      } else {
-        const targetId = showId || (savedShow && savedShow.id);
-        if (targetId) {
-          const result = await getShowWithItems(targetId);
+      console.log('Save result:', savedShow);
+      
+      if (savedShow && savedShow.id) {
+        if (!showId) {
+          // This is a new show, navigate to the show page
+          console.log(`New show saved, navigating to /show/${savedShow.id}`);
+          navigate(`/show/${savedShow.id}`, { replace: true });
+        } else {
+          // This is an update, reload the show data
+          const result = await getShowWithItems(showId);
           if (result && result.show) {
             setItems(result.items);
             setInitialState({
@@ -244,13 +248,16 @@ const Index = () => {
             });
           }
         }
+        
+        setHasUnsavedChanges(false);
+        toast.success('הליינאפ נשמר בהצלחה');
+        
+        // Refresh next show info after saving
+        fetchNextShowInfo();
+      } else {
+        console.error('No show ID returned after save');
+        toast.error('שגיאה בשמירת הליינאפ - לא התקבל מזהה');
       }
-      
-      setHasUnsavedChanges(false);
-      toast.success('הליינאפ נשמר בהצלחה');
-      
-      // Refresh next show info after saving
-      fetchNextShowInfo();
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת הליינאפ');
