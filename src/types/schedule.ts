@@ -24,8 +24,7 @@ export interface ScheduleSlot {
     date?: string;
     notes?: string;
     created_at?: string;
-    slot_id?: string;
-  }>;
+  }> | null;
 }
 
 export interface DayNote {
