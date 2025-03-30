@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useEditor } from '@tiptap/react';
@@ -96,7 +97,7 @@ const Index = () => {
       if (showId) {
         try {
           const result = await getShowWithItems(showId);
-          if (!result) {
+          if (!result || !result.show) {
             toast.error('התוכנית לא נמצאה');
             navigate('/');
             return;
@@ -226,27 +227,23 @@ const Index = () => {
 
       const savedShow = await saveShow(show, itemsToSave, showId);
       
-      if (savedShow && !showId) {
+      if (savedShow && savedShow.id && !showId) {
         navigate(`/show/${savedShow.id}`, { replace: true });
-      }
-      
-      const result = await getShowWithItems(showId || savedShow.id);
-      if (result) {
-        console.log('Items after reloading:', result.items.map(item => ({
-          name: item.name,
-          is_divider: item.is_divider,
-          is_break: item.is_break,
-          is_note: item.is_note
-        })));
-        
-        setItems(result.items);
-        setInitialState({
-          name: showName,
-          time: showTime,
-          date: showDate,
-          notes: editor?.getHTML() || '',
-          items: result.items
-        });
+      } else {
+        const targetId = showId || (savedShow && savedShow.id);
+        if (targetId) {
+          const result = await getShowWithItems(targetId);
+          if (result && result.show) {
+            setItems(result.items);
+            setInitialState({
+              name: showName,
+              time: showTime,
+              date: showDate,
+              notes: editor?.getHTML() || '',
+              items: result.items
+            });
+          }
+        }
       }
       
       setHasUnsavedChanges(false);
@@ -481,7 +478,7 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
             <AlertDialogDescription>
-              יש ��ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
+              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
