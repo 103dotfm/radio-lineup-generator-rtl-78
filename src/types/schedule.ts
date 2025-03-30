@@ -1,4 +1,3 @@
-
 export type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleSlot {
@@ -13,7 +12,6 @@ export interface ScheduleSlot {
   is_collection?: boolean;
   has_lineup?: boolean;
   is_modified?: boolean;
-  is_deleted?: boolean;
   color?: string;
   created_at?: string;
   updated_at?: string;
@@ -24,7 +22,7 @@ export interface ScheduleSlot {
     date?: string;
     notes?: string;
     created_at?: string;
-  }> | null;
+  }>;
 }
 
 export interface DayNote {
