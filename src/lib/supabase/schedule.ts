@@ -68,6 +68,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     .select('*')
     .gte('date', formattedStartDate)
     .lte('date', formattedEndDate)
+    .not('name', 'eq', 'DELETED') // Filter out shows marked as DELETED
     .order('time', { ascending: true });
 
   if (showsError) {
@@ -177,15 +178,19 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         if (processedSlots.has(slotKey)) continue;
         processedSlots.add(slotKey);
         
-        // Check if there are any deletion markers for this slot on this date
-        const deletionMarker = shows?.find(show => 
-          show.date === formattedDate && 
-          show.slot_id === masterSlot.id &&
-          show.name === "DELETED"
-        );
+        // Get deletion markers for this slot on this date
+        const { data: deletionMarkers } = await supabase
+          .from('shows')
+          .select('*')
+          .eq('date', formattedDate)
+          .eq('slot_id', masterSlot.id)
+          .eq('name', 'DELETED');
         
         // Skip this master slot if there's a deletion marker
-        if (deletionMarker) continue;
+        if (deletionMarkers && deletionMarkers.length > 0) {
+          console.log(`Skipping master slot with ID ${masterSlot.id} on ${formattedDate} due to deletion marker`);
+          continue;
+        }
         
         // Find any shows for this master slot on this date (non-deletion markers)
         const slotShows = shows?.filter(show => 
@@ -448,6 +453,7 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
       console.error('Error deleting master schedule slot:', error);
       throw error;
     }
+    console.log('Successfully marked master slot as deleted');
   } else {
     // Check if this is a show ID or a slot ID
     const { data: existingShow, error: showCheckError } = await supabase
@@ -462,7 +468,8 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
     }
     
     if (existingShow) {
-      // This is a show ID, delete the show
+      // This is a show ID, delete the show directly
+      console.log(`Deleting show with ID ${id}`);
       const { error } = await supabase
         .from('shows')
         .delete()
@@ -472,11 +479,12 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         console.error('Error deleting show:', error);
         throw error;
       }
+      console.log(`Successfully deleted show ${id}`);
     } else {
       // If no show with this ID exists, it might be referencing a master slot
-      // We should check if there's a show with this slot_id that has a lineup
       if (selectedDate) {
         const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+        console.log(`Checking for slot ID ${id} on date ${formattedDate}`);
         
         const { data: slotData, error: slotError } = await supabase
           .from('schedule_slots_old')
@@ -484,10 +492,12 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
           .eq('id', id)
           .single();
           
-        if (slotError || !slotData) {
+        if (slotError) {
           console.error('Error fetching slot data for deletion:', slotError);
           throw slotError || new Error('Slot not found');
         }
+        
+        console.log('Found master slot:', slotData);
         
         // Check if there are shows with this slot_id for this date
         const { data: existingShowsForSlot, error: showCheckError } = await supabase
@@ -501,10 +511,15 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
           throw showCheckError;
         }
         
+        console.log(`Found ${existingShowsForSlot?.length || 0} shows for slot ${id} on date ${formattedDate}`);
+        
         if (existingShowsForSlot && existingShowsForSlot.length > 0) {
-          // If we have shows with this slot_id for this date, delete those shows
+          // If we have shows with this slot_id for this date, delete those shows directly
           // This preserves any associated lineup while removing the slot from the schedule
+          console.log(`Deleting ${existingShowsForSlot.length} shows for slot ${id}`);
+          
           for (const show of existingShowsForSlot) {
+            console.log(`Deleting show ${show.id}`);
             const { error: deleteError } = await supabase
               .from('shows')
               .delete()
@@ -515,9 +530,13 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
               throw deleteError;
             }
           }
+          
+          console.log(`Successfully deleted shows for slot ${id}`);
         } else {
           // Create a "deletion" marker in the shows table
           // This ensures the master slot won't appear on this date
+          console.log(`Creating deletion marker for slot ${id} on date ${formattedDate}`);
+          
           const deletionShow = {
             name: "DELETED",
             date: formattedDate,
@@ -534,6 +553,8 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
             console.error('Error creating deletion marker:', error);
             throw error;
           }
+          
+          console.log(`Successfully created deletion marker for slot ${id}`);
         }
       }
     }
