@@ -134,7 +134,7 @@ export default function ScheduleView({
     
     try {
       // First check if the slot has associated shows from the slot.shows property (which is populated in useScheduleSlots)
-      if (slot.shows && slot.shows.length > 0) {
+      if (slot.shows && slot.shows.length > 0 && slot.shows[0]?.id) {
         const showId = slot.shows[0].id;
         console.log(`Found associated show ${showId} for slot ${slot.id} from slot.shows`);
         
@@ -169,7 +169,7 @@ export default function ScheduleView({
           throw showError;
         }
         
-        if (shows && shows.length > 0) {
+        if (shows && shows.length > 0 && shows[0].id) {
           const showId = shows[0].id;
           console.log(`Found show ID ${showId} for slot ${slot.id} from direct query`);
           
