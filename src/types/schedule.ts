@@ -1,3 +1,4 @@
+
 export type ViewMode = 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleSlot {
