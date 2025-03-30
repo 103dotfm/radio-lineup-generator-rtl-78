@@ -25,11 +25,11 @@ export const getNextShow = async (
     console.log('Finding next show for date:', formattedDate, 'after time:', currentShowTime);
     
     // Debug: Log the query we're about to make
-    console.log(`Running query: SELECT * FROM shows WHERE date = '${formattedDate}' ORDER BY time ASC`);
+    console.log(`Running query: SELECT * FROM shows_backup WHERE date = '${formattedDate}' ORDER BY time ASC`);
     
     // Query the shows table for all shows on this specific date
     const { data: showsOnDate, error: showsError } = await supabase
-      .from('shows')
+      .from('shows_backup')
       .select('id, name, time, date')
       .eq('date', formattedDate)
       .order('time', { ascending: true });
@@ -47,7 +47,7 @@ export const getNextShow = async (
     console.log('All shows on date:', showsOnDate);
     
     // Find the first show that comes after the current show time
-    const nextShow = showsOnDate.find(show => show.time > currentShowTime);
+    const nextShow = showsOnDate.find(show => show && show.time > currentShowTime);
     
     if (!nextShow) {
       console.log('No next show found after time:', currentShowTime);
@@ -57,17 +57,21 @@ export const getNextShow = async (
     console.log('Found next show:', nextShow.name, 'at', nextShow.time);
     
     // Extract name and host if applicable
-    const hostMatch = nextShow.name.match(/(.*?)\s+עם\s+(.*)/);
-    if (hostMatch) {
+    if (nextShow && nextShow.name) {
+      const hostMatch = nextShow.name.match(/(.*?)\s+עם\s+(.*)/);
+      if (hostMatch) {
+        return {
+          name: hostMatch[1].trim(),
+          host: hostMatch[2].trim()
+        };
+      }
+      
       return {
-        name: hostMatch[1].trim(),
-        host: hostMatch[2].trim()
+        name: nextShow.name
       };
     }
     
-    return {
-      name: nextShow.name
-    };
+    return null;
     
   } catch (error) {
     console.error('Error getting next show:', error);
