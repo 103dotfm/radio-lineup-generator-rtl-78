@@ -25,7 +25,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       });
       return getScheduleSlots(selectedDate, isMasterSchedule);
     },
-    staleTime: 30000 // Consider data fresh for 30 seconds (reduced from 60s)
+    staleTime: 0 // Consider data always stale to ensure fresh data after mutations
   });
 
   const createSlotMutation = useMutation({
@@ -103,10 +103,17 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       return { previousSlots };
     },
     onSuccess: (_, deletedId) => {
-      // No need to update cache again since we did it optimistically
+      // Clear query cache completely to force a full refetch
+      queryClient.removeQueries({ queryKey });
+      
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
       });
+      
+      // Force refetch to ensure we get the latest data
+      setTimeout(() => {
+        refetch();
+      }, 300);
     },
     onError: (error, deletedId, context) => {
       console.error('Error deleting slot:', error);
@@ -129,6 +136,8 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   // Function to explicitly refetch the schedule slots
   const refetchSlots = async () => {
     try {
+      // Clear cache first to ensure fresh data
+      queryClient.removeQueries({ queryKey });
       await refetch();
     } catch (error) {
       console.error('Error refetching slots:', error);

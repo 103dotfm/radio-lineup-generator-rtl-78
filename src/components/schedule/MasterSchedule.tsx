@@ -6,9 +6,7 @@ import { Plus } from "lucide-react";
 import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { ScheduleSlot } from '@/types/schedule';
 import { format, startOfWeek } from 'date-fns';
-import { createScheduleSlot, updateScheduleSlot } from '@/lib/supabase/schedule';
 
 const MasterSchedule = () => {
   const [showSlotDialog, setShowSlotDialog] = useState(false);
@@ -36,29 +34,24 @@ const MasterSchedule = () => {
         onSave={async slotData => {
           console.log('Attempting to save master schedule slot:', slotData);
           try {
-            // Check if this is an update or a new slot
-            if (slotData.id) {
-              console.log("Updating existing master slot:", slotData.id);
-              const { id, ...updates } = slotData;
-              await updateScheduleSlot(id, updates, true);
-              console.log('Master schedule slot updated successfully');
-            } else {
-              console.log("Creating new master slot");
-              // For master schedule, use the current week's date
-              const today = new Date();
-              const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 });
-              slotData.date = format(currentWeekStart, 'yyyy-MM-dd'); 
-              slotData.is_recurring = true;
-              
-              await createScheduleSlot(slotData, true);
-              console.log('Master schedule slot created successfully');
-            }
-
-            // Force refresh the schedule view
-            await queryClient.invalidateQueries({
+            // Ensure we're working with the master schedule
+            const today = new Date();
+            const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 });
+            slotData.date = format(currentWeekStart, 'yyyy-MM-dd'); 
+            slotData.is_recurring = true;
+            
+            // Clear the query cache completely to force a refetch
+            await queryClient.removeQueries({
               queryKey: ['scheduleSlots']
             });
-            console.log('Query cache invalidated');
+            
+            // Force a refetch after a short delay
+            setTimeout(() => {
+              queryClient.invalidateQueries({
+                queryKey: ['scheduleSlots']
+              });
+            }, 500);
+            
             toast({
               title: slotData.id ? "משבצת שידור עודכנה בהצלחה" : "משבצת שידור נוספה בהצלחה"
             });

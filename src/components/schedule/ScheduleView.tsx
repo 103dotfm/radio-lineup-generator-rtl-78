@@ -68,6 +68,11 @@ export default function ScheduleView({
     }
   }, [externalSelectedDate]);
 
+  // Force a refetch when component mounts
+  useEffect(() => {
+    refetchSlots();
+  }, [selectedDate, isMasterSchedule]);
+
   const handleAddSlot = () => {
     setEditingSlot(undefined);
     setShowSlotDialog(true);
@@ -81,6 +86,14 @@ export default function ScheduleView({
     if (e.ctrlKey) {
       try {
         await deleteSlot(slot.id);
+        
+        // Immediately update UI optimistically
+        queryClient.setQueryData(['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule], 
+          (oldData: ScheduleSlot[] | undefined) => {
+            if (!oldData) return [];
+            return oldData.filter(s => s.id !== slot.id);
+          });
+        
         toast({
           title: "משבצת נמחקה",
           description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
@@ -94,6 +107,8 @@ export default function ScheduleView({
         });
       } finally {
         setDeletingSlotId(null);
+        // Force refetch after a short delay
+        setTimeout(() => refetchSlots(), 500);
       }
       return;
     }
@@ -101,14 +116,21 @@ export default function ScheduleView({
     if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
       try {
         await deleteSlot(slot.id);
-        // Invalidate queries to force a refresh
-        const queryKey = ['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule];
-        queryClient.invalidateQueries({ queryKey });
+        
+        // Immediately update UI optimistically
+        queryClient.setQueryData(['scheduleSlots', selectedDate.toISOString().split('T')[0], isMasterSchedule], 
+          (oldData: ScheduleSlot[] | undefined) => {
+            if (!oldData) return [];
+            return oldData.filter(s => s.id !== slot.id);
+          });
         
         toast({
           title: "משבצת נמחקה",
           description: `משבצת "${slot.show_name}" נמחקה בהצלחה`
         });
+        
+        // Force refetch after a short delay
+        setTimeout(() => refetchSlots(), 500);
       } catch (error) {
         console.error('Error during deletion:', error);
         toast({
@@ -162,7 +184,9 @@ export default function ScheduleView({
         await createSlot(slotData);
       }
       setShowSlotDialog(false);
-      refetchSlots(); // Force a refresh after save
+      
+      // Force refetch after a short delay
+      setTimeout(() => refetchSlots(), 500);
     } catch (error) {
       console.error('Error saving slot:', error);
       toast({
