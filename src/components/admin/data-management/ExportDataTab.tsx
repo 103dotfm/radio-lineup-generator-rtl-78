@@ -70,7 +70,9 @@ const ExportDataTab = () => {
           throw new Error(`Error filtering shows: ${showsError.message}`);
         }
         
-        filteredShowIds = filteredShows?.map(show => show.id) || [];
+        // Use type assertion to handle TypeScript error
+        const typedShows = (filteredShows || []) as { id: string }[];
+        filteredShowIds = typedShows.map(show => show.id);
         
         // Get show items for these shows to later filter interviewees
         if (filteredShowIds.length > 0) {
@@ -82,13 +84,19 @@ const ExportDataTab = () => {
             throw new Error(`Error filtering show items: ${itemsError.message}`);
           }
           
-          filteredShowItemIds = filteredItems?.map(item => item.id) || [];
+          // Use type assertion to handle TypeScript error
+          const typedItems = (filteredItems || []) as { id: string }[];
+          filteredShowItemIds = typedItems.map(item => item.id);
         }
       }
       
       // Process each selected table
       for (const tableName of tables) {
-        let query = safeTableQuery(tableName).select('*');
+        const actualTableName = tableName === 'shows' ? 'shows_backup' : 
+                               tableName === 'schedule_slots' ? 'schedule_slots_old' : 
+                               tableName;
+        
+        let query = safeTableQuery(actualTableName).select('*');
         
         // Apply filters based on date range for each table type
         if (exportStartDate || exportEndDate) {

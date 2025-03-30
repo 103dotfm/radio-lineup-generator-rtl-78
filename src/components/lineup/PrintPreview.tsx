@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthProvider';
 import { ShowItem, Interviewee } from '@/types/show';
 
 interface PrintPreviewProps {

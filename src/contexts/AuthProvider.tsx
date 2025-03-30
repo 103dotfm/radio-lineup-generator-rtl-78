@@ -6,17 +6,19 @@ import { useToast } from '@/hooks/use-toast';
 
 type AuthContextType = {
   isAuthenticated: boolean;
+  isAdmin: boolean; // Add isAdmin property
   user: any;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{error?: any}>;
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
+  isAdmin: false, // Add default value for isAdmin
   user: null,
   loading: true,
-  login: async () => {},
+  login: async () => ({}),
   logout: async () => {}
 });
 
@@ -24,6 +26,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,12 +38,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error) {
           console.error('Error checking session:', error);
           setUser(null);
+          setIsAdmin(false);
         } else {
           setUser(data?.session?.user ?? null);
+          
+          // Check if user is admin
+          if (data?.session?.user) {
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('is_admin')
+              .eq('id', data.session.user.id)
+              .single();
+              
+            if (!userError && userData) {
+              setIsAdmin(userData.is_admin || false);
+            } else {
+              setIsAdmin(false);
+            }
+          } else {
+            setIsAdmin(false);
+          }
         }
       } catch (error) {
         console.error('Exception checking session:', error);
         setUser(null);
+        setIsAdmin(false);
       } finally {
         setLoading(false);
       }
@@ -48,8 +70,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     checkSession();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      
+      // Check admin status when auth state changes
+      if (session?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (!userError && userData) {
+          setIsAdmin(userData.is_admin || false);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      
       setLoading(false);
     });
 
@@ -63,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         toast({
@@ -71,13 +111,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: "destructive"
         });
-        throw error;
+        return { error };
+      }
+      
+      // Check if user is admin after login
+      if (data?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (!userError && userData) {
+          setIsAdmin(userData.is_admin || false);
+        }
       }
       
       navigate('/');
+      return {};
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      return { error };
     } finally {
       setLoading(false);
     }
@@ -87,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       await supabase.auth.signOut();
+      setIsAdmin(false);
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -97,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     isAuthenticated: !!user,
+    isAdmin,
     user,
     loading,
     login,
