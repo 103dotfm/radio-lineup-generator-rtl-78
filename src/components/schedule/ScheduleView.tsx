@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthProvider';
 import { ViewMode, ScheduleSlot } from '@/types/schedule';
 import ScheduleHeader from './layout/ScheduleHeader';
 import ScheduleGrid from './layout/ScheduleGrid';
