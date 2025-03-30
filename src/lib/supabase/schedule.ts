@@ -120,6 +120,11 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
   if (isMasterSchedule) {
     console.log('Creating master schedule slot with day_of_week:', slot.day_of_week);
     
+    // For master schedule, we need to add a placeholder date value
+    // This fixes the TypeScript error by providing the required 'date' field
+    const today = new Date();
+    const placeholderDate = format(today, 'yyyy-MM-dd');
+    
     const slotData = {
       show_name: slot.show_name,
       host_name: slot.host_name,
@@ -129,7 +134,8 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
       is_prerecorded: slot.is_prerecorded || false,
       is_collection: slot.is_collection || false,
       is_recurring: true,
-      color: slot.color || null
+      color: slot.color || null,
+      date: placeholderDate // Add placeholder date to satisfy database requirements
     };
 
     console.log('Inserting new master slot with data:', slotData);
