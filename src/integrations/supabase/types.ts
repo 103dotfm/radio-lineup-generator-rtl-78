@@ -156,6 +156,57 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          date: string
+          end_time: string
+          has_lineup: boolean | null
+          host_name: string | null
+          id: string
+          is_collection: boolean | null
+          is_modified: boolean | null
+          is_prerecorded: boolean | null
+          is_recurring: boolean | null
+          show_name: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          date: string
+          end_time: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          date?: string
+          end_time?: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          is_recurring?: boolean | null
+          show_name?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_slots_old: {
+        Row: {
+          color: string | null
+          created_at: string
           day_of_week: number
           end_time: string
           has_lineup: boolean | null
@@ -417,6 +468,21 @@ export type Database = {
     Functions: {
       add_schedule_slots_columns: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      add_slots_to_date_range: {
+        Args: {
+          p_show_name: string
+          p_host_name: string
+          p_start_date: string
+          p_end_date: string
+          p_day_of_week: number
+          p_start_time: string
+          p_end_time: string
+          p_is_prerecorded?: boolean
+          p_is_collection?: boolean
+          p_color?: string
+        }
         Returns: undefined
       }
       gtrgm_compress: {
