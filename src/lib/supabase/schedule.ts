@@ -4,7 +4,7 @@ import { DayNote, ScheduleSlot } from "@/types/schedule";
 import { format, addDays, startOfWeek as dateStartOfWeek, isSameDay as dateIsSameDay } from "date-fns";
 
 // Helper functions from date-fns
-const startOfWeek = (date: Date, options?: { weekStartsOn: number }) => 
+const startOfWeek = (date: Date, options?: { weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 }) => 
   dateStartOfWeek(date, options);
   
 const isSameDay = (date1: Date, date2: Date) => dateIsSameDay(date1, date2);
