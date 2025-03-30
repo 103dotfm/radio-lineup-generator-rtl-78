@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
+import { safeTableQuery } from "@/lib/supabase-utils";
 
 type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots" | 
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
@@ -51,7 +52,7 @@ const ExportDataTab = () => {
       
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = supabase.from('shows' as ValidTableName).select('id');
+        let showsQuery = safeTableQuery('shows_backup').select('id');
         
         if (exportStartDate) {
           const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -73,13 +74,8 @@ const ExportDataTab = () => {
         
         // Get show items for these shows to later filter interviewees
         if (filteredShowIds.length > 0) {
-          // Need to cast to any before using .in()
-          const queryBuilder = supabase
-            .from('show_items' as ValidTableName)
-            .select('id');
-          
-          // Cast queryBuilder to any before calling .in()
-          const { data: filteredItems, error: itemsError } = await (queryBuilder as any)
+          const { data: filteredItems, error: itemsError } = await safeTableQuery('show_items')
+            .select('id')
             .in('show_id', filteredShowIds);
             
           if (itemsError) {
@@ -92,7 +88,7 @@ const ExportDataTab = () => {
       
       // Process each selected table
       for (const tableName of tables) {
-        let query = supabase.from(tableName as ValidTableName).select('*');
+        let query = safeTableQuery(tableName).select('*');
         
         // Apply filters based on date range for each table type
         if (exportStartDate || exportEndDate) {
@@ -121,12 +117,10 @@ const ExportDataTab = () => {
             }
           }
           else if (tableName === 'show_items' && filteredShowIds.length > 0) {
-            // Cast query to any before calling .in()
-            query = (query as any).in('show_id', filteredShowIds);
+            query = query.in('show_id', filteredShowIds);
           }
           else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
-            // Cast query to any before calling .in()
-            query = (query as any).in('item_id', filteredShowItemIds);
+            query = query.in('item_id', filteredShowItemIds);
           }
           // Other tables not filtered by date range
         }

@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
+import { safeTableQuery } from './supabase-utils';
 
 interface NextShowInfo {
   name: string;
@@ -28,8 +29,7 @@ export const getNextShow = async (
     console.log(`Running query: SELECT * FROM shows_backup WHERE date = '${formattedDate}' ORDER BY time ASC`);
     
     // Query the shows table for all shows on this specific date
-    const { data: showsOnDate, error: showsError } = await supabase
-      .from('shows_backup')
+    const { data: showsOnDate, error: showsError } = await safeTableQuery('shows_backup')
       .select('id, name, time, date')
       .eq('date', formattedDate)
       .order('time', { ascending: true });

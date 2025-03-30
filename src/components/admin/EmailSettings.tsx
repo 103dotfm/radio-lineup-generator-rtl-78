@@ -13,6 +13,7 @@ import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { safeTableQuery } from "@/lib/supabase-utils";
 
 interface EmailSettingsType {
   id: string;
@@ -350,8 +351,7 @@ const EmailSettings: React.FC = () => {
 
   const loadLatestShow = async () => {
     try {
-      const { data, error } = await supabase
-        .from('shows')
+      const { data, error } = await safeTableQuery('shows_backup')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -1216,4 +1216,3 @@ const EmailSettings: React.FC = () => {
 };
 
 export default EmailSettings;
-
