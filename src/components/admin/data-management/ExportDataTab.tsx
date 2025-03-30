@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -78,17 +77,16 @@ const ExportDataTab = () => {
         
         // Make sure we have valid data
         if (filteredShows && Array.isArray(filteredShows)) {
-          // Use type assertion after proper checks
           filteredShowIds = filteredShows
-            .filter(show => 
-              show !== null && 
-              typeof show === 'object' && 
-              'id' in show && 
-              typeof show.id === 'string'
-            )
+            .filter(show => {
+              return show !== null && 
+                typeof show === 'object' && 
+                'id' in show && 
+                typeof show.id === 'string';
+            })
             .map(show => {
-              // We've already filtered, so we know it has id
-              return (show as {id: string}).id;
+              // We've verified this show has an id property
+              return (show as unknown as { id: string }).id;
             });
           
           // Get show items for these shows to later filter interviewees
@@ -104,15 +102,15 @@ const ExportDataTab = () => {
             // Safely type filter and extract IDs
             if (filteredItems && Array.isArray(filteredItems)) {
               filteredShowItemIds = filteredItems
-                .filter(item => 
-                  item !== null && 
-                  typeof item === 'object' && 
-                  'id' in item && 
-                  typeof item.id === 'string'
-                )
+                .filter(item => {
+                  return item !== null && 
+                    typeof item === 'object' && 
+                    'id' in item && 
+                    typeof item.id === 'string';
+                })
                 .map(item => {
-                  // We've already filtered, so we know it has id
-                  return (item as {id: string}).id;
+                  // We've verified this item has an id property
+                  return (item as unknown as { id: string }).id;
                 });
             }
           }
