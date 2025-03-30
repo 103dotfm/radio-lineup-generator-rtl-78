@@ -11,18 +11,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     // For master schedule, get all recurring slots from schedule_slots_old
     const { data: slots, error } = await supabase
       .from('schedule_slots_old')
-      .select(`
-        *,
-        shows (
-          id,
-          name,
-          time,
-          date,
-          notes,
-          created_at,
-          slot_id
-        )
-      `)
+      .select('*')
       .eq('is_recurring', true)
       .eq('is_deleted', false)
       .order('start_time', { ascending: true });
@@ -33,6 +22,18 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     }
     console.log('Retrieved master schedule slots:', slots);
     
+    // Get all shows to associate with slots later
+    const { data: showsData, error: showsError } = await supabase
+      .from('shows')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (showsError) {
+      console.error('Error fetching shows for master slots:', showsError);
+    }
+    
+    const shows = showsData || [];
+    
     // Transform slots to match ScheduleSlot type
     const transformedSlots = slots?.map(slot => {
       // Calculate date based on day_of_week for display purposes
@@ -41,12 +42,14 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       const slotDate = addDays(currentWeekStart, slot.day_of_week);
       const formattedDate = format(slotDate, 'yyyy-MM-dd');
       
+      // Find shows for this slot, matching by slot_id
+      const slotShows = shows.filter(show => show.slot_id === slot.id);
+      
       return {
         ...slot,
         date: formattedDate,
-        // Ensure shows is always an array, even if it's null from the query
-        shows: Array.isArray(slot.shows) ? slot.shows : [],
-        has_lineup: Array.isArray(slot.shows) && slot.shows.length > 0
+        shows: slotShows || [],
+        has_lineup: slotShows && slotShows.length > 0
       };
     }) || [];
     
@@ -103,8 +106,10 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
     const dateSlotsFromMaster = daySlotsFromMaster.map(slot => {
       // Find any shows for this slot on this date
       const slotShows = shows?.filter(show => {
-        // Match by date and time
-        return show.date === formattedDate && show.time === slot.start_time;
+        // Match by date and time and slot_id if available
+        return show.date === formattedDate && 
+               (show.time === slot.start_time || 
+               (show.slot_id && show.slot_id === slot.id));
       }) || [];
       
       return {
@@ -116,12 +121,47 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       };
     });
     
-    transformedSlots.push(...dateSlotsFromMaster);
+    // Now find any shows for this date that aren't associated with a master slot
+    const showsForDate = shows?.filter(show => show.date === formattedDate && !show.slot_id) || [];
+    
+    // Create virtual slots for these shows
+    const showSlots = showsForDate.map(show => {
+      return {
+        id: show.id, // Use the show ID as the slot ID for these virtual slots
+        show_name: show.name,
+        host_name: null,
+        start_time: show.time || "00:00", // Default if no time
+        end_time: show.time ? incrementTimeByHour(show.time) : "01:00", // Add 1 hour by default
+        date: formattedDate,
+        is_recurring: false,
+        is_prerecorded: false,
+        is_collection: false,
+        shows: [show],
+        has_lineup: true
+      };
+    });
+    
+    transformedSlots.push(...dateSlotsFromMaster, ...showSlots);
   }
+  
+  // Sort all slots by time
+  transformedSlots.sort((a, b) => {
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date);
+    }
+    return a.start_time.localeCompare(b.start_time);
+  });
   
   console.log('Final transformed slots:', transformedSlots);
   return transformedSlots;
 };
+
+// Helper function to increment time by 1 hour (e.g. "14:00" -> "15:00")
+function incrementTimeByHour(timeStr: string): string {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const newHours = (hours + 1) % 24;
+  return `${newHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
 
 export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>, isMasterSchedule: boolean = false, selectedDate?: Date): Promise<ScheduleSlot> => {
   console.log('Creating schedule slot:', { slot, isMasterSchedule, selectedDate });
@@ -239,7 +279,8 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
     console.log('Successfully updated master slot:', data);
     return {
       ...data,
-      date: updates.date || format(new Date(), 'yyyy-MM-dd')
+      date: updates.date || format(new Date(), 'yyyy-MM-dd'),
+      shows: [] // Ensure shows is always an array
     };
   } else {
     // For weekly schedule, we're updating a show
@@ -282,9 +323,9 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         id: updatedShow.id,
         show_name: updatedShow.name,
         host_name: updates.host_name,
-        start_time: updatedShow.time,
-        end_time: updates.end_time,
-        date: updatedShow.date,
+        start_time: updatedShow.time || '',
+        end_time: updates.end_time || '',
+        date: updatedShow.date || '',
         is_prerecorded: updates.is_prerecorded || false,
         is_collection: updates.is_collection || false,
         color: updates.color || null,
@@ -320,9 +361,9 @@ export const updateScheduleSlot = async (id: string, updates: Partial<ScheduleSl
         id: newShow.id,
         show_name: newShow.name,
         host_name: updates.host_name,
-        start_time: newShow.time,
-        end_time: updates.end_time,
-        date: newShow.date,
+        start_time: newShow.time || '',
+        end_time: updates.end_time || '',
+        date: newShow.date || '',
         is_prerecorded: updates.is_prerecorded || false,
         is_collection: updates.is_collection || false,
         color: updates.color || null,
