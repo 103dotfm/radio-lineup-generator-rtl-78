@@ -65,7 +65,7 @@ const LineupItem = ({
 
   useEffect(() => {
     if (editor && details !== editor.getHTML()) {
-      editor.commands.setContent(details);
+      editor.commands.setContent(details || '');
     }
   }, [editor, details]);
 
@@ -75,7 +75,7 @@ const LineupItem = ({
   const isNote = is_note === true;
 
   // Debug: Log the exact values coming into the component including explicit conversions
-  console.log(`LineupItem ${id} (${name}) render - raw props:`, { 
+  console.log(`LineupItem ${id} (${name || 'unnamed'}) render - raw props:`, { 
     is_break, 
     is_note, 
     is_divider,
@@ -89,7 +89,7 @@ const LineupItem = ({
   });
   
   // Debug: Log the item properties to help diagnose issues
-  console.log(`LineupItem ${id} (${name}) render:`, { 
+  console.log(`LineupItem ${id} (${name || 'unnamed'}) render:`, { 
     is_break: isBreak, 
     is_note: isNote, 
     is_divider: isDivider,
@@ -98,7 +98,7 @@ const LineupItem = ({
 
   // Ensure we check explicitly for is_divider === true - This is crucial!
   if (isDivider) {
-    console.log(`Item ${id} (${name}) identified as divider, returning null`);
+    console.log(`Item ${id} (${name || 'unnamed'}) identified as divider, returning null`);
     return null; // Dividers are handled separately in LineupTable
   }
 
@@ -109,12 +109,12 @@ const LineupItem = ({
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`${is_break ? 'bg-gray-50' : ''} ${is_note ? 'bg-yellow-50' : ''}`}
+          className={`${isBreak ? 'bg-gray-50' : ''} ${isNote ? 'bg-yellow-50' : ''}`}
         >
-          {is_break ? (
+          {isBreak ? (
             <BreakItem
               id={id}
-              name={name}
+              name={name || ''}
               duration={duration}
               onDelete={onDelete}
               onDurationChange={onDurationChange}
@@ -122,7 +122,7 @@ const LineupItem = ({
               isAuthenticated={isAuthenticated}
               showMinutes={showMinutes}
             />
-          ) : is_note ? (
+          ) : isNote ? (
             <NoteItem
               id={id}
               editor={editor}
@@ -136,10 +136,10 @@ const LineupItem = ({
           ) : (
             <RegularItem
               id={id}
-              name={name}
-              title={title}
-              details={details}
-              phone={phone}
+              name={name || ''}
+              title={title || ''}
+              details={details || ''}
+              phone={phone || ''}
               duration={duration}
               onDelete={onDelete}
               onDurationChange={onDurationChange}
