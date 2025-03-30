@@ -3,30 +3,35 @@ import { Show } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
-  const { data: shows, error } = await supabase
-    .from('shows_backup')
-    .select('*');
+  try {
+    const { data: shows, error } = await supabase
+      .from('shows_backup')
+      .select('*');
 
-  if (error) {
-    console.error('Error fetching shows:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching shows:', error);
+      throw error;
+    }
+
+    // Fetch items separately for each show
+    const showsWithItems = await Promise.all((shows || []).map(async (show) => {
+      const { data: items, error: itemsError } = await supabase
+        .from('show_items')
+        .select('*')
+        .eq('show_id', show.id);
+        
+      return {
+        ...show,
+        items: itemsError ? [] : (items || [])
+      } as Show;
+    }));
+
+    console.log('Fetched shows:', showsWithItems);
+    return showsWithItems || [];
+  } catch (error) {
+    console.error('Error in getShows:', error);
+    return [];
   }
-
-  // Fetch items separately for each show
-  const showsWithItems = await Promise.all((shows || []).map(async (show) => {
-    const { data: items, error: itemsError } = await supabase
-      .from('show_items')
-      .select('*')
-      .eq('show_id', show.id);
-      
-    return {
-      ...show,
-      items: itemsError ? [] : (items || [])
-    };
-  }));
-
-  console.log('Fetched shows:', showsWithItems);
-  return showsWithItems || [];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
@@ -78,14 +83,13 @@ export const searchShows = async (query: string): Promise<Show[]> => {
           details: item.details,
           duration: item.duration,
           is_break: item.is_break,
-          is_note: item.is_note,
-          created_at: item.created_at
+          is_note: item.is_note
         }));
         
       return {
         ...show,
         items: showItems
-      };
+      } as Show;
     });
 
     console.log('Search results:', result);
@@ -93,7 +97,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
 
   } catch (error) {
     console.error('Error searching shows:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -105,53 +109,58 @@ export const getShowWithItems = async (showId: string) => {
     throw new Error('No show ID provided');
   }
 
-  const { data: show, error: showError } = await supabase
-    .from('shows_backup')
-    .select('*')
-    .eq('id', showId)
-    .single();
-
-  if (showError) {
-    console.error('Error fetching show:', showError);
-    throw showError;
-  }
-
-  const { data: items, error: itemsError } = await supabase
-    .from('show_items')
-    .select('*')
-    .eq('show_id', showId)
-    .order('position', { ascending: true });
-
-  if (itemsError) {
-    console.error('Error fetching show items:', itemsError);
-    throw itemsError;
-  }
-
-  // Fetch interviewees separately for each item
-  const itemsWithInterviewees = await Promise.all((items || []).map(async (item) => {
-    const { data: interviewees, error: intervieweesError } = await supabase
-      .from('interviewees')
+  try {
+    const { data: show, error: showError } = await supabase
+      .from('shows_backup')
       .select('*')
-      .eq('item_id', item.id);
-      
+      .eq('id', showId)
+      .single();
+
+    if (showError) {
+      console.error('Error fetching show:', showError);
+      throw showError;
+    }
+
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select('*')
+      .eq('show_id', showId)
+      .order('position', { ascending: true });
+
+    if (itemsError) {
+      console.error('Error fetching show items:', itemsError);
+      throw itemsError;
+    }
+
+    // Fetch interviewees separately for each item
+    const itemsWithInterviewees = await Promise.all((items || []).map(async (item) => {
+      const { data: interviewees, error: intervieweesError } = await supabase
+        .from('interviewees')
+        .select('*')
+        .eq('item_id', item.id);
+        
+      return {
+        ...item,
+        interviewees: intervieweesError ? [] : (interviewees || [])
+      };
+    }));
+
+    console.log('Retrieved items from database:', itemsWithInterviewees?.map(item => ({
+      id: item.id,
+      name: item.name,
+      is_divider: item.is_divider,
+      is_break: item.is_break,
+      is_note: item.is_note
+    })));
+
     return {
-      ...item,
-      interviewees: intervieweesError ? [] : (interviewees || [])
+      show,
+      items: itemsWithInterviewees || []
     };
-  }));
-
-  console.log('Retrieved items from database:', itemsWithInterviewees?.map(item => ({
-    id: item.id,
-    name: item.name,
-    is_divider: item.is_divider,
-    is_break: item.is_break,
-    is_note: item.is_note
-  })));
-
-  return {
-    show,
-    items: itemsWithInterviewees || []
-  };
+  } catch (error) {
+    console.error('Error in getShowWithItems:', error);
+    throw error;
+  }
 };
 
 export const getShowsByDate = async (date: string): Promise<Show[]> => {

@@ -25,11 +25,11 @@ export const getNextShow = async (
     console.log('Finding next show for date:', formattedDate, 'after time:', currentShowTime);
     
     // Debug: Log the query we're about to make
-    console.log(`Running query: SELECT * FROM shows WHERE date = '${formattedDate}' ORDER BY time ASC`);
+    console.log(`Running query: SELECT * FROM shows_backup WHERE date = '${formattedDate}' ORDER BY time ASC`);
     
     // Query the shows table for all shows on this specific date
     const { data: showsOnDate, error: showsError } = await supabase
-      .from('shows')
+      .from('shows_backup')
       .select('id, name, time, date')
       .eq('date', formattedDate)
       .order('time', { ascending: true });
