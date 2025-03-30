@@ -24,6 +24,7 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
         )
       `)
       .eq('is_recurring', true)
+      .eq('is_deleted', false)
       .order('start_time', { ascending: true });
 
     if (error) {
@@ -43,7 +44,9 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
       return {
         ...slot,
         date: formattedDate,
-        has_lineup: slot.shows && slot.shows.length > 0
+        // Ensure shows is always an array, even if it's null from the query
+        shows: Array.isArray(slot.shows) ? slot.shows : [],
+        has_lineup: Array.isArray(slot.shows) && slot.shows.length > 0
       };
     }) || [];
     
@@ -76,7 +79,8 @@ export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: bo
   const { data: masterSlots, error: masterSlotsError } = await supabase
     .from('schedule_slots_old')
     .select('*')
-    .eq('is_recurring', true);
+    .eq('is_recurring', true)
+    .eq('is_deleted', false);
   
   if (masterSlotsError) {
     console.error('Error fetching master slots:', masterSlotsError);
@@ -159,7 +163,8 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     // Return the data with a date for compatibility
     return {
       ...data,
-      date: slot.date
+      date: slot.date,
+      shows: [] // Ensure shows is always an array
     };
   } else {
     // Create a show for a specific date directly in the shows table
