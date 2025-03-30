@@ -26,7 +26,8 @@ export interface ScheduleSlot {
     notes?: string | null;
     created_at?: string | null;
     slot_id?: string | null;
-  }>;
+  }> | null;
+  fromMaster?: boolean; // Flag to indicate if this slot is generated from the master schedule
 }
 
 export interface DayNote {
