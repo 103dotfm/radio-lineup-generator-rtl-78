@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleSlot } from '@/types/schedule';
+import { format } from 'date-fns';
 
 export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
   const { toast } = useToast();
@@ -31,8 +32,13 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   });
 
   const createSlotMutation = useMutation({
-    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
+    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+      // Ensure we have a date string
+      if (!slotData.date && selectedDate) {
+        slotData.date = format(selectedDate, 'yyyy-MM-dd');
+      }
+      return createScheduleSlot(slotData, isMasterSchedule, selectedDate);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
