@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -65,20 +66,55 @@ const EmailSettings = () => {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { error } = await supabase
+      // First, check if there's already an entry in the email_settings table
+      const { data: existingSettings, error: fetchError } = await supabase
         .from('email_settings')
-        .upsert([
-          { key: 'smtp_host', value: values.smtp_host },
-          { key: 'smtp_port', value: values.smtp_port },
-          { key: 'smtp_user', value: values.smtp_user },
-          { key: 'smtp_pass', value: values.smtp_pass },
-          { key: 'from_email', value: values.from_email },
-          { key: 'email_subject', value: values.email_subject },
-          { key: 'email_body', value: values.email_body },
-        ], { onConflict: 'key' });
+        .select('id')
+        .limit(1);
 
-      if (error) {
-        console.error("Error updating email settings:", error);
+      if (fetchError) {
+        console.error("Error fetching email settings:", fetchError);
+        toast({
+          title: "Error",
+          description: "Failed to check existing email settings.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare the settings record
+      const emailSettings = {
+        sender_email: values.from_email,
+        sender_name: "Radio Lineup System",
+        smtp_host: values.smtp_host,
+        smtp_port: parseInt(values.smtp_port),
+        smtp_user: values.smtp_user,
+        smtp_password: values.smtp_pass,
+        body_template: values.email_body,
+        subject_template: values.email_subject
+      };
+
+      let settingsError;
+
+      if (existingSettings && existingSettings.length > 0) {
+        // Update existing record
+        const { error } = await supabase
+          .from('email_settings')
+          .update(emailSettings)
+          .eq('id', existingSettings[0].id);
+        
+        settingsError = error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('email_settings')
+          .insert([emailSettings]);
+        
+        settingsError = error;
+      }
+
+      if (settingsError) {
+        console.error("Error updating email settings:", settingsError);
         toast({
           title: "Error",
           description: "Failed to update email settings.",
@@ -87,6 +123,7 @@ const EmailSettings = () => {
         return;
       }
 
+      // Update enable_emails setting in system_settings table
       const { error: enableError } = await supabase
         .from('system_settings')
         .upsert([
@@ -146,7 +183,7 @@ const EmailSettings = () => {
       }
       
       const { data: latestShow, error: showError } = await supabase
-        .from('shows_backup') // Changed from 'shows' to 'shows_backup'
+        .from('shows_backup')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -179,12 +216,15 @@ const EmailSettings = () => {
   React.useEffect(() => {
     const fetchEmailSettings = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch email settings
+        const { data: emailSettings, error: emailError } = await supabase
           .from('email_settings')
-          .select('key, value');
+          .select('*')
+          .limit(1)
+          .single();
 
-        if (error) {
-          console.error("Error fetching email settings:", error);
+        if (emailError && emailError.code !== 'PGRST116') { // PGRST116 is "not found"
+          console.error("Error fetching email settings:", emailError);
           toast({
             title: "Error",
             description: "Failed to fetch email settings.",
@@ -193,26 +233,24 @@ const EmailSettings = () => {
           return;
         }
 
-        const settings: { [key: string]: string } = {};
-        data.forEach(item => {
-          settings[item.key] = item.value;
-        });
+        if (emailSettings) {
+          form.setValue("smtp_host", emailSettings.smtp_host || "");
+          form.setValue("smtp_port", emailSettings.smtp_port?.toString() || "");
+          form.setValue("smtp_user", emailSettings.smtp_user || "");
+          form.setValue("smtp_pass", emailSettings.smtp_password || "");
+          form.setValue("from_email", emailSettings.sender_email || "");
+          form.setValue("email_subject", emailSettings.subject_template || "");
+          form.setValue("email_body", emailSettings.body_template || "");
+        }
 
-        form.setValue("smtp_host", settings.smtp_host || "");
-        form.setValue("smtp_port", settings.smtp_port || "");
-        form.setValue("smtp_user", settings.smtp_user || "");
-        form.setValue("smtp_pass", settings.smtp_pass || "");
-        form.setValue("from_email", settings.from_email || "");
-        form.setValue("email_subject", settings.email_subject || "");
-        form.setValue("email_body", settings.email_body || "");
-
+        // Fetch enable_emails setting from system_settings table
         const { data: enableData, error: enableError } = await supabase
           .from('system_settings')
           .select('value')
           .eq('key', 'enable_emails')
           .single();
 
-        if (enableError) {
+        if (enableError && enableError.code !== 'PGRST116') {
           console.error("Error fetching enable_emails setting:", enableError);
           toast({
             title: "Error",
@@ -222,7 +260,9 @@ const EmailSettings = () => {
           return;
         }
 
-        form.setValue("enable_emails", enableData?.value === 'true' || false);
+        if (enableData) {
+          form.setValue("enable_emails", enableData.value === 'true');
+        }
 
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -235,7 +275,7 @@ const EmailSettings = () => {
     };
 
     fetchEmailSettings();
-  }, [form, supabase, toast]);
+  }, [form, toast]);
 
   return (
     <div className="container py-12">
@@ -248,9 +288,6 @@ const EmailSettings = () => {
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <FormLabel className="text-base">Enable Sending Emails</FormLabel>
-                  {/* <FormDescription>
-                    This will enable or disable the sending of emails.
-                  </FormDescription> */}
                 </div>
                 <FormControl>
                   <Switch
