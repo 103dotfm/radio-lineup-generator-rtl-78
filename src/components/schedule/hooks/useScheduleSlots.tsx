@@ -24,35 +24,66 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       
       // For each slot, check if there's an associated show in the shows_backup table
       const slotsWithShowInfo = await Promise.all(slots.map(async slot => {
-        // Only check when has_lineup is true
-        if (slot.has_lineup) {
-          try {
-            const { data: shows, error } = await supabase
-              .from('shows_backup')
-              .select('id, name')
-              .eq('slot_id', slot.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
-              
-            if (error) {
-              console.error(`Error fetching show for slot ${slot.id}:`, error);
-              return slot; // Return the slot as is if there's an error
+        try {
+          // Check if this slot has any associated shows, regardless of has_lineup flag
+          const { data: shows, error } = await supabase
+            .from('shows_backup')
+            .select('id, name')
+            .eq('slot_id', slot.id)
+            .order('created_at', { ascending: false });
+            
+          if (error) {
+            console.error(`Error fetching show for slot ${slot.id}:`, error);
+            return slot; // Return the slot as is if there's an error
+          }
+          
+          if (shows && shows.length > 0) {
+            // If shows exist, update the slot's has_lineup flag to true
+            if (!slot.has_lineup) {
+              console.log(`Slot ${slot.id} has shows but has_lineup=false, updating it`);
+              const { error: updateError } = await supabase
+                .from('schedule_slots_old')
+                .update({ has_lineup: true })
+                .eq('id', slot.id);
+                
+              if (updateError) {
+                console.error(`Error updating has_lineup for slot ${slot.id}:`, updateError);
+              } else {
+                slot.has_lineup = true; // Update the local slot object too
+              }
             }
             
-            if (shows && shows.length > 0) {
-              return {
-                ...slot,
-                shows: shows
-              };
+            return {
+              ...slot,
+              shows: shows,
+              has_lineup: true // Ensure the flag is set in the returned data
+            };
+          } else if (slot.has_lineup) {
+            // If no shows but has_lineup is true, this is inconsistent - fix it
+            console.log(`Slot ${slot.id} has has_lineup=true but no shows found, fixing it`);
+            const { error: updateError } = await supabase
+              .from('schedule_slots_old')
+              .update({ has_lineup: false })
+              .eq('id', slot.id);
+              
+            if (updateError) {
+              console.error(`Error updating has_lineup for slot ${slot.id}:`, updateError);
             }
-          } catch (e) {
-            console.error(`Error processing slot ${slot.id}:`, e);
+            
+            return {
+              ...slot,
+              has_lineup: false, // Update the flag in the returned data
+              shows: [] 
+            };
           }
+        } catch (e) {
+          console.error(`Error processing slot ${slot.id}:`, e);
         }
         
         return slot;
       }));
       
+      console.log('Processed slots with show info:', slotsWithShowInfo.length);
       return slotsWithShowInfo;
     },
     meta: {
