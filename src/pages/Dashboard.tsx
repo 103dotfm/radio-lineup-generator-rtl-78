@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import ScheduleView from '@/components/schedule/ScheduleView';
 
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { logout, isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,22 +83,24 @@ const Dashboard = () => {
   }, [shows, sortBy]);
   
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
-        <div className="flex gap-4">
-          {isAdmin && <Button onClick={() => navigate('/admin')} variant="outline" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              ניהול מערכת
-            </Button>}
-          <Button onClick={() => navigate('/new')} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
+    <div className="container mx-auto p-4 space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center">
+        <h1 className="text-2xl font-bold mb-4">מערכת שידורים</h1>
+        <div className="flex flex-wrap justify-center sm:justify-end gap-2">
+          <Button onClick={() => navigate('/new')} className="mb-2 sm:mb-0">
             ליינאפ חדש
           </Button>
-          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
-            <LogOut className="h-4 w-4" />
-            התנתקות
+          <Button onClick={() => navigate('/schedule')} variant="outline" className="mb-2 sm:mb-0">
+            לוח שידורים
           </Button>
+          <Button onClick={() => navigate('/daily-schedule')} variant="outline" className="mb-2 sm:mb-0">
+            לוח יומי טקסטואלי
+          </Button>
+          {isAdmin && (
+            <Button onClick={() => navigate('/admin')} variant="outline" className="mb-2 sm:mb-0">
+              הגדרות מערכת
+            </Button>
+          )}
         </div>
       </div>
 
