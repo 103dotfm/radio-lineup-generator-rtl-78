@@ -385,6 +385,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_show_id"
+            columns: ["show_id"]
+            isOneToOne: false
+            referencedRelation: "shows_backup"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "show_items_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: false
@@ -397,7 +404,7 @@ export type Database = {
         Row: {
           created_at: string | null
           date: string | null
-          id: string | null
+          id: string
           name: string | null
           notes: string | null
           slot_id: string | null
@@ -406,7 +413,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           date?: string | null
-          id?: string | null
+          id: string
           name?: string | null
           notes?: string | null
           slot_id?: string | null
@@ -415,7 +422,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           date?: string | null
-          id?: string | null
+          id?: string
           name?: string | null
           notes?: string | null
           slot_id?: string | null
