@@ -20,7 +20,7 @@ export const getShows = async (): Promise<Show[]> => {
     throw error;
   }
 
-  console.log('Fetched shows:', shows);
+  console.log('Fetched shows count:', shows?.length);
   return shows as unknown as Show[];
 };
 
@@ -197,7 +197,9 @@ export const saveShow = async (
             time: show.time,
             date: show.date,
             notes: show.notes,
-            slot_id: show.slot_id
+            slot_id: show.slot_id,
+            // Add an updated timestamp to trigger refresh
+            created_at: new Date().toISOString()
           })
           .eq('id', showId);
 
@@ -221,7 +223,8 @@ export const saveShow = async (
         time: show.time,
         date: show.date,
         notes: show.notes,
-        slot_id: show.slot_id
+        slot_id: show.slot_id,
+        created_at: new Date().toISOString() // Ensure we have a created_at timestamp
       };
 
       const { data: insertedShow, error: createError } = await supabase
