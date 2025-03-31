@@ -5,7 +5,7 @@ import Login from './pages/Login';
 import Print from './pages/Print';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
-import ShowForm from './components/lineup/LineupEditor'; // Fixed import path
+import ShowForm from './pages/ShowForm';
 import SchedulePage from './pages/SchedulePage';
 import GoogleAuthRedirect from './pages/GoogleAuthRedirect';
 import DailyScheduleText from './pages/DailyScheduleText';
