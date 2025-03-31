@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import ScheduleView from './ScheduleView';
+import { ScheduleView } from './ScheduleView';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';

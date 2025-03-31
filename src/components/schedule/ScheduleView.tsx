@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +16,8 @@ interface ScheduleViewProps {
   hideDateControls?: boolean;
   hideHeaderDates?: boolean;
   filterShowsByWeek?: boolean;
+  isAdmin?: boolean;
+  showAddButton?: boolean;
 }
 
 export const ScheduleView = ({ 
@@ -22,7 +25,9 @@ export const ScheduleView = ({
   isMasterSchedule = false, 
   hideDateControls = false, 
   hideHeaderDates = false,
-  filterShowsByWeek = true
+  filterShowsByWeek = true,
+  isAdmin = false,
+  showAddButton = true
 }: ScheduleViewProps) => {
   const [selectedDateState, setSelectedDate] = useState<Date>(selectedDate);
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -206,4 +211,7 @@ export const ScheduleView = ({
       />
     </div>
   );
-}
+};
+
+// Add a default export that references the named export
+export default ScheduleView;
