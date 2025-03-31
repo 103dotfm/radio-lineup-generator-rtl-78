@@ -21,7 +21,7 @@ export const getShows = async (): Promise<Show[]> => {
   }
 
   console.log('Fetched shows:', shows);
-  return shows || [];
+  return shows as unknown as Show[];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
