@@ -220,7 +220,6 @@ body {
   
   body {
     background-color: white;
-    font-size: 12pt;
   }
   .showNamePrint {margin-top: -10px;}
   .showTimePrint {margin-top: -10px;}
@@ -441,21 +440,12 @@ body {
   /* Only show the schedule table title when printing */
   .print-schedule-header {
     display: block !important;
-    font-size: 18pt;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 1rem;
+    margin: 0 auto 10px auto !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
   }
-
-  .print-hidden {
-    display: none !important;
-  }
-
-  .print-footer {
-    display: block;
-    margin-top: 2rem;
-  }
-
+  
   /* BEGIN: Column width styles for print view - ADJUST THESE VALUES AS NEEDED */
   /* THESE ARE THE COLUMN WIDTH SETTINGS - START */
   .col-print-name,
