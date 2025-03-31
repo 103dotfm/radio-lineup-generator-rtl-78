@@ -18,7 +18,14 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// Create the context with a default value that matches the shape
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  isAdmin: false,
+  user: null,
+  login: async () => ({ error: null }),
+  logout: async () => {},
+});
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -77,8 +84,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         lastUserCheckRef.current = 0;
       }
     });
-
-    // Remove visibility change listener entirely since we're using caching
     
     return () => {
       subscription.unsubscribe();
@@ -120,8 +125,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Provide the actual values to the context
+  const contextValue: AuthContextType = {
+    isAuthenticated, 
+    isAdmin, 
+    user, 
+    login, 
+    logout
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
