@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { format } from 'date-fns';
 import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "@/hooks/use-toast";
-import ScheduleView from '@/components/schedule/ScheduleView';
+import { ScheduleView } from '@/components/schedule/ScheduleView';
 
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
