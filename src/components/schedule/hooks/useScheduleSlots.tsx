@@ -1,195 +1,284 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
-import { useToast } from '@/hooks/use-toast';
-import { ScheduleSlot } from '@/types/schedule';
 import { supabase } from '@/lib/supabase';
+import { format, startOfWeek, addDays, parseISO, addWeeks, isAfter, isBefore } from 'date-fns';
+import { ScheduleSlot } from '@/types/schedule';
 
-export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
-  const { toast } = useToast();
+export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) => {
   const queryClient = useQueryClient();
+  const queryKey = isMasterSchedule ? ['masterScheduleSlots'] : ['scheduleSlots', format(selectedDate, 'yyyy-MM-dd')];
 
-  const {
-    data: scheduleSlots = [],
-    isLoading
-  } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
-    queryFn: async () => {
-      console.log('Fetching slots with params:', {
-        selectedDate,
-        isMasterSchedule
-      });
-      
-      const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
-      
-      // For each slot, check if there's an associated show in the shows_backup table
-      const slotsWithShowInfo = await Promise.all(slots.map(async slot => {
-        if (!slot || !slot.id) {
-          console.error('Invalid slot found without ID:', slot);
-          return slot; // Return the slot as is if it's invalid
-        }
-        
-        try {
-          // Check if this slot has any associated shows
-          console.log('Checking for shows with slot_id:', slot.id);
-          const { data: shows, error } = await supabase
-            .from('shows_backup')
-            .select('id, name')
-            .eq('slot_id', slot.id)
-            .not('id', 'is', null)  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
-            .order('created_at', { ascending: false });
-            
-          if (error) {
-            console.error(`Error fetching show for slot ${slot.id}:`, error);
-            return slot; // Return the slot as is if there's an error
+  // Get schedule slots
+  const { data: scheduleSlots = [], isLoading, error } = useQuery({
+    queryKey,
+    queryFn: async (): Promise<ScheduleSlot[]> => {
+      try {
+        const fetchStartTime = performance.now();
+        console.log(`Fetching ${isMasterSchedule ? 'master' : 'weekly'} schedule slots...`);
+
+        let query;
+
+        if (isMasterSchedule) {
+          query = supabase
+            .from('schedule_slots_old')
+            .select('*, shows_backup(*)')
+            .eq('is_recurring', true)
+            .not('id', 'is', null);
+        } else {
+          const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+          const weekEnd = addDays(weekStart, 6);
+          
+          const formattedWeekStart = format(weekStart, 'yyyy-MM-dd');
+          const formattedWeekEnd = format(weekEnd, 'yyyy-MM-dd');
+
+          // First try to get non-recurring slots for this week's range
+          const { data: weeklySlots, error: weeklyError } = await supabase
+            .from('schedule_slots_backup')
+            .select('*, shows_backup(*)')
+            .gte('date', formattedWeekStart)
+            .lte('date', formattedWeekEnd)
+            .not('id', 'is', null);
+
+          if (weeklyError) {
+            console.error('Error fetching weekly slots:', weeklyError);
           }
-          
-          const validShows = (shows || []).filter(show => show && show.id);
-          
-          if (validShows && validShows.length > 0) {
-            console.log(`Found ${validShows.length} shows for slot ${slot.id}:`, validShows);
-            // If shows exist, update the slot's has_lineup flag to true
-            if (!slot.has_lineup) {
-              console.log(`Slot ${slot.id} has shows but has_lineup=false, updating it`);
-              const { error: updateError } = await supabase
-                .from('schedule_slots_old')
-                .update({ has_lineup: true })
-                .eq('id', slot.id);
-                
-              if (updateError) {
-                console.error(`Error updating has_lineup for slot ${slot.id}:`, updateError);
+
+          // Then get the master slots (recurring)
+          const { data: masterSlots, error: masterError } = await supabase
+            .from('schedule_slots_old')
+            .select('*, shows_backup(*)')
+            .eq('is_recurring', true)
+            .not('id', 'is', null);
+
+          if (masterError) {
+            console.error('Error fetching master slots:', masterError);
+          }
+
+          // Map weekly slots to their days
+          let dayToWeeklySlotsMap = new Map();
+          if (weeklySlots) {
+            weeklySlots.forEach((slot: any) => {
+              if (slot.date) {
+                const date = parseISO(slot.date);
+                const dayOfWeek = date.getDay();
+                if (!dayToWeeklySlotsMap.has(dayOfWeek)) {
+                  dayToWeeklySlotsMap.set(dayOfWeek, []);
+                }
+                dayToWeeklySlotsMap.get(dayOfWeek).push(slot);
+              }
+            });
+          }
+
+          // Merge master and weekly slots, with weekly slots taking precedence
+          const mergedSlots = [];
+
+          if (masterSlots) {
+            for (const masterSlot of masterSlots) {
+              const dayOfWeek = masterSlot.day_of_week;
+              const day = addDays(weekStart, dayOfWeek);
+              
+              // Check if we have a weekly slot for this day and time
+              const weeklySlotForDay = dayToWeeklySlotsMap.get(dayOfWeek) || [];
+              const matchingWeeklySlot = weeklySlotForDay.find((ws: any) => 
+                ws.start_time === masterSlot.start_time && ws.end_time === masterSlot.end_time
+              );
+
+              if (matchingWeeklySlot) {
+                // Use the weekly slot instead of the master slot
+                matchingWeeklySlot.is_modified = true;
+                mergedSlots.push({
+                  ...matchingWeeklySlot,
+                  day_of_week: dayOfWeek,
+                  shows: matchingWeeklySlot.shows_backup && matchingWeeklySlot.shows_backup.length > 0 ? 
+                    matchingWeeklySlot.shows_backup : null
+                });
               } else {
-                slot.has_lineup = true; // Update the local slot object too
+                // Use the master slot
+                mergedSlots.push({
+                  ...masterSlot,
+                  shows: masterSlot.shows_backup && masterSlot.shows_backup.length > 0 ? 
+                    masterSlot.shows_backup : null
+                });
               }
             }
-            
-            return {
-              ...slot,
-              shows: validShows,
-              has_lineup: true // Ensure the flag is set in the returned data
-            };
-          } else if (slot.has_lineup) {
-            // If no shows but has_lineup is true, this is inconsistent - fix it
-            console.log(`Slot ${slot.id} has has_lineup=true but no shows found, fixing it`);
-            const { error: updateError } = await supabase
-              .from('schedule_slots_old')
-              .update({ has_lineup: false })
-              .eq('id', slot.id);
+          }
+
+          // Add any weekly slots that don't overlap with master slots
+          if (weeklySlots) {
+            for (const weeklySlot of weeklySlots) {
+              if (!weeklySlot.date) continue;
               
-            if (updateError) {
-              console.error(`Error updating has_lineup for slot ${slot.id}:`, updateError);
+              const date = parseISO(weeklySlot.date);
+              const dayOfWeek = date.getDay();
+              
+              // Check if this slot exists in our mergedSlots
+              const alreadyExists = mergedSlots.some((ms: any) => 
+                ms.day_of_week === dayOfWeek && ms.start_time === weeklySlot.start_time && ms.end_time === weeklySlot.end_time
+              );
+              
+              if (!alreadyExists) {
+                weeklySlot.is_modified = true;
+                mergedSlots.push({
+                  ...weeklySlot,
+                  day_of_week: dayOfWeek,
+                  shows: weeklySlot.shows_backup && weeklySlot.shows_backup.length > 0 ? 
+                    weeklySlot.shows_backup : null
+                });
+              }
             }
+          }
+
+          // Now fetch specific shows for the slots in this week
+          for (const slot of mergedSlots) {
+            const slotDay = addDays(weekStart, slot.day_of_week);
+            const slotDate = format(slotDay, 'yyyy-MM-dd');
             
-            return {
-              ...slot,
-              has_lineup: false, // Update the flag in the returned data
-              shows: [] 
-            };
+            const { data: shows, error: showsError } = await supabase
+              .from('shows_backup')
+              .select('*')
+              .eq('date', slotDate)
+              .eq('slot_id', slot.id)
+              .not('id', 'is', null);
+              
+            if (!showsError && shows && shows.length > 0) {
+              console.log(`Found ${shows.length} shows for slot ${slot.id} on ${slotDate}:`, shows);
+              slot.shows = shows;
+              slot.has_lineup = true;
+            }
           }
-        } catch (e) {
-          console.error(`Error processing slot ${slot.id}:`, e);
+
+          const fetchEndTime = performance.now();
+          console.log(`Fetch completed in ${fetchEndTime - fetchStartTime}ms`);
+          
+          return mergedSlots;
         }
+
+        // For master schedule, just execute the query
+        const { data, error: queryError } = await query;
         
-        return slot;
-      }));
-      
-      console.log('Processed slots with show info:', slotsWithShowInfo.length);
-      return slotsWithShowInfo;
-    },
-    meta: {
-      onSuccess: (data: ScheduleSlot[]) => {
-        console.log('Successfully fetched slots:', data.length);
-        // Add additional logging to help debug show connections
-        data.forEach(slot => {
-          if (slot.has_lineup) {
-            console.log(`Slot ${slot.id} (${slot.show_name}) has lineup:`, 
-              slot.shows ? `Found ${slot.shows.length} shows` : 'No shows found');
-          }
-        });
-      },
-      onError: (error: Error) => {
-        console.error('Error fetching slots:', error);
+        if (queryError) {
+          console.error('Error fetching schedule slots:', queryError);
+          throw queryError;
+        }
+
+        const processedData = data.map((slot: any) => ({
+          ...slot,
+          shows: slot.shows_backup && slot.shows_backup.length > 0 ? slot.shows_backup : null
+        }));
+
+        const fetchEndTime = performance.now();
+        console.log(`Fetch completed in ${fetchEndTime - fetchStartTime}ms`);
+        console.log(`Retrieved ${processedData.length} schedule slots`);
+
+        return processedData;
+      } catch (error) {
+        console.error('Error in useScheduleSlots:', error);
+        throw error;
       }
     }
   });
 
-  const createSlotMutation = useMutation({
-    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
-    onSuccess: (newSlot) => {
-      console.log('Successfully created slot:', newSlot);
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      toast({
-        title: 'משבצת שידור נוספה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error creating slot:', error);
-      toast({
-        title: 'שגיאה בהוספת משבצת שידור',
-        variant: 'destructive'
-      });
-    }
-  });
+  // Create a new slot
+  const createSlot = async (slotData: Omit<ScheduleSlot, 'id'>) => {
+    try {
+      const tableName = isMasterSchedule ? 'schedule_slots_old' : 'schedule_slots_backup';
+      
+      let insertData: any = { ...slotData };
+      
+      if (isMasterSchedule) {
+        insertData.is_recurring = true;
+      } else {
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+        const slotDay = addDays(weekStart, slotData.day_of_week);
+        insertData.date = format(slotDay, 'yyyy-MM-dd');
+      }
 
-  const updateSlotMutation = useMutation({
-    mutationFn: ({
-      id,
-      updates
-    }: {
-      id: string;
-      updates: Partial<ScheduleSlot>;
-    }) => {
-      console.log("Mutation updating slot:", {
-        id,
-        updates
-      });
-      return updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
-    },
-    onSuccess: (updatedSlot) => {
-      console.log('Successfully updated slot:', updatedSlot);
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      toast({
-        title: 'משבצת שידור עודכנה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error updating slot:', error);
-      toast({
-        title: 'שגיאה בעדכון משבצת שידור',
-        variant: 'destructive'
-      });
-    }
-  });
+      const { data, error } = await supabase
+        .from(tableName)
+        .insert(insertData)
+        .select();
 
-  const deleteSlotMutation = useMutation({
-    mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
+      if (error) {
+        console.error(`Error creating ${isMasterSchedule ? 'master' : 'weekly'} slot:`, error);
+        throw error;
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey
       });
-      toast({
-        title: 'משבצת שידור נמחקה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error deleting slot:', error);
-      toast({
-        title: 'שגיאה במחיקת משבצת שידור',
-        variant: 'destructive'
-      });
+
+      return data;
+    } catch (error) {
+      console.error(`Error in createSlot:`, error);
+      throw error;
     }
-  });
+  };
+
+  // Update a slot
+  const updateSlot = async ({
+    id,
+    updates
+  }: {
+    id: string;
+    updates: Partial<ScheduleSlot>;
+  }) => {
+    try {
+      const tableName = isMasterSchedule ? 'schedule_slots_old' : 'schedule_slots_backup';
+      
+      const { data, error } = await supabase
+        .from(tableName)
+        .update(updates)
+        .eq('id', id)
+        .select();
+
+      if (error) {
+        console.error(`Error updating ${isMasterSchedule ? 'master' : 'weekly'} slot:`, error);
+        throw error;
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey
+      });
+
+      return data;
+    } catch (error) {
+      console.error(`Error in updateSlot:`, error);
+      throw error;
+    }
+  };
+
+  // Delete a slot
+  const deleteSlot = async (id: string) => {
+    try {
+      const tableName = isMasterSchedule ? 'schedule_slots_old' : 'schedule_slots_backup';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error(`Error deleting ${isMasterSchedule ? 'master' : 'weekly'} slot:`, error);
+        throw error;
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey
+      });
+
+      return true;
+    } catch (error) {
+      console.error(`Error in deleteSlot:`, error);
+      throw error;
+    }
+  };
 
   return {
     scheduleSlots,
     isLoading,
-    createSlot: createSlotMutation.mutateAsync,
-    updateSlot: updateSlotMutation.mutateAsync,
-    deleteSlot: deleteSlotMutation.mutateAsync
+    error,
+    createSlot,
+    updateSlot,
+    deleteSlot,
   };
 };

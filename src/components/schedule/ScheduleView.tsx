@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +10,7 @@ import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { toast } from "sonner";
+import { createEmptyShow } from '@/lib/supabase/shows';
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -130,24 +132,20 @@ export default function ScheduleView({
     });
     
     try {
-      // First check if the slot has associated shows from the slot.shows property (which is populated in useScheduleSlots)
-      if (slot.shows && slot.shows.length > 0 && slot.shows[0]?.id) {
+      // First check if the slot has associated shows from the slot.shows property
+      if (slot.has_lineup === true && slot.shows && slot.shows.length > 0 && slot.shows[0]?.id) {
         const showId = slot.shows[0].id;
         console.log(`Found associated show ${showId} for slot ${slot.id} from slot.shows`);
         
-        try {
-          // Navigate to the show page
-          navigate(`/show/${showId}`);
-          return;
-        } catch (showError) {
-          console.error(`Error navigating to show ${showId}:`, showError);
-          // If navigation fails, continue to create new lineup
-        }
+        // Navigate to the existing show
+        navigate(`/show/${showId}`);
+        return;
       }
       
-      // If we reach here, we need to create a new lineup
-      console.log(`Creating new lineup for slot ${slot.id}`);
+      // If we reach here, we need to create a new show record first, then navigate to it
+      console.log(`Creating new show record for slot ${slot.id}`);
       
+      // Calculate the date for this slot
       const weekStart = new Date(selectedDate);
       weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
       const slotDate = new Date(weekStart);
@@ -157,23 +155,30 @@ export default function ScheduleView({
         ? slot.host_name 
         : `${slot.show_name} עם ${slot.host_name}`;
       
-      navigate('/new', {
-        state: {
-          generatedShowName,
-          showName: slot.show_name,
-          hostName: slot.host_name,
-          time: slot.start_time,
-          date: slotDate,
-          isPrerecorded: slot.is_prerecorded,
-          isCollection: slot.is_collection,
-          slotId: slot.id
-        }
+      // Create an empty show record with this slot ID
+      const newShow = await createEmptyShow({
+        name: generatedShowName,
+        showName: slot.show_name,
+        hostName: slot.host_name,
+        time: slot.start_time,
+        date: slotDate,
+        isPrerecorded: slot.is_prerecorded || false,
+        isCollection: slot.is_collection || false,
+        slotId: slot.id
       });
+      
+      if (newShow && newShow.id) {
+        // Successfully created the show, now navigate to it
+        console.log(`Created new show with ID: ${newShow.id}, navigating to it`);
+        navigate(`/show/${newShow.id}`);
+      } else {
+        throw new Error("Failed to create new show record");
+      }
     } catch (error) {
       console.error("Error handling slot click:", error);
       toast.error("אירעה שגיאה בטעינת הליינאפ");
       
-      // Fall back to creating a new lineup if anything goes wrong
+      // Fall back to the new lineup form
       navigate('/new');
     }
   };
