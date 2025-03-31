@@ -4,20 +4,18 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const {
-    login,
-    isAuthenticated
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { login, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  
   const from = new URLSearchParams(location.search).get('from') || '/';
+  
   useEffect(() => {
     if (isAuthenticated) {
       navigate(from, {
@@ -25,6 +23,7 @@ const Login = () => {
       });
     }
   }, [isAuthenticated, navigate, from]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -68,6 +67,7 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+  
   return <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-sky-300 to-teal-400">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg transform transition-all duration-500 hover:shadow-xl">
         <div className="text-center">
@@ -97,4 +97,5 @@ const Login = () => {
       </div>
     </div>;
 };
+
 export default Login;
