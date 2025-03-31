@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { format, startOfWeek, addDays, parseISO, addWeeks, isAfter, isBefore } from 'date-fns';
@@ -19,9 +18,10 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) =
         let query;
 
         if (isMasterSchedule) {
+          // For master schedule, we don't need to join with shows
           query = supabase
             .from('schedule_slots_old')
-            .select('*, shows_backup(*)')
+            .select('*')
             .eq('is_recurring', true)
             .not('id', 'is', null);
         } else {
@@ -34,7 +34,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) =
           // First try to get non-recurring slots for this week's range
           const { data: weeklySlots, error: weeklyError } = await supabase
             .from('schedule_slots_backup')
-            .select('*, shows_backup(*)')
+            .select('*')
             .gte('date', formattedWeekStart)
             .lte('date', formattedWeekEnd)
             .not('id', 'is', null);
@@ -46,7 +46,7 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) =
           // Then get the master slots (recurring)
           const { data: masterSlots, error: masterError } = await supabase
             .from('schedule_slots_old')
-            .select('*, shows_backup(*)')
+            .select('*')
             .eq('is_recurring', true)
             .not('id', 'is', null);
 
@@ -88,16 +88,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) =
                 matchingWeeklySlot.is_modified = true;
                 mergedSlots.push({
                   ...matchingWeeklySlot,
-                  day_of_week: dayOfWeek,
-                  shows: matchingWeeklySlot.shows_backup && matchingWeeklySlot.shows_backup.length > 0 ? 
-                    matchingWeeklySlot.shows_backup : null
+                  day_of_week: dayOfWeek
                 });
               } else {
                 // Use the master slot
                 mergedSlots.push({
-                  ...masterSlot,
-                  shows: masterSlot.shows_backup && masterSlot.shows_backup.length > 0 ? 
-                    masterSlot.shows_backup : null
+                  ...masterSlot
                 });
               }
             }
@@ -120,25 +116,23 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) =
                 weeklySlot.is_modified = true;
                 mergedSlots.push({
                   ...weeklySlot,
-                  day_of_week: dayOfWeek,
-                  shows: weeklySlot.shows_backup && weeklySlot.shows_backup.length > 0 ? 
-                    weeklySlot.shows_backup : null
+                  day_of_week: dayOfWeek
                 });
               }
             }
           }
 
-          // Now fetch specific shows for the slots in this week
+          // Now fetch specific shows for each slot in this week
           for (const slot of mergedSlots) {
             const slotDay = addDays(weekStart, slot.day_of_week);
             const slotDate = format(slotDay, 'yyyy-MM-dd');
             
+            // Fetch directly from shows_backup table instead of using the join
             const { data: shows, error: showsError } = await supabase
               .from('shows_backup')
               .select('*')
               .eq('date', slotDate)
-              .eq('slot_id', slot.id)
-              .not('id', 'is', null);
+              .eq('slot_id', slot.id);
               
             if (!showsError && shows && shows.length > 0) {
               console.log(`Found ${shows.length} shows for slot ${slot.id} on ${slotDate}:`, shows);
@@ -161,16 +155,30 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule = false) =
           throw queryError;
         }
 
-        const processedData = data.map((slot: any) => ({
-          ...slot,
-          shows: slot.shows_backup && slot.shows_backup.length > 0 ? slot.shows_backup : null
-        }));
+        // For master schedule, we need to fetch shows separately
+        if (isMasterSchedule && data) {
+          // We need to fetch shows for all slots
+          for (const slot of data) {
+            const { data: shows, error: showsError } = await supabase
+              .from('shows_backup')
+              .select('*')
+              .eq('slot_id', slot.id);
+              
+            if (!showsError && shows && shows.length > 0) {
+              console.log(`Found ${shows.length} shows for master slot ${slot.id}:`, shows);
+              slot.shows = shows;
+              slot.has_lineup = true;
+            } else {
+              slot.shows = [];
+            }
+          }
+        }
 
         const fetchEndTime = performance.now();
         console.log(`Fetch completed in ${fetchEndTime - fetchStartTime}ms`);
-        console.log(`Retrieved ${processedData.length} schedule slots`);
+        console.log(`Retrieved ${data ? data.length : 0} schedule slots`);
 
-        return processedData;
+        return data || [];
       } catch (error) {
         console.error('Error in useScheduleSlots:', error);
         throw error;
