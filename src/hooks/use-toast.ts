@@ -10,11 +10,12 @@ type ToasterToast = {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  variant?: "default" | "destructive";
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-export type ToastProps = Omit<ToasterToast, "id">;
+export type ToastProps = Partial<Omit<ToasterToast, "id">>;
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -158,7 +159,7 @@ export function toast(props: ToastProps) {
       onOpenChange: (open) => {
         if (!open) dismiss();
       },
-    },
+    } as ToasterToast,
   });
 
   return {
