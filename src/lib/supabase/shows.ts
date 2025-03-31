@@ -84,9 +84,14 @@ export const createEmptyShow = async (params: {
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0].id) {
+    if (!data || data.length === 0) {
+      console.error('Failed to get data for newly created show record');
+      throw new Error('Failed to create show record - no data returned');
+    }
+    
+    if (!data[0].id) {
       console.error('Failed to get ID for newly created show record:', data);
-      throw new Error('Failed to create show record - no ID returned');
+      throw new Error('Failed to create show record - no ID in returned data');
     }
     
     // Update the schedule slot to indicate it has a lineup
