@@ -30,7 +30,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   try {
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
-      .select('*, show:show_id(*)')
+      .select('*, show:shows_backup!inner(*)')
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
@@ -176,51 +176,79 @@ export const saveShow = async (
     let isUpdate = Boolean(showId);
     console.log('Saving show. Is update?', isUpdate);
 
+    // Ensure show has a valid UUID for id field if updating
     if (isUpdate) {
-      const { error: showError } = await supabase
+      // Verify show exists before updating
+      const { data: existingShow, error: checkError } = await supabase
         .from('shows_backup')
-        .update({
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes,
-          slot_id: show.slot_id
-        })
-        .eq('id', showId);
-
-      if (showError) throw showError;
-      
-      const { data: existingItems, error: fetchError } = await supabase
-        .from('show_items')
         .select('id')
-        .eq('show_id', showId);
-        
-      if (fetchError) throw fetchError;
+        .eq('id', showId)
+        .single();
       
-      const { error: deleteError } = await supabase
-        .from('show_items')
-        .delete()
-        .eq('show_id', showId);
+      if (checkError || !existingShow) {
+        console.error('Show does not exist, creating new instead:', checkError);
+        isUpdate = false;
+        finalShowId = undefined;
+      } else {
+        const { error: showError } = await supabase
+          .from('shows_backup')
+          .update({
+            name: show.name,
+            time: show.time,
+            date: show.date,
+            notes: show.notes,
+            slot_id: show.slot_id
+          })
+          .eq('id', showId);
 
-      if (deleteError) throw deleteError;
+        if (showError) throw showError;
+        
+        // Delete existing items to replace with new ones
+        const { error: deleteError } = await supabase
+          .from('show_items')
+          .delete()
+          .eq('show_id', showId);
+
+        if (deleteError) throw deleteError;
+      }
+    }
       
-    } else {
-      const { data: newShow, error: createError } = await supabase
+    // Create a new show if not updating
+    if (!isUpdate) {
+      const newShow = {
+        id: crypto.randomUUID(), // Generate UUID client-side to ensure we have it
+        name: show.name,
+        time: show.time,
+        date: show.date,
+        notes: show.notes,
+        slot_id: show.slot_id
+      };
+
+      const { data: insertedShow, error: createError } = await supabase
         .from('shows_backup')
-        .insert({
-          name: show.name,
-          time: show.time,
-          date: show.date,
-          notes: show.notes,
-          slot_id: show.slot_id
-        })
+        .insert(newShow)
         .select()
         .single();
 
-      if (createError) throw createError;
-      finalShowId = newShow.id;
+      if (createError) {
+        console.error('Error creating show:', createError);
+        throw createError;
+      }
+
+      if (!insertedShow) {
+        console.error('Failed to get ID for newly created show');
+        throw new Error('Failed to create show - no ID returned');
+      }
+
+      console.log('Created new show:', insertedShow);
+      finalShowId = insertedShow.id;
     }
 
+    if (!finalShowId) {
+      throw new Error('No valid show ID for item insertion');
+    }
+
+    // Update slot if provided
     if (show.slot_id) {
       const { error: slotError } = await supabase
         .from('schedule_slots_old')
@@ -277,26 +305,9 @@ export const saveShow = async (
         return cleanedItem;
       });
 
-      console.log('Original items before mapping:', JSON.stringify(items.map(item => ({
-        name: item.name,
-        is_divider: item.is_divider,
-        is_divider_type: typeof item.is_divider,
-        is_break: item.is_break,
-        is_note: item.is_note
-      })), null, 2));
-      
       console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
       
-      const insertRawSql = `
-        INSERT INTO show_items(show_id, position, name, title, details, phone, duration, is_break, is_note, is_divider)
-        VALUES ${itemsToInsert.map((item, i) => 
-          `('${item.show_id}', ${item.position}, '${item.name}', ${item.title ? `'${item.title}'` : 'NULL'}, ${item.details ? `'${item.details}'` : 'NULL'}, ${item.phone ? `'${item.phone}'` : 'NULL'}, ${item.duration}, ${item.is_break}, ${item.is_note}, ${item.is_divider})`
-        ).join(', ')}
-        RETURNING *
-      `;
-      
-      console.log('SQL to be executed:', insertRawSql);
-      
+      // Insert items
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
         .insert(itemsToInsert)
