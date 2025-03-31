@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
@@ -23,25 +22,22 @@ interface ArrangementFile {
 }
 
 const SchedulePage = () => {
-  const {
-    weekDate
-  } = useParams<{
-    weekDate: string;
-  }>();
+  const { weekDate } = useParams<{ weekDate: string }>();
   const navigate = useNavigate();
   const [currentWeek, setCurrentWeek] = useState<Date>(() => {
     if (weekDate) {
-      const parsedDate = parse(weekDate, 'yyyy-MM-dd', new Date());
-      return isValid(parsedDate) ? startOfWeek(parsedDate, {
-        weekStartsOn: 0
-      }) : startOfWeek(new Date(), {
-        weekStartsOn: 0
-      });
+      try {
+        const parsedDate = parse(weekDate, 'yyyy-MM-dd', new Date());
+        if (isValid(parsedDate)) {
+          return startOfWeek(parsedDate, { weekStartsOn: 0 });
+        }
+      } catch (error) {
+        console.error("Error parsing weekDate:", error);
+      }
     }
-    return startOfWeek(new Date(), {
-      weekStartsOn: 0
-    });
+    return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
+
   const [arrangements, setArrangements] = useState<Record<ArrangementType, ArrangementFile | null>>({
     producers: null,
     engineers: null,

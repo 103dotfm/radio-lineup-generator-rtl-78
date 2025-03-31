@@ -27,7 +27,14 @@ const MasterSchedule = () => {
         </Button>
       </div>
 
-      <ScheduleView isAdmin isMasterSchedule hideDateControls showAddButton={false} hideHeaderDates />
+      <ScheduleView 
+        selectedDate={new Date()} 
+        isAdmin 
+        isMasterSchedule 
+        hideDateControls 
+        showAddButton={false} 
+        hideHeaderDates 
+      />
 
       <ScheduleSlotDialog isOpen={showSlotDialog} onClose={() => setShowSlotDialog(false)} onSave={async slotData => {
       console.log('Attempting to save master schedule slot:', slotData);

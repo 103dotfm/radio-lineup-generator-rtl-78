@@ -148,7 +148,7 @@ const Dashboard = () => {
 
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">לוח שידורים שבועי</h2>
-        <ScheduleView isAdmin={isAdmin} />
+        <ScheduleView selectedDate={new Date()} isAdmin={isAdmin} />
       </div>
 
       <div>
