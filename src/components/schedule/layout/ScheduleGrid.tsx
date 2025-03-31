@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
@@ -121,7 +122,7 @@ export default function ScheduleGrid({
       <div key={cellKey} className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
         {isCurrentMonth && relevantSlots.map(slot => (
           <ScheduleGridCell 
-            key={`${slot.id}-${time}`}
+            key={`slot-${slot.id}-${time}`}
             slot={slot}
             handleSlotClick={handleSlotClick}
             handleEditSlot={handleEditSlot}
