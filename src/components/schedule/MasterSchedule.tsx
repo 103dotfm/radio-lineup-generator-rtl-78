@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ScheduleView from './ScheduleView';
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createScheduleSlot, updateScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleSlot } from '@/types/schedule';
+
 const MasterSchedule = () => {
   const [showSlotDialog, setShowSlotDialog] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
+  
   return <div className="space-y-4">
       <div className="p-4 rounded-lg bg-transparent">
         <h2 className="text-lg font-bold mb-2 text-right">לוח שידורים ראשי</h2>
@@ -66,4 +65,5 @@ const MasterSchedule = () => {
     }} isMasterSchedule={true} />
     </div>;
 };
+
 export default MasterSchedule;

@@ -1,5 +1,6 @@
 
-import { Toast as ToastPrimitive, ToastActionElement, ToastProps } from "@/components/ui/toast";
+import * as React from "react";
+import { Toast as ToastPrimitive, ToastActionElement, ToastProps as UIToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 20;
 const TOAST_REMOVE_DELAY = 1000;
@@ -12,6 +13,8 @@ type ToasterToast = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
+
+export type ToastProps = Omit<ToasterToast, "id">;
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -135,9 +138,7 @@ function dispatch(action: Action) {
   });
 }
 
-type ToastProps = Omit<ToasterToast, "id">;
-
-function toast(props: ToastProps) {
+export function toast(props: ToastProps) {
   const id = genId();
 
   const update = (props: ToasterToast) =>

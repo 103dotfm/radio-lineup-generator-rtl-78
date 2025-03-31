@@ -1,10 +1,11 @@
+
 import React, { useRef, useState } from 'react';
 import { Upload, FileUp, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { ConflictDialog } from './ConflictDialog';
 import { GlobalResolutionDialog } from './GlobalResolutionDialog';
 
