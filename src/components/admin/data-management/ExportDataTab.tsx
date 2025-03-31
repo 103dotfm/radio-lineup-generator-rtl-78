@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -9,7 +10,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 
-type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots" | 
+type ValidTableName = "show_items" | "shows_backup" | "interviewees" | "schedule_slots_old" | 
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
   "show_email_logs" | "system_settings" | "users";
 
@@ -21,10 +22,10 @@ const ExportDataTab = () => {
   
   // Tables to export
   const [selectedTables, setSelectedTables] = useState({
-    shows: true,
+    shows_backup: true,  // Changed from 'shows' to 'shows_backup'
     show_items: true,
     interviewees: true,
-    schedule_slots: true,
+    schedule_slots_old: true,
     day_notes: true,
     email_settings: false,
     email_recipients: false,
@@ -51,7 +52,7 @@ const ExportDataTab = () => {
       
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = supabase.from('shows' as ValidTableName).select('id');
+        let showsQuery = supabase.from('shows_backup' as ValidTableName).select('id');  // Changed from 'shows' to 'shows_backup'
         
         if (exportStartDate) {
           const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -96,7 +97,7 @@ const ExportDataTab = () => {
         
         // Apply filters based on date range for each table type
         if (exportStartDate || exportEndDate) {
-          if (tableName === 'shows') {
+          if (tableName === 'shows_backup') {  // Changed from 'shows' to 'shows_backup'
             // Shows are filtered directly by date
             if (exportStartDate) {
               const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');

@@ -82,7 +82,6 @@ const EmailSettings: React.FC = () => {
     loadRecipients();
     loadLatestShow();
     
-    // Check for OAuth code in URL
     const code = searchParams.get('code');
     
     if (code) {
@@ -90,7 +89,6 @@ const EmailSettings: React.FC = () => {
       setManualCodeInput(code);
       handleGmailAuthCode(code);
       
-      // Remove code from URL without reload but stay on admin page
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [searchParams]);
@@ -98,7 +96,6 @@ const EmailSettings: React.FC = () => {
   const handleGmailAuthCode = async (code: string) => {
     console.log('Processing Gmail auth code:', code);
     
-    // Update UI to show we're processing the code
     toast({
       title: "קוד אימות Gmail התקבל",
       description: "מעבד את הקוד...",
@@ -113,7 +110,6 @@ const EmailSettings: React.FC = () => {
         throw new Error("חסרות הגדרות חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
       }
       
-      // Exchange the code for tokens
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
         body: { 
           code,
@@ -137,7 +133,6 @@ const EmailSettings: React.FC = () => {
       if (data && data.refreshToken) {
         console.log('Got refresh token from Google');
         
-        // Save the refresh token to our database
         const newSettings = {
           ...settings,
           gmail_refresh_token: data.refreshToken,
@@ -187,7 +182,6 @@ const EmailSettings: React.FC = () => {
       setAuthorizingGmail(true);
       setErrorDetails(null);
       
-      // Process the manual refresh token
       const { data, error } = await supabase.functions.invoke('gmail-auth', {
         body: { 
           refreshToken: manualTokenInput,
@@ -201,7 +195,6 @@ const EmailSettings: React.FC = () => {
       if (data && data.accessToken) {
         console.log('Successfully validated manual refresh token');
         
-        // Save the tokens to our database
         const newSettings = {
           ...settings,
           gmail_refresh_token: manualTokenInput,
@@ -230,7 +223,7 @@ const EmailSettings: React.FC = () => {
       });
       
       toast({
-        title: "שגיאה בעיבוד הטוקן",
+        title: "��גיאה בעיבוד הטוקן",
         description: error.message || 'אירעה שגיאה בעיבוד הטוקן',
         variant: "destructive"
       });
@@ -351,7 +344,7 @@ const EmailSettings: React.FC = () => {
   const loadLatestShow = async () => {
     try {
       const { data, error } = await supabase
-        .from('shows')
+        .from('shows_backup')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -545,12 +538,9 @@ const EmailSettings: React.FC = () => {
       return;
     }
     
-    // Save the current settings before initiating the OAuth flow
     saveSettings().then(() => {
-      // Make sure the redirectUri in settings is configured to point to the dedicated redirect page
       const scope = 'https://www.googleapis.com/auth/gmail.send';
       
-      // Make sure to include access_type=offline and prompt=consent to always get a refresh token
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${settings.gmail_client_id}&redirect_uri=${encodeURIComponent(settings.gmail_redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
       
       toast({
@@ -559,7 +549,6 @@ const EmailSettings: React.FC = () => {
         variant: "default"
       });
       
-      // Open the authorization URL in a new window instead of replacing current window
       window.open(authUrl, '_blank');
     });
   };
@@ -1216,4 +1205,3 @@ const EmailSettings: React.FC = () => {
 };
 
 export default EmailSettings;
-
