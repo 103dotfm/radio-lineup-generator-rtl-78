@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 type ValidTableName = "show_items" | "shows_backup" | "interviewees" | "schedule_slots_old" | 
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
@@ -52,7 +52,7 @@ const ExportDataTab = () => {
       
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = supabase.from('shows_backup' as ValidTableName).select('id');  // Changed from 'shows' to 'shows_backup'
+        let showsQuery = supabase.from('shows_backup').select('id');  // Changed from 'shows' to 'shows_backup'
         
         if (exportStartDate) {
           const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -76,7 +76,7 @@ const ExportDataTab = () => {
         if (filteredShowIds.length > 0) {
           // Need to cast to any before using .in()
           const queryBuilder = supabase
-            .from('show_items' as ValidTableName)
+            .from('show_items')
             .select('id');
           
           // Cast queryBuilder to any before calling .in()

@@ -1,13 +1,16 @@
-import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast";
+
+import { Toast as ToastPrimitive, ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 20;
 const TOAST_REMOVE_DELAY = 1000;
 
-type ToasterToast = Toast & {
+type ToasterToast = {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 const actionTypes = {
@@ -132,9 +135,9 @@ function dispatch(action: Action) {
   });
 }
 
-export function toast({
-  ...props
-}: Omit<ToasterToast, "id">) {
+type ToastProps = Omit<ToasterToast, "id">;
+
+function toast(props: ToastProps) {
   const id = genId();
 
   const update = (props: ToasterToast) =>
@@ -165,8 +168,24 @@ export function toast({
 }
 
 export function useToast() {
+  const [state, setState] = React.useState<State>(memoryState);
+
+  React.useEffect(() => {
+    listeners.push(setState);
+    return () => {
+      const index = listeners.indexOf(setState);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    };
+  }, [state]);
+
   return {
+    ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   };
 }
+
+// To make it easier to use with refs
+useToast.toast = toast;
