@@ -28,9 +28,13 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
   try {
+    // Modify the query to properly specify the relationship
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
-      .select('*, show:shows_backup!inner(*)')
+      .select(`
+        *,
+        shows_backup!inner(*)
+      `)
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
@@ -42,12 +46,12 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     }
 
     const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
-      if (!item.show) return acc;
+      if (!item.shows_backup) return acc;
       
-      const showId = item.show.id;
+      const showId = item.shows_backup.id;
       if (!acc[showId]) {
         acc[showId] = {
-          ...item.show,
+          ...item.shows_backup,
           items: []
         };
       }
