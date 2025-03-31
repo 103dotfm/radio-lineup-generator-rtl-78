@@ -8,10 +8,10 @@ import ScheduleGrid from './layout/ScheduleGrid';
 import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek, addDays, isValid } from 'date-fns';
 
 interface ScheduleViewProps {
-  selectedDate: Date;
+  selectedDate?: Date;
   isMasterSchedule?: boolean;
   hideDateControls?: boolean;
   hideHeaderDates?: boolean;
@@ -21,7 +21,7 @@ interface ScheduleViewProps {
 }
 
 export const ScheduleView = ({ 
-  selectedDate, 
+  selectedDate = new Date(), // Provide default current date
   isMasterSchedule = false, 
   hideDateControls = false, 
   hideHeaderDates = false,
@@ -39,10 +39,27 @@ export const ScheduleView = ({
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
-  // Format the date range for print header
-  const weekStart = startOfWeek(selectedDateState, { weekStartsOn: 0 });
-  const weekEnd = addDays(weekStart, 6);
-  const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
+  // Format the date range for print header with validity check
+  let dateRangeDisplay = '';
+  try {
+    if (isValid(selectedDateState)) {
+      const weekStart = startOfWeek(selectedDateState, { weekStartsOn: 0 });
+      const weekEnd = addDays(weekStart, 6);
+      
+      if (isValid(weekStart) && isValid(weekEnd)) {
+        dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
+      } else {
+        console.error("Invalid week start/end dates calculated");
+        dateRangeDisplay = "Invalid date range";
+      }
+    } else {
+      console.error("Invalid selectedDateState:", selectedDateState);
+      dateRangeDisplay = "Invalid date range";
+    }
+  } catch (error) {
+    console.error("Error formatting date range:", error);
+    dateRangeDisplay = "Invalid date range";
+  }
 
   // Use custom hooks
   const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
@@ -53,7 +70,7 @@ export const ScheduleView = ({
   const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
 
   useEffect(() => {
-    if (selectedDate !== selectedDateState) {
+    if (selectedDate && selectedDate !== selectedDateState && isValid(selectedDate)) {
       setSelectedDate(selectedDate);
     }
   }, [selectedDate]);
