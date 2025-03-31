@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar, Printer, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Printer } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ScheduleView from '@/components/schedule/ScheduleView';
 import { supabase } from "@/integrations/supabase/client";
@@ -54,7 +53,6 @@ const SchedulePage = () => {
   }, [currentWeek]);
 
   useEffect(() => {
-    // Update URL when week changes
     const formattedDate = format(currentWeek, 'yyyy-MM-dd');
     if (weekDate !== formattedDate) {
       navigate(`/schedule/${formattedDate}`, {
@@ -134,7 +132,6 @@ const SchedulePage = () => {
         </div>
         <h1 className="text-3xl font-bold mb-2 text-center md:text-right">לוח שידורים שבועי</h1>
         
-        {/* Mobile Date Range - Centered */}
         <div className="md:hidden flex justify-center mb-4">
           <div className="flex items-center">
             <Calendar className="h-5 w-5 ml-1" />
@@ -145,7 +142,6 @@ const SchedulePage = () => {
         </div>
         
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-          {/* Desktop Date Range - Left */}
           <div className="hidden md:flex items-center space-x-4 space-x-reverse md:mb-0 mb-2 text-center w-full md:w-auto">
             <Calendar className="h-5 w-5 ml-1" />
             <span>
@@ -175,7 +171,6 @@ const SchedulePage = () => {
         </div>
       </header>
       
-      {/* Desktop Tabs */}
       <div className="hidden md:block">
         <Tabs defaultValue="schedule" className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8 schedTabs" dir="rtl">
@@ -187,7 +182,12 @@ const SchedulePage = () => {
           
           <TabsContent value="schedule" className="mt-4 schedule-content">
             <div className="border rounded-lg overflow-hidden bg-white p-4">
-              <ScheduleView selectedDate={currentWeek} hideDateControls hideHeaderDates={false} />
+              <ScheduleView 
+                selectedDate={currentWeek} 
+                hideDateControls 
+                hideHeaderDates={false}
+                filterShowsByWeek={true}
+              />
             </div>
           </TabsContent>
           
@@ -205,7 +205,6 @@ const SchedulePage = () => {
         </Tabs>
       </div>
       
-      {/* Mobile Dropdown and Content */}
       <div className="block md:hidden">
         <div className="mb-4">
           <Select value={selectedTab} onValueChange={setSelectedTab}>
@@ -236,7 +235,12 @@ const SchedulePage = () => {
         <div className="mt-4">
           {selectedTab === "schedule" && (
             <div className="border rounded-lg overflow-hidden bg-white p-2 schedule-content">
-              <ScheduleView selectedDate={currentWeek} hideDateControls hideHeaderDates={false} />
+              <ScheduleView 
+                selectedDate={currentWeek} 
+                hideDateControls 
+                hideHeaderDates={false}
+                filterShowsByWeek={true}
+              />
             </div>
           )}
           

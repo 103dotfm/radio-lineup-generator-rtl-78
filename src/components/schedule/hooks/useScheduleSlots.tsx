@@ -1,8 +1,8 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleSlot } from '@/types/schedule';
+import { format } from 'date-fns';
 
 export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
   const { toast } = useToast();
@@ -37,6 +37,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
       });
+      
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      queryClient.invalidateQueries({
+        queryKey: ['shows', dateString]
+      });
+      
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
       });
@@ -68,6 +74,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
       });
+      
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      queryClient.invalidateQueries({
+        queryKey: ['shows', dateString]
+      });
+      
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
       });
@@ -87,6 +99,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
       queryClient.invalidateQueries({
         queryKey: ['scheduleSlots']
       });
+      
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      queryClient.invalidateQueries({
+        queryKey: ['shows', dateString]
+      });
+      
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
       });

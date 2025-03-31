@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,23 +10,21 @@ import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays } from 'date-fns';
 
 interface ScheduleViewProps {
-  isAdmin?: boolean;
+  selectedDate: Date;
   isMasterSchedule?: boolean;
   hideDateControls?: boolean;
-  showAddButton?: boolean;
   hideHeaderDates?: boolean;
-  selectedDate?: Date;
+  filterShowsByWeek?: boolean;
 }
 
-export default function ScheduleView({
-  isAdmin = false,
-  isMasterSchedule = false,
-  hideDateControls = false,
-  showAddButton = true,
+export const ScheduleView = ({ 
+  selectedDate, 
+  isMasterSchedule = false, 
+  hideDateControls = false, 
   hideHeaderDates = false,
-  selectedDate: externalSelectedDate
-}: ScheduleViewProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(externalSelectedDate || new Date());
+  filterShowsByWeek = true
+}: ScheduleViewProps) => {
+  const [selectedDateState, setSelectedDate] = useState<Date>(selectedDate);
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSlotDialog, setShowSlotDialog] = useState(false);
@@ -38,23 +35,23 @@ export default function ScheduleView({
   const { isAuthenticated } = useAuth();
   
   // Format the date range for print header
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(selectedDateState, { weekStartsOn: 0 });
   const weekEnd = addDays(weekStart, 6);
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
 
   // Use custom hooks
   const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
-    selectedDate, 
+    selectedDateState, 
     isMasterSchedule
   );
   
-  const { dayNotes, refreshDayNotes } = useDayNotes(selectedDate, viewMode);
+  const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
 
   useEffect(() => {
-    if (externalSelectedDate) {
-      setSelectedDate(externalSelectedDate);
+    if (selectedDate !== selectedDateState) {
+      setSelectedDate(selectedDate);
     }
-  }, [externalSelectedDate]);
+  }, [selectedDate]);
 
   const handleAddSlot = () => {
     setEditingSlot(undefined);
@@ -166,7 +163,7 @@ export default function ScheduleView({
       </div>
       
       <ScheduleHeader 
-        selectedDate={selectedDate}
+        selectedDate={selectedDateState}
         setSelectedDate={setSelectedDate}
         viewMode={viewMode}
         setViewMode={setViewMode}
@@ -180,7 +177,7 @@ export default function ScheduleView({
 
       <ScheduleGrid 
         scheduleSlots={scheduleSlots}
-        selectedDate={selectedDate}
+        selectedDate={selectedDateState}
         viewMode={viewMode}
         handleSlotClick={handleSlotClick}
         handleEditSlot={handleEditSlot}

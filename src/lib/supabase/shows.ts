@@ -132,19 +132,53 @@ export const getShowWithItems = async (showId: string) => {
 export const getShowsByDate = async (date: string): Promise<Show[]> => {
   console.log('Fetching shows for date:', date);
   
-  const { data: shows, error } = await supabase
-    .from('shows_backup')
-    .select('*')
-    .eq('date', date)
-    .order('time', { ascending: true });
+  try {
+    const { data: shows, error } = await supabase
+      .from('shows_backup')
+      .select('*')
+      .eq('date', date)
+      .order('time', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching shows by date:', error);
+    if (error) {
+      console.error('Error fetching shows by date:', error);
+      throw error;
+    }
+
+    console.log(`Found ${shows?.length || 0} shows for date ${date}:`, shows);
+    
+    if (shows && shows.length > 0) {
+      const showIds = shows.map(show => show.id);
+      
+      const { data: items, error: itemsError } = await supabase
+        .from('show_items')
+        .select(`
+          *,
+          interviewees(*)
+        `)
+        .in('show_id', showIds)
+        .order('position', { ascending: true });
+      
+      if (itemsError) {
+        console.error('Error fetching items for shows:', itemsError);
+        throw itemsError;
+      }
+      
+      if (items) {
+        const showsWithItems = shows.map(show => ({
+          ...show,
+          items: items.filter(item => item.show_id === show.id)
+        }));
+        
+        console.log(`Added items to ${showsWithItems.length} shows`);
+        return showsWithItems;
+      }
+    }
+    
+    return shows || [];
+  } catch (error) {
+    console.error('Error in getShowsByDate:', error);
     throw error;
   }
-
-  console.log(`Found ${shows?.length || 0} shows for date ${date}:`, shows);
-  return shows || [];
 };
 
 export const saveShow = async (
