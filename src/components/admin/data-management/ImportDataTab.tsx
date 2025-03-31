@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import { Upload, FileUp, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -17,8 +16,7 @@ type ConflictItem = {
   newData: any;
   resolution?: 'overwrite' | 'keep';
 };
-
-type ValidTableName = "shows_backup" | "show_items" | "interviewees" | "schedule_slots_old" | 
+type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots" | 
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
   "show_email_logs" | "system_settings" | "users";
 
@@ -54,12 +52,14 @@ const ImportDataTab = () => {
         const fileContent = event.target?.result as string;
         const importData = JSON.parse(fileContent);
         
+        // Validate data structure
         if (!importData || typeof importData !== 'object') {
           throw new Error('קובץ לא חוקי. יש להשתמש בקובץ שיוצא מהמערכת.');
         }
         
         await processImportData(importData);
         
+        // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -90,23 +90,18 @@ const ImportDataTab = () => {
   };
 
   const processImportData = async (importData: Record<string, any[]>) => {
+    // Check for potential conflicts first
     const conflictItems: ConflictItem[] = [];
     
     for (const [tableName, records] of Object.entries(importData)) {
-      let actualTableName = tableName;
-      if (tableName === 'shows') {
-        actualTableName = 'shows_backup';
-      } else if (tableName === 'schedule_slots') {
-        actualTableName = 'schedule_slots_old';
-      }
-
       if (!Array.isArray(records) || records.length === 0) continue;
       
       for (const record of records) {
         if (!record.id) continue;
         
+        // Check if record already exists
         const { data: existingData, error } = await supabase
-          .from(actualTableName as ValidTableName)
+          .from(tableName as ValidTableName)
           .select('*')
           .eq('id', record.id)
           .single();
@@ -114,7 +109,7 @@ const ImportDataTab = () => {
         if (!error && existingData) {
           conflictItems.push({
             id: record.id,
-            table: actualTableName,
+            table: tableName,
             existingData,
             newData: record
           });
@@ -131,49 +126,49 @@ const ImportDataTab = () => {
         await saveImportData(importData, conflictResolution);
       }
     } else {
+      // No conflicts, proceed with import
       await saveImportData(importData, 'overwrite');
     }
   };
 
   const saveImportData = async (importData: Record<string, any[]>, resolution: ConflictResolution) => {
     try {
+      // Import each table's data
       for (const [tableName, records] of Object.entries(importData)) {
-        let actualTableName = tableName;
-        if (tableName === 'shows') {
-          actualTableName = 'shows_backup';
-        } else if (tableName === 'schedule_slots') {
-          actualTableName = 'schedule_slots_old';
-        }
-        
         if (!Array.isArray(records) || records.length === 0) continue;
         
+        // Process based on resolution strategy
         for (const record of records) {
           if (!record.id) continue;
           
+          // Check if record exists
           const { data: existingData, error: checkError } = await supabase
-            .from(actualTableName as ValidTableName)
+            .from(tableName as ValidTableName)
             .select('id')
             .eq('id', record.id)
             .single();
           
           if (!checkError && existingData) {
+            // Record exists, handle based on resolution
             if (resolution === 'overwrite') {
               const { error: updateError } = await supabase
-                .from(actualTableName as ValidTableName)
+                .from(tableName as ValidTableName)
                 .update(record)
                 .eq('id', record.id);
               
               if (updateError) {
-                console.error(`Error updating ${actualTableName} record:`, updateError);
+                console.error(`Error updating ${tableName} record:`, updateError);
               }
             }
+            // If 'keep', do nothing
           } else {
+            // Record doesn't exist, insert it
             const { error: insertError } = await supabase
-              .from(actualTableName as ValidTableName)
+              .from(tableName as ValidTableName)
               .insert(record);
             
             if (insertError) {
-              console.error(`Error inserting ${actualTableName} record:`, insertError);
+              console.error(`Error inserting ${tableName} record:`, insertError);
             }
           }
         }
@@ -198,11 +193,14 @@ const ImportDataTab = () => {
     setShowGlobalResolutionDialog(false);
     
     if (globalResolution === 'ask') {
+      // Handle individual conflicts
       setCurrentConflictIndex(0);
       setShowConflictDialog(true);
     } else {
+      // Apply global resolution
       const importData: Record<string, any[]> = {};
       
+      // Reconstruct import data structure
       conflicts.forEach(conflict => {
         if (!importData[conflict.table]) {
           importData[conflict.table] = [];
@@ -214,24 +212,26 @@ const ImportDataTab = () => {
     }
   };
 
-  // Fix: Make this function async
-  const resolveCurrentConflict = async (resolution: 'overwrite' | 'keep') => {
+  const resolveCurrentConflict = (resolution: 'overwrite' | 'keep') => {
+    // Update resolution for current conflict
     const updatedConflicts = [...conflicts];
     updatedConflicts[currentConflictIndex].resolution = resolution;
     setConflicts(updatedConflicts);
     
+    // Move to next conflict or finish
     if (currentConflictIndex < conflicts.length - 1) {
       setCurrentConflictIndex(prevIndex => prevIndex + 1);
     } else {
       setShowConflictDialog(false);
       
-      // Now this await is valid because the function is async
-      await processIndividualConflicts();
+      // Process all conflicts with their individual resolutions
+      processIndividualConflicts();
     }
   };
 
   const processIndividualConflicts = async () => {
     try {
+      // Group conflicts by table
       const tableData: Record<string, any[]> = {};
       
       conflicts.forEach(conflict => {
@@ -239,11 +239,13 @@ const ImportDataTab = () => {
           tableData[conflict.table] = [];
         }
         
+        // Only include data to be saved based on resolution
         if (conflict.resolution === 'overwrite') {
           tableData[conflict.table].push(conflict.newData);
         }
       });
       
+      // Save data by table
       for (const [tableName, records] of Object.entries(tableData)) {
         for (const record of records) {
           const { error } = await supabase
@@ -359,6 +361,7 @@ const ImportDataTab = () => {
         </div>
       </div>
 
+      {/* Dialogs */}
       <ConflictDialog 
         open={showConflictDialog}
         onOpenChange={setShowConflictDialog}
