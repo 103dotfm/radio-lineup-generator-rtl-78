@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -8,7 +7,7 @@ export const getShows = async (): Promise<Show[]> => {
     .from('shows_backup')
     .select(`
       *,
-      items:show_items(
+      items:show_items!show_items_show_id_fkey(
         *,
         interviewees(*)
       )
@@ -28,7 +27,6 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
   try {
-    // Fixed query to properly specify the relationship with explicit foreign key
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
       .select(`
@@ -46,7 +44,6 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     }
 
     const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
-      // Access the related show using the explicit shows_backup property
       const showData = item.shows_backup;
       if (!showData) return acc;
       
@@ -182,9 +179,7 @@ export const saveShow = async (
     let isUpdate = Boolean(showId);
     console.log('Saving show. Is update?', isUpdate);
 
-    // Ensure show has a valid UUID for id field if updating
     if (isUpdate) {
-      // Verify show exists before updating
       const { data: existingShow, error: checkError } = await supabase
         .from('shows_backup')
         .select('id')
@@ -204,14 +199,12 @@ export const saveShow = async (
             date: show.date,
             notes: show.notes,
             slot_id: show.slot_id,
-            // Add an updated timestamp to trigger refresh
             created_at: new Date().toISOString()
           })
           .eq('id', showId);
 
         if (showError) throw showError;
         
-        // Delete existing items to replace with new ones
         const { error: deleteError } = await supabase
           .from('show_items')
           .delete()
@@ -221,16 +214,15 @@ export const saveShow = async (
       }
     }
       
-    // Create a new show if not updating
     if (!isUpdate) {
       const newShow = {
-        id: crypto.randomUUID(), // Generate UUID client-side to ensure we have it
+        id: crypto.randomUUID(),
         name: show.name,
         time: show.time,
         date: show.date,
         notes: show.notes,
         slot_id: show.slot_id,
-        created_at: new Date().toISOString() // Ensure we have a created_at timestamp
+        created_at: new Date().toISOString()
       };
 
       const { data: insertedShow, error: createError } = await supabase
@@ -257,7 +249,6 @@ export const saveShow = async (
       throw new Error('No valid show ID for item insertion');
     }
 
-    // Update slot if provided
     if (show.slot_id) {
       const { error: slotError } = await supabase
         .from('schedule_slots_old')
@@ -316,7 +307,6 @@ export const saveShow = async (
 
       console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
       
-      // Insert items
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
         .insert(itemsToInsert)
