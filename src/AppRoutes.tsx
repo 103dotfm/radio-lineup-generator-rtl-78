@@ -1,10 +1,11 @@
+
 import { Routes, Route } from 'react-router-dom';
 import Index from './pages/Index';
 import Login from './pages/Login';
 import Print from './pages/Print';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
-import ShowForm from './pages/ShowForm';
+import ShowForm from './components/lineup/LineupEditor'; // Fixed import path
 import SchedulePage from './pages/SchedulePage';
 import GoogleAuthRedirect from './pages/GoogleAuthRedirect';
 import DailyScheduleText from './pages/DailyScheduleText';
