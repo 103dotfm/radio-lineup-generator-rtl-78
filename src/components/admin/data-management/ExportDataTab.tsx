@@ -9,7 +9,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 
-type ValidTableName = "shows_backup" | "show_items" | "interviewees" | "schedule_slots_old" | 
+type ValidTableName = "shows" | "show_items" | "interviewees" | "schedule_slots" | 
   "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
   "show_email_logs" | "system_settings" | "users";
 
@@ -19,17 +19,19 @@ const ExportDataTab = () => {
   const [exportEndDate, setExportEndDate] = useState<Date | undefined>(undefined);
   const [isExporting, setIsExporting] = useState(false);
   
+  // Tables to export
   const [selectedTables, setSelectedTables] = useState({
-    shows_backup: true,
+    shows: true,
     show_items: true,
     interviewees: true,
-    schedule_slots_old: true,
+    schedule_slots: true,
     day_notes: true,
     email_settings: false,
     email_recipients: false,
     work_arrangements: false,
   });
 
+  // Helper to format dates for display
   const formatDate = (date?: Date) => {
     if (!date) return 'לא נבחר';
     return format(date, 'dd/MM/yyyy');
@@ -47,8 +49,9 @@ const ExportDataTab = () => {
       let filteredShowIds: string[] = [];
       let filteredShowItemIds: string[] = [];
       
+      // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = supabase.from('shows_backup' as ValidTableName).select('id');
+        let showsQuery = supabase.from('shows' as ValidTableName).select('id');
         
         if (exportStartDate) {
           const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -66,33 +69,35 @@ const ExportDataTab = () => {
           throw new Error(`Error filtering shows: ${showsError.message}`);
         }
         
-        if (filteredShows) {
-          filteredShowIds = filteredShows.map(show => show.id);
+        filteredShowIds = filteredShows?.map(show => show.id) || [];
+        
+        // Get show items for these shows to later filter interviewees
+        if (filteredShowIds.length > 0) {
+          // Need to cast to any before using .in()
+          const queryBuilder = supabase
+            .from('show_items' as ValidTableName)
+            .select('id');
           
-          if (filteredShowIds.length > 0) {
-            const queryBuilder = supabase
-              .from('show_items' as ValidTableName)
-              .select('id');
+          // Cast queryBuilder to any before calling .in()
+          const { data: filteredItems, error: itemsError } = await (queryBuilder as any)
+            .in('show_id', filteredShowIds);
             
-            const { data: filteredItems, error: itemsError } = await (queryBuilder as any)
-              .in('show_id', filteredShowIds);
-              
-            if (itemsError) {
-              throw new Error(`Error filtering show items: ${itemsError.message}`);
-            }
-            
-            if (filteredItems) {
-              filteredShowItemIds = filteredItems.map(item => item.id);
-            }
+          if (itemsError) {
+            throw new Error(`Error filtering show items: ${itemsError.message}`);
           }
+          
+          filteredShowItemIds = filteredItems?.map(item => item.id) || [];
         }
       }
       
+      // Process each selected table
       for (const tableName of tables) {
         let query = supabase.from(tableName as ValidTableName).select('*');
         
+        // Apply filters based on date range for each table type
         if (exportStartDate || exportEndDate) {
-          if (tableName === 'shows_backup') {
+          if (tableName === 'shows') {
+            // Shows are filtered directly by date
             if (exportStartDate) {
               const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
               query = query.gte('date', formattedStartDate);
@@ -104,6 +109,7 @@ const ExportDataTab = () => {
             }
           } 
           else if (tableName === 'work_arrangements') {
+            // Work arrangements are filtered by week_start
             if (exportStartDate) {
               const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
               query = query.gte('week_start', formattedStartDate);
@@ -115,11 +121,14 @@ const ExportDataTab = () => {
             }
           }
           else if (tableName === 'show_items' && filteredShowIds.length > 0) {
+            // Cast query to any before calling .in()
             query = (query as any).in('show_id', filteredShowIds);
           }
           else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
+            // Cast query to any before calling .in()
             query = (query as any).in('item_id', filteredShowItemIds);
           }
+          // Other tables not filtered by date range
         }
         
         const { data, error } = await query;
@@ -131,14 +140,17 @@ const ExportDataTab = () => {
         exportData[tableName] = data || [];
       }
       
+      // Create and download file
       const exportBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(exportBlob);
       const link = document.createElement('a');
       link.href = url;
       
+      // Create filename with current date
       const today = format(new Date(), 'yyyy-MM-dd');
       let fileName = `radio-data-export-${today}.json`;
       
+      // Add date range to filename if specified
       if (exportStartDate && exportEndDate) {
         const startStr = format(exportStartDate, 'yyyy-MM-dd');
         const endStr = format(exportEndDate, 'yyyy-MM-dd');

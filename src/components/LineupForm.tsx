@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { addGuest } from '../lib/supabase/guests';
@@ -43,11 +42,11 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
 
   useEffect(() => {
     if (editingItem) {
-      setName(editingItem.name || '');
-      setTitle(editingItem.title || '');
+      setName(editingItem.name);
+      setTitle(editingItem.title);
       setDetails(editingItem.details || '');
-      setPhone(editingItem.phone || '');
-      setDuration(editingItem.duration || 5);
+      setPhone(editingItem.phone);
+      setDuration(editingItem.duration);
     }
   }, [editingItem]);
 
@@ -156,9 +155,9 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
   };
 
   const handleGuestSelect = (guest: { name: string; title: string; phone: string }) => {
-    setName(guest.name || '');
-    setTitle(guest.title || '');
-    setPhone(guest.phone || '');
+    setName(guest.name);
+    setTitle(guest.title);
+    setPhone(guest.phone);
   };
 
   return (
@@ -168,8 +167,8 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
           <GuestSearch 
             value={name}
             onNameChange={(newName) => {
-              setName(newName || '');
-              onNameChange(newName || '');
+              setName(newName);
+              onNameChange(newName);
             }}
             onGuestSelect={handleGuestSelect}
           />

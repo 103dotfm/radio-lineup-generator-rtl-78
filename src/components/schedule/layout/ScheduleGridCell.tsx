@@ -28,8 +28,7 @@ export default function ScheduleGridCell({
       color: slot.color,
       is_prerecorded: slot.is_prerecorded,
       is_collection: slot.is_collection,
-      is_modified: slot.is_modified,
-      has_lineup: slot.has_lineup
+      is_modified: slot.is_modified
     });
 
     // First priority: user-selected color (if explicitly set)
@@ -80,16 +79,6 @@ export default function ScheduleGridCell({
 
   const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
   const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
-  
-  // Check if the slot has a connected show properly
-  const hasValidLineup = slot.has_lineup === true && 
-    slot.shows && 
-    Array.isArray(slot.shows) && 
-    slot.shows.length > 0 && 
-    slot.shows[0]?.id;
-
-  const slotId = slot.id || '';
-  const showId = hasValidLineup && slot.shows && slot.shows[0]?.id ? slot.shows[0].id : 'none';
 
   return (
     <div 
@@ -103,13 +92,10 @@ export default function ScheduleGridCell({
         right: '0',
         zIndex: 10
       }}
-      data-slot-id={slotId}
-      data-has-lineup={hasValidLineup ? 'true' : 'false'}
-      data-show-id={showId}
     >
       <div className="flex justify-between items-start">
         <div className="font-bold">{displayName}</div>
-        {hasValidLineup && <FileCheck className="h-4 w-4 text-green-600" />}
+        {slot.has_lineup && <FileCheck className="h-4 w-4 text-green-600" />}
       </div>
       {displayHost && <div className="text-sm opacity-75">{displayHost}</div>}
       

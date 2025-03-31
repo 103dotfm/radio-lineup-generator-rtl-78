@@ -9,7 +9,6 @@ import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays } from 'date-fns';
-import { toast } from "sonner";
 
 interface ScheduleViewProps {
   isAdmin?: boolean;
@@ -38,10 +37,12 @@ export default function ScheduleView({
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
+  // Format the date range for print header
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
   const weekEnd = addDays(weekStart, 6);
   const dateRangeDisplay = `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
 
+  // Use custom hooks
   const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
     selectedDate, 
     isMasterSchedule
@@ -63,6 +64,7 @@ export default function ScheduleView({
   const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
     e.stopPropagation();
 
+    // Skip confirmation if CTRL key is pressed
     if (e.ctrlKey) {
       await deleteSlot(slot.id);
       return;
@@ -116,39 +118,21 @@ export default function ScheduleView({
     }
   };
 
-  const handleSlotClick = async (slot: ScheduleSlot) => {
+  const handleSlotClick = (slot: ScheduleSlot) => {
     if (!isAuthenticated) return;
-    
     console.log('Clicked slot details:', {
-      id: slot.id,
       show_name: slot.show_name,
       host_name: slot.host_name,
       start_time: slot.start_time,
       is_prerecorded: slot.is_prerecorded,
-      is_collection: slot.is_collection,
-      has_lineup: slot.has_lineup,
-      shows: slot.shows ? slot.shows.map(s => s.id) : 'none'
+      is_collection: slot.is_collection
     });
     
-    try {
-      // First check if the slot has associated shows from the slot.shows property (which is populated in useScheduleSlots)
-      if (slot.shows && slot.shows.length > 0 && slot.shows[0]?.id) {
-        const showId = slot.shows[0].id;
-        console.log(`Found associated show ${showId} for slot ${slot.id} from slot.shows`);
-        
-        try {
-          // Navigate to the show page
-          navigate(`/show/${showId}`);
-          return;
-        } catch (showError) {
-          console.error(`Error navigating to show ${showId}:`, showError);
-          // If navigation fails, continue to create new lineup
-        }
-      }
-      
-      // If we reach here, we need to create a new lineup
-      console.log(`Creating new lineup for slot ${slot.id}`);
-      
+    if (slot.shows && slot.shows.length > 0) {
+      const show = slot.shows[0];
+      console.log('Found existing show, navigating to:', show.id);
+      navigate(`/show/${show.id}`);
+    } else {
       const weekStart = new Date(selectedDate);
       weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
       const slotDate = new Date(weekStart);
@@ -158,6 +142,7 @@ export default function ScheduleView({
         ? slot.host_name 
         : `${slot.show_name} עם ${slot.host_name}`;
       
+      console.log('Navigating to new lineup with generated name:', generatedShowName);
       navigate('/new', {
         state: {
           generatedShowName,
@@ -170,17 +155,12 @@ export default function ScheduleView({
           slotId: slot.id
         }
       });
-    } catch (error) {
-      console.error("Error handling slot click:", error);
-      toast.error("אירעה שגיאה בטעינת הליינאפ");
-      
-      // Fall back to creating a new lineup if anything goes wrong
-      navigate('/new');
     }
   };
 
   return (
     <div className="space-y-4">
+      {/* Print Header - Only visible when printing */}
       <div className="print-schedule-header">
         לוח שידורים שבועי 103fm - {dateRangeDisplay}
       </div>

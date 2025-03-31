@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { saveShow, getShowWithItems } from '@/lib/supabase/shows';
+import { saveShow, getShowWithItems, getShowsByDate } from '@/lib/supabase/shows';
 import { DropResult } from 'react-beautiful-dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
@@ -15,23 +15,22 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 
 const Index = () => {
-  const { id: showId } = useParams<{ id: string }>();
+  const { id: showId } = useParams();
   const navigate = useNavigate();
   const { state } = useLocation();
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState([]);
   const [showName, setShowName] = useState('');
   const [showTime, setShowTime] = useState('');
   const [showDate, setShowDate] = useState<Date>(new Date());
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [initialState, setInitialState] = useState<any>(null);
+  const [initialState, setInitialState] = useState(null);
   const [showMinutes, setShowMinutes] = useState(false);
   const [nextShowInfo, setNextShowInfo] = useState<{ name: string; host?: string } | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const isNewLineup = !showId;
-  const [slotId, setSlotId] = useState<string | undefined>(undefined);
 
   const editor = useEditor({
     extensions: [
@@ -81,19 +80,13 @@ const Index = () => {
       if (state.date) {
         setShowDate(new Date(state.date));
       }
-      
-      if (state.slotId) {
-        setSlotId(state.slotId);
-        console.log('Setting slot ID from state:', state.slotId);
-      }
 
       setInitialState({
         name: displayName,
         time: state.time || '',
         date: state.date ? new Date(state.date) : new Date(),
         notes: '',
-        items: [],
-        slotId: state.slotId
+        items: []
       });
     }
   }, [isNewLineup, state]);
@@ -102,9 +95,8 @@ const Index = () => {
     const loadShow = async () => {
       if (showId) {
         try {
-          console.log('Loading show with ID:', showId);
           const result = await getShowWithItems(showId);
-          if (!result || !result.show) {
+          if (!result) {
             toast.error('התוכנית לא נמצאה');
             navigate('/');
             return;
@@ -114,10 +106,6 @@ const Index = () => {
             setShowName(show.name);
             setShowTime(show.time);
             setShowDate(show.date ? new Date(show.date) : new Date());
-            if (show.slot_id) {
-              setSlotId(show.slot_id);
-              console.log('Setting slot ID from loaded show:', show.slot_id);
-            }
             if (editor) {
               editor.commands.setContent(show.notes || '');
             }
@@ -126,8 +114,7 @@ const Index = () => {
               time: show.time,
               date: show.date ? new Date(show.date) : new Date(),
               notes: show.notes || '',
-              items: showItems,
-              slotId: show.slot_id
+              items: showItems
             });
           }
           if (showItems) {
@@ -205,14 +192,8 @@ const Index = () => {
         time: showTime,
         date: showDate ? format(showDate, 'yyyy-MM-dd') : '',
         notes: editor?.getHTML() || '',
-        slot_id: slotId // Use the tracked slotId state
+        slot_id: state?.slotId
       };
-      
-      console.log('Saving show with data:', {
-        ...show,
-        showId,
-        itemsCount: items.length
-      });
 
       const itemsToSave = items.map(({ id: itemId, ...item }) => {
         console.log(`Preparing item to save: ${item.name}`, {
@@ -245,45 +226,41 @@ const Index = () => {
 
       const savedShow = await saveShow(show, itemsToSave, showId);
       
-      console.log('Save result:', savedShow);
-      
-      if (savedShow && savedShow.id) {
-        if (!showId) {
-          // This is a new show, navigate to the show page
-          console.log(`New show saved, navigating to /show/${savedShow.id}`);
-          navigate(`/show/${savedShow.id}`, { replace: true });
-        } else {
-          // This is an update, reload the show data
-          const result = await getShowWithItems(showId);
-          if (result && result.show) {
-            setItems(result.items);
-            setInitialState({
-              name: showName,
-              time: showTime,
-              date: showDate,
-              notes: editor?.getHTML() || '',
-              items: result.items,
-              slotId: result.show.slot_id
-            });
-          }
-        }
-        
-        setHasUnsavedChanges(false);
-        toast.success('הליינאפ נשמר בהצלחה');
-        
-        // Refresh next show info after saving
-        fetchNextShowInfo();
-      } else {
-        console.error('No show ID returned after save');
-        toast.error('שגיאה בשמירת הליינאפ - לא התקבל מזהה');
+      if (savedShow && !showId) {
+        navigate(`/show/${savedShow.id}`, { replace: true });
       }
+      
+      const result = await getShowWithItems(showId || savedShow.id);
+      if (result) {
+        console.log('Items after reloading:', result.items.map(item => ({
+          name: item.name,
+          is_divider: item.is_divider,
+          is_break: item.is_break,
+          is_note: item.is_note
+        })));
+        
+        setItems(result.items);
+        setInitialState({
+          name: showName,
+          time: showTime,
+          date: showDate,
+          notes: editor?.getHTML() || '',
+          items: result.items
+        });
+      }
+      
+      setHasUnsavedChanges(false);
+      toast.success('הליינאפ נשמר בהצלחה');
+      
+      // Refresh next show info after saving
+      fetchNextShowInfo();
     } catch (error) {
       console.error('Error saving show:', error);
       toast.error('שגיאה בשמירת הליינאפ');
     } finally {
       setIsSaving(false);
     }
-  }, [isSaving, showName, showTime, showDate, editor, items, showId, navigate, fetchNextShowInfo, slotId]);
+  }, [isSaving, showName, showTime, showDate, editor, items, state, showId, navigate, fetchNextShowInfo]);
 
   const handleAdd = useCallback((newItem) => {
     if (editingItem) {
@@ -504,7 +481,7 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
             <AlertDialogDescription>
-              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
+              יש ��ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

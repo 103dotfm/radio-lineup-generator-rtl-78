@@ -6,47 +6,22 @@ export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
   const { data: shows, error } = await supabase
     .from('shows_backup')
-    .select('*')
-    .not('id', 'is', null);  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
+    .select(`
+      *,
+      items:show_items(
+        *,
+        interviewees(*)
+      )
+    `)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching shows:', error);
     throw error;
   }
 
-  // Filter out shows without valid IDs before processing
-  const validShows = (shows || []).filter(show => show && show.id);
-  
-  // Fetch items separately for each show
-  const showsWithItems = await Promise.all(validShows.map(async (show) => {
-    if (!show || !show.id) {
-      console.error('Invalid show found without ID:', show);
-      return null; // Skip this show
-    }
-    
-    try {
-      const { data: items, error: itemsError } = await supabase
-        .from('show_items')
-        .select('*')
-        .eq('show_id', show.id);
-        
-      return {
-        ...show,
-        items: itemsError ? [] : (items || [])
-      };
-    } catch (err) {
-      console.error(`Error fetching items for show ${show.id}:`, err);
-      return {
-        ...show,
-        items: []
-      };
-    }
-  }));
-
-  // Filter out any null entries from failed processing
-  const cleanedShows = showsWithItems.filter(Boolean);
-  console.log('Fetched shows:', cleanedShows);
-  return cleanedShows || [];
+  console.log('Fetched shows:', shows);
+  return shows || [];
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
@@ -55,7 +30,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   try {
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
-      .select('*, show_id')
+      .select('*, show:show_id(*)')
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
@@ -66,55 +41,37 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    // Get unique show IDs from matching items and filter out null/undefined IDs
-    const showIds = [...new Set((matchingItems || [])
-      .map(item => item.show_id)
-      .filter(Boolean))];
-    
-    if (showIds.length === 0) {
-      return [];
-    }
-    
-    // Fetch the shows for these IDs
-    const { data: shows, error: showsError } = await supabase
-      .from('shows_backup')
-      .select('*')
-      .in('id', showIds)
-      .not('id', 'is', null);  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
+    const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
+      if (!item.show) return acc;
       
-    if (showsError) {
-      console.error('Error fetching shows:', showsError);
-      throw showsError;
-    }
+      const showId = item.show.id;
+      if (!acc[showId]) {
+        acc[showId] = {
+          ...item.show,
+          items: []
+        };
+      }
+      
+      acc[showId].items = acc[showId].items || [];
+      acc[showId].items.push({
+        id: item.id,
+        show_id: item.show_id,
+        position: item.position,
+        name: item.name,
+        title: item.title,
+        phone: item.phone,
+        details: item.details,
+        duration: item.duration,
+        is_break: item.is_break,
+        is_note: item.is_note,
+        created_at: item.created_at
+      });
 
-    // Filter out shows without valid IDs
-    const validShows = (shows || []).filter(show => show && show.id);
+      return acc;
+    }, {});
 
-    // Group items by show
-    const result = validShows.map(show => {
-      const showItems = (matchingItems || [])
-        .filter(item => item.show_id === show.id)
-        .map(item => ({
-          id: item.id,
-          show_id: item.show_id,
-          position: item.position,
-          name: item.name,
-          title: item.title,
-          phone: item.phone,
-          details: item.details,
-          duration: item.duration,
-          is_break: item.is_break,
-          is_note: item.is_note
-        }));
-        
-      return {
-        ...show,
-        items: showItems
-      };
-    });
-
-    console.log('Search results:', result);
-    return result;
+    console.log('Search results:', Object.values(shows));
+    return Object.values(shows || {});
 
   } catch (error) {
     console.error('Error searching shows:', error);
@@ -122,71 +79,51 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   }
 };
 
-export const getShowWithItems = async (showId: string | undefined) => {
+export const getShowWithItems = async (showId: string) => {
   console.log('Fetching show with ID:', showId);
   
-  if (!showId || showId === "null" || showId === "undefined") {
-    console.error('Invalid show ID provided:', showId);
-    throw new Error(`Invalid show ID provided: ${showId}`);
+  if (!showId) {
+    console.error('No show ID provided');
+    throw new Error('No show ID provided');
   }
 
-  try {
-    const { data: show, error: showError } = await supabase
-      .from('shows_backup')
-      .select('*')
-      .eq('id', showId)
-      .single();
+  const { data: show, error: showError } = await supabase
+    .from('shows_backup')
+    .select('*')
+    .eq('id', showId)
+    .single();
 
-    if (showError) {
-      console.error('Error fetching show:', showError);
-      throw showError;
-    }
-
-    if (!show || !show.id) {
-      console.error('Show not found or invalid:', showId);
-      throw new Error(`Show not found: ${showId}`);
-    }
-
-    const { data: items, error: itemsError } = await supabase
-      .from('show_items')
-      .select('*')
-      .eq('show_id', showId)
-      .order('position', { ascending: true });
-
-    if (itemsError) {
-      console.error('Error fetching show items:', itemsError);
-      throw itemsError;
-    }
-
-    // Fetch interviewees separately for each item
-    const itemsWithInterviewees = await Promise.all((items || []).map(async (item) => {
-      const { data: interviewees, error: intervieweesError } = await supabase
-        .from('interviewees')
-        .select('*')
-        .eq('item_id', item.id);
-        
-      return {
-        ...item,
-        interviewees: intervieweesError ? [] : (interviewees || [])
-      };
-    }));
-
-    console.log('Retrieved items from database:', itemsWithInterviewees?.map(item => ({
-      id: item.id,
-      name: item.name,
-      is_divider: item.is_divider,
-      is_break: item.is_break,
-      is_note: item.is_note
-    })));
-
-    return {
-      show,
-      items: itemsWithInterviewees || []
-    };
-  } catch (error) {
-    console.error('Error getting show with items:', error);
-    throw error;
+  if (showError) {
+    console.error('Error fetching show:', showError);
+    throw showError;
   }
+
+  const { data: items, error: itemsError } = await supabase
+    .from('show_items')
+    .select(`
+      *,
+      interviewees(*)
+    `)
+    .eq('show_id', showId)
+    .order('position', { ascending: true });
+
+  if (itemsError) {
+    console.error('Error fetching show items:', itemsError);
+    throw itemsError;
+  }
+
+  console.log('Retrieved items from database:', items?.map(item => ({
+    id: item.id,
+    name: item.name,
+    is_divider: item.is_divider,
+    is_break: item.is_break,
+    is_note: item.is_note
+  })));
+
+  return {
+    show,
+    items: items || []
+  };
 };
 
 export const getShowsByDate = async (date: string): Promise<Show[]> => {
@@ -196,7 +133,6 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     .from('shows_backup')
     .select('*')
     .eq('date', date)
-    .not('id', 'is', null)  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
     .order('time', { ascending: true });
 
   if (error) {
@@ -204,10 +140,8 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     throw error;
   }
 
-  // Filter out invalid shows
-  const validShows = (shows || []).filter(show => show && show.id);
-  console.log(`Found ${validShows.length} valid shows for date ${date}:`, validShows);
-  return validShows;
+  console.log(`Found ${shows?.length || 0} shows for date ${date}:`, shows);
+  return shows || [];
 };
 
 export const saveShow = async (
@@ -241,16 +175,9 @@ export const saveShow = async (
     let finalShowId = showId;
     let isUpdate = Boolean(showId);
     console.log('Saving show. Is update?', isUpdate);
-    console.log('Show data:', { ...show, showId });
 
     if (isUpdate) {
-      // Update existing show
-      if (!showId || showId === "null" || showId === "undefined") {
-        console.error('Invalid show ID for update:', showId);
-        throw new Error('Invalid show ID provided for update');
-      }
-      
-      const { data: updateData, error: showError } = await supabase
+      const { error: showError } = await supabase
         .from('shows_backup')
         .update({
           name: show.name,
@@ -259,90 +186,75 @@ export const saveShow = async (
           notes: show.notes,
           slot_id: show.slot_id
         })
-        .eq('id', showId)
-        .select();
+        .eq('id', showId);
 
-      if (showError) {
-        console.error('Error updating show:', showError);
-        throw showError;
-      }
+      if (showError) throw showError;
       
-      console.log('Updated show successfully:', updateData);
+      const { data: existingItems, error: fetchError } = await supabase
+        .from('show_items')
+        .select('id')
+        .eq('show_id', showId);
+        
+      if (fetchError) throw fetchError;
       
       const { error: deleteError } = await supabase
         .from('show_items')
         .delete()
         .eq('show_id', showId);
 
-      if (deleteError) {
-        console.error('Error deleting existing items:', deleteError);
-        throw deleteError;
-      }
+      if (deleteError) throw deleteError;
       
     } else {
-      // Create new show with specific return handling and handle errors more robustly
-      console.log('Creating new show with data:', show);
-      
-      const insertData = {
-        name: show.name,
-        time: show.time,
-        date: show.date,
-        notes: show.notes,
-        slot_id: show.slot_id
-      };
-      
-      const { data, error: createError } = await supabase
+      const { data: newShow, error: createError } = await supabase
         .from('shows_backup')
-        .insert([insertData])
-        .select('*');
+        .insert({
+          name: show.name,
+          time: show.time,
+          date: show.date,
+          notes: show.notes,
+          slot_id: show.slot_id
+        })
+        .select()
+        .single();
 
-      if (createError) {
-        console.error('Error creating new show:', createError);
-        throw createError;
-      }
-      
-      console.log('Received response after show creation:', data);
-      
-      if (!data || data.length === 0 || !data[0].id) {
-        console.error('Failed to get ID for newly created show, data:', data);
-        throw new Error('Failed to create show - no ID returned');
-      }
-      
-      finalShowId = data[0].id;
-      console.log('Created new show with id:', finalShowId);
+      if (createError) throw createError;
+      finalShowId = newShow.id;
     }
 
-    // Update the schedule slot to indicate it has a lineup
     if (show.slot_id) {
-      console.log('Updating schedule slot with has_lineup=true:', show.slot_id);
-      const { data: slotData, error: slotError } = await supabase
+      const { error: slotError } = await supabase
         .from('schedule_slots_old')
         .update({ 
           has_lineup: true
         })
-        .eq('id', show.slot_id)
-        .select();
+        .eq('id', show.slot_id);
 
-      if (slotError) {
-        console.error('Error updating slot has_lineup:', slotError);
-        throw slotError;
-      }
-      
-      console.log('Updated slot successfully:', slotData);
+      if (slotError) throw slotError;
     }
 
-    // Only proceed with item insertion if we have a valid show ID
-    if (finalShowId && items.length > 0) {
-      console.log('Inserting items for show ID:', finalShowId);
-      
+    if (items.length > 0) {
+      console.log('RAW ITEMS BEFORE PROCESSING:', items.map(item => ({
+        name: item.name,
+        is_divider: item.is_divider,
+        type: typeof item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
+
       const itemsToInsert = items.map((item, index) => {
         const isDivider = Boolean(item.is_divider);
         const isBreak = Boolean(item.is_break);
         const isNote = Boolean(item.is_note);
         
+        console.log(`DIRECT ACCESS - Item ${index} (${item.name}):`, {
+          isDivider,
+          is_divider_value: item.is_divider,
+          is_divider_type: typeof item.is_divider
+        });
+        
         const { interviewees, ...itemData } = item;
         
-        return {
+        const cleanedItem = {
           show_id: finalShowId,
           position: index,
           name: item.name,
@@ -354,7 +266,36 @@ export const saveShow = async (
           is_note: isNote,
           is_divider: isDivider
         };
+        
+        console.log(`Processed item ${index} (${cleanedItem.name}):`, {
+          is_break: cleanedItem.is_break,
+          is_note: cleanedItem.is_note,
+          is_divider: cleanedItem.is_divider,
+          preserved_is_divider: isDivider
+        });
+        
+        return cleanedItem;
       });
+
+      console.log('Original items before mapping:', JSON.stringify(items.map(item => ({
+        name: item.name,
+        is_divider: item.is_divider,
+        is_divider_type: typeof item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })), null, 2));
+      
+      console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
+      
+      const insertRawSql = `
+        INSERT INTO show_items(show_id, position, name, title, details, phone, duration, is_break, is_note, is_divider)
+        VALUES ${itemsToInsert.map((item, i) => 
+          `('${item.show_id}', ${item.position}, '${item.name}', ${item.title ? `'${item.title}'` : 'NULL'}, ${item.details ? `'${item.details}'` : 'NULL'}, ${item.phone ? `'${item.phone}'` : 'NULL'}, ${item.duration}, ${item.is_break}, ${item.is_note}, ${item.is_divider})`
+        ).join(', ')}
+        RETURNING *
+      `;
+      
+      console.log('SQL to be executed:', insertRawSql);
       
       const { data: insertedItems, error: itemsError } = await supabase
         .from('show_items')
@@ -366,7 +307,13 @@ export const saveShow = async (
         throw itemsError;
       }
 
-      console.log('Successfully inserted items:', insertedItems?.length || 0);
+      console.log('Successfully inserted items:', insertedItems?.map(item => ({
+        id: item.id,
+        name: item.name,
+        is_divider: item.is_divider,
+        is_break: item.is_break,
+        is_note: item.is_note
+      })));
 
       if (insertedItems) {
         for (let i = 0; i < insertedItems.length; i++) {
@@ -382,7 +329,7 @@ export const saveShow = async (
               duration: interviewee.duration || null
             }));
 
-            console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}`);
+            console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}:`, intervieweesToInsert);
             
             const { error: intervieweesError } = await supabase
               .from('interviewees')
