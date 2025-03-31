@@ -1,32 +1,87 @@
 
-import { Routes, Route } from 'react-router-dom';
-import Index from './pages/Index';
-import Login from './pages/Login';
-import Print from './pages/Print';
-import Dashboard from './pages/Dashboard';
-import Admin from './pages/Admin';
-import ShowForm from './pages/ShowForm';
-import SchedulePage from './pages/SchedulePage';
-import GoogleAuthRedirect from './pages/GoogleAuthRedirect';
-import DailyScheduleText from './pages/DailyScheduleText';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
+import { format, startOfWeek } from 'date-fns';
+import Index from "./pages/Index";
+import Print from "./pages/Print";
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Admin from "./pages/Admin";
+import SchedulePage from "./pages/SchedulePage";
+import GoogleAuthRedirect from "./pages/GoogleAuthRedirect";
 
-function AppRoutes() {
+const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/print" element={<Print />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/new" element={<ShowForm />} />
-      <Route path="/show/:id" element={<ShowForm />} />
-      <Route path="/schedule" element={<SchedulePage />} />
+      <Route 
+        path="/login" 
+        element={
+          isAuthenticated ? <Navigate to="/" replace /> : <Login />
+        } 
+      />
+      <Route path="/print/:id" element={<Print />} />
       <Route path="/schedule/:weekDate" element={<SchedulePage />} />
-      <Route path="/auth/google/callback" element={<GoogleAuthRedirect />} />
-      <Route path="/daily-schedule" element={<DailyScheduleText />} />
-      <Route path="/daily-schedule/:date" element={<DailyScheduleText />} />
+      <Route path="/schedule" element={<Navigate to={`/schedule/${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd')}`} replace />} />
+      <Route path="/google-auth-redirect" element={<GoogleAuthRedirect />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute adminOnly>
+            <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/database"
+        element={
+          <ProtectedRoute adminOnly>
+            <Navigate to="/admin?tab=database" replace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/new"
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/show/:id"
+        element={
+          <ProtectedRoute>
+            <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
-}
+};
 
 export default AppRoutes;
