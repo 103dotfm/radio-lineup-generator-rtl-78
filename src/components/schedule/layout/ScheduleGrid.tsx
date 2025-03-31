@@ -112,16 +112,16 @@ export default function ScheduleGrid({
     }
   };
 
-  const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true) => {
+  const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true, cellKey: string) => {
     const relevantSlots = scheduleSlots.filter(
       slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time)
     );
     
     return (
-      <div className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
+      <div key={cellKey} className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
         {isCurrentMonth && relevantSlots.map(slot => (
           <ScheduleGridCell 
-            key={slot.id}
+            key={`${slot.id}-${time}`}
             slot={slot}
             handleSlotClick={handleSlotClick}
             handleEditSlot={handleEditSlot}
@@ -153,7 +153,7 @@ export default function ScheduleGrid({
     
     return (
       <div 
-        key={index} 
+        key={`header-${date.toISOString()}`}
         className={`p-2 font-bold text-center border-b border-r last:border-r-0 ${todayClass} group cursor-pointer`}
         onClick={() => handleDayHeaderClick(date)}
       >
@@ -186,12 +186,12 @@ export default function ScheduleGrid({
               שעה
             </div>
             {renderDayHeader(selectedDate, 0)}
-            {timeSlots.map(time => (
-              <React.Fragment key={time}>
+            {timeSlots.map((time, timeIndex) => (
+              <React.Fragment key={`daily-${time}-${timeIndex}`}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {renderTimeCell(selectedDate.getDay(), time)}
+                {renderTimeCell(selectedDate.getDay(), time, true, `daily-cell-${time}-${timeIndex}`)}
               </React.Fragment>
             ))}
           </div>
@@ -204,15 +204,13 @@ export default function ScheduleGrid({
               שעה
             </div>
             {dates.map((date, index) => renderDayHeader(date, index))}
-            {timeSlots.map(time => (
-              <React.Fragment key={time}>
+            {timeSlots.map((time, timeIndex) => (
+              <React.Fragment key={`weekly-${time}-${timeIndex}`}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
                 {Array.from({length: 7}).map((_, dayIndex) => (
-                  <React.Fragment key={`${time}-${dayIndex}`}>
-                    {renderTimeCell(dayIndex, time)}
-                  </React.Fragment>
+                  renderTimeCell(dayIndex, time, true, `weekly-cell-${time}-${dayIndex}-${timeIndex}`)
                 ))}
               </React.Fragment>
             ))}
@@ -225,20 +223,20 @@ export default function ScheduleGrid({
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            {weekDays.map(day => (
-              <div key={day} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
+            {weekDays.map((day, index) => (
+              <div key={`monthly-header-${day}-${index}`} className="p-2 font-bold text-center border-b border-r last:border-r-0 bg-gray-100">
                 {day}
               </div>
             ))}
-            {timeSlots.map(time => (
-              <React.Fragment key={time}>
+            {timeSlots.map((time, timeIndex) => (
+              <React.Fragment key={`monthly-${time}-${timeIndex}`}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
                 {weekDays.map((_, dayIndex) => {
                   const relevantDates = dates.filter(date => date.getDay() === dayIndex);
                   const isCurrentMonth = relevantDates.length > 0;
-                  return renderTimeCell(dayIndex, time, isCurrentMonth);
+                  return renderTimeCell(dayIndex, time, isCurrentMonth, `monthly-cell-${time}-${dayIndex}-${timeIndex}`);
                 })}
               </React.Fragment>
             ))}
