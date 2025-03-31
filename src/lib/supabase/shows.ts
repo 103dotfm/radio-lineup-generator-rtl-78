@@ -196,7 +196,7 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     .from('shows_backup')
     .select('*')
     .eq('date', date)
-    .is('id', 'not.null')  // Only include shows with valid IDs
+    .not('id', 'is', null)  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
     .order('time', { ascending: true });
 
   if (error) {
