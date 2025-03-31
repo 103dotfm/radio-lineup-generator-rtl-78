@@ -28,7 +28,7 @@ interface LineupTableProps {
 }
 
 const LineupTable = ({
-  items,
+  items = [], // Provide empty array as default value
   onDelete,
   onDurationChange,
   onEdit,
@@ -53,10 +53,14 @@ const LineupTable = ({
   };
   
   const calculateTotalMinutes = () => {
-    return items.reduce((total, item) => total + (item.duration || 0), 0);
+    // Ensure items is an array before calling reduce
+    return Array.isArray(items) ? items.reduce((total, item) => total + (item.duration || 0), 0) : 0;
   };
 
-  const groupedItems = items.reduce((groups, item, index) => {
+  // Ensure items is an array before processing
+  const safeItems = Array.isArray(items) ? items : [];
+
+  const groupedItems = safeItems.reduce((groups, item, index) => {
     // CRITICAL: Explicitly check for boolean true with === true
     const isDivider = item.is_divider === true;
     const isBreak = item.is_break === true;
