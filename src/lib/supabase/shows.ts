@@ -291,30 +291,24 @@ export const saveShow = async (
         slot_id: show.slot_id
       };
       
-      // FIXED: Better error handling and response parsing 
-      const response = await supabase
+      const { data, error: createError } = await supabase
         .from('shows_backup')
         .insert([insertData])
         .select('*');
-        
-      if (response.error) {
-        console.error('Error creating new show:', response.error);
-        throw response.error;
+
+      if (createError) {
+        console.error('Error creating new show:', createError);
+        throw createError;
       }
       
-      console.log('Received full response after show creation:', response);
+      console.log('Received response after show creation:', data);
       
-      if (!response.data || response.data.length === 0) {
-        console.error('Failed to get ID for newly created show, empty data returned');
-        throw new Error('Failed to create show - no data returned');
+      if (!data || data.length === 0 || !data[0].id) {
+        console.error('Failed to get ID for newly created show, data:', data);
+        throw new Error('Failed to create show - no ID returned');
       }
       
-      if (!response.data[0].id) {
-        console.error('Failed to get ID for newly created show, no ID in data:', response.data);
-        throw new Error('Failed to create show - no ID in returned data');
-      }
-      
-      finalShowId = response.data[0].id;
+      finalShowId = data[0].id;
       console.log('Created new show with id:', finalShowId);
     }
 
