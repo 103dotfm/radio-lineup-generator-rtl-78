@@ -28,12 +28,12 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
   try {
-    // Modify the query to properly specify the relationship
+    // Fixed query to properly specify the relationship with explicit foreign key
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
       .select(`
         *,
-        shows_backup!inner(*)
+        shows_backup!show_id(*)
       `)
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
@@ -46,12 +46,14 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     }
 
     const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
-      if (!item.shows_backup) return acc;
+      // Access the related show using the explicit shows_backup property
+      const showData = item.shows_backup;
+      if (!showData) return acc;
       
-      const showId = item.shows_backup.id;
+      const showId = showData.id;
       if (!acc[showId]) {
         acc[showId] = {
-          ...item.shows_backup,
+          ...showData,
           items: []
         };
       }
