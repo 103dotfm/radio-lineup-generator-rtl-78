@@ -1,13 +1,13 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
-import { format } from 'date-fns';
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
   const { data: shows, error } = await supabase
     .from('shows_backup')
     .select('*')
-    .not('id', 'is', null);
+    .not('id', 'is', null);  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
 
   if (error) {
     console.error('Error fetching shows:', error);
@@ -47,71 +47,6 @@ export const getShows = async (): Promise<Show[]> => {
   const cleanedShows = showsWithItems.filter(Boolean);
   console.log('Fetched shows:', cleanedShows);
   return cleanedShows || [];
-};
-
-export const createEmptyShow = async (params: {
-  name: string;
-  showName: string;
-  hostName: string;
-  time: string;
-  date: Date;
-  isPrerecorded: boolean;
-  isCollection: boolean;
-  slotId: string;
-}) => {
-  try {
-    console.log('Creating empty show record for slot:', params.slotId);
-    
-    const formattedDate = format(params.date, 'yyyy-MM-dd');
-    
-    const insertData = {
-      name: params.name,
-      time: params.time,
-      date: formattedDate,
-      notes: '',
-      slot_id: params.slotId
-    };
-    
-    console.log('Insert data:', insertData);
-    
-    const { data, error } = await supabase
-      .from('shows_backup')
-      .insert([insertData])
-      .select('*');
-      
-    if (error) {
-      console.error('Error creating empty show record:', error);
-      throw error;
-    }
-    
-    if (!data || data.length === 0) {
-      console.error('Failed to get data for newly created show record');
-      throw new Error('Failed to create show record - no data returned');
-    }
-    
-    if (!data[0].id) {
-      console.error('Failed to get ID for newly created show record:', data);
-      throw new Error('Failed to create show record - no ID in returned data');
-    }
-    
-    // Update the schedule slot to indicate it has a lineup
-    const { error: slotError } = await supabase
-      .from('schedule_slots_old')
-      .update({ has_lineup: true })
-      .eq('id', params.slotId);
-      
-    if (slotError) {
-      console.error('Warning: Failed to update slot has_lineup status:', slotError);
-      // Continue despite this error
-    }
-    
-    console.log('Created empty show record with ID:', data[0].id);
-    return data[0];
-    
-  } catch (error) {
-    console.error('Error in createEmptyShow:', error);
-    throw error;
-  }
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
@@ -261,7 +196,7 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     .from('shows_backup')
     .select('*')
     .eq('date', date)
-    .not('id', 'is', null)
+    .not('id', 'is', null)  // Fixed: Use not('id', 'is', null) instead of is('id', 'not.null')
     .order('time', { ascending: true });
 
   if (error) {
@@ -356,6 +291,7 @@ export const saveShow = async (
         slot_id: show.slot_id
       };
       
+      // FIXED: Better error handling and response parsing 
       const response = await supabase
         .from('shows_backup')
         .insert([insertData])

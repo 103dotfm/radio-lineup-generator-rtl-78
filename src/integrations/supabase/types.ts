@@ -421,15 +421,7 @@ export type Database = {
           slot_id?: string | null
           time?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_slot_id"
-            columns: ["slot_id"]
-            isOneToOne: false
-            referencedRelation: "schedule_slots_old"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       shows_todelete: {
         Row: {
