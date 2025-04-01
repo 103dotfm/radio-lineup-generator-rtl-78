@@ -100,50 +100,30 @@ serve(async (req) => {
     }
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
+    // First check if schedule_slots exists using direct query
+    let useScheduleSlots = true;
     try {
-      // Check if schedule_slots table exists using a direct query
-      console.log("Checking if schedule_slots table exists...");
-      
       // Use a direct query to check if the table exists
       const { count, error: countError } = await supabase
         .from('schedule_slots')
         .select('*', { count: 'exact', head: true });
         
       if (countError) {
-        console.error("Error checking if schedule_slots table exists:", countError);
-        console.log("Trying to use schedule_slots_old table instead...");
-        
-        // Try with the schedule_slots_old table
-        const { count: oldCount, error: oldCountError } = await supabase
-          .from('schedule_slots_old')
-          .select('*', { count: 'exact', head: true });
-          
-        if (oldCountError) {
-          console.error("Error checking schedule_slots_old table:", oldCountError);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "Could not find the schedule slots table",
-              error: oldCountError
-            }),
-            { 
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-        }
-        
-        console.log("Using schedule_slots_old table instead");
+        console.log("schedule_slots table not found or error, will use schedule_slots_old instead");
+        useScheduleSlots = false;
+      } else {
+        console.log(`Found ${count} records in schedule_slots table`);
       }
-      
-      // Query for schedule slots matching the current time and day
-      // First try with schedule_slots
-      let scheduleSlots;
-      let scheduleSlotsError;
-      
+    } catch (error) {
+      console.log("Error checking schedule_slots table existence:", error);
+      useScheduleSlots = false;
+    }
+    
+    // Query for schedule slots matching the current time and day
+    let scheduleSlots;
+    let scheduleSlotsError;
+    
+    if (useScheduleSlots) {
       try {
         const response = await supabase
           .from("schedule_slots")
@@ -163,225 +143,233 @@ serve(async (req) => {
           
         scheduleSlots = response.data;
         scheduleSlotsError = response.error;
-      } catch (error) {
-        console.error("Error fetching schedule_slots:", error);
-        scheduleSlotsError = error;
-      }
-      
-      // If there was an error, try with schedule_slots_old
-      if (scheduleSlotsError) {
-        console.log("Trying schedule_slots_old table...");
-        const response = await supabase
-          .from("schedule_slots_old")
-          .select(`
-            id,
-            day_of_week,
-            start_time,
-            end_time,
-            show_name,
-            host_name,
-            shows:shows_backup (id, name, date)
-          `)
-          .eq("day_of_week", adjustedDay)
-          .gte("start_time", startTime)
-          .lt("start_time", endTime)
-          .order("start_time");
-          
-        scheduleSlots = response.data;
-        scheduleSlotsError = response.error;
         
         if (scheduleSlotsError) {
-          console.error("Error fetching schedule slots from both tables:", scheduleSlotsError);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "Failed to fetch schedule slots",
-              error: scheduleSlotsError
-            }),
-            { 
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          console.log("Error with schedule_slots table, falling back to schedule_slots_old");
+          useScheduleSlots = false;
         }
+      } catch (error) {
+        console.error("Error fetching from schedule_slots:", error);
+        useScheduleSlots = false;
       }
+    }
+    
+    // If there was an error or schedule_slots doesn't exist, try with schedule_slots_old
+    if (!useScheduleSlots) {
+      console.log("Using schedule_slots_old table...");
+      const response = await supabase
+        .from("schedule_slots_old")
+        .select(`
+          id,
+          day_of_week,
+          start_time,
+          end_time,
+          show_name,
+          host_name,
+          shows (id, name, date)
+        `)
+        .eq("day_of_week", adjustedDay)
+        .gte("start_time", startTime)
+        .lt("start_time", endTime)
+        .order("start_time");
+        
+      scheduleSlots = response.data;
+      scheduleSlotsError = response.error;
       
-      console.log(`Found ${scheduleSlots?.length || 0} schedule slots in the current time range`);
-      
-      const results = [];
-      
-      // For each slot, find the most recent show and send its lineup
-      if (scheduleSlots) {
-        for (const slot of scheduleSlots) {
+      if (scheduleSlotsError) {
+        console.error("Error fetching schedule slots from schedule_slots_old:", scheduleSlotsError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: "Failed to fetch schedule slots",
+            error: scheduleSlotsError
+          }),
+          { 
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+    }
+    
+    console.log(`Found ${scheduleSlots?.length || 0} schedule slots in the current time range`);
+    
+    const results = [];
+    
+    // For each slot, find the most recent show and send its lineup
+    if (scheduleSlots && scheduleSlots.length > 0) {
+      for (const slot of scheduleSlots) {
+        try {
+          // Get today's date in YYYY-MM-DD format
+          const today = new Date();
+          today.setUTCHours(today.getUTCHours() + (timezoneOffset || 3));
+          const todayFormatted = today.toISOString().split('T')[0];
+          
+          console.log(`Processing schedule slot: ${slot.show_name} at ${slot.start_time}`);
+          
+          // Check shows table
+          let showsTable = "shows";
           try {
-            // Get today's date in YYYY-MM-DD format
-            const today = new Date();
-            today.setUTCHours(today.getUTCHours() + (timezoneOffset || 3));
-            const todayFormatted = today.toISOString().split('T')[0];
-            
-            console.log(`Processing schedule slot: ${slot.show_name} at ${slot.start_time}`);
-            
-            // Get the most recent show for this slot
-            const { data: recentShows, error: recentShowsError } = await supabase
-              .from("shows")
-              .select("id, name, date")
-              .eq("date", todayFormatted)
-              .ilike("name", `%${slot.show_name}%`)
-              .order("created_at", { ascending: false })
-              .limit(1);
-            
-            if (recentShowsError) {
-              console.error(`Error fetching recent show for slot ${slot.id}:`, recentShowsError);
-              results.push({
-                slot_id: slot.id,
-                success: false,
-                error: recentShowsError.message
-              });
-              continue;
-            }
-            
-            // If no show found for today, check for linked shows in the schedule slot
-            let showToSend = null;
-            
-            if (recentShows && recentShows.length > 0) {
-              showToSend = recentShows[0];
-              console.log(`Found today's show: ${showToSend.name} (${showToSend.id})`);
-            } else if (slot.shows && slot.shows.length > 0) {
-              showToSend = slot.shows[0];
-              console.log(`Using linked show: ${showToSend.name} (${showToSend.id})`);
-            } else {
-              console.log(`No show found for slot: ${slot.show_name}`);
-              results.push({
-                slot_id: slot.id,
-                success: false,
-                error: "No show found"
-              });
-              continue;
-            }
-            
-            // Check if email was already sent for this show
-            const { data: emailLog, error: emailLogError } = await supabase
-              .from("show_email_logs")
-              .select("*")
-              .eq("show_id", showToSend.id)
-              .limit(1);
-            
-            if (emailLogError) {
-              console.error(`Error checking email log for show ${showToSend.id}:`, emailLogError);
-            }
-            
-            if (emailLog && emailLog.length > 0) {
-              console.log(`Email already sent for show ${showToSend.name} (${showToSend.id})`);
-              results.push({
-                slot_id: slot.id,
-                show_id: showToSend.id,
-                success: true,
-                message: "Email already sent"
-              });
-              continue;
-            }
-            
-            // Send email with lineup
-            console.log(`Sending email for show ${showToSend.name} (${showToSend.id})`);
-            
-            try {
-              const sendEmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-lineup-email`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${supabaseAnonKey}`
-                },
-                body: JSON.stringify({
-                  showId: showToSend.id
-                })
-              });
+            // Try the default shows table first
+            const { count: showsCount, error: showsError } = await supabase
+              .from('shows')
+              .select('*', { count: 'exact', head: true });
               
-              let responseData;
-              try {
-                responseData = await sendEmailResponse.json();
-              } catch (parseError) {
-                console.error(`Error parsing response for show ${showToSend.id}:`, parseError);
-                responseData = { error: "Failed to parse response" };
-              }
-              
-              if (sendEmailResponse.ok) {
-                console.log(`Successfully sent email for show ${showToSend.name} (${showToSend.id})`);
-                results.push({
-                  slot_id: slot.id,
-                  show_id: showToSend.id,
-                  success: true
-                });
-              } else {
-                console.error(`Failed to send email for show ${showToSend.name} (${showToSend.id}):`, responseData);
-                results.push({
-                  slot_id: slot.id,
-                  show_id: showToSend.id,
-                  success: false,
-                  error: responseData.error || "Unknown error"
-                });
-              }
-            } catch (sendError) {
-              console.error(`Error sending email for show ${showToSend.name} (${showToSend.id}):`, sendError);
-              results.push({
-                slot_id: slot.id,
-                show_id: showToSend.id,
-                success: false,
-                error: sendError.message
-              });
+            if (showsError) {
+              console.log("shows table not available, trying shows_backup");
+              showsTable = "shows_backup";
             }
-          } catch (slotError) {
-            console.error(`Error processing slot ${slot.id}:`, slotError);
+          } catch (error) {
+            console.log("Error checking shows table existence:", error);
+            showsTable = "shows_backup";
+          }
+          
+          console.log(`Using ${showsTable} table for show data`);
+          
+          // Get the most recent show for this slot
+          const { data: recentShows, error: recentShowsError } = await supabase
+            .from(showsTable)
+            .select("id, name, date")
+            .eq("date", todayFormatted)
+            .ilike("name", `%${slot.show_name}%`)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          if (recentShowsError) {
+            console.error(`Error fetching recent show for slot ${slot.id}:`, recentShowsError);
             results.push({
               slot_id: slot.id,
               success: false,
-              error: slotError.message
+              error: recentShowsError.message
+            });
+            continue;
+          }
+          
+          // If no show found for today, check for linked shows in the schedule slot
+          let showToSend = null;
+          
+          if (recentShows && recentShows.length > 0) {
+            showToSend = recentShows[0];
+            console.log(`Found today's show: ${showToSend.name} (${showToSend.id})`);
+          } else if (slot.shows && slot.shows.length > 0) {
+            showToSend = slot.shows[0];
+            console.log(`Using linked show: ${showToSend.name} (${showToSend.id})`);
+          } else {
+            console.log(`No show found for slot: ${slot.show_name}`);
+            results.push({
+              slot_id: slot.id,
+              success: false,
+              error: "No show found"
+            });
+            continue;
+          }
+          
+          // Check if email was already sent for this show
+          const { data: emailLog, error: emailLogError } = await supabase
+            .from("show_email_logs")
+            .select("*")
+            .eq("show_id", showToSend.id)
+            .limit(1);
+          
+          if (emailLogError) {
+            console.error(`Error checking email log for show ${showToSend.id}:`, emailLogError);
+          }
+          
+          if (emailLog && emailLog.length > 0) {
+            console.log(`Email already sent for show ${showToSend.name} (${showToSend.id})`);
+            results.push({
+              slot_id: slot.id,
+              show_id: showToSend.id,
+              success: true,
+              message: "Email already sent"
+            });
+            continue;
+          }
+          
+          // Send email with lineup
+          console.log(`Sending email for show ${showToSend.name} (${showToSend.id})`);
+          
+          try {
+            const sendEmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-lineup-email`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${supabaseAnonKey}`
+              },
+              body: JSON.stringify({
+                showId: showToSend.id
+              })
+            });
+            
+            let responseData;
+            try {
+              responseData = await sendEmailResponse.json();
+            } catch (parseError) {
+              console.error(`Error parsing response for show ${showToSend.id}:`, parseError);
+              responseData = { error: "Failed to parse response" };
+            }
+            
+            if (sendEmailResponse.ok) {
+              console.log(`Successfully sent email for show ${showToSend.name} (${showToSend.id})`);
+              results.push({
+                slot_id: slot.id,
+                show_id: showToSend.id,
+                success: true
+              });
+            } else {
+              console.error(`Failed to send email for show ${showToSend.name} (${showToSend.id}):`, responseData);
+              results.push({
+                slot_id: slot.id,
+                show_id: showToSend.id,
+                success: false,
+                error: responseData.error || "Unknown error"
+              });
+            }
+          } catch (sendError) {
+            console.error(`Error sending email for show ${showToSend.name} (${showToSend.id}):`, sendError);
+            results.push({
+              slot_id: slot.id,
+              show_id: showToSend.id,
+              success: false,
+              error: sendError.message
             });
           }
+        } catch (slotError) {
+          console.error(`Error processing slot ${slot.id}:`, slotError);
+          results.push({
+            slot_id: slot.id,
+            success: false,
+            error: slotError.message
+          });
         }
       }
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          time_checked: adjustedTime,
-          day_checked: adjustedDay,
-          slots_count: scheduleSlots?.length || 0,
-          results
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Error in schedule-lineup-emails function:", error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: "Error in schedule-lineup-emails function",
-          error: error.message
-        }),
-        { 
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
     }
+    
+    return new Response(
+      JSON.stringify({
+        success: true,
+        time_checked: adjustedTime,
+        day_checked: adjustedDay,
+        slots_count: scheduleSlots?.length || 0,
+        results
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
-    console.error("Critical error in schedule-lineup-emails function:", error);
+    console.error("Error in schedule-lineup-emails function:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        message: "Critical error in schedule-lineup-emails function",
+        message: "Error in schedule-lineup-emails function",
         error: error.message
       }),
       { 
