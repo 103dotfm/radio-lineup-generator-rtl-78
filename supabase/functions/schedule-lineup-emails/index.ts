@@ -100,99 +100,40 @@ serve(async (req) => {
     }
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
-    // First check if schedule_slots exists using direct query
-    let useScheduleSlots = true;
-    try {
-      // Use a direct query to check if the table exists
-      const { count, error: countError } = await supabase
-        .from('schedule_slots')
-        .select('*', { count: 'exact', head: true });
-        
-      if (countError) {
-        console.log("schedule_slots table not found or error, will use schedule_slots_old instead");
-        useScheduleSlots = false;
-      } else {
-        console.log(`Found ${count} records in schedule_slots table`);
-      }
-    } catch (error) {
-      console.log("Error checking schedule_slots table existence:", error);
-      useScheduleSlots = false;
-    }
+    // Query for schedule slots from schedule_slots_old table (always use this table)
+    console.log("Querying schedule_slots_old table...");
+    const { data: scheduleSlots, error: scheduleSlotsError } = await supabase
+      .from("schedule_slots_old")
+      .select(`
+        id,
+        day_of_week,
+        start_time,
+        end_time,
+        show_name,
+        host_name,
+        shows_backup (id, name, date)
+      `)
+      .eq("day_of_week", adjustedDay)
+      .gte("start_time", startTime)
+      .lt("start_time", endTime)
+      .order("start_time");
     
-    // Query for schedule slots matching the current time and day
-    let scheduleSlots;
-    let scheduleSlotsError;
-    
-    if (useScheduleSlots) {
-      try {
-        const response = await supabase
-          .from("schedule_slots")
-          .select(`
-            id,
-            day_of_week,
-            start_time,
-            end_time,
-            show_name,
-            host_name,
-            shows (id, name, date)
-          `)
-          .eq("day_of_week", adjustedDay)
-          .gte("start_time", startTime)
-          .lt("start_time", endTime)
-          .order("start_time");
-          
-        scheduleSlots = response.data;
-        scheduleSlotsError = response.error;
-        
-        if (scheduleSlotsError) {
-          console.log("Error with schedule_slots table, falling back to schedule_slots_old");
-          useScheduleSlots = false;
+    if (scheduleSlotsError) {
+      console.error("Error fetching schedule slots from schedule_slots_old:", scheduleSlotsError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "Failed to fetch schedule slots",
+          error: scheduleSlotsError
+        }),
+        { 
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
         }
-      } catch (error) {
-        console.error("Error fetching from schedule_slots:", error);
-        useScheduleSlots = false;
-      }
-    }
-    
-    // If there was an error or schedule_slots doesn't exist, try with schedule_slots_old
-    if (!useScheduleSlots) {
-      console.log("Using schedule_slots_old table...");
-      const response = await supabase
-        .from("schedule_slots_old")
-        .select(`
-          id,
-          day_of_week,
-          start_time,
-          end_time,
-          show_name,
-          host_name,
-          shows (id, name, date)
-        `)
-        .eq("day_of_week", adjustedDay)
-        .gte("start_time", startTime)
-        .lt("start_time", endTime)
-        .order("start_time");
-        
-      scheduleSlots = response.data;
-      scheduleSlotsError = response.error;
-      
-      if (scheduleSlotsError) {
-        console.error("Error fetching schedule slots from schedule_slots_old:", scheduleSlotsError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: "Failed to fetch schedule slots",
-            error: scheduleSlotsError
-          }),
-          { 
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      }
+      );
     }
     
     console.log(`Found ${scheduleSlots?.length || 0} schedule slots in the current time range`);
@@ -210,28 +151,10 @@ serve(async (req) => {
           
           console.log(`Processing schedule slot: ${slot.show_name} at ${slot.start_time}`);
           
-          // Check shows table
-          let showsTable = "shows";
-          try {
-            // Try the default shows table first
-            const { count: showsCount, error: showsError } = await supabase
-              .from('shows')
-              .select('*', { count: 'exact', head: true });
-              
-            if (showsError) {
-              console.log("shows table not available, trying shows_backup");
-              showsTable = "shows_backup";
-            }
-          } catch (error) {
-            console.log("Error checking shows table existence:", error);
-            showsTable = "shows_backup";
-          }
-          
-          console.log(`Using ${showsTable} table for show data`);
-          
-          // Get the most recent show for this slot
+          // Get the most recent show for this slot using shows_backup table
+          console.log("Searching for today's show in shows_backup table...");
           const { data: recentShows, error: recentShowsError } = await supabase
-            .from(showsTable)
+            .from("shows_backup")
             .select("id, name, date")
             .eq("date", todayFormatted)
             .ilike("name", `%${slot.show_name}%`)
@@ -254,8 +177,8 @@ serve(async (req) => {
           if (recentShows && recentShows.length > 0) {
             showToSend = recentShows[0];
             console.log(`Found today's show: ${showToSend.name} (${showToSend.id})`);
-          } else if (slot.shows && slot.shows.length > 0) {
-            showToSend = slot.shows[0];
+          } else if (slot.shows_backup && slot.shows_backup.length > 0) {
+            showToSend = slot.shows_backup[0];
             console.log(`Using linked show: ${showToSend.name} (${showToSend.id})`);
           } else {
             console.log(`No show found for slot: ${slot.show_name}`);

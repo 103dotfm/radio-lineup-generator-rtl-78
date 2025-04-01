@@ -150,41 +150,16 @@ async function handleRequest(req: Request) {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
-    // Check if shows table exists using direct query
-    try {
-      console.log("Checking if shows table exists...");
-      // Use a direct query that doesn't rely on the function
-      const { count, error: countError } = await supabase
-        .from("shows")
-        .select("*", { count: 'exact', head: true });
-        
-      if (countError) {
-        console.error("Error checking shows table:", countError);
-        return new Response(
-          JSON.stringify({ error: "Error checking shows table existence", details: countError }),
-          { status: 500, headers: corsHeaders }
-        );
-      }
-
-      console.log("Shows table exists and has data");
-    } catch (tableCheckError) {
-      console.error("Exception checking shows table:", tableCheckError);
-      return new Response(
-        JSON.stringify({ error: "Exception checking shows table", details: tableCheckError }),
-        { status: 500, headers: corsHeaders }
-      );
-    }
-
     // Fetch the show details - Separate queries for shows and related items
     try {
       console.log("Fetching show details...");
       
-      // First, fetch the show details
+      // First, fetch the show details - ALWAYS use shows_backup
       const { data: show, error: showError } = await supabase
-        .from("shows")
+        .from("shows_backup")
         .select("id, name, date, time")
         .eq("id", showId)
-        .single();
+        .maybeSingle();  // Changed from single() to maybeSingle()
 
       if (showError) {
         const errorLog = createErrorLog("FETCHING_SHOW", showError);
@@ -198,8 +173,12 @@ async function handleRequest(req: Request) {
       }
 
       if (!show) {
+        console.error(`Show not found with ID: ${showId}`);
         return new Response(
-          JSON.stringify({ error: "Show not found" }),
+          JSON.stringify({ 
+            error: "Show not found", 
+            details: { showId }
+          }),
           { 
             status: 404, 
             headers: corsHeaders 
@@ -208,31 +187,6 @@ async function handleRequest(req: Request) {
       }
       
       console.log("Retrieved show:", show);
-      
-      // Check if show_items table exists
-      try {
-        console.log("Checking if show_items table exists...");
-        // Use a direct query that doesn't rely on the function
-        const { count, error: countError } = await supabase
-          .from("show_items")
-          .select("*", { count: 'exact', head: true });
-          
-        if (countError) {
-          console.error("Error checking show_items table:", countError);
-          return new Response(
-            JSON.stringify({ error: "Error checking show_items table existence", details: countError }),
-            { status: 500, headers: corsHeaders }
-          );
-        }
-        
-        console.log("Show_items table exists");
-      } catch (tableCheckError) {
-        console.error("Exception checking show_items table:", tableCheckError);
-        return new Response(
-          JSON.stringify({ error: "Exception checking show_items table", details: tableCheckError }),
-          { status: 500, headers: corsHeaders }
-        );
-      }
       
       // Then, fetch the show items separately
       const { data: items, error: itemsError } = await supabase
@@ -272,7 +226,7 @@ async function handleRequest(req: Request) {
         .from("email_settings")
         .select("*")
         .limit(1)
-        .maybeSingle();
+        .maybeSingle();  // Using maybeSingle for safer query
 
       if (settingsError) {
         const errorLog = createErrorLog("FETCHING_EMAIL_SETTINGS", settingsError);
@@ -287,7 +241,10 @@ async function handleRequest(req: Request) {
 
       if (!emailSettings) {
         return new Response(
-          JSON.stringify({ error: "Email settings not found" }),
+          JSON.stringify({ 
+            error: "Email settings not found", 
+            details: "Please configure email settings in the admin panel"
+          }),
           { 
             status: 404, 
             headers: corsHeaders 
@@ -355,7 +312,10 @@ async function handleRequest(req: Request) {
 
       if (recipientEmails.length === 0) {
         return new Response(
-          JSON.stringify({ error: "No recipient emails found" }),
+          JSON.stringify({ 
+            error: "No recipient emails found", 
+            details: "Please add recipients in the admin panel or specify a test email"
+          }),
           { 
             status: 400, 
             headers: corsHeaders 
