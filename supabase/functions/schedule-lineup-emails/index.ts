@@ -101,11 +101,14 @@ serve(async (req) => {
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
     try {
-      // First verify that the schedule_slots table exists
-      const { data: tableExists, error: tableCheckError } = await supabase.rpc(
-        'check_table_exists',
-        { table_name: 'schedule_slots' }
-      ).single();
+      // First check if schedule_slots table exists directly without using the function
+      console.log("Checking if schedule_slots table exists directly...");
+      const { data: tableExists, error: tableCheckError } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .eq('table_name', 'schedule_slots')
+        .maybeSingle();
 
       if (tableCheckError) {
         console.error("Error checking if schedule_slots table exists:", tableCheckError);
@@ -125,7 +128,10 @@ serve(async (req) => {
         );
       }
 
-      if (!tableExists) {
+      const scheduleSlotsExists = !!tableExists;
+      console.log("Schedule slots table exists:", scheduleSlotsExists);
+
+      if (!scheduleSlotsExists) {
         console.log("Schedule slots table does not exist");
         return new Response(
           JSON.stringify({ 
@@ -177,135 +183,137 @@ serve(async (req) => {
         );
       }
       
-      console.log(`Found ${scheduleSlots.length} schedule slots in the current time range`);
+      console.log(`Found ${scheduleSlots?.length || 0} schedule slots in the current time range`);
       
       const results = [];
       
       // For each slot, find the most recent show and send its lineup
-      for (const slot of scheduleSlots) {
-        try {
-          // Get today's date in YYYY-MM-DD format
-          const today = new Date();
-          today.setUTCHours(today.getUTCHours() + (timezoneOffset || 3));
-          const todayFormatted = today.toISOString().split('T')[0];
-          
-          console.log(`Processing schedule slot: ${slot.show_name} at ${slot.start_time}`);
-          
-          // Get the most recent show for this slot
-          const { data: recentShows, error: recentShowsError } = await supabase
-            .from("shows")
-            .select("id, name, date")
-            .eq("date", todayFormatted)
-            .ilike("name", `%${slot.show_name}%`)
-            .order("created_at", { ascending: false })
-            .limit(1);
-          
-          if (recentShowsError) {
-            console.error(`Error fetching recent show for slot ${slot.id}:`, recentShowsError);
-            results.push({
-              slot_id: slot.id,
-              success: false,
-              error: recentShowsError.message
-            });
-            continue;
-          }
-          
-          // If no show found for today, check for linked shows in the schedule slot
-          let showToSend = null;
-          
-          if (recentShows && recentShows.length > 0) {
-            showToSend = recentShows[0];
-            console.log(`Found today's show: ${showToSend.name} (${showToSend.id})`);
-          } else if (slot.shows && slot.shows.length > 0) {
-            showToSend = slot.shows[0];
-            console.log(`Using linked show: ${showToSend.name} (${showToSend.id})`);
-          } else {
-            console.log(`No show found for slot: ${slot.show_name}`);
-            results.push({
-              slot_id: slot.id,
-              success: false,
-              error: "No show found"
-            });
-            continue;
-          }
-          
-          // Check if email was already sent for this show
-          const { data: emailLog, error: emailLogError } = await supabase
-            .from("show_email_logs")
-            .select("*")
-            .eq("show_id", showToSend.id)
-            .limit(1);
-          
-          if (emailLogError) {
-            console.error(`Error checking email log for show ${showToSend.id}:`, emailLogError);
-          }
-          
-          if (emailLog && emailLog.length > 0) {
-            console.log(`Email already sent for show ${showToSend.name} (${showToSend.id})`);
-            results.push({
-              slot_id: slot.id,
-              show_id: showToSend.id,
-              success: true,
-              message: "Email already sent"
-            });
-            continue;
-          }
-          
-          // Send email with lineup
-          console.log(`Sending email for show ${showToSend.name} (${showToSend.id})`);
-          
+      if (scheduleSlots) {
+        for (const slot of scheduleSlots) {
           try {
-            const sendEmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-lineup-email`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${supabaseAnonKey}`
-              },
-              body: JSON.stringify({
-                showId: showToSend.id
-              })
-            });
+            // Get today's date in YYYY-MM-DD format
+            const today = new Date();
+            today.setUTCHours(today.getUTCHours() + (timezoneOffset || 3));
+            const todayFormatted = today.toISOString().split('T')[0];
             
-            let responseData;
-            try {
-              responseData = await sendEmailResponse.json();
-            } catch (parseError) {
-              console.error(`Error parsing response for show ${showToSend.id}:`, parseError);
-              responseData = { error: "Failed to parse response" };
+            console.log(`Processing schedule slot: ${slot.show_name} at ${slot.start_time}`);
+            
+            // Get the most recent show for this slot
+            const { data: recentShows, error: recentShowsError } = await supabase
+              .from("shows")
+              .select("id, name, date")
+              .eq("date", todayFormatted)
+              .ilike("name", `%${slot.show_name}%`)
+              .order("created_at", { ascending: false })
+              .limit(1);
+            
+            if (recentShowsError) {
+              console.error(`Error fetching recent show for slot ${slot.id}:`, recentShowsError);
+              results.push({
+                slot_id: slot.id,
+                success: false,
+                error: recentShowsError.message
+              });
+              continue;
             }
             
-            if (sendEmailResponse.ok) {
-              console.log(`Successfully sent email for show ${showToSend.name} (${showToSend.id})`);
+            // If no show found for today, check for linked shows in the schedule slot
+            let showToSend = null;
+            
+            if (recentShows && recentShows.length > 0) {
+              showToSend = recentShows[0];
+              console.log(`Found today's show: ${showToSend.name} (${showToSend.id})`);
+            } else if (slot.shows && slot.shows.length > 0) {
+              showToSend = slot.shows[0];
+              console.log(`Using linked show: ${showToSend.name} (${showToSend.id})`);
+            } else {
+              console.log(`No show found for slot: ${slot.show_name}`);
+              results.push({
+                slot_id: slot.id,
+                success: false,
+                error: "No show found"
+              });
+              continue;
+            }
+            
+            // Check if email was already sent for this show
+            const { data: emailLog, error: emailLogError } = await supabase
+              .from("show_email_logs")
+              .select("*")
+              .eq("show_id", showToSend.id)
+              .limit(1);
+            
+            if (emailLogError) {
+              console.error(`Error checking email log for show ${showToSend.id}:`, emailLogError);
+            }
+            
+            if (emailLog && emailLog.length > 0) {
+              console.log(`Email already sent for show ${showToSend.name} (${showToSend.id})`);
               results.push({
                 slot_id: slot.id,
                 show_id: showToSend.id,
-                success: true
+                success: true,
+                message: "Email already sent"
               });
-            } else {
-              console.error(`Failed to send email for show ${showToSend.name} (${showToSend.id}):`, responseData);
+              continue;
+            }
+            
+            // Send email with lineup
+            console.log(`Sending email for show ${showToSend.name} (${showToSend.id})`);
+            
+            try {
+              const sendEmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-lineup-email`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseAnonKey}`
+                },
+                body: JSON.stringify({
+                  showId: showToSend.id
+                })
+              });
+              
+              let responseData;
+              try {
+                responseData = await sendEmailResponse.json();
+              } catch (parseError) {
+                console.error(`Error parsing response for show ${showToSend.id}:`, parseError);
+                responseData = { error: "Failed to parse response" };
+              }
+              
+              if (sendEmailResponse.ok) {
+                console.log(`Successfully sent email for show ${showToSend.name} (${showToSend.id})`);
+                results.push({
+                  slot_id: slot.id,
+                  show_id: showToSend.id,
+                  success: true
+                });
+              } else {
+                console.error(`Failed to send email for show ${showToSend.name} (${showToSend.id}):`, responseData);
+                results.push({
+                  slot_id: slot.id,
+                  show_id: showToSend.id,
+                  success: false,
+                  error: responseData.error || "Unknown error"
+                });
+              }
+            } catch (sendError) {
+              console.error(`Error sending email for show ${showToSend.name} (${showToSend.id}):`, sendError);
               results.push({
                 slot_id: slot.id,
                 show_id: showToSend.id,
                 success: false,
-                error: responseData.error || "Unknown error"
+                error: sendError.message
               });
             }
-          } catch (sendError) {
-            console.error(`Error sending email for show ${showToSend.name} (${showToSend.id}):`, sendError);
+          } catch (slotError) {
+            console.error(`Error processing slot ${slot.id}:`, slotError);
             results.push({
               slot_id: slot.id,
-              show_id: showToSend.id,
               success: false,
-              error: sendError.message
+              error: slotError.message
             });
           }
-        } catch (slotError) {
-          console.error(`Error processing slot ${slot.id}:`, slotError);
-          results.push({
-            slot_id: slot.id,
-            success: false,
-            error: slotError.message
-          });
         }
       }
       
@@ -314,7 +322,7 @@ serve(async (req) => {
           success: true,
           time_checked: adjustedTime,
           day_checked: adjustedDay,
-          slots_count: scheduleSlots.length,
+          slots_count: scheduleSlots?.length || 0,
           results
         }),
         {
