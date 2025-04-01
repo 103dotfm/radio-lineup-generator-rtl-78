@@ -150,37 +150,27 @@ async function handleRequest(req: Request) {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
-    // Check if shows table exists
+    // Check if shows table exists using direct query
     try {
       console.log("Checking if shows table exists...");
-      const { data: tables, error: tablesError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'shows');
+      // Use a direct query that doesn't rely on the function
+      const { count, error: countError } = await supabase
+        .from("shows")
+        .select("*", { count: 'exact', head: true });
         
-      if (tablesError) {
-        console.error("Error checking if shows table exists:", tablesError);
+      if (countError) {
+        console.error("Error checking shows table:", countError);
         return new Response(
-          JSON.stringify({ error: "Error checking if shows table exists", details: tablesError }),
+          JSON.stringify({ error: "Error checking shows table existence", details: countError }),
           { status: 500, headers: corsHeaders }
         );
       }
 
-      const showsExists = tables && tables.length > 0;
-      console.log("Shows table exists:", showsExists);
-
-      if (!showsExists) {
-        console.log("Shows table does not exist");
-        return new Response(
-          JSON.stringify({ error: "Shows table does not exist" }),
-          { status: 404, headers: corsHeaders }
-        );
-      }
+      console.log("Shows table exists and has data");
     } catch (tableCheckError) {
-      console.error("Exception checking if shows table exists:", tableCheckError);
+      console.error("Exception checking shows table:", tableCheckError);
       return new Response(
-        JSON.stringify({ error: "Exception checking if shows table exists", details: tableCheckError }),
+        JSON.stringify({ error: "Exception checking shows table", details: tableCheckError }),
         { status: 500, headers: corsHeaders }
       );
     }
@@ -222,34 +212,24 @@ async function handleRequest(req: Request) {
       // Check if show_items table exists
       try {
         console.log("Checking if show_items table exists...");
-        const { data: tables, error: tablesError } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_schema', 'public')
-          .eq('table_name', 'show_items');
+        // Use a direct query that doesn't rely on the function
+        const { count, error: countError } = await supabase
+          .from("show_items")
+          .select("*", { count: 'exact', head: true });
           
-        if (tablesError) {
-          console.error("Error checking if show_items table exists:", tablesError);
+        if (countError) {
+          console.error("Error checking show_items table:", countError);
           return new Response(
-            JSON.stringify({ error: "Error checking if show_items table exists", details: tablesError }),
+            JSON.stringify({ error: "Error checking show_items table existence", details: countError }),
             { status: 500, headers: corsHeaders }
           );
         }
-
-        const showItemsExists = tables && tables.length > 0;
-        console.log("Show items table exists:", showItemsExists);
-
-        if (!showItemsExists) {
-          console.log("Show items table does not exist");
-          return new Response(
-            JSON.stringify({ error: "Show items table does not exist" }),
-            { status: 404, headers: corsHeaders }
-          );
-        }
+        
+        console.log("Show_items table exists");
       } catch (tableCheckError) {
-        console.error("Exception checking if show_items table exists:", tableCheckError);
+        console.error("Exception checking show_items table:", tableCheckError);
         return new Response(
-          JSON.stringify({ error: "Exception checking if show_items table exists", details: tableCheckError }),
+          JSON.stringify({ error: "Exception checking show_items table", details: tableCheckError }),
           { status: 500, headers: corsHeaders }
         );
       }
