@@ -101,22 +101,21 @@ serve(async (req) => {
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
     try {
-      // First check if schedule_slots table exists directly without using the function
-      console.log("Checking if schedule_slots table exists directly...");
-      const { data: tableExists, error: tableCheckError } = await supabase
+      // Check if schedule_slots table exists
+      console.log("Checking if schedule_slots table exists...");
+      const { data: tables, error: tablesError } = await supabase
         .from('information_schema.tables')
         .select('table_name')
         .eq('table_schema', 'public')
-        .eq('table_name', 'schedule_slots')
-        .maybeSingle();
-
-      if (tableCheckError) {
-        console.error("Error checking if schedule_slots table exists:", tableCheckError);
+        .eq('table_name', 'schedule_slots');
+        
+      if (tablesError) {
+        console.error("Error checking if schedule_slots table exists:", tablesError);
         return new Response(
           JSON.stringify({ 
             success: false, 
             message: "Error checking if schedule_slots table exists",
-            error: tableCheckError
+            error: tablesError
           }),
           { 
             status: 200,
@@ -128,7 +127,7 @@ serve(async (req) => {
         );
       }
 
-      const scheduleSlotsExists = !!tableExists;
+      const scheduleSlotsExists = tables && tables.length > 0;
       console.log("Schedule slots table exists:", scheduleSlotsExists);
 
       if (!scheduleSlotsExists) {

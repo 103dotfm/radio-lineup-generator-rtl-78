@@ -150,25 +150,24 @@ async function handleRequest(req: Request) {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
-    // Check if shows table exists without using the function
+    // Check if shows table exists
     try {
-      console.log("Checking if shows table exists directly...");
-      const { data: showsExistsResult, error: showsExistsError } = await supabase
+      console.log("Checking if shows table exists...");
+      const { data: tables, error: tablesError } = await supabase
         .from('information_schema.tables')
         .select('table_name')
         .eq('table_schema', 'public')
-        .eq('table_name', 'shows')
-        .maybeSingle();
-
-      if (showsExistsError) {
-        console.error("Error checking if shows table exists:", showsExistsError);
+        .eq('table_name', 'shows');
+        
+      if (tablesError) {
+        console.error("Error checking if shows table exists:", tablesError);
         return new Response(
-          JSON.stringify({ error: "Error checking if shows table exists", details: showsExistsError }),
+          JSON.stringify({ error: "Error checking if shows table exists", details: tablesError }),
           { status: 500, headers: corsHeaders }
         );
       }
 
-      const showsExists = !!showsExistsResult;
+      const showsExists = tables && tables.length > 0;
       console.log("Shows table exists:", showsExists);
 
       if (!showsExists) {
@@ -220,30 +219,38 @@ async function handleRequest(req: Request) {
       
       console.log("Retrieved show:", show);
       
-      // Check if show_items table exists without using the function
-      const { data: itemsExistsResult, error: itemsExistsError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'show_items')
-        .maybeSingle();
-        
-      if (itemsExistsError) {
-        console.error("Error checking if show_items table exists:", itemsExistsError);
-        return new Response(
-          JSON.stringify({ error: "Error checking if show_items table exists", details: itemsExistsError }),
-          { status: 500, headers: corsHeaders }
-        );
-      }
+      // Check if show_items table exists
+      try {
+        console.log("Checking if show_items table exists...");
+        const { data: tables, error: tablesError } = await supabase
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', 'public')
+          .eq('table_name', 'show_items');
+          
+        if (tablesError) {
+          console.error("Error checking if show_items table exists:", tablesError);
+          return new Response(
+            JSON.stringify({ error: "Error checking if show_items table exists", details: tablesError }),
+            { status: 500, headers: corsHeaders }
+          );
+        }
 
-      const itemsExists = !!itemsExistsResult;
-      console.log("Show items table exists:", itemsExists);
-      
-      if (!itemsExists) {
-        console.log("Show items table does not exist");
+        const showItemsExists = tables && tables.length > 0;
+        console.log("Show items table exists:", showItemsExists);
+
+        if (!showItemsExists) {
+          console.log("Show items table does not exist");
+          return new Response(
+            JSON.stringify({ error: "Show items table does not exist" }),
+            { status: 404, headers: corsHeaders }
+          );
+        }
+      } catch (tableCheckError) {
+        console.error("Exception checking if show_items table exists:", tableCheckError);
         return new Response(
-          JSON.stringify({ error: "Show items table does not exist" }),
-          { status: 404, headers: corsHeaders }
+          JSON.stringify({ error: "Exception checking if show_items table exists", details: tableCheckError }),
+          { status: 500, headers: corsHeaders }
         );
       }
       
