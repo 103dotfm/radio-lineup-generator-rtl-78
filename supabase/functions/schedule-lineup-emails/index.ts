@@ -101,50 +101,59 @@ serve(async (req) => {
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
     try {
-      // Check if schedule_slots table exists
+      // Check if schedule_slots table exists using a direct query
       console.log("Checking if schedule_slots table exists...");
+      
       const { data: tables, error: tablesError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .eq('table_name', 'schedule_slots');
-        
+        .rpc('check_table_exists', { table_name: 'schedule_slots' });
+      
       if (tablesError) {
         console.error("Error checking if schedule_slots table exists:", tablesError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: "Error checking if schedule_slots table exists",
-            error: tablesError
-          }),
-          { 
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      }
+        
+        // Fallback method - try to query the table directly
+        const { count, error: countError } = await supabase
+          .from('schedule_slots')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) {
+          console.error("Fallback check also failed:", countError);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Could not verify if schedule_slots table exists",
+              error: tablesError
+            }),
+            { 
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
 
-      const scheduleSlotsExists = tables && tables.length > 0;
-      console.log("Schedule slots table exists:", scheduleSlotsExists);
+        console.log("Fallback check succeeded, schedule_slots table exists");
+      } else {
+        const scheduleSlotsExists = tables === true;
+        console.log("Schedule slots table exists:", scheduleSlotsExists);
 
-      if (!scheduleSlotsExists) {
-        console.log("Schedule slots table does not exist");
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: "Schedule slots table does not exist"
-          }),
-          { 
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        if (!scheduleSlotsExists) {
+          console.log("Schedule slots table does not exist");
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Schedule slots table does not exist"
+            }),
+            { 
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
       }
       
       // Query for schedule slots matching the current time and day
