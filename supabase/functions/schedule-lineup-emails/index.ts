@@ -101,19 +101,18 @@ serve(async (req) => {
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
     try {
-      // Query for schedule slots matching the current time and day
-      // First check if the schedule_slots table exists
-      const { error: tableCheckError } = await supabase.rpc(
+      // First verify that the schedule_slots table exists
+      const { data: tableExists, error: tableCheckError } = await supabase.rpc(
         'check_table_exists',
         { table_name: 'schedule_slots' }
       ).single();
-      
+
       if (tableCheckError) {
         console.error("Error checking if schedule_slots table exists:", tableCheckError);
         return new Response(
           JSON.stringify({ 
             success: false, 
-            message: "Schedule slots table does not exist",
+            message: "Error checking if schedule_slots table exists",
             error: tableCheckError
           }),
           { 
@@ -125,7 +124,25 @@ serve(async (req) => {
           }
         );
       }
+
+      if (!tableExists) {
+        console.log("Schedule slots table does not exist");
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: "Schedule slots table does not exist"
+          }),
+          { 
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
       
+      // Query for schedule slots matching the current time and day
       const { data: scheduleSlots, error: scheduleSlotsError } = await supabase
         .from("schedule_slots")
         .select(`
@@ -249,7 +266,13 @@ serve(async (req) => {
               })
             });
             
-            const responseData = await sendEmailResponse.json();
+            let responseData;
+            try {
+              responseData = await sendEmailResponse.json();
+            } catch (parseError) {
+              console.error(`Error parsing response for show ${showToSend.id}:`, parseError);
+              responseData = { error: "Failed to parse response" };
+            }
             
             if (sendEmailResponse.ok) {
               console.log(`Successfully sent email for show ${showToSend.name} (${showToSend.id})`);

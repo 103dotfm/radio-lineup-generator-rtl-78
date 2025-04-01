@@ -152,6 +152,54 @@ export type Database = {
           },
         ]
       }
+      schedule_slots: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          has_lineup: boolean | null
+          host_name: string | null
+          id: string
+          is_collection: boolean | null
+          is_modified: boolean | null
+          is_prerecorded: boolean | null
+          show_name: string
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          show_name: string
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          has_lineup?: boolean | null
+          host_name?: string | null
+          id?: string
+          is_collection?: boolean | null
+          is_modified?: boolean | null
+          is_prerecorded?: boolean | null
+          show_name?: string
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       schedule_slots_backup: {
         Row: {
           color: string | null
@@ -400,6 +448,36 @@ export type Database = {
           },
         ]
       }
+      shows: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string
+          name: string
+          notes: string | null
+          slot_id: string | null
+          time: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          slot_id?: string | null
+          time?: string | null
+        }
+        Relationships: []
+      }
       shows_backup: {
         Row: {
           created_at: string | null
@@ -580,6 +658,12 @@ export type Database = {
           p_color?: string
         }
         Returns: undefined
+      }
+      check_table_exists: {
+        Args: {
+          table_name: string
+        }
+        Returns: boolean
       }
       gtrgm_compress: {
         Args: {
