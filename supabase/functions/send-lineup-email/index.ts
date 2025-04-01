@@ -150,7 +150,37 @@ async function handleRequest(req: Request) {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
-    // Fetch the show details - FIXED: Separate queries for shows and related items
+    // First, verify that the shows table exists
+    try {
+      const { data: showsTableExists, error: tableCheckError } = await supabase.rpc(
+        'check_table_exists',
+        { table_name: 'shows' }
+      ).single();
+
+      if (tableCheckError) {
+        console.error("Error checking if shows table exists:", tableCheckError);
+        return new Response(
+          JSON.stringify({ error: "Error checking if shows table exists", details: tableCheckError }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
+
+      if (!showsTableExists) {
+        console.log("Shows table does not exist");
+        return new Response(
+          JSON.stringify({ error: "Shows table does not exist" }),
+          { status: 404, headers: corsHeaders }
+        );
+      }
+    } catch (tableCheckError) {
+      console.error("Exception checking if shows table exists:", tableCheckError);
+      return new Response(
+        JSON.stringify({ error: "Exception checking if shows table exists", details: tableCheckError }),
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    // Fetch the show details - Separate queries for shows and related items
     try {
       console.log("Fetching show details...");
       
@@ -179,6 +209,30 @@ async function handleRequest(req: Request) {
             status: 404, 
             headers: corsHeaders 
           }
+        );
+      }
+      
+      console.log("Retrieved show:", show);
+      
+      // Check if show_items table exists
+      const { data: itemsTableExists, error: itemsTableCheckError } = await supabase.rpc(
+        'check_table_exists',
+        { table_name: 'show_items' }
+      ).single();
+      
+      if (itemsTableCheckError) {
+        console.error("Error checking if show_items table exists:", itemsTableCheckError);
+        return new Response(
+          JSON.stringify({ error: "Error checking if show_items table exists", details: itemsTableCheckError }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
+
+      if (!itemsTableExists) {
+        console.log("Show items table does not exist");
+        return new Response(
+          JSON.stringify({ error: "Show items table does not exist" }),
+          { status: 404, headers: corsHeaders }
         );
       }
       
@@ -287,7 +341,7 @@ async function handleRequest(req: Request) {
             );
           }
           
-          recipientEmails = recipients.map(r => r.email);
+          recipientEmails = recipients?.map(r => r.email) || [];
           console.log(`Found ${recipientEmails.length} recipients`);
         } catch (recipientsError) {
           const errorLog = createErrorLog("PROCESSING_RECIPIENTS", recipientsError);
