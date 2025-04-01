@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { 
@@ -149,26 +150,14 @@ async function handleRequest(req: Request) {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
-    // Fetch the show details
+    // Fetch the show details - FIXED: Separate queries for shows and related items
     try {
       console.log("Fetching show details...");
+      
+      // First, fetch the show details
       const { data: show, error: showError } = await supabase
         .from("shows")
-        .select(`
-          id,
-          name,
-          date,
-          time,
-          items:show_items(
-            id,
-            name,
-            title,
-            is_break,
-            is_note,
-            is_divider,
-            interviewees(name, title)
-          )
-        `)
+        .select("id, name, date, time")
         .eq("id", showId)
         .single();
 
@@ -192,8 +181,39 @@ async function handleRequest(req: Request) {
           }
         );
       }
+      
+      // Then, fetch the show items separately
+      const { data: items, error: itemsError } = await supabase
+        .from("show_items")
+        .select(`
+          id,
+          name,
+          title,
+          is_break,
+          is_note,
+          is_divider,
+          interviewees(name, title)
+        `)
+        .eq("show_id", showId);
+        
+      if (itemsError) {
+        const errorLog = createErrorLog("FETCHING_SHOW_ITEMS", itemsError);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch show items", details: errorLog }),
+          { 
+            status: 500, 
+            headers: corsHeaders 
+          }
+        );
+      }
+      
+      // Combine the data
+      const showWithItems = {
+        ...show,
+        items: items || []
+      };
 
-      console.log(`Show found: ${show.name}, with ${show.items?.length || 0} items`);
+      console.log(`Show found: ${show.name}, with ${showWithItems.items?.length || 0} items`);
 
       // Fetch email settings
       const { data: emailSettings, error: settingsError } = await supabase
@@ -313,7 +333,7 @@ async function handleRequest(req: Request) {
       
       // Prepare email content
       const { subject, body } = prepareEmailContent(
-        show as ShowData, 
+        showWithItems as ShowData, 
         formattedDate, 
         lineupLink, 
         emailSettings

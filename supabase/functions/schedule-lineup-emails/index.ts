@@ -4,325 +4,335 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const functionStart = new Date();
+    console.log(`Function execution started at: ${functionStart.toISOString()}`);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error("Missing Supabase environment variables");
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    
-    // Log start time for debugging
-    const requestStartTime = new Date();
-    console.log(`Function execution started at: ${requestStartTime.toISOString()}`);
-    
+
     // Get timezone offset from system settings
     let timezoneOffset = 0;
     try {
-      const { data: offsetData, error: offsetError } = await supabase
+      const { data, error } = await supabase
         .from("system_settings")
         .select("value")
         .eq("key", "timezone_offset")
         .single();
         
-      if (!offsetError && offsetData && offsetData.value) {
-        timezoneOffset = parseInt(offsetData.value) || 0;
+      if (!error && data && data.value) {
+        timezoneOffset = parseInt(data.value);
         console.log(`Timezone offset from settings: ${timezoneOffset} hours`);
       }
-    } catch (offsetError) {
-      console.warn("Error fetching timezone offset, defaulting to 0:", offsetError);
+    } catch (error) {
+      console.warn("Error fetching timezone offset:", error);
     }
     
-    // Create date object for current time
+    // Current time calculation with timezone offset
     const now = new Date();
     console.log(`Raw server time: ${now.toISOString()}`);
     
-    // Calculate Israel time (UTC+3) without relying on client timezone
-    const israelOffset = 3; // Israel is UTC+3 (3 hours ahead of UTC)
+    const utcTime = now.getUTCHours() + ":" + now.getUTCMinutes().toString().padStart(2, '0');
+    console.log(`UTC time: ${utcTime}`);
     
-    // *** CRITICAL FIX: ENSURE TIME CALCULATIONS ARE CORRECT ***
-    // Get the current UTC time components
-    const utcHours = now.getUTCHours();
-    const utcMinutes = now.getUTCMinutes();
-    console.log(`UTC time: ${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
+    // Calculate Israel time (UTC+3, unless offset is different)
+    const israelHours = (now.getUTCHours() + 3) % 24;
+    const israelMinutes = now.getUTCMinutes();
+    const israelTime = `${israelHours.toString().padStart(2, '0')}:${israelMinutes.toString().padStart(2, '0')}`;
+    console.log(`Israel time (UTC+3): ${israelTime}`);
     
-    // First calculate Israel time (UTC+3)
-    const israelHours = (utcHours + israelOffset) % 24;
-    console.log(`Israel time (UTC+3): ${israelHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`);
+    // Apply custom timezone offset if configured
+    const adjustedHours = (now.getUTCHours() + (timezoneOffset || 3)) % 24;
+    const adjustedTime = `${adjustedHours.toString().padStart(2, '0')}:${israelMinutes.toString().padStart(2, '0')}`;
+    console.log(`Adjusted time with offset ${timezoneOffset}: ${adjustedTime}`);
     
-    // Then apply the user-defined timezone offset
-    // IMPORTANT FIX: Correctly apply timezone offset to avoid the 1-hour-early bug
-    const adjustedHours = (israelHours + timezoneOffset) % 24;
+    // Time range for checking (current minute)
+    const startTime = adjustedTime;
     
-    // Format the current time with the applied offset
-    const currentTimeString = `${adjustedHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}`;
-    console.log(`Adjusted time with offset ${timezoneOffset}: ${currentTimeString}`);
+    // Calculate end time (1 minute later)
+    const oneMinuteLater = new Date(now);
+    oneMinuteLater.setUTCMinutes(oneMinuteLater.getUTCMinutes() + 1);
+    const endHours = (oneMinuteLater.getUTCHours() + (timezoneOffset || 3)) % 24;
+    const endMinutes = oneMinuteLater.getUTCMinutes();
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
     
-    // Calculate time 1 minute ago for the window
-    let oneMinuteAgoMinutes = utcMinutes - 1;
-    let oneMinuteAgoHours = utcHours;
+    console.log(`Checking for shows between ${startTime} and ${endTime}`);
     
-    // Handle minute rollover
-    if (oneMinuteAgoMinutes < 0) {
-      oneMinuteAgoMinutes = 59;
-      oneMinuteAgoHours = (oneMinuteAgoHours - 1 + 24) % 24;
+    // Get day of week (0 = Sunday, 6 = Saturday)
+    const utcDayOfWeek = now.getUTCDay();
+    console.log(`UTC day of week: ${utcDayOfWeek}`);
+    
+    // Calculate Israel day of week
+    let israelDayOfWeek = utcDayOfWeek;
+    
+    // If Israel time crosses midnight compared to UTC
+    if (now.getUTCHours() + 3 >= 24) {
+      israelDayOfWeek = (utcDayOfWeek + 1) % 7;
     }
+    console.log(`Israel day of week: ${israelDayOfWeek}`);
     
-    // First calculate one minute ago in Israel time
-    const israelOneMinuteAgoHours = (oneMinuteAgoHours + israelOffset) % 24;
-    
-    // Then apply timezone offset to the one minute ago time
-    // IMPORTANT FIX: Correctly apply timezone offset to avoid the 1-hour-early bug
-    const adjustedOneMinuteAgoHours = (israelOneMinuteAgoHours + timezoneOffset) % 24;
-    const oneMinuteAgoTimeString = `${adjustedOneMinuteAgoHours.toString().padStart(2, '0')}:${oneMinuteAgoMinutes.toString().padStart(2, '0')}`;
-    
-    console.log(`Checking for shows between ${oneMinuteAgoTimeString} and ${currentTimeString}`);
-    
-    // Current day of week calculations
-    // First get the UTC day
-    const utcDay = now.getUTCDay();
-    console.log(`UTC day of week: ${utcDay}`);
-    
-    // Calculate the Israel day by potentially adjusting for day rollover
-    // IMPORTANT FIX: Properly handle day boundary crossing with Israel offset
-    let israelDay = utcDay;
-    if (utcHours + israelOffset >= 24) {
-      israelDay = (utcDay + 1) % 7;
+    // Apply timezone offset to day of week if needed
+    let adjustedDay = israelDayOfWeek;
+    if (timezoneOffset) {
+      // Calculate hours difference from Israel time
+      const hoursDiff = timezoneOffset - 3;
+      // If the difference crosses day boundary
+      if ((israelHours + hoursDiff) >= 24) {
+        adjustedDay = (israelDayOfWeek + 1) % 7;
+      } else if ((israelHours + hoursDiff) < 0) {
+        adjustedDay = (israelDayOfWeek - 1 + 7) % 7;
+      }
     }
-    console.log(`Israel day of week: ${israelDay}`);
-    
-    // Apply timezone offset that might affect the day
-    // IMPORTANT FIX: Properly handle day boundary crossing with timezone offset
-    let adjustedDay = israelDay;
-    
-    // If the timezone offset pushes us back a day (negative offset)
-    // or if it pushes us forward across day boundary
-    if (israelHours + timezoneOffset < 0) {
-      adjustedDay = (israelDay - 1 + 7) % 7;
-    } else if (israelHours + timezoneOffset >= 24) {
-      adjustedDay = (israelDay + 1) % 7;
-    }
-    
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
-    // Get all shows from Schedule slots for today that match the time window
-    const { data: slots, error: slotsError } = await supabase
-      .from("schedule_slots")
-      .select("id, show_name, start_time")
-      .eq("day_of_week", adjustedDay)
-      .eq("has_lineup", true)
-      .gte("start_time", oneMinuteAgoTimeString)
-      .lt("start_time", currentTimeString);
-    
-    if (slotsError) {
-      console.error("Error fetching schedule slots:", slotsError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch schedule slots" }),
-        { 
-          status: 500, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
-        }
-      );
-    }
-    
-    console.log(`Found ${slots?.length || 0} slots in the time window`);
-    
-    if (!slots || slots.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          message: "No shows to send emails for",
-          debug: {
-            serverTime: now.toISOString(),
-            utcTime: `${utcHours}:${utcMinutes}`,
-            israelTime: `${israelHours}:${utcMinutes}`,
-            adjustedTime: currentTimeString,
-            timezoneOffset,
-            adjustedDay,
-            searchWindow: {
-              start: oneMinuteAgoTimeString,
-              end: currentTimeString
-            }
-          }
-        }),
-        { 
-          status: 200, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
-        }
-      );
-    }
-    
-    const results = [];
-    
-    // For each slot, find the most recent show for the current date
-    for (const slot of slots) {
-      console.log(`Processing slot: ${slot.show_name} (${slot.start_time})`);
+    try {
+      // Query for schedule slots matching the current time and day
+      // First check if the schedule_slots table exists
+      const { error: tableCheckError } = await supabase.rpc(
+        'check_table_exists',
+        { table_name: 'schedule_slots' }
+      ).single();
       
-      // Get current date in YYYY-MM-DD format
-      // IMPORTANT FIX: Correct date calculation
-      const nowUtc = new Date();
-      
-      // Adjust for Israel and timezone offset
-      const totalOffsetHours = israelOffset + timezoneOffset;
-      
-      // Calculate if the date should roll forward or backward based on the offset
-      let dateAdjustment = 0;
-      if (utcHours + totalOffsetHours >= 24) {
-        dateAdjustment = 1; // Add a day
-      } else if (utcHours + totalOffsetHours < 0) {
-        dateAdjustment = -1; // Subtract a day
-      }
-      
-      // Create a new date object and adjust by the total offset
-      const adjustedDate = new Date(nowUtc);
-      adjustedDate.setUTCHours(nowUtc.getUTCHours() + totalOffsetHours);
-      
-      // Apply any date rollover
-      if (dateAdjustment !== 0) {
-        adjustedDate.setUTCDate(adjustedDate.getUTCDate() + dateAdjustment);
-      }
-      
-      const todayDate = adjustedDate.toISOString().slice(0, 10); // YYYY-MM-DD
-      
-      console.log(`Looking for shows on date: ${todayDate}`);
-      
-      // Get the most recent show associated with this slot for today's date
-      const { data: shows, error: showsError } = await supabase
-        .from("shows")
-        .select("id, name, date")
-        .eq("slot_id", slot.id)
-        .eq("date", todayDate) // Filter for today's date explicitly
-        .order("created_at", { ascending: false })
-        .limit(1);
-      
-      if (showsError) {
-        console.error(`Error fetching shows for slot ${slot.id}:`, showsError);
-        results.push({
-          slot: slot.id,
-          success: false,
-          error: "Failed to fetch shows for slot"
-        });
-        continue;
-      }
-      
-      if (!shows || shows.length === 0) {
-        console.log(`No shows found for slot ${slot.id} on date ${todayDate}`);
-        
-        // If no show found for today, log the issue and skip this slot
-        results.push({
-          slot: slot.id,
-          success: false,
-          error: `No shows found for slot on date ${todayDate}`
-        });
-        continue;
-      }
-      
-      const show = shows[0];
-      console.log(`Found show: ${show.name} (${show.id}) for date ${show.date}`);
-      
-      // Check if we've already sent an email for this show
-      const { data: logs, error: logsError } = await supabase
-        .from("show_email_logs")
-        .select("id, success")
-        .eq("show_id", show.id);
-      
-      if (logsError) {
-        console.error(`Error fetching email logs for show ${show.id}:`, logsError);
-        results.push({
-          show: show.id,
-          success: false,
-          error: "Failed to fetch email logs"
-        });
-        continue;
-      }
-      
-      // Skip if we've already sent an email for this show
-      if (logs && logs.length > 0 && logs[0].success) {
-        console.log(`Email already sent for show ${show.id}`);
-        results.push({
-          show: show.id,
-          success: false,
-          error: "Email already sent"
-        });
-        continue;
-      }
-      
-      // Send email for this show
-      try {
-        console.log(`Sending email for show ${show.id}`);
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/send-lineup-email`,
-          {
-            method: "POST",
+      if (tableCheckError) {
+        console.error("Error checking if schedule_slots table exists:", tableCheckError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: "Schedule slots table does not exist",
+            error: tableCheckError
+          }),
+          { 
+            status: 200,
             headers: {
+              ...corsHeaders,
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${supabaseAnonKey}`
             },
-            body: JSON.stringify({ showId: show.id })
           }
         );
-        
-        const result = await response.json();
-        
-        if (!response.ok) {
-          console.error(`Error sending email for show ${show.id}:`, result);
-          results.push({
-            show: show.id,
-            success: false,
-            error: result.error || "Failed to send email"
-          });
-          continue;
-        }
-        
-        console.log(`Email sent successfully for show ${show.id}`);
-        results.push({
-          show: show.id,
-          success: true
-        });
-      } catch (error) {
-        console.error(`Error calling send-lineup-email for show ${show.id}:`, error);
-        results.push({
-          show: show.id,
-          success: false,
-          error: error.message
-        });
       }
+      
+      const { data: scheduleSlots, error: scheduleSlotsError } = await supabase
+        .from("schedule_slots")
+        .select(`
+          id,
+          day_of_week,
+          start_time,
+          end_time,
+          show_name,
+          host_name,
+          shows (id, name, date)
+        `)
+        .eq("day_of_week", adjustedDay)
+        .gte("start_time", startTime)
+        .lt("start_time", endTime)
+        .order("start_time");
+      
+      if (scheduleSlotsError) {
+        console.error("Error fetching schedule slots:", scheduleSlotsError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: "Failed to fetch schedule slots",
+            error: scheduleSlotsError
+          }),
+          { 
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+      
+      console.log(`Found ${scheduleSlots.length} schedule slots in the current time range`);
+      
+      const results = [];
+      
+      // For each slot, find the most recent show and send its lineup
+      for (const slot of scheduleSlots) {
+        try {
+          // Get today's date in YYYY-MM-DD format
+          const today = new Date();
+          today.setUTCHours(today.getUTCHours() + (timezoneOffset || 3));
+          const todayFormatted = today.toISOString().split('T')[0];
+          
+          console.log(`Processing schedule slot: ${slot.show_name} at ${slot.start_time}`);
+          
+          // Get the most recent show for this slot
+          const { data: recentShows, error: recentShowsError } = await supabase
+            .from("shows")
+            .select("id, name, date")
+            .eq("date", todayFormatted)
+            .ilike("name", `%${slot.show_name}%`)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          if (recentShowsError) {
+            console.error(`Error fetching recent show for slot ${slot.id}:`, recentShowsError);
+            results.push({
+              slot_id: slot.id,
+              success: false,
+              error: recentShowsError.message
+            });
+            continue;
+          }
+          
+          // If no show found for today, check for linked shows in the schedule slot
+          let showToSend = null;
+          
+          if (recentShows && recentShows.length > 0) {
+            showToSend = recentShows[0];
+            console.log(`Found today's show: ${showToSend.name} (${showToSend.id})`);
+          } else if (slot.shows && slot.shows.length > 0) {
+            showToSend = slot.shows[0];
+            console.log(`Using linked show: ${showToSend.name} (${showToSend.id})`);
+          } else {
+            console.log(`No show found for slot: ${slot.show_name}`);
+            results.push({
+              slot_id: slot.id,
+              success: false,
+              error: "No show found"
+            });
+            continue;
+          }
+          
+          // Check if email was already sent for this show
+          const { data: emailLog, error: emailLogError } = await supabase
+            .from("show_email_logs")
+            .select("*")
+            .eq("show_id", showToSend.id)
+            .limit(1);
+          
+          if (emailLogError) {
+            console.error(`Error checking email log for show ${showToSend.id}:`, emailLogError);
+          }
+          
+          if (emailLog && emailLog.length > 0) {
+            console.log(`Email already sent for show ${showToSend.name} (${showToSend.id})`);
+            results.push({
+              slot_id: slot.id,
+              show_id: showToSend.id,
+              success: true,
+              message: "Email already sent"
+            });
+            continue;
+          }
+          
+          // Send email with lineup
+          console.log(`Sending email for show ${showToSend.name} (${showToSend.id})`);
+          
+          try {
+            const sendEmailResponse = await fetch(`${supabaseUrl}/functions/v1/send-lineup-email`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${supabaseAnonKey}`
+              },
+              body: JSON.stringify({
+                showId: showToSend.id
+              })
+            });
+            
+            const responseData = await sendEmailResponse.json();
+            
+            if (sendEmailResponse.ok) {
+              console.log(`Successfully sent email for show ${showToSend.name} (${showToSend.id})`);
+              results.push({
+                slot_id: slot.id,
+                show_id: showToSend.id,
+                success: true
+              });
+            } else {
+              console.error(`Failed to send email for show ${showToSend.name} (${showToSend.id}):`, responseData);
+              results.push({
+                slot_id: slot.id,
+                show_id: showToSend.id,
+                success: false,
+                error: responseData.error || "Unknown error"
+              });
+            }
+          } catch (sendError) {
+            console.error(`Error sending email for show ${showToSend.name} (${showToSend.id}):`, sendError);
+            results.push({
+              slot_id: slot.id,
+              show_id: showToSend.id,
+              success: false,
+              error: sendError.message
+            });
+          }
+        } catch (slotError) {
+          console.error(`Error processing slot ${slot.id}:`, slotError);
+          results.push({
+            slot_id: slot.id,
+            success: false,
+            error: slotError.message
+          });
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          time_checked: adjustedTime,
+          day_checked: adjustedDay,
+          slots_count: scheduleSlots.length,
+          results
+        }),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Error in schedule-lineup-emails function:", error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: "Error in schedule-lineup-emails function",
+          error: error.message
+        }),
+        { 
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
-    
+  } catch (error) {
+    console.error("Critical error in schedule-lineup-emails function:", error);
     return new Response(
       JSON.stringify({ 
-        results, 
-        executionTime: new Date().getTime() - requestStartTime.getTime(),
-        debug: {
-          serverTime: now.toISOString(),
-          utcTime: `${utcHours}:${utcMinutes}`,
-          israelTime: `${israelHours}:${utcMinutes}`,
-          adjustedTime: currentTimeString,
-          timezoneOffset,
-          adjustedDay,
-          searchWindow: {
-            start: oneMinuteAgoTimeString,
-            end: currentTimeString
-          }
-        }
+        success: false, 
+        message: "Critical error in schedule-lineup-emails function",
+        error: error.message
       }),
       { 
-        status: 200, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
-      }
-    );
-  } catch (error) {
-    console.error("Error in schedule-lineup-emails function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   }
