@@ -104,24 +104,27 @@ serve(async (req) => {
       // Check if schedule_slots table exists using a direct query
       console.log("Checking if schedule_slots table exists...");
       
-      const { data: tables, error: tablesError } = await supabase
-        .rpc('check_table_exists', { table_name: 'schedule_slots' });
-      
-      if (tablesError) {
-        console.error("Error checking if schedule_slots table exists:", tablesError);
+      // Use a direct query to check if the table exists
+      const { count, error: countError } = await supabase
+        .from('schedule_slots')
+        .select('*', { count: 'exact', head: true });
         
-        // Fallback method - try to query the table directly
-        const { count, error: countError } = await supabase
-          .from('schedule_slots')
+      if (countError) {
+        console.error("Error checking if schedule_slots table exists:", countError);
+        console.log("Trying to use schedule_slots_old table instead...");
+        
+        // Try with the schedule_slots_old table
+        const { count: oldCount, error: oldCountError } = await supabase
+          .from('schedule_slots_old')
           .select('*', { count: 'exact', head: true });
           
-        if (countError) {
-          console.error("Fallback check also failed:", countError);
+        if (oldCountError) {
+          console.error("Error checking schedule_slots_old table:", oldCountError);
           return new Response(
             JSON.stringify({ 
               success: false, 
-              message: "Could not verify if schedule_slots table exists",
-              error: tablesError
+              message: "Could not find the schedule slots table",
+              error: oldCountError
             }),
             { 
               status: 200,
@@ -132,63 +135,78 @@ serve(async (req) => {
             }
           );
         }
-
-        console.log("Fallback check succeeded, schedule_slots table exists");
-      } else {
-        const scheduleSlotsExists = tables === true;
-        console.log("Schedule slots table exists:", scheduleSlotsExists);
-
-        if (!scheduleSlotsExists) {
-          console.log("Schedule slots table does not exist");
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "Schedule slots table does not exist"
-            }),
-            { 
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-        }
+        
+        console.log("Using schedule_slots_old table instead");
       }
       
       // Query for schedule slots matching the current time and day
-      const { data: scheduleSlots, error: scheduleSlotsError } = await supabase
-        .from("schedule_slots")
-        .select(`
-          id,
-          day_of_week,
-          start_time,
-          end_time,
-          show_name,
-          host_name,
-          shows (id, name, date)
-        `)
-        .eq("day_of_week", adjustedDay)
-        .gte("start_time", startTime)
-        .lt("start_time", endTime)
-        .order("start_time");
+      // First try with schedule_slots
+      let scheduleSlots;
+      let scheduleSlotsError;
       
+      try {
+        const response = await supabase
+          .from("schedule_slots")
+          .select(`
+            id,
+            day_of_week,
+            start_time,
+            end_time,
+            show_name,
+            host_name,
+            shows (id, name, date)
+          `)
+          .eq("day_of_week", adjustedDay)
+          .gte("start_time", startTime)
+          .lt("start_time", endTime)
+          .order("start_time");
+          
+        scheduleSlots = response.data;
+        scheduleSlotsError = response.error;
+      } catch (error) {
+        console.error("Error fetching schedule_slots:", error);
+        scheduleSlotsError = error;
+      }
+      
+      // If there was an error, try with schedule_slots_old
       if (scheduleSlotsError) {
-        console.error("Error fetching schedule slots:", scheduleSlotsError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: "Failed to fetch schedule slots",
-            error: scheduleSlotsError
-          }),
-          { 
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        console.log("Trying schedule_slots_old table...");
+        const response = await supabase
+          .from("schedule_slots_old")
+          .select(`
+            id,
+            day_of_week,
+            start_time,
+            end_time,
+            show_name,
+            host_name,
+            shows:shows_backup (id, name, date)
+          `)
+          .eq("day_of_week", adjustedDay)
+          .gte("start_time", startTime)
+          .lt("start_time", endTime)
+          .order("start_time");
+          
+        scheduleSlots = response.data;
+        scheduleSlotsError = response.error;
+        
+        if (scheduleSlotsError) {
+          console.error("Error fetching schedule slots from both tables:", scheduleSlotsError);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              message: "Failed to fetch schedule slots",
+              error: scheduleSlotsError
+            }),
+            { 
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
       }
       
       console.log(`Found ${scheduleSlots?.length || 0} schedule slots in the current time range`);
