@@ -150,22 +150,28 @@ async function handleRequest(req: Request) {
       console.warn("Error fetching app domain, will use request origin:", domainError);
     }
 
-    // First, verify that the shows table exists
+    // Check if shows table exists without using the function
     try {
-      const { data: showsTableExists, error: tableCheckError } = await supabase.rpc(
-        'check_table_exists',
-        { table_name: 'shows' }
-      ).single();
+      console.log("Checking if shows table exists directly...");
+      const { data: showsExistsResult, error: showsExistsError } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .eq('table_name', 'shows')
+        .maybeSingle();
 
-      if (tableCheckError) {
-        console.error("Error checking if shows table exists:", tableCheckError);
+      if (showsExistsError) {
+        console.error("Error checking if shows table exists:", showsExistsError);
         return new Response(
-          JSON.stringify({ error: "Error checking if shows table exists", details: tableCheckError }),
+          JSON.stringify({ error: "Error checking if shows table exists", details: showsExistsError }),
           { status: 500, headers: corsHeaders }
         );
       }
 
-      if (!showsTableExists) {
+      const showsExists = !!showsExistsResult;
+      console.log("Shows table exists:", showsExists);
+
+      if (!showsExists) {
         console.log("Shows table does not exist");
         return new Response(
           JSON.stringify({ error: "Shows table does not exist" }),
@@ -214,21 +220,26 @@ async function handleRequest(req: Request) {
       
       console.log("Retrieved show:", show);
       
-      // Check if show_items table exists
-      const { data: itemsTableExists, error: itemsTableCheckError } = await supabase.rpc(
-        'check_table_exists',
-        { table_name: 'show_items' }
-      ).single();
-      
-      if (itemsTableCheckError) {
-        console.error("Error checking if show_items table exists:", itemsTableCheckError);
+      // Check if show_items table exists without using the function
+      const { data: itemsExistsResult, error: itemsExistsError } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .eq('table_name', 'show_items')
+        .maybeSingle();
+        
+      if (itemsExistsError) {
+        console.error("Error checking if show_items table exists:", itemsExistsError);
         return new Response(
-          JSON.stringify({ error: "Error checking if show_items table exists", details: itemsTableCheckError }),
+          JSON.stringify({ error: "Error checking if show_items table exists", details: itemsExistsError }),
           { status: 500, headers: corsHeaders }
         );
       }
 
-      if (!itemsTableExists) {
+      const itemsExists = !!itemsExistsResult;
+      console.log("Show items table exists:", itemsExists);
+      
+      if (!itemsExists) {
         console.log("Show items table does not exist");
         return new Response(
           JSON.stringify({ error: "Show items table does not exist" }),
@@ -274,7 +285,7 @@ async function handleRequest(req: Request) {
         .from("email_settings")
         .select("*")
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (settingsError) {
         const errorLog = createErrorLog("FETCHING_EMAIL_SETTINGS", settingsError);

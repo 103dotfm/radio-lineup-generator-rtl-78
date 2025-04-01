@@ -7,7 +7,7 @@ BEGIN
     SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public'
-        AND table_name = $1
+        AND table_name = table_name
     ) INTO exists_val;
     
     RETURN exists_val;
