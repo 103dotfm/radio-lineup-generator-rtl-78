@@ -76,7 +76,10 @@ export const sendViaGmailApi = async (
     
     console.log("Creating email message");
     
-    const from = `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`;
+    // Sender name needs special encoding for non-Latin characters
+    const senderName = mimeEncode(emailSettings.sender_name);
+    const from = `${senderName} <${emailSettings.sender_email}>`;
+    
     // Use first recipient in To field
     const to = recipientEmails[0];
     // Use remaining recipients in BCC
@@ -87,8 +90,19 @@ export const sendViaGmailApi = async (
     console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
     // Properly encode subject with UTF-8 support
-    const encodedSubject = "=?UTF-8?B?" + encodeBase64Url(new TextEncoder().encode(subject)) + "?=";
+    const encodedSubject = mimeEncode(subject);
     
+    // Debug logging 
+    console.log("Sender:", { 
+      raw: emailSettings.sender_name,
+      encoded: senderName
+    });
+    console.log("Subject:", {
+      raw: subject,
+      encoded: encodedSubject
+    });
+    
+    // Properly format the MIME email with RTL support for HTML content
     const emailLines = [
       `From: ${from}`,
       `To: ${to}`,
@@ -96,17 +110,18 @@ export const sendViaGmailApi = async (
       `Subject: ${encodedSubject}`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: quoted-printable',
+      'Content-Transfer-Encoding: base64',
       '',
-      body
+      encodeBase64ForEmail(body) // Base64 encode the body with proper line breaks
     ].filter(line => line !== ""); // Remove empty lines (in case BCC is empty)
     
     const email = emailLines.join('\r\n');
     
-    // Properly encode the email body with UTF-8 support
-    const encodedEmail = encodeBase64Url(new TextEncoder().encode(email));
+    console.log("Preparing to send email via Gmail API");
+    console.log("Email content length:", email.length);
     
-    console.log("Sending email via Gmail API");
+    // Encode the entire email for the Gmail API
+    const encodedEmail = encodeBase64Url(new TextEncoder().encode(email));
     
     try {
       const res = await gmail.users.messages.send({
@@ -159,4 +174,33 @@ function encodeBase64Url(data: Uint8Array): string {
   
   // Convert to base64url encoding (replace '+' with '-', '/' with '_', and remove '=')
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// MIME encode text (for subject and sender name with UTF-8 support)
+function mimeEncode(text: string): string {
+  // Convert text to UTF-8 binary data
+  const encoded = encodeBase64(new TextEncoder().encode(text));
+  return `=?UTF-8?B?${encoded}?=`;
+}
+
+// Standard base64 encoding without URL safe conversion
+function encodeBase64(data: Uint8Array): string {
+  let binaryString = '';
+  for (let i = 0; i < data.length; i++) {
+    binaryString += String.fromCharCode(data[i]);
+  }
+  return btoa(binaryString);
+}
+
+// Encode HTML body content for email with proper line breaks
+function encodeBase64ForEmail(text: string): string {
+  const encoded = encodeBase64(new TextEncoder().encode(text));
+  
+  // Gmail API requires base64 encoded content to have lines no longer than 76 characters
+  let result = '';
+  for (let i = 0; i < encoded.length; i += 76) {
+    result += encoded.substring(i, i + 76) + '\r\n';
+  }
+  
+  return result;
 }
