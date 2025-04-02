@@ -105,33 +105,34 @@ export const sendViaGmailApi = async (
     // Log a sample of the HTML body for debugging
     console.log("Email body sample (first 100 chars):", body.substring(0, 100));
     
-    // Properly format the MIME email with RTL support for HTML content
-    const emailLines = [
+    // Create raw RFC 2822 formatted email
+    const message = [
       `From: ${from}`,
       `To: ${to}`,
-      bccHeader, // Add BCC header conditionally
+      bccHeader ? `Bcc: ${bcc}` : '',
       `Subject: ${encodedSubject}`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
       '',
-      encodeBase64ForEmail(body) // Base64 encode the body with proper line breaks
-    ].filter(line => line !== ""); // Remove empty lines (in case BCC is empty)
+      body
+    ].filter(Boolean).join('\r\n');
     
-    const email = emailLines.join('\r\n');
+    console.log("Preparing email with length:", message.length);
+    console.log("Email headers sample:", message.substring(0, 200));
     
-    console.log("Preparing to send email via Gmail API");
-    console.log("Email content length:", email.length);
-    console.log("Email headers:", emailLines.slice(0, 6).join('\r\n'));
+    // Base64Url encode the email for the Gmail API
+    const base64EncodedEmail = btoa(
+      new Uint8Array(new TextEncoder().encode(message))
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    ).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     
-    // Encode the entire email for the Gmail API
-    const encodedEmail = encodeBase64Url(email);
+    console.log("Base64 encoded email length:", base64EncodedEmail.length);
     
     try {
       const res = await gmail.users.messages.send({
         userId: 'me',
         requestBody: {
-          raw: encodedEmail
+          raw: base64EncodedEmail
         }
       });
       
@@ -165,92 +166,14 @@ export const sendViaGmailApi = async (
   }
 };
 
-// Helper function to properly encode binary data to base64url format for Gmail API
-function encodeBase64Url(text: string): string {
-  // First encode the text to UTF-8
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  
-  // Convert the binary data to a string where each character is the code point
-  let binaryString = '';
-  for (let i = 0; i < data.length; i++) {
-    binaryString += String.fromCharCode(data[i]);
-  }
-  
-  // Use btoa to encode to base64
-  let base64;
-  try {
-    base64 = btoa(binaryString);
-  } catch (e) {
-    console.error("Error during base64 encoding:", e);
-    // If btoa fails, use a more manual approach for non-Latin1 characters
-    base64 = manualBase64Encode(data);
-  }
-  
-  // Convert to base64url encoding (replace '+' with '-', '/' with '_', and remove '=')
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 // MIME encode text (for subject and sender name with UTF-8 support)
 function mimeEncode(text: string): string {
   // Convert text to UTF-8 binary data
-  const encoded = encodeBase64(text);
-  return `=?UTF-8?B?${encoded}?=`;
-}
-
-// Standard base64 encoding for UTF-8 text
-function encodeBase64(text: string): string {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  
-  let binaryString = '';
-  for (let i = 0; i < data.length; i++) {
-    binaryString += String.fromCharCode(data[i]);
-  }
-  
-  try {
-    return btoa(binaryString);
-  } catch (e) {
-    console.error("Error in encodeBase64:", e);
-    return manualBase64Encode(data);
-  }
-}
-
-// Encode HTML body content for email with proper line breaks
-function encodeBase64ForEmail(text: string): string {
-  const encoded = encodeBase64(text);
-  
-  // Gmail API requires base64 encoded content to have lines no longer than 76 characters
-  let result = '';
-  for (let i = 0; i < encoded.length; i += 76) {
-    result += encoded.substring(i, i + 76) + '\r\n';
-  }
-  
-  return result;
-}
-
-// Manual base64 encoding for cases where btoa fails with non-Latin1 characters
-function manualBase64Encode(data: Uint8Array): string {
-  const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  let result = '';
-  const len = data.length;
-  
-  for (let i = 0; i < len; i += 3) {
-    result += b64chars[data[i] >> 2];
-    if (i + 1 < len) {
-      result += b64chars[((data[i] & 3) << 4) | (data[i + 1] >> 4)];
-      if (i + 2 < len) {
-        result += b64chars[((data[i + 1] & 15) << 2) | (data[i + 2] >> 6)];
-        result += b64chars[data[i + 2] & 63];
-      } else {
-        result += b64chars[(data[i + 1] & 15) << 2];
-        result += '=';
-      }
-    } else {
-      result += b64chars[(data[i] & 3) << 4];
-      result += '==';
-    }
-  }
-  
-  return result;
+  const utf8Encoded = new TextEncoder().encode(text);
+  const base64Encoded = btoa(
+    Array.from(utf8Encoded)
+      .map(byte => String.fromCharCode(byte))
+      .join('')
+  );
+  return `=?UTF-8?B?${base64Encoded}?=`;
 }
