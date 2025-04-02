@@ -79,9 +79,13 @@ export const sendViaSmtp = async (
       to: recipientEmails[0], // First recipient goes in TO
       subject: subject,
       html: body, // Explicitly set as HTML content
-      headers: {
-        'Content-Type': 'text/html; charset=UTF-8'
-      }
+      // Remove Content-Type header - let nodemailer set it correctly
+      alternatives: [
+        {
+          contentType: 'text/html; charset=utf-8',
+          content: body
+        }
+      ]
     };
     
     // Add BCC if more than one recipient
@@ -100,6 +104,7 @@ export const sendViaSmtp = async (
       htmlLength: body.length
     });
     console.log("Using BCC for multiple recipients to avoid duplicate emails");
+    console.log("Content-Type being used: text/html; charset=utf-8");
     
     const info = await transporter.sendMail(mailOptions);
 
