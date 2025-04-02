@@ -90,7 +90,7 @@ export const sendViaGmailApi = async (
       `From: ${from}`,
       `To: ${to}`,
       bccHeader, // Add BCC header conditionally
-      `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+      `Subject: =?UTF-8?B?${btoa(subject)}?=`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: quoted-printable',
@@ -100,7 +100,10 @@ export const sendViaGmailApi = async (
     
     const email = emailLines.join('\r\n');
     
-    const encodedEmail = Buffer.from(email).toString('base64')
+    // Use TextEncoder instead of Buffer for base64 encoding
+    const encoder = new TextEncoder();
+    const emailBytes = encoder.encode(email);
+    const encodedEmail = btoa(String.fromCharCode(...new Uint8Array(emailBytes)))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
