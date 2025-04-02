@@ -109,7 +109,7 @@ export const sendViaGmailApi = async (
     const message = [
       `From: ${from}`,
       `To: ${to}`,
-      bccHeader ? `Bcc: ${bcc}` : '',
+      bccHeader,
       `Subject: ${encodedSubject}`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
@@ -118,12 +118,17 @@ export const sendViaGmailApi = async (
     ].filter(Boolean).join('\r\n');
     
     console.log("Preparing email with length:", message.length);
-    console.log("Email headers sample:", message.substring(0, 200));
+    console.log("Email headers sample:", message.substring(0, 200).replace(/\r\n/g, " | "));
     
-    // Base64Url encode the email for the Gmail API
+    // Convert the message to an array of bytes
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(message);
+    
+    // Convert to base64url format as required by Gmail API
     const base64EncodedEmail = btoa(
-      new Uint8Array(new TextEncoder().encode(message))
-        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+      Array.from(bytes)
+        .map(byte => String.fromCharCode(byte))
+        .join('')
     ).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     
     console.log("Base64 encoded email length:", base64EncodedEmail.length);

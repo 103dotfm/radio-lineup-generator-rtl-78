@@ -46,6 +46,11 @@ export const prepareEmailContent = (
   subject = subject.replace(/{{show_date}}/g, formattedDate);
   subject = subject.replace(/{{show_time}}/g, show.time || "");
   
+  // Create button HTML with proper styles that won't break when rendered
+  const viewLineupButton = `
+    <a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold;">לצפייה בליינאפ</a>
+  `;
+  
   // Create email body with enhanced RTL and Hebrew support
   let body = `
 <!DOCTYPE html>
@@ -99,19 +104,6 @@ export const prepareEmailContent = (
       margin-top: 30px;
       text-align: center;
     }
-    .btn-link {
-      background-color: #4CAF50;
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-      font-size: 16px;
-      margin: 4px 2px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
   </style>
 </head>
 <body>
@@ -121,7 +113,7 @@ export const prepareEmailContent = (
       .replace(/{{show_date}}/g, formattedDate)
       .replace(/{{show_time}}/g, show.time || "")
       .replace(/{{interviewees_list}}/g, intervieweesList)
-      .replace(/{{lineup_link}}/g, `<div class="link-section"><a href="${lineupLink}" class="btn-link">לצפייה בליינאפ</a></div>`)}
+      .replace(/{{lineup_link}}/g, `<div class="link-section">${viewLineupButton}</div>`)}
   </div>
 </body>
 </html>
