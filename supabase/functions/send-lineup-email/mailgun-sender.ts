@@ -48,16 +48,27 @@ export const sendViaMailgun = async (
       "Content-Type": "application/x-www-form-urlencoded",
     });
     
-    // Create form data for the request
+    // Create form data for the request - FIX: Use BCC instead of multiple TO recipients
     const formData = new URLSearchParams();
     formData.append("from", `${emailSettings.sender_name} <${emailSettings.sender_email}>`);
-    formData.append("to", recipientEmails.join(","));
+    
+    // Use the first recipient as the "to" field and the rest as BCC
+    if (recipientEmails.length > 0) {
+      formData.append("to", recipientEmails[0]);
+      
+      // Add remaining recipients as BCC to prevent multiple emails
+      if (recipientEmails.length > 1) {
+        formData.append("bcc", recipientEmails.slice(1).join(","));
+      }
+    }
+    
     formData.append("subject", subject);
     formData.append("html", body);
     
     // Log the request URL
     const requestUrl = `${mailgunApiBase}/${domain}/messages`;
     console.log(`Making Mailgun API request to: ${requestUrl}`);
+    console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
     // Make the request
     const response = await fetch(requestUrl, {

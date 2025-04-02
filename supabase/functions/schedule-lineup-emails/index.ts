@@ -33,7 +33,7 @@ serve(async (req) => {
         .from("system_settings")
         .select("value")
         .eq("key", "timezone_offset")
-        .single();
+        .maybeSingle();
         
       if (!error && data && data.value) {
         timezoneOffset = parseInt(data.value);
@@ -100,7 +100,7 @@ serve(async (req) => {
     }
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
-    // Query for schedule slots from schedule_slots_old table (always use this table)
+    // Query for schedule slots - ALWAYS use schedule_slots_old table
     console.log("Querying schedule_slots_old table...");
     const { data: scheduleSlots, error: scheduleSlotsError } = await supabase
       .from("schedule_slots_old")

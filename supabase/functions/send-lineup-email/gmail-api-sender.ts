@@ -77,18 +77,26 @@ export const sendViaGmailApi = async (
     console.log("Creating email message");
     
     const from = `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`;
-    const to = recipientEmails.join(", ");
+    // Use first recipient in To field
+    const to = recipientEmails[0];
+    // Use remaining recipients in BCC
+    const bcc = recipientEmails.length > 1 ? recipientEmails.slice(1).join(", ") : "";
+    
+    // Add BCC header if needed
+    const bccHeader = bcc ? `Bcc: ${bcc}\r\n` : "";
+    console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
     const emailLines = [
       `From: ${from}`,
       `To: ${to}`,
+      bccHeader, // Add BCC header conditionally
       `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: quoted-printable',
       '',
       body
-    ];
+    ].filter(line => line !== ""); // Remove empty lines (in case BCC is empty)
     
     const email = emailLines.join('\r\n');
     
