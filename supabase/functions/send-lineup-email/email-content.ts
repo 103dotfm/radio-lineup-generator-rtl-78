@@ -46,22 +46,86 @@ export const prepareEmailContent = (
   subject = subject.replace(/{{show_date}}/g, formattedDate);
   subject = subject.replace(/{{show_time}}/g, show.time || "");
   
-  // Create email body
-  let body = `<div dir="rtl" style="direction: rtl; text-align: right; font-family: Arial, sans-serif;">
+  // Create email body with enhanced RTL and Hebrew support
+  let body = `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body, table, td, p, a, li, blockquote {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      direction: rtl;
+      text-align: right;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+    }
+    body {
+      height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+    }
+    a {
+      color: #0000FF;
+    }
+    .content {
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .header {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .interviewees {
+      margin-bottom: 20px;
+    }
+    .link-section {
+      margin-top: 30px;
+      text-align: center;
+    }
+    .btn-link {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
     ${emailSettings.body_template
       .replace(/{{show_name}}/g, show.name)
       .replace(/{{show_date}}/g, formattedDate)
       .replace(/{{show_time}}/g, show.time || "")
       .replace(/{{interviewees_list}}/g, intervieweesList)
-      .replace(/{{lineup_link}}/g, lineupLink)}
-  </div>`;
-  
-  // Apply RTL styling to all elements
-  const rtlElements = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'span', 'a', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th'];
-  rtlElements.forEach(element => {
-    const regex = new RegExp(`<${element}(\\s[^>]*|)>`, 'g');
-    body = body.replace(regex, `<${element}$1 style="direction: rtl; text-align: right;">`);
-  });
+      .replace(/{{lineup_link}}/g, `<div class="link-section"><a href="${lineupLink}" class="btn-link">לצפייה בליינאפ</a></div>`)}
+  </div>
+</body>
+</html>
+  `;
 
   return { subject, body };
 };
