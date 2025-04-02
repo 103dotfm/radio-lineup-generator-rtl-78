@@ -31,7 +31,7 @@ const GoogleAuthRedirect = () => {
         // Get the Gmail settings to use for the token exchange
         const { data: emailSettings, error: settingsError } = await supabase
           .from('email_settings')
-          .select('gmail_client_id, gmail_client_secret, gmail_redirect_uri')
+          .select('id, gmail_client_id, gmail_client_secret, gmail_redirect_uri')
           .single();
           
         if (settingsError) {
@@ -40,7 +40,7 @@ const GoogleAuthRedirect = () => {
           return;
         }
         
-        if (!emailSettings.gmail_client_id || !emailSettings.gmail_client_secret || !emailSettings.gmail_redirect_uri) {
+        if (!emailSettings || !emailSettings.gmail_client_id || !emailSettings.gmail_client_secret || !emailSettings.gmail_redirect_uri) {
           setStatus('error');
           setErrorDetails('Gmail settings are incomplete. Please check your Gmail configuration in the admin panel.');
           return;
@@ -91,7 +91,7 @@ const GoogleAuthRedirect = () => {
         
         console.log('Successfully received tokens from Gmail API');
         
-        // Save the tokens to the database
+        // Save the tokens to the database using the UUID from our query
         const { error: updateError } = await supabase
           .from('email_settings')
           .update({
@@ -99,7 +99,7 @@ const GoogleAuthRedirect = () => {
             gmail_access_token: data.accessToken,
             gmail_token_expiry: data.expiryDate
           })
-          .eq('id', '1');  // Using string ID '1' since that's how it's stored
+          .eq('id', emailSettings.id);  // Use the UUID we retrieved
           
         if (updateError) {
           console.error('Failed to save tokens:', updateError);
