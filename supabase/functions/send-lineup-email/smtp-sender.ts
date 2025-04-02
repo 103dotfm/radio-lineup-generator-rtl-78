@@ -71,9 +71,10 @@ export const sendViaSmtp = async (
     }
 
     console.log("Sending email...");
-    const mailOptions = {
+    // Fix: Use the first recipient in the "to" field and the rest in "bcc"
+    let mailOptions = {
       from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
-      to: recipientEmails.join(", "),
+      to: recipientEmails[0], // First recipient goes in TO
       subject: subject,
       html: body,
       headers: {
@@ -81,12 +82,22 @@ export const sendViaSmtp = async (
       }
     };
     
+    // Add BCC if more than one recipient
+    if (recipientEmails.length > 1) {
+      mailOptions = {
+        ...mailOptions,
+        bcc: recipientEmails.slice(1).join(", ") // Rest of recipients go in BCC
+      };
+    }
+    
     console.log("Mail options:", {
       from: mailOptions.from,
       to: mailOptions.to,
+      bcc: mailOptions.bcc ? `${recipientEmails.length - 1} recipients` : 'none',
       subject: mailOptions.subject,
       htmlLength: mailOptions.html.length
     });
+    console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
     const info = await transporter.sendMail(mailOptions);
 

@@ -383,7 +383,7 @@ export type Database = {
             foreignKeyName: "show_email_logs_show_id_fkey"
             columns: ["show_id"]
             isOneToOne: true
-            referencedRelation: "shows_todelete"
+            referencedRelation: "shows_backup"
             referencedColumns: ["id"]
           },
         ]

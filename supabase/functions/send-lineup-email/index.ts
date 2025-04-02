@@ -123,7 +123,7 @@ async function handleRequest(req: Request) {
         .from("system_settings")
         .select("value")
         .eq("key", "timezone_offset")
-        .single();
+        .maybeSingle();
         
       if (!offsetError && offsetData && offsetData.value) {
         timezoneOffset = parseInt(offsetData.value) || 0;
@@ -140,7 +140,7 @@ async function handleRequest(req: Request) {
         .from("system_settings")
         .select("value")
         .eq("key", "app_domain")
-        .single();
+        .maybeSingle();
         
       if (!domainError && domainData && domainData.value) {
         appDomain = domainData.value;
@@ -159,7 +159,7 @@ async function handleRequest(req: Request) {
         .from("shows_backup")
         .select("id, name, date, time")
         .eq("id", showId)
-        .maybeSingle();  // Changed from single() to maybeSingle()
+        .maybeSingle();
 
       if (showError) {
         const errorLog = createErrorLog("FETCHING_SHOW", showError);
@@ -226,7 +226,7 @@ async function handleRequest(req: Request) {
         .from("email_settings")
         .select("*")
         .limit(1)
-        .maybeSingle();  // Using maybeSingle for safer query
+        .maybeSingle();
 
       if (settingsError) {
         const errorLog = createErrorLog("FETCHING_EMAIL_SETTINGS", settingsError);
