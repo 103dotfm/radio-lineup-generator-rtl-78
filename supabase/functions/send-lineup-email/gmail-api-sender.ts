@@ -86,11 +86,14 @@ export const sendViaGmailApi = async (
     const bccHeader = bcc ? `Bcc: ${bcc}\r\n` : "";
     console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
+    // Properly encode subject with UTF-8 support
+    const encodedSubject = "=?UTF-8?B?" + encodeBase64Url(new TextEncoder().encode(subject)) + "?=";
+    
     const emailLines = [
       `From: ${from}`,
       `To: ${to}`,
       bccHeader, // Add BCC header conditionally
-      `Subject: =?UTF-8?B?${btoa(subject)}?=`,
+      `Subject: ${encodedSubject}`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=UTF-8',
       'Content-Transfer-Encoding: quoted-printable',
@@ -100,13 +103,8 @@ export const sendViaGmailApi = async (
     
     const email = emailLines.join('\r\n');
     
-    // Use TextEncoder instead of Buffer for base64 encoding
-    const encoder = new TextEncoder();
-    const emailBytes = encoder.encode(email);
-    const encodedEmail = btoa(String.fromCharCode(...new Uint8Array(emailBytes)))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    // Properly encode the email body with UTF-8 support
+    const encodedEmail = encodeBase64Url(new TextEncoder().encode(email));
     
     console.log("Sending email via Gmail API");
     
@@ -147,3 +145,18 @@ export const sendViaGmailApi = async (
     throw error;
   }
 };
+
+// Helper function to properly encode binary data to base64url format
+function encodeBase64Url(data: Uint8Array): string {
+  // Convert the binary data to a string where each character is the code point
+  let binaryString = '';
+  for (let i = 0; i < data.length; i++) {
+    binaryString += String.fromCharCode(data[i]);
+  }
+  
+  // Use btoa to encode to base64
+  const base64 = btoa(binaryString);
+  
+  // Convert to base64url encoding (replace '+' with '-', '/' with '_', and remove '=')
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
