@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AlertCircle, Check, ExternalLink } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const GoogleAuthRedirect = () => {
   const [searchParams] = useSearchParams();
@@ -91,7 +91,7 @@ const GoogleAuthRedirect = () => {
         
         console.log('Successfully received tokens from Gmail API');
         
-        // Save the tokens to the database - using string ID for consistency
+        // Save the tokens to the database
         const { error: updateError } = await supabase
           .from('email_settings')
           .update({
@@ -99,9 +99,10 @@ const GoogleAuthRedirect = () => {
             gmail_access_token: data.accessToken,
             gmail_token_expiry: data.expiryDate
           })
-          .eq('id', '1');  // ID as string to match the expected type
+          .eq('id', '1');  // Using string ID '1' since that's how it's stored
           
         if (updateError) {
+          console.error('Failed to save tokens:', updateError);
           setStatus('error');
           setErrorDetails(`Failed to save tokens: ${updateError.message}`);
           return;

@@ -56,10 +56,12 @@ export type Database = {
           body_template: string
           created_at: string
           email_method: string | null
+          gmail_access_token: string | null
           gmail_client_id: string | null
           gmail_client_secret: string | null
           gmail_redirect_uri: string | null
           gmail_refresh_token: string | null
+          gmail_token_expiry: string | null
           id: string
           mailgun_api_key: string | null
           mailgun_domain: string | null
@@ -76,10 +78,12 @@ export type Database = {
           body_template: string
           created_at?: string
           email_method?: string | null
+          gmail_access_token?: string | null
           gmail_client_id?: string | null
           gmail_client_secret?: string | null
           gmail_redirect_uri?: string | null
           gmail_refresh_token?: string | null
+          gmail_token_expiry?: string | null
           id?: string
           mailgun_api_key?: string | null
           mailgun_domain?: string | null
@@ -96,10 +100,12 @@ export type Database = {
           body_template?: string
           created_at?: string
           email_method?: string | null
+          gmail_access_token?: string | null
           gmail_client_id?: string | null
           gmail_client_secret?: string | null
           gmail_redirect_uri?: string | null
           gmail_refresh_token?: string | null
+          gmail_token_expiry?: string | null
           id?: string
           mailgun_api_key?: string | null
           mailgun_domain?: string | null
