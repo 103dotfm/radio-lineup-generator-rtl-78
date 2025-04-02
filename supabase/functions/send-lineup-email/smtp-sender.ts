@@ -71,12 +71,14 @@ export const sendViaSmtp = async (
     }
 
     console.log("Sending email...");
+    console.log("Email body sample (first 100 chars):", body.substring(0, 100));
+    
     // Fix: Use the first recipient in the "to" field and the rest in "bcc"
     let mailOptions = {
       from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
       to: recipientEmails[0], // First recipient goes in TO
       subject: subject,
-      html: body,
+      html: body, // Explicitly set as HTML content
       headers: {
         'Content-Type': 'text/html; charset=UTF-8'
       }
@@ -95,7 +97,7 @@ export const sendViaSmtp = async (
       to: mailOptions.to,
       bcc: mailOptions.bcc ? `${recipientEmails.length - 1} recipients` : 'none',
       subject: mailOptions.subject,
-      htmlLength: mailOptions.html.length
+      htmlLength: body.length
     });
     console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
