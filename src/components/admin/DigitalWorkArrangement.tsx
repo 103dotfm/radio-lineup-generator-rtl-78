@@ -111,3 +111,4 @@ const DigitalWorkArrangement = () => {
 };
 
 export default DigitalWorkArrangement;
+
