@@ -81,24 +81,30 @@ export const sendViaGmailApi = async (
     // Add BCC if there are multiple recipients
     const rawBcc = recipientEmails.length > 1 ? recipientEmails.slice(1).join(',') : null;
     
+    // Since we're dealing with Hebrew characters, we need to ensure proper UTF-8 encoding
+    // The subject needs to be properly encoded for the header
+    const encoder = new TextEncoder();
+    
+    // Properly encode the sender name with UTF-8 support
+    const encodedSenderName = Buffer.from(emailSettings.sender_name).toString('base64');
+    const encodedSubject = Buffer.from(subject).toString('base64');
+    
     // Create simple MIME message with proper encoding
     const emailLines = [];
     
-    // Add headers
-    emailLines.push(`From: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
+    // Add headers with proper encoding for UTF-8 content
+    emailLines.push(`From: =?UTF-8?B?${encodedSenderName}?= <${emailSettings.sender_email}>`);
     emailLines.push(`To: ${rawTo}`);
     if (rawBcc) {
       emailLines.push(`Bcc: ${rawBcc}`);
     }
-    emailLines.push(`Subject: ${subject}`);
+    emailLines.push(`Subject: =?UTF-8?B?${encodedSubject}?=`);
     emailLines.push('MIME-Version: 1.0');
     emailLines.push('Content-Type: text/html; charset=UTF-8');
     emailLines.push('Content-Transfer-Encoding: base64');
     emailLines.push('');
     
     // Properly encode the body for base64 with UTF-8 support
-    // Convert the HTML string to a Uint8Array using TextEncoder
-    const encoder = new TextEncoder();
     const uint8Array = encoder.encode(body);
     
     // Convert the Uint8Array to a base64 string
@@ -121,8 +127,7 @@ export const sendViaGmailApi = async (
     // Join with proper CRLF
     const rawEmail = emailLines.join('\r\n');
     
-    // Encode the raw email for the Gmail API
-    // Use the same binary-to-base64 encoding approach
+    // Encode the raw email for the Gmail API using the same approach
     const uint8ArrayRaw = encoder.encode(rawEmail);
     const chunksRaw = [];
     for (let i = 0; i < uint8ArrayRaw.length; i += 3) {
