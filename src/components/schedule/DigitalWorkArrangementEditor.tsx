@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, parse, startOfWeek, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Plus, Clock, User, Save, Eye, X } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Trash2, Plus, Clock, User, Save, Eye, X, Check, ChevronsUpDown } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import "@/styles/digital-work-arrangement.css";
 
 interface Shift {
   id?: string;
@@ -22,6 +26,7 @@ interface Shift {
   start_time: string;
   end_time: string;
   person_name: string | null;
+  additional_text: string | null;
   is_custom_time: boolean;
   is_hidden: boolean;
   position: number;
@@ -30,6 +35,7 @@ interface Shift {
 interface CustomRow {
   id?: string;
   section_name: string;
+  day_of_week: number | null;
   content: string | null;
   position: number;
 }
@@ -40,8 +46,17 @@ interface WorkArrangement {
   notes: string | null;
   footer_text: string | null;
   footer_image_url: string | null;
+  sketch_prompt: string | null;
+  sketch_url: string | null;
   shifts: Shift[];
   custom_rows: CustomRow[];
+}
+
+interface Worker {
+  id: string;
+  name: string;
+  department: string;
+  active: boolean;
 }
 
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
@@ -105,10 +120,12 @@ const DEFAULT_TIMES = {
 
 interface DigitalWorkArrangementEditorProps {
   weekDate?: string; // Format: 'yyyy-MM-dd'
+  onSave?: () => void;
 }
 
 const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> = ({ 
-  weekDate 
+  weekDate,
+  onSave
 }) => {
   const { toast } = useToast();
   const [currentWeek, setCurrentWeek] = useState<Date>(() => {
@@ -128,6 +145,8 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
     notes: '',
     footer_text: '',
     footer_image_url: null,
+    sketch_prompt: '',
+    sketch_url: null,
     shifts: [],
     custom_rows: []
   });
@@ -138,6 +157,9 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
   const [weekDates, setWeekDates] = useState<string[]>([]);
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [isAddShiftDialogOpen, setIsAddShiftDialogOpen] = useState(false);
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [openWorkersDropdown, setOpenWorkersDropdown] = useState<{[key: string]: boolean}>({});
+  const [isGeneratingSketch, setIsGeneratingSketch] = useState(false);
   
   // Calculate week dates for display in header
   useEffect(() => {
@@ -158,6 +180,38 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
     const month = format(currentWeek, 'MMMM yyyy', { locale: he });
     return `${endDay}-${startDay} ב${month}`;
   };
+  
+  // Fetch workers for dropdown
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workers')
+          .select('*')
+          .eq('active', true)
+          .order('name');
+          
+        if (error) throw error;
+        
+        if (data) {
+          setWorkers(data);
+        }
+      } catch (error) {
+        console.error('Error fetching workers:', error);
+        // Create dummy worker data if table doesn't exist yet
+        setWorkers([
+          { id: '1', name: 'משה כהן', department: 'דיגיטל', active: true },
+          { id: '2', name: 'שרה לוי', department: 'דיגיטל', active: true },
+          { id: '3', name: 'דוד רביץ', department: 'דיגיטל', active: true },
+          { id: '4', name: 'מיכל גרין', department: 'תמלול', active: true },
+          { id: '5', name: 'יעקב פרידמן', department: 'תמלול', active: true },
+          { id: '6', name: 'רחל הורוביץ', department: 'תמלול', active: true },
+        ]);
+      }
+    };
+    
+    fetchWorkers();
+  }, []);
   
   // Initialize the arrangement
   useEffect(() => {
@@ -209,6 +263,8 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
           notes: existingArrangement.notes,
           footer_text: existingArrangement.footer_text,
           footer_image_url: existingArrangement.footer_image_url,
+          sketch_prompt: existingArrangement.sketch_prompt || '',
+          sketch_url: existingArrangement.sketch_url,
           shifts: shifts || [],
           custom_rows: customRows || []
         });
@@ -246,6 +302,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: isFriday ? DEFAULT_TIMES[SHIFT_TYPES.MORNING].friday.start : DEFAULT_TIMES[SHIFT_TYPES.MORNING].regular.start,
         end_time: isFriday ? DEFAULT_TIMES[SHIFT_TYPES.MORNING].friday.end : DEFAULT_TIMES[SHIFT_TYPES.MORNING].regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -262,6 +319,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: isFriday ? DEFAULT_TIMES[SHIFT_TYPES.AFTERNOON].friday.start : DEFAULT_TIMES[SHIFT_TYPES.AFTERNOON].regular.start,
         end_time: isFriday ? DEFAULT_TIMES[SHIFT_TYPES.AFTERNOON].friday.end : DEFAULT_TIMES[SHIFT_TYPES.AFTERNOON].regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -278,6 +336,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: isThursday ? DEFAULT_TIMES[SHIFT_TYPES.EVENING].thursday.start : DEFAULT_TIMES[SHIFT_TYPES.EVENING].regular.start,
         end_time: isThursday ? DEFAULT_TIMES[SHIFT_TYPES.EVENING].thursday.end : DEFAULT_TIMES[SHIFT_TYPES.EVENING].regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -293,6 +352,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: DEFAULT_TIMES[SECTION_NAMES.RADIO_NORTH].regular.start,
         end_time: DEFAULT_TIMES[SECTION_NAMES.RADIO_NORTH].regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -310,6 +370,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: isFriday ? times.friday.start : times.regular.start,
         end_time: isFriday ? times.friday.end : times.regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -326,18 +387,22 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: times.regular.start,
         end_time: times.regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
       });
     }
     
-    // Default custom row for transcription
-    defaultCustomRows.push({
-      section_name: SECTION_NAMES.TRANSCRIPTION_SHIFTS,
-      content: '',
-      position: 0
-    });
+    // Default custom rows for transcription (one for each day)
+    for (let day = 0; day < 6; day++) {
+      defaultCustomRows.push({
+        section_name: SECTION_NAMES.TRANSCRIPTION_SHIFTS,
+        day_of_week: day,
+        content: '',
+        position: day
+      });
+    }
     
     // Live Social shifts morning (all days)
     for (let day = 0; day < 6; day++) {
@@ -350,6 +415,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: isFriday ? times.friday.start : times.regular.start,
         end_time: isFriday ? times.friday.end : times.regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -366,6 +432,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         start_time: times.regular.start,
         end_time: times.regular.end,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: positionCounter++
@@ -377,6 +444,8 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
       notes: '',
       footer_text: '',
       footer_image_url: null,
+      sketch_prompt: '',
+      sketch_url: null,
       shifts: defaultShifts,
       custom_rows: defaultCustomRows
     });
@@ -396,7 +465,9 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
             week_start: arrangement.week_start,
             notes: arrangement.notes,
             footer_text: arrangement.footer_text,
-            footer_image_url: arrangement.footer_image_url
+            footer_image_url: arrangement.footer_image_url,
+            sketch_prompt: arrangement.sketch_prompt || null,
+            sketch_url: arrangement.sketch_url
           })
           .select()
           .single();
@@ -411,7 +482,9 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
           .update({
             notes: arrangement.notes,
             footer_text: arrangement.footer_text,
-            footer_image_url: arrangement.footer_image_url
+            footer_image_url: arrangement.footer_image_url,
+            sketch_prompt: arrangement.sketch_prompt || null,
+            sketch_url: arrangement.sketch_url
           })
           .eq('id', arrangementId);
         
@@ -439,6 +512,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
           start_time: shift.start_time,
           end_time: shift.end_time,
           person_name: shift.person_name,
+          additional_text: shift.additional_text,
           is_custom_time: shift.is_custom_time,
           is_hidden: shift.is_hidden,
           position: index
@@ -456,6 +530,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         const rowsToInsert = arrangement.custom_rows.map((row, index) => ({
           arrangement_id: arrangementId,
           section_name: row.section_name,
+          day_of_week: row.day_of_week,
           content: row.content,
           position: index
         }));
@@ -500,6 +575,8 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         notes: updatedArrangement.notes,
         footer_text: updatedArrangement.footer_text,
         footer_image_url: updatedArrangement.footer_image_url,
+        sketch_prompt: updatedArrangement.sketch_prompt || '',
+        sketch_url: updatedArrangement.sketch_url,
         shifts: shifts || [],
         custom_rows: customRows || []
       });
@@ -508,6 +585,10 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         title: 'לוח משמרות נשמר בהצלחה',
         description: 'לוח המשמרות נשמר בהצלחה',
       });
+      
+      if (onSave) {
+        onSave();
+      }
     } catch (error) {
       console.error('Error saving arrangement:', error);
       toast({
@@ -559,29 +640,13 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
     });
   };
   
-  const handleAddCustomRow = (sectionName: string) => {
-    setArrangement(prev => {
-      const newCustomRows = [...prev.custom_rows];
-      const position = newCustomRows
-        .filter(row => row.section_name === sectionName)
-        .length;
-      
-      newCustomRows.push({
-        section_name: sectionName,
-        content: '',
-        position: position
-      });
-      
-      return { ...prev, custom_rows: newCustomRows };
-    });
-  };
-  
-  const handleCustomRowChange = (index: number, content: string) => {
+  const handleCustomRowChange = (index: number, dayOfWeek: number | null, content: string) => {
     setArrangement(prev => {
       const newCustomRows = [...prev.custom_rows];
       if (index >= 0 && index < newCustomRows.length) {
         newCustomRows[index] = {
           ...newCustomRows[index],
+          day_of_week: dayOfWeek,
           content
         };
       }
@@ -611,6 +676,127 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
     
     setEditingShift(null);
     setIsAddShiftDialogOpen(false);
+  };
+  
+  const handleWorkerSelect = (sectionName: string, dayOfWeek: number, shiftType: string, workerName: string) => {
+    handleShiftChange(sectionName, dayOfWeek, shiftType, 'person_name', workerName);
+    setOpenWorkersDropdown({...openWorkersDropdown, [`${sectionName}-${dayOfWeek}-${shiftType}`]: false});
+  };
+  
+  const handleAddCustomFreetextRow = (sectionName: string) => {
+    setArrangement(prev => {
+      // Find custom rows for this section to determine positions
+      const sectionRows = prev.custom_rows.filter(row => row.section_name === sectionName);
+      
+      // Create 6 new free text rows for each day of the week
+      const newRows: CustomRow[] = [];
+      
+      for (let day = 0; day < 6; day++) {
+        // Check if this day already has a custom row
+        const existingRowIndex = sectionRows.findIndex(row => row.day_of_week === day);
+        
+        if (existingRowIndex === -1) {
+          // If no custom row exists for this day, add a new one
+          newRows.push({
+            section_name: sectionName,
+            day_of_week: day,
+            content: '',
+            position: prev.custom_rows.length + day
+          });
+        }
+      }
+      
+      // Only add new rows if needed
+      if (newRows.length === 0) {
+        toast({
+          title: "כל הימים כבר קיימים",
+          description: "כבר קיימות שורות חופשיות לכל הימים"
+        });
+        return prev;
+      }
+      
+      return { 
+        ...prev, 
+        custom_rows: [...prev.custom_rows, ...newRows]
+      };
+    });
+  };
+  
+  const generateAISketch = async () => {
+    if (!arrangement.sketch_prompt || arrangement.sketch_prompt.trim() === '') {
+      toast({
+        title: "שגיאה",
+        description: "אנא הכנס הנחיה ליצירת איור",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsGeneratingSketch(true);
+    
+    try {
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "dall-e-2",
+          prompt: arrangement.sketch_prompt + " (sketch, comic style, black and white, simple lines)",
+          n: 1,
+          size: "512x512"
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.data && data.data[0] && data.data[0].url) {
+        setArrangement(prev => ({
+          ...prev,
+          sketch_url: data.data[0].url
+        }));
+      } else {
+        throw new Error('No image URL returned');
+      }
+    } catch (error) {
+      console.error('Error generating sketch:', error);
+      toast({
+        title: "שגיאה ביצירת האיור",
+        description: "אירעה שגיאה ביצירת האיור. נסה שוב מאוחר יותר.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingSketch(false);
+    }
+  };
+
+  // For demo purposes, using a placeholder image when API isn't available
+  const handleDemoSketch = () => {
+    if (!arrangement.sketch_prompt || arrangement.sketch_prompt.trim() === '') {
+      toast({
+        title: "שגיאה",
+        description: "אנא הכנס הנחיה ליצירת איור",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsGeneratingSketch(true);
+    
+    // Simulate API call with timeout
+    setTimeout(() => {
+      // Using placeholder comic sketch image
+      setArrangement(prev => ({
+        ...prev,
+        sketch_url: "https://placehold.co/600x400/e2e8f0/1e293b?text=Comic+Sketch"
+      }));
+      setIsGeneratingSketch(false);
+    }, 1500);
   };
   
   // Render a time input cell
@@ -649,6 +835,9 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
       );
     }
     
+    const dropdownKey = `${sectionName}-${dayOfWeek}-${shiftType}`;
+    const isOpen = openWorkersDropdown[dropdownKey] || false;
+    
     return (
       <div className="space-y-1">
         <div className="flex items-center justify-center gap-1">
@@ -656,16 +845,115 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
           <span>-</span>
           {renderTimeInput(sectionName, dayOfWeek, shiftType, 'end_time')}
         </div>
-        <Input
-          value={shift.person_name || ''}
-          onChange={(e) => handleShiftChange(sectionName, dayOfWeek, shiftType, 'person_name', e.target.value)}
-          placeholder="שם העובד/ת"
-          className="w-full text-center"
-        />
-        <Button variant="ghost" size="sm" onClick={() => handleShiftVisibility(sectionName, dayOfWeek, shiftType, false)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="space-y-1">
+          <Popover open={isOpen} onOpenChange={(open) => setOpenWorkersDropdown({...openWorkersDropdown, [dropdownKey]: open})}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={isOpen}
+                className="w-full justify-between overflow-hidden"
+                onClick={() => setOpenWorkersDropdown({...openWorkersDropdown, [dropdownKey]: !isOpen})}
+              >
+                <span className="truncate">
+                  {shift.person_name || "בחר עובד/ת"}
+                </span>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0">
+              <Command>
+                <CommandInput placeholder="חפש עובד/ת..." />
+                <CommandList>
+                  <CommandEmpty>לא נמצאו עובדים</CommandEmpty>
+                  <CommandGroup>
+                    {workers.map((worker) => (
+                      <CommandItem
+                        key={worker.id}
+                        onSelect={() => handleWorkerSelect(sectionName, dayOfWeek, shiftType, worker.name)}
+                      >
+                        <Check
+                          className={cn(
+                            "h-4 w-4 ml-2",
+                            shift.person_name === worker.name ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {worker.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          
+          <Input
+            value={shift.additional_text || ''}
+            onChange={(e) => handleShiftChange(sectionName, dayOfWeek, shiftType, 'additional_text', e.target.value)}
+            placeholder="טקסט נוסף"
+            className="w-full text-center"
+          />
+          
+          <Button variant="ghost" size="sm" onClick={() => handleShiftVisibility(sectionName, dayOfWeek, shiftType, false)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+    );
+  };
+  
+  // Render free text cell for each day
+  const renderCustomRowCells = () => {
+    // Group custom rows by day of week
+    const rowsByDay = Array(6).fill(null).map((_, day) => {
+      return arrangement.custom_rows.find(row => 
+        row.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS && 
+        row.day_of_week === day
+      );
+    });
+    
+    return (
+      <TableRow>
+        {rowsByDay.map((row, dayIndex) => {
+          const rowIndex = row ? arrangement.custom_rows.indexOf(row) : -1;
+          
+          return (
+            <TableCell key={`custom-${dayIndex}`} className="p-2 border">
+              {rowIndex !== -1 ? (
+                <div className="flex flex-col gap-2">
+                  <Input
+                    value={row?.content || ''}
+                    onChange={(e) => handleCustomRowChange(rowIndex, dayIndex, e.target.value)}
+                    placeholder="טקסט חופשי..."
+                    className="w-full"
+                  />
+                </div>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => {
+                    setArrangement(prev => {
+                      const newCustomRows = [...prev.custom_rows];
+                      newCustomRows.push({
+                        section_name: SECTION_NAMES.TRANSCRIPTION_SHIFTS,
+                        day_of_week: dayIndex,
+                        content: '',
+                        position: prev.custom_rows.length
+                      });
+                      return { ...prev, custom_rows: newCustomRows };
+                    });
+                  }}
+                >
+                  <Plus className="h-4 w-4 ml-1" />
+                  הוסף טקסט
+                </Button>
+              )}
+            </TableCell>
+          );
+        })}
+      </TableRow>
     );
   };
   
@@ -708,7 +996,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6" dir="rtl">
           {/* Digital Shifts Table */}
           <div className="bg-white rounded-md overflow-x-auto">
             <Table className="border">
@@ -781,10 +1069,10 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => handleAddCustomRow(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
+                onClick={() => handleAddCustomFreetextRow(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
               >
                 <Plus className="h-4 w-4 ml-1" />
-                הוסף שורה
+                הוסף שורת טקסט חופשי
               </Button>
             </div>
             <Table className="border">
@@ -811,35 +1099,9 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                     );
                   })}
                 </TableRow>
-                {/* Custom rows */}
-                {arrangement.custom_rows
-                  .filter(row => row.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS)
-                  .map((row, index) => (
-                    <TableRow key={`transcription-custom-${index}`}>
-                      <TableCell colSpan={6} className="p-2 border">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={row.content || ''}
-                            onChange={(e) => handleCustomRowChange(
-                              arrangement.custom_rows.findIndex(r => r === row),
-                              e.target.value
-                            )}
-                            placeholder="הזן טקסט חופשי..."
-                            className="w-full"
-                          />
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteCustomRow(
-                              arrangement.custom_rows.findIndex(r => r === row)
-                            )}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                ))}
+                
+                {/* Custom free text rows by day */}
+                {renderCustomRowCells()}
               </TableBody>
             </Table>
           </div>
@@ -884,8 +1146,37 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                 value={arrangement.footer_text || ''}
                 onChange={(e) => setArrangement(prev => ({ ...prev, footer_text: e.target.value }))}
                 placeholder="הערות או מידע נוסף..."
-                className="h-24"
+                className="h-40"
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="sketch-prompt">הנחיה ליצירת איור מצחיק</Label>
+              <div className="flex gap-2">
+                <Input 
+                  id="sketch-prompt"
+                  value={arrangement.sketch_prompt || ''}
+                  onChange={(e) => setArrangement(prev => ({ ...prev, sketch_prompt: e.target.value }))}
+                  placeholder="תאר את האיור שתרצה ליצור, למשל: גיבור על מתמלל הקלטות"
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleDemoSketch} 
+                  disabled={isGeneratingSketch}
+                >
+                  {isGeneratingSketch ? 'מייצר איור...' : 'צור איור'}
+                </Button>
+              </div>
+              
+              {arrangement.sketch_url && (
+                <div className="mt-4 p-2 border rounded">
+                  <img 
+                    src={arrangement.sketch_url} 
+                    alt="איור מצחיק"
+                    className="max-h-60 mx-auto object-contain" 
+                  />
+                </div>
+              )}
             </div>
             
             <div>
@@ -1000,7 +1291,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
           <DialogHeader>
             <DialogTitle>תצוגה מקדימה</DialogTitle>
           </DialogHeader>
-          <div className="digital-work-arrangement-view">
+          <div className="digital-work-arrangement-view" dir="rtl">
             <h2 className="text-2xl font-bold text-center mb-2">לוח משמרות דיגיטל</h2>
             <div className="text-center mb-4">{formatDateRange()}</div>
             
@@ -1034,9 +1325,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`morning-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1057,9 +1351,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`afternoon-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1084,9 +1381,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`evening-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1115,9 +1415,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`radio-north-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1148,9 +1451,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`transcription-morning-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1175,23 +1481,36 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`transcription-afternoon-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
                   </TableRow>
-                  {/* Custom rows */}
-                  {arrangement.custom_rows
-                    .filter(row => row.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS && row.content)
-                    .map((row, index) => (
-                      <TableRow key={`transcription-custom-${index}`}>
-                        <TableCell colSpan={6} className="p-2 border text-center">
-                          {row.content}
+                </TableBody>
+              </Table>
+              
+              {/* Free text rows by day */}
+              <Table className="border w-full mt-2">
+                <TableBody>
+                  <TableRow>
+                    {[...Array(6)].map((_, day) => {
+                      const customRow = arrangement.custom_rows.find(
+                        row => row.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS && 
+                              row.day_of_week === day
+                      );
+                      
+                      return (
+                        <TableCell key={`freetext-${day}`} className="p-2 border text-center">
+                          {customRow?.content || ''}
                         </TableCell>
-                      </TableRow>
-                  ))}
+                      );
+                    })}
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
@@ -1217,9 +1536,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`live-social-morning-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1244,9 +1566,12 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                       return (
                         <TableCell key={`live-social-afternoon-${day}`} className="p-2 border text-center">
                           <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-                            <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+                            <span>{shift.start_time.substring(0, 5)}-{shift.end_time.substring(0, 5)}</span>
                           </div>
-                          <div>{shift.person_name || '-'}</div>
+                          <div className="font-bold">{shift.person_name || '-'}</div>
+                          {shift.additional_text && (
+                            <div className="text-sm">{shift.additional_text}</div>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -1256,25 +1581,33 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
             </div>
             
             {/* Footer Section */}
-            {(arrangement.footer_text || arrangement.footer_image_url) && (
-              <div className="mt-8 space-y-4">
-                {arrangement.footer_text && (
-                  <div className="text-center whitespace-pre-line">
-                    {arrangement.footer_text}
-                  </div>
-                )}
-                
-                {arrangement.footer_image_url && (
-                  <div className="flex justify-center">
-                    <img 
-                      src={arrangement.footer_image_url} 
-                      alt="תמונת כותרת תחתונה"
-                      className="max-h-40 object-contain" 
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="mt-8 space-y-4">
+              {arrangement.footer_text && (
+                <div className="text-center whitespace-pre-line">
+                  {arrangement.footer_text}
+                </div>
+              )}
+              
+              {arrangement.sketch_url && (
+                <div className="flex justify-center my-4">
+                  <img 
+                    src={arrangement.sketch_url} 
+                    alt="איור מצחיק"
+                    className="max-h-60 object-contain" 
+                  />
+                </div>
+              )}
+              
+              {arrangement.footer_image_url && (
+                <div className="flex justify-center">
+                  <img 
+                    src={arrangement.footer_image_url} 
+                    alt="תמונת כותרת תחתונה"
+                    className="max-h-40 object-contain" 
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1283,3 +1616,4 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
 };
 
 export default DigitalWorkArrangementEditor;
+
