@@ -76,109 +76,62 @@ export const sendViaGmailApi = async (
     
     console.log("Creating email message");
     
-    // Sender name needs special encoding for non-Latin characters
-    const senderName = mimeEncode(emailSettings.sender_name);
-    const from = `${senderName} <${emailSettings.sender_email}>`;
+    // Build raw email content with proper encoding
+    const rawTo = recipientEmails[0];
+    // Add BCC if there are multiple recipients
+    const rawBcc = recipientEmails.length > 1 ? recipientEmails.slice(1).join(',') : null;
     
-    // Use first recipient in To field
-    const to = recipientEmails[0];
-    // Use remaining recipients in BCC
-    const bcc = recipientEmails.length > 1 ? recipientEmails.slice(1).join(", ") : "";
+    // Create simple MIME message with proper encoding
+    const emailLines = [];
     
-    // Add BCC header if needed
-    const bccHeader = bcc ? `Bcc: ${bcc}\r\n` : "";
-    console.log("Using BCC for multiple recipients to avoid duplicate emails");
-    
-    // Properly encode subject with UTF-8 support
-    const encodedSubject = mimeEncode(subject);
-    
-    // Debug logging 
-    console.log("Sender:", { 
-      raw: emailSettings.sender_name,
-      encoded: senderName
-    });
-    console.log("Subject:", {
-      raw: subject,
-      encoded: encodedSubject
-    });
-    
-    // Log a sample of the HTML body for debugging
-    console.log("Email body sample (first 100 chars):", body.substring(0, 100));
-    
-    // Create raw RFC 2822 formatted email
-    const message = [
-      `From: ${from}`,
-      `To: ${to}`,
-      bccHeader,
-      `Subject: ${encodedSubject}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      '',
-      body
-    ].filter(Boolean).join('\r\n');
-    
-    console.log("Preparing email with length:", message.length);
-    console.log("Email headers sample:", message.substring(0, 200).replace(/\r\n/g, " | "));
-    
-    // Convert the message to an array of bytes
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(message);
-    
-    // Convert to base64url format as required by Gmail API
-    const base64EncodedEmail = btoa(
-      Array.from(bytes)
-        .map(byte => String.fromCharCode(byte))
-        .join('')
-    ).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    
-    console.log("Base64 encoded email length:", base64EncodedEmail.length);
-    
-    try {
-      const res = await gmail.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: base64EncodedEmail
-        }
-      });
-      
-      console.log("✅ Email sent successfully via Gmail API:", {
-        messageId: res.data.id,
-        threadId: res.data.threadId,
-        labelIds: res.data.labelIds
-      });
-      
-      return {
-        messageId: res.data.id,
-        success: true
-      };
-    } catch (sendError) {
-      console.error("Error sending email via Gmail API:", sendError);
-      
-      // Detailed error logging
-      if (sendError.response) {
-        console.error("API Response Error:", {
-          status: sendError.response.status,
-          statusText: sendError.response.statusText,
-          data: sendError.response.data
-        });
-      }
-      
-      throw new Error(`Failed to send email: ${sendError.message || 'Unknown error'}`);
+    // Add headers
+    emailLines.push(`From: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
+    emailLines.push(`To: ${rawTo}`);
+    if (rawBcc) {
+      emailLines.push(`Bcc: ${rawBcc}`);
     }
+    emailLines.push(`Subject: ${subject}`);
+    emailLines.push('MIME-Version: 1.0');
+    emailLines.push('Content-Type: text/html; charset=UTF-8');
+    emailLines.push('Content-Transfer-Encoding: base64');
+    emailLines.push('');
+    
+    // Add the body as base64 encoded content
+    const bodyBase64 = btoa(unescape(encodeURIComponent(body)));
+    emailLines.push(bodyBase64);
+    
+    // Join with proper CRLF
+    const rawEmail = emailLines.join('\r\n');
+    
+    // Encode the raw email in base64url format
+    const encodedEmail = btoa(rawEmail)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    
+    console.log("Sending email via Gmail API");
+    
+    const response = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw: encodedEmail
+      }
+    });
+    
+    console.log("✅ Email sent successfully via Gmail API:", {
+      messageId: response.data.id,
+      threadId: response.data.threadId
+    });
+    
+    return {
+      success: true,
+      method: 'gmail_api',
+      messageId: response.data.id
+    };
   } catch (error) {
     console.error("Error in Gmail API sender:", error);
-    throw error;
+    
+    const errorLog = createErrorLog("GMAIL_API", error);
+    throw { ...error, errorLog };
   }
 };
-
-// MIME encode text (for subject and sender name with UTF-8 support)
-function mimeEncode(text: string): string {
-  // Convert text to UTF-8 binary data
-  const utf8Encoded = new TextEncoder().encode(text);
-  const base64Encoded = btoa(
-    Array.from(utf8Encoded)
-      .map(byte => String.fromCharCode(byte))
-      .join('')
-  );
-  return `=?UTF-8?B?${base64Encoded}?=`;
-}
