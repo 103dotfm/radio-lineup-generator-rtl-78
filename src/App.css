@@ -49,3 +49,8 @@
 .footer-logo {
   text-align: center;
 }
+
+/* Fix for Dashboard layout */
+.dashboard-container {
+  text-align: initial;
+}

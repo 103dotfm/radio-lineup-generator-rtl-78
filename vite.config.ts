@@ -17,6 +17,27 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     port: 8080,
-    host: "::"
+    host: "::",
+    hmr: {
+      overlay: true,
+    },
+    watch: {
+      usePolling: true,
+    }
+  },
+  optimizeDeps: {
+    exclude: [],
+  },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress certain warnings
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+          return;
+        }
+        warn(warning);
+      }
+    }
   }
 }))
