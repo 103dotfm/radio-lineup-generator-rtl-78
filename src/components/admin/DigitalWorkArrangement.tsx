@@ -40,23 +40,8 @@ const DigitalWorkArrangement = () => {
     return `${format(currentWeek, 'dd')}-${format(endOfWeek, 'dd')} ב${format(currentWeek, 'MMMM yyyy')}`;
   };
 
-  useEffect(() => {
-    console.log("DigitalWorkArrangement component mounted");
-    
-    // Force a re-render after a short delay
-    const timer = setTimeout(() => {
-      console.log("DigitalWorkArrangement - forcing re-render");
-      setCurrentWeek(current => {
-        // This creates a new Date object with the same value, which will trigger a re-render
-        return new Date(current.getTime());
-      });
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <Card className="overflow-hidden digital-work-arrangement">
+    <Card className="overflow-hidden">
       <CardHeader className="p-4 sm:p-6 space-y-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg sm:text-xl">לוח משמרות דיגיטל</CardTitle>
@@ -126,3 +111,4 @@ const DigitalWorkArrangement = () => {
 };
 
 export default DigitalWorkArrangement;
+
