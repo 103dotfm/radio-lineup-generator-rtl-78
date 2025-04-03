@@ -40,6 +40,10 @@ const DigitalWorkArrangement = () => {
     return `${format(currentWeek, 'dd')}-${format(endOfWeek, 'dd')} ב${format(currentWeek, 'MMMM yyyy')}`;
   };
 
+  useEffect(() => {
+    console.log("DigitalWorkArrangement component mounted");
+  }, []);
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="p-4 sm:p-6 space-y-2">
