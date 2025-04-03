@@ -52,7 +52,11 @@ export const sendViaMailgun = async (
     const formData = new URLSearchParams();
     
     // Properly format the "from" field for better compatibility with Hebrew sender names
-    formData.append("from", `=?UTF-8?B?${Buffer.from(emailSettings.sender_name).toString('base64')}?= <${emailSettings.sender_email}>`);
+    // Use Deno-compatible encoding for Hebrew sender name
+    const encoder = new TextEncoder();
+    const senderNameBytes = encoder.encode(emailSettings.sender_name);
+    const encodedSenderName = btoa(String.fromCharCode(...senderNameBytes));
+    formData.append("from", `=?UTF-8?B?${encodedSenderName}?= <${emailSettings.sender_email}>`);
     
     // Use the first recipient as the "to" field and the rest as BCC
     if (recipientEmails.length > 0) {
