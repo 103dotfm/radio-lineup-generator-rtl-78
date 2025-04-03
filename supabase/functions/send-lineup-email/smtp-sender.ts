@@ -1,3 +1,4 @@
+
 import nodemailer from "npm:nodemailer@6.9.9";
 import { EmailSettings } from "./utils.ts";
 import { isOutlookAuthError, getAlternativeSmtpRecommendation, createErrorLog } from "./error-handler.ts";
@@ -32,7 +33,7 @@ export const sendViaSmtp = async (
         rejectUnauthorized: false
       },
       debug: true,
-      logger: true, // Enable built-in logger
+      logger: true // Enable built-in logger
     };
     
     console.log("Transport config:", {
@@ -72,28 +73,21 @@ export const sendViaSmtp = async (
     console.log("Sending email...");
     console.log("Email body sample (first 100 chars):", body.substring(0, 100));
     
-    // Set proper HTML email options with explicit UTF-8 encoding
+    // Set proper HTML email options with explicit content type
     const mailOptions = {
-      from: {
-        name: emailSettings.sender_name, // Will be automatically encoded by nodemailer
-        address: emailSettings.sender_email
-      },
+      from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
       to: recipientEmails[0], // First recipient goes in TO
-      subject: subject, // Will be automatically encoded by nodemailer
+      subject: subject,
       html: body, // Using html property to ensure proper rendering
       bcc: recipientEmails.length > 1 ? recipientEmails.slice(1).join(",") : undefined,
       encoding: 'utf-8',
-      textEncoding: 'base64',
       headers: {
-        'Content-Type': 'text/html; charset=UTF-8',
-        'Content-Transfer-Encoding': 'base64'
+        'Content-Type': 'text/html; charset=UTF-8'
       }
     };
     
     console.log("Mail options:", {
-      from: typeof mailOptions.from === 'object' 
-        ? `${mailOptions.from.name} <${mailOptions.from.address}>`
-        : mailOptions.from,
+      from: mailOptions.from,
       to: mailOptions.to,
       bcc: mailOptions.bcc ? `${recipientEmails.length - 1} recipients` : 'none',
       subject: mailOptions.subject,
