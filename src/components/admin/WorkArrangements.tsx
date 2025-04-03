@@ -7,10 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { CopyIcon, CheckIcon, UploadIcon } from 'lucide-react';
+import { CopyIcon, CheckIcon, UploadIcon, FileDigit } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import DigitalWorkArrangement from './DigitalWorkArrangement';
 
 type ArrangementType = 'producers' | 'engineers' | 'digital';
 
@@ -47,6 +48,7 @@ const WorkArrangements = () => {
     digital: null
   });
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('producers');
   
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
@@ -331,11 +333,15 @@ const WorkArrangements = () => {
             <Button variant="outline" onClick={() => navigateWeek(1)}>שבוע הבא</Button>
           </div>
           
-          <Tabs defaultValue="producers">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="producers" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="producers">מפיקים</TabsTrigger>
               <TabsTrigger value="engineers">טכנאים</TabsTrigger>
-              <TabsTrigger value="digital">דיגיטל</TabsTrigger>
+              <TabsTrigger value="digital-pdf">דיגיטל (PDF)</TabsTrigger>
+              <TabsTrigger value="digital-editor" className="flex items-center gap-2">
+                <FileDigit className="h-4 w-4" />
+                עורך דיגיטל
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="producers" className="space-y-4">
@@ -408,7 +414,7 @@ const WorkArrangements = () => {
               </div>
             </TabsContent>
             
-            <TabsContent value="digital" className="space-y-4">
+            <TabsContent value="digital-pdf" className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="digital-file">העלאת סידור עבודה לדיגיטל</Label>
                 <div className="flex gap-2">
@@ -440,7 +446,16 @@ const WorkArrangements = () => {
                     </a>
                   </div>
                 )}
+                <div className="mt-4 p-3 border rounded bg-amber-50">
+                  <p className="text-amber-700">
+                    <strong>הערה:</strong> אנו ממליצים להשתמש בעורך סידור העבודה החדש בטאב "עורך דיגיטל" במקום העלאת קובץ PDF.
+                  </p>
+                </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="digital-editor" className="space-y-4">
+              <DigitalWorkArrangement />
             </TabsContent>
           </Tabs>
         </CardContent>

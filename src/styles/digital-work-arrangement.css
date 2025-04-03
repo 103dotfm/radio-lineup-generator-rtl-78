@@ -1,0 +1,52 @@
+
+/* Digital Work Arrangement Styles */
+.digital-work-arrangement table,
+.digital-work-arrangement-view table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.digital-work-arrangement th,
+.digital-work-arrangement td,
+.digital-work-arrangement-view th,
+.digital-work-arrangement-view td {
+  border: 1px solid #ddd;
+}
+
+.digital-work-arrangement th,
+.digital-work-arrangement-view th {
+  background-color: #000;
+  color: white;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Custom styles for highlighting custom times */
+.digital-work-arrangement .bg-yellow-100 {
+  background-color: #fef9c3;
+}
+
+/* Print styles */
+@media print {
+  .digital-work-arrangement-view {
+    page-break-inside: avoid;
+  }
+  
+  .digital-work-arrangement-view table {
+    page-break-inside: avoid;
+  }
+}
+
+/* Improved input styling */
+.digital-work-arrangement input[type="time"],
+.digital-work-arrangement input[type="text"] {
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.digital-work-arrangement input[type="time"]:focus,
+.digital-work-arrangement input[type="text"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
+}
