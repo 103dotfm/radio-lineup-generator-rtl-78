@@ -73,28 +73,14 @@ export const sendViaSmtp = async (
     console.log("Sending email...");
     console.log("Email body sample (first 100 chars):", body.substring(0, 100));
     
-    // Fix: Use the first recipient in the "to" field and the rest in "bcc"
-    let mailOptions = {
+    // Set proper HTML email options with explicit content type
+    const mailOptions = {
       from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
       to: recipientEmails[0], // First recipient goes in TO
       subject: subject,
-      html: body, // Explicitly set as HTML content
-      // Remove Content-Type header - let nodemailer set it correctly
-      alternatives: [
-        {
-          contentType: 'text/html; charset=utf-8',
-          content: body
-        }
-      ]
+      html: body,
+      bcc: recipientEmails.length > 1 ? recipientEmails.slice(1).join(",") : undefined
     };
-    
-    // Add BCC if more than one recipient
-    if (recipientEmails.length > 1) {
-      mailOptions = {
-        ...mailOptions,
-        bcc: recipientEmails.slice(1).join(", ") // Rest of recipients go in BCC
-      };
-    }
     
     console.log("Mail options:", {
       from: mailOptions.from,
@@ -104,7 +90,6 @@ export const sendViaSmtp = async (
       htmlLength: body.length
     });
     console.log("Using BCC for multiple recipients to avoid duplicate emails");
-    console.log("Content-Type being used: text/html; charset=utf-8");
     
     const info = await transporter.sendMail(mailOptions);
 

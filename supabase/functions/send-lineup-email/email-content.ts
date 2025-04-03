@@ -46,13 +46,11 @@ export const prepareEmailContent = (
   subject = subject.replace(/{{show_date}}/g, formattedDate);
   subject = subject.replace(/{{show_time}}/g, show.time || "");
   
-  // Create button HTML with proper styles that won't break when rendered
-  const viewLineupButton = `
-    <a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold;">לצפייה בליינאפ</a>
-  `;
+  // Create simple direct HTML for the button with inline styles - avoid classes
+  const viewLineupButton = `<a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold;">לצפייה בליינאפ</a>`;
   
-  // Create email body with enhanced RTL and Hebrew support
-  let body = `
+  // Create email body with enhanced RTL and Hebrew support - simplified approach
+  const body = `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -60,45 +58,20 @@ export const prepareEmailContent = (
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
   <style>
-    body, table, td, p, a, li, blockquote {
-      -webkit-text-size-adjust: 100%;
-      -ms-text-size-adjust: 100%;
+    body {
       direction: rtl;
       text-align: right;
       font-family: Arial, sans-serif;
-    }
-    body {
       margin: 0;
       padding: 0;
-    }
-    table, td {
-      mso-table-lspace: 0pt;
-      mso-table-rspace: 0pt;
-    }
-    img {
-      -ms-interpolation-mode: bicubic;
-    }
-    body {
       height: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
       width: 100% !important;
     }
-    a {
-      color: #0000FF;
-    }
+    a { color: #0000FF; }
     .content {
       padding: 20px;
       max-width: 600px;
       margin: 0 auto;
-    }
-    .header {
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .interviewees {
-      margin-bottom: 20px;
     }
     .link-section {
       margin-top: 30px;
@@ -113,7 +86,7 @@ export const prepareEmailContent = (
       .replace(/{{show_date}}/g, formattedDate)
       .replace(/{{show_time}}/g, show.time || "")
       .replace(/{{interviewees_list}}/g, intervieweesList)
-      .replace(/{{lineup_link}}/g, `<div class="link-section">${viewLineupButton}</div>`)}
+      .replace(/{{lineup_link}}/g, `<div style="margin-top: 30px; text-align: center;">${viewLineupButton}</div>`)}
   </div>
 </body>
 </html>
