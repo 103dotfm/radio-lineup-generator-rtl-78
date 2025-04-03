@@ -78,7 +78,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
   const [weekDates, setWeekDates] = useState<string[]>([]);
-
+  
   // Calculate week dates for display in header
   useEffect(() => {
     const dates = Array.from({ length: 6 }, (_, i) => {
@@ -88,7 +88,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     });
     setWeekDates(dates);
   }, [currentWeek]);
-
+  
   // Format date for display
   const formatDateRange = () => {
     const startDay = format(currentWeek, 'dd', { locale: he });
@@ -98,16 +98,16 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     const month = format(currentWeek, 'MMMM yyyy', { locale: he });
     return `${endDay}-${startDay} ב${month}`;
   };
-
+  
   // Fetch arrangement
   useEffect(() => {
     fetchArrangement();
   }, [currentWeek]);
-
+  
   const fetchArrangement = async () => {
     setIsLoading(true);
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-
+    
     try {
       // Check if arrangement exists for this week
       const { data: existingArrangement, error: fetchError } = await supabase
@@ -115,11 +115,11 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         .select('*')
         .eq('week_start', weekStartStr)
         .single();
-
+        
       if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
         throw fetchError;
       }
-
+      
       if (existingArrangement) {
         // Fetch shifts
         const { data: shifts, error: shiftsError } = await supabase
@@ -127,18 +127,18 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           .select('*')
           .eq('arrangement_id', existingArrangement.id)
           .order('position', { ascending: true });
-
+          
         if (shiftsError) throw shiftsError;
-
+        
         // Fetch custom rows
         const { data: customRows, error: customRowsError } = await supabase
           .from('digital_shift_custom_rows')
           .select('*')
           .eq('arrangement_id', existingArrangement.id)
           .order('position', { ascending: true });
-
+          
         if (customRowsError) throw customRowsError;
-
+        
         setArrangement({
           ...existingArrangement,
           shifts: shifts || [],
@@ -154,7 +154,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       setIsLoading(false);
     }
   };
-
+  
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
     
@@ -185,7 +185,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </TableCell>
     );
   };
-
+  
   const renderRadioNorthCell = (day: number) => {
     if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
     
@@ -212,7 +212,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </TableCell>
     );
   };
-
+  
   const renderCustomRows = (sectionName: string) => {
     if (!arrangement) return null;
     
@@ -228,7 +228,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </TableRow>
     ));
   };
-
+  
   if (isLoading) {
     return (
       <Card>
@@ -241,7 +241,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </Card>
     );
   }
-
+  
   if (!arrangement) {
     return (
       <Card>
@@ -254,7 +254,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </Card>
     );
   }
-
+  
   return (
     <Card className="digital-work-arrangement-view">
       <CardHeader>
@@ -298,7 +298,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               </TableBody>
             </Table>
           </div>
-
+          
           {/* Radio North Table */}
           <div className="overflow-x-auto">
             <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.RADIO_NORTH]}</div>
@@ -311,7 +311,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               </TableBody>
             </Table>
           </div>
-
+          
           {/* Transcription Shifts Table */}
           <div className="overflow-x-auto">
             <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.TRANSCRIPTION_SHIFTS]}</div>
@@ -331,13 +331,12 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                     return renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
                 </TableRow>
-                {/* Custom rows */}
                 {renderCustomRows(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
               </TableBody>
             </Table>
           </div>
-
-          {/* Live and Social Shifts Table */}
+          
+          {/* Live Social Shifts Table */}
           <div className="overflow-x-auto">
             <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.LIVE_SOCIAL_SHIFTS]}</div>
             <Table className="border">
@@ -356,25 +355,28 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                     return renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
                 </TableRow>
-                {/* Custom rows */}
-                {renderCustomRows(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
               </TableBody>
             </Table>
           </div>
-
-          {/* Footer */}
-          {arrangement.footer_text && (
-            <div className="p-4 text-center">
-              {arrangement.footer_text}
-            </div>
-          )}
-          {arrangement.footer_image_url && (
-            <div className="flex justify-center">
-              <img 
-                src={arrangement.footer_image_url} 
-                alt="Footer" 
-                className="max-h-[300px]"
-              />
+          
+          {/* Footer Section */}
+          {(arrangement.footer_text || arrangement.footer_image_url) && (
+            <div className="mt-8 space-y-4">
+              {arrangement.footer_text && (
+                <div className="text-center whitespace-pre-line">
+                  {arrangement.footer_text}
+                </div>
+              )}
+              
+              {arrangement.footer_image_url && (
+                <div className="flex justify-center">
+                  <img 
+                    src={arrangement.footer_image_url} 
+                    alt="תמונת כותרת תחתונה"
+                    className="max-h-40 object-contain" 
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -384,3 +386,4 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 };
 
 export default DigitalWorkArrangementView;
+
