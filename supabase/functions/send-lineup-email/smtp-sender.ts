@@ -33,7 +33,7 @@ export const sendViaSmtp = async (
         rejectUnauthorized: false
       },
       debug: true,
-      logger: true // Enable built-in logger
+      logger: true, // Enable built-in logger
     };
     
     console.log("Transport config:", {
@@ -73,21 +73,28 @@ export const sendViaSmtp = async (
     console.log("Sending email...");
     console.log("Email body sample (first 100 chars):", body.substring(0, 100));
     
-    // Set proper HTML email options with explicit content type
+    // Set proper HTML email options with explicit UTF-8 encoding
     const mailOptions = {
-      from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
+      from: {
+        name: emailSettings.sender_name, // Will be automatically encoded by nodemailer
+        address: emailSettings.sender_email
+      },
       to: recipientEmails[0], // First recipient goes in TO
-      subject: subject,
+      subject: subject, // Will be automatically encoded by nodemailer
       html: body, // Using html property to ensure proper rendering
       bcc: recipientEmails.length > 1 ? recipientEmails.slice(1).join(",") : undefined,
       encoding: 'utf-8',
+      textEncoding: 'base64',
       headers: {
-        'Content-Type': 'text/html; charset=UTF-8'
+        'Content-Type': 'text/html; charset=UTF-8',
+        'Content-Transfer-Encoding': 'base64'
       }
     };
     
     console.log("Mail options:", {
-      from: mailOptions.from,
+      from: typeof mailOptions.from === 'object' 
+        ? `${mailOptions.from.name} <${mailOptions.from.address}>`
+        : mailOptions.from,
       to: mailOptions.to,
       bcc: mailOptions.bcc ? `${recipientEmails.length - 1} recipients` : 'none',
       subject: mailOptions.subject,

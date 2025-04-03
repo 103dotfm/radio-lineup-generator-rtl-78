@@ -50,7 +50,9 @@ export const sendViaMailgun = async (
     
     // Create form data for the request - FIX: Use BCC instead of multiple TO recipients
     const formData = new URLSearchParams();
-    formData.append("from", `${emailSettings.sender_name} <${emailSettings.sender_email}>`);
+    
+    // Properly format the "from" field for better compatibility with Hebrew sender names
+    formData.append("from", `=?UTF-8?B?${Buffer.from(emailSettings.sender_name).toString('base64')}?= <${emailSettings.sender_email}>`);
     
     // Use the first recipient as the "to" field and the rest as BCC
     if (recipientEmails.length > 0) {
@@ -62,6 +64,7 @@ export const sendViaMailgun = async (
       }
     }
     
+    // Encode the subject for Mailgun API
     formData.append("subject", subject);
     formData.append("html", body);
     
