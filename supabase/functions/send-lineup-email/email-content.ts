@@ -46,10 +46,20 @@ export const prepareEmailContent = (
   subject = subject.replace(/{{show_date}}/g, formattedDate);
   subject = subject.replace(/{{show_time}}/g, show.time || "");
   
-  // Create simple direct HTML for the button with inline styles - avoid classes
-  const viewLineupButton = `<a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold;">לצפייה בליינאפ</a>`;
+  // Create a properly formatted button HTML
+  const viewLineupButton = `<div style="text-align: center; margin-top: 30px;">
+    <a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
+  </div>`;
   
-  // Create email body with enhanced RTL and Hebrew support - simplified approach
+  // Process the body template
+  let processedBody = emailSettings.body_template
+    .replace(/{{show_name}}/g, show.name)
+    .replace(/{{show_date}}/g, formattedDate)
+    .replace(/{{show_time}}/g, show.time || "")
+    .replace(/{{interviewees_list}}/g, intervieweesList)
+    .replace(/{{lineup_link}}/g, viewLineupButton);
+  
+  // Create email body with enhanced RTL and Hebrew support
   const body = `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
@@ -58,20 +68,45 @@ export const prepareEmailContent = (
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
   <style>
-    body {
+    body, table, td, p, a, li, blockquote {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
       direction: rtl;
       text-align: right;
       font-family: Arial, sans-serif;
+    }
+    body {
       margin: 0;
       padding: 0;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+    }
+    body {
       height: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
       width: 100% !important;
     }
-    a { color: #0000FF; }
+    a {
+      color: #0000FF;
+    }
     .content {
       padding: 20px;
       max-width: 600px;
       margin: 0 auto;
+    }
+    .header {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .interviewees {
+      margin-bottom: 20px;
     }
     .link-section {
       margin-top: 30px;
@@ -81,12 +116,7 @@ export const prepareEmailContent = (
 </head>
 <body>
   <div class="content">
-    ${emailSettings.body_template
-      .replace(/{{show_name}}/g, show.name)
-      .replace(/{{show_date}}/g, formattedDate)
-      .replace(/{{show_time}}/g, show.time || "")
-      .replace(/{{interviewees_list}}/g, intervieweesList)
-      .replace(/{{lineup_link}}/g, `<div style="margin-top: 30px; text-align: center;">${viewLineupButton}</div>`)}
+    ${processedBody}
   </div>
 </body>
 </html>

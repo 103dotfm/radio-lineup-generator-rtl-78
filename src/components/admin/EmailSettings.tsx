@@ -624,6 +624,31 @@ const EmailSettings: React.FC = () => {
     return processed;
   };
 
+  const createHtmlPreview = () => {
+    if (!latestShow) return '';
+    
+    const formattedDate = latestShow.date ? new Date(latestShow.date).toLocaleDateString('he-IL') : "";
+    const dummyLink = "https://example.com/lineup";
+    
+    let intervieweesList = "<ul style='direction: rtl; text-align: right; padding-right: 20px; margin-right: 0;'>";
+    intervieweesList += "<li style='direction: rtl; text-align: right;'>דוגמה לשם מרואיין, תפקיד</li>";
+    intervieweesList += "<li style='direction: rtl; text-align: right;'>דוגמה לשם מרואיין נוסף</li>";
+    intervieweesList += "</ul>";
+    
+    const viewLineupButton = `<div style="text-align: center; margin-top: 30px;">
+      <a href="${dummyLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
+    </div>`;
+    
+    let processedBody = settings.body_template
+      .replace(/{{show_name}}/g, latestShow.name || 'שם התו��נית')
+      .replace(/{{show_date}}/g, formattedDate)
+      .replace(/{{show_time}}/g, latestShow.time || '00:00')
+      .replace(/{{interviewees_list}}/g, intervieweesList)
+      .replace(/{{lineup_link}}/g, viewLineupButton);
+    
+    return processedBody;
+  };
+
   const getGmailAuthStatus = () => {
     if (!settings.gmail_refresh_token) {
       return {
@@ -678,6 +703,7 @@ const EmailSettings: React.FC = () => {
   }
 
   const gmailStatus = getGmailAuthStatus();
+  const htmlPreview = createHtmlPreview();
 
   return (
     <div className="space-y-6">
@@ -855,7 +881,7 @@ const EmailSettings: React.FC = () => {
                   >
                     <div className="flex items-center space-x-2 space-x-reverse">
                       <RadioGroupItem value="smtp" id="email-method-smtp" />
-                      <Label htmlFor="email-method-smtp" className="mr-2 cursor-pointer">שרת SMTP (שיטה סטנדרטית)</Label>
+                      <Label htmlFor="email-method-smtp" className="mr-2 cursor-pointer">שרת SMTP (שיטה סטנ��רטית)</Label>
                     </div>
                     <div className="flex items-center space-x-2 space-x-reverse">
                       <RadioGroupItem value="gmail_api" id="email-method-gmail" />
@@ -1107,7 +1133,7 @@ const EmailSettings: React.FC = () => {
                       <AlertTitle>כתובת ה-from בדומיין Mailgun</AlertTitle>
                       <AlertDescription>
                         <p className="text-sm">
-                          ודא שכתובת השולח (כתובת ה-from) תואמת את הדומיין המאומת שלך. אחרת, המשלוח עלול להיכשל.
+                          ודא שכתובת השולח (כתובת ה-from) תואמת את הדומיין המאומת שלך. אחרת, המשלוח עלו�� להיכשל.
                         </p>
                       </AlertDescription>
                     </Alert>
@@ -1169,20 +1195,31 @@ const EmailSettings: React.FC = () => {
                     onChange={(e) => setSettings({...settings, body_template: e.target.value})}
                   />
                   <p className="text-xs text-muted-foreground">
-                    תגיות אפשריות: <code>{'{{show_name}}'}</code>, <code>{'{{show_date}}'}</code>, <code>{'{{show_time}}'}</code>
+                    תגיות אפשריות: <code>{'{{show_name}}'}</code>, <code>{'{{show_date}}'}</code>, <code>{'{{show_time}}'}</code>, <code>{'{{interviewees_list}}'}</code>, <code>{'{{lineup_link}}'}</code>
                   </p>
+                  <Alert className="mt-4">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>תגיות מיוחדות</AlertTitle>
+                    <AlertDescription>
+                      <p className="mb-2"><code>{'{{interviewees_list}}'}</code> - רשימת מרואיינים מעוצבת כ-HTML</p>
+                      <p><code>{'{{lineup_link}}'}</code> - כפתור מעוצב עם קישור לליינאפ</p>
+                    </AlertDescription>
+                  </Alert>
                 </div>
                 
                 {latestShow && (
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertTitle className="flex items-center gap-2">
-                      תצוגה מקדימה
+                      תצוגה מקדימה של תוכן הדוא"ל
                     </AlertTitle>
                     <AlertDescription>
                       <div className="mt-2 space-y-2">
                         <p><strong>נושא:</strong> {processTemplate(settings.subject_template)}</p>
-                        <p><strong>גוף:</strong> {processTemplate(settings.body_template)}</p>
+                        <div className="border rounded-md p-4 mt-2 bg-white">
+                          <p><strong>תצוגה מקדימה כפי שתופיע בדוא"ל:</strong></p>
+                          <div className="mt-2" dangerouslySetInnerHTML={{ __html: htmlPreview }} />
+                        </div>
                       </div>
                     </AlertDescription>
                   </Alert>
