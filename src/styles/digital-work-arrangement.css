@@ -4,7 +4,6 @@
 .digital-work-arrangement-view table {
   border-collapse: collapse;
   width: 100%;
-  direction: rtl;
 }
 
 .digital-work-arrangement th,
@@ -12,13 +11,13 @@
 .digital-work-arrangement-view th,
 .digital-work-arrangement-view td {
   border: 1px solid #ddd;
-  text-align: right;
 }
 
 .digital-work-arrangement th,
 .digital-work-arrangement-view th {
   background-color: #000;
   color: white;
+  text-align: center;
   padding: 8px;
 }
 
