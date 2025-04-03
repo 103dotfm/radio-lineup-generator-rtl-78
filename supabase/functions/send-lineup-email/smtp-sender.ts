@@ -78,8 +78,14 @@ export const sendViaSmtp = async (
       from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
       to: recipientEmails[0], // First recipient goes in TO
       subject: subject,
-      html: body,
-      bcc: recipientEmails.length > 1 ? recipientEmails.slice(1).join(",") : undefined
+      html: body, // Using html property to ensure proper rendering
+      bcc: recipientEmails.length > 1 ? recipientEmails.slice(1).join(",") : undefined,
+      alternatives: [
+        {
+          contentType: 'text/html; charset=UTF-8',
+          content: body
+        }
+      ]
     };
     
     console.log("Mail options:", {
@@ -87,7 +93,8 @@ export const sendViaSmtp = async (
       to: mailOptions.to,
       bcc: mailOptions.bcc ? `${recipientEmails.length - 1} recipients` : 'none',
       subject: mailOptions.subject,
-      htmlLength: body.length
+      htmlLength: body.length,
+      contentType: 'text/html; charset=UTF-8'
     });
     console.log("Using BCC for multiple recipients to avoid duplicate emails");
     
