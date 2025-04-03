@@ -20,9 +20,22 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     hmr: {
       overlay: true,
+      // Add HMR connection options for WebSocket
+      host: 'localhost',
+      clientPort: 8080,
+      // Disable CORS checks for WebSocket connections
+      protocol: 'ws',
     },
     watch: {
       usePolling: true,
+    },
+    // Set CORS headers
+    cors: {
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+      credentials: true
     }
   },
   optimizeDeps: {
