@@ -80,12 +80,10 @@ export const sendViaSmtp = async (
       subject: subject,
       html: body, // Using html property to ensure proper rendering
       bcc: recipientEmails.length > 1 ? recipientEmails.slice(1).join(",") : undefined,
-      alternatives: [
-        {
-          contentType: 'text/html; charset=UTF-8',
-          content: body
-        }
-      ]
+      encoding: 'utf-8',
+      headers: {
+        'Content-Type': 'text/html; charset=UTF-8'
+      }
     };
     
     console.log("Mail options:", {

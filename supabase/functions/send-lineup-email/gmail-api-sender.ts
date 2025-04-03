@@ -96,15 +96,43 @@ export const sendViaGmailApi = async (
     emailLines.push('Content-Transfer-Encoding: base64');
     emailLines.push('');
     
-    // Add the body as base64 encoded content
-    const bodyBase64 = btoa(unescape(encodeURIComponent(body)));
-    emailLines.push(bodyBase64);
+    // Properly encode the body for base64 with UTF-8 support
+    // Convert the HTML string to a Uint8Array using TextEncoder
+    const encoder = new TextEncoder();
+    const uint8Array = encoder.encode(body);
+    
+    // Convert the Uint8Array to a base64 string
+    // This avoids the btoa() Latin1 limitation
+    const chunks = [];
+    for (let i = 0; i < uint8Array.length; i += 3) {
+      chunks.push(String.fromCharCode(
+        uint8Array[i],
+        uint8Array[i + 1] || 0,
+        uint8Array[i + 2] || 0
+      ));
+    }
+    const base64Body = btoa(chunks.join(''));
+    
+    // Add the body as base64 encoded content (with proper line breaks)
+    // Gmail API requires line breaks every 76 characters
+    const bodyLines = base64Body.match(/.{1,76}/g) || [];
+    emailLines.push(bodyLines.join('\r\n'));
     
     // Join with proper CRLF
     const rawEmail = emailLines.join('\r\n');
     
-    // Encode the raw email in base64url format
-    const encodedEmail = btoa(rawEmail)
+    // Encode the raw email for the Gmail API
+    // Use the same binary-to-base64 encoding approach
+    const uint8ArrayRaw = encoder.encode(rawEmail);
+    const chunksRaw = [];
+    for (let i = 0; i < uint8ArrayRaw.length; i += 3) {
+      chunksRaw.push(String.fromCharCode(
+        uint8ArrayRaw[i],
+        uint8ArrayRaw[i + 1] || 0,
+        uint8ArrayRaw[i + 2] || 0
+      ));
+    }
+    const encodedEmail = btoa(chunksRaw.join(''))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
