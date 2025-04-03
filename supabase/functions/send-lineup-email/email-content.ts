@@ -47,9 +47,11 @@ export const prepareEmailContent = (
   subject = subject.replace(/{{show_time}}/g, show.time || "");
   
   // Create a properly formatted button HTML
-  const viewLineupButton = `<div style="text-align: center; margin-top: 30px;">
-    <a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
-  </div>`;
+  // Make sure the button is a single self-contained element
+  const viewLineupButton = `
+    <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+      <a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
+    </div>`;
   
   // Process the body template
   let processedBody = emailSettings.body_template
@@ -108,9 +110,18 @@ export const prepareEmailContent = (
     .interviewees {
       margin-bottom: 20px;
     }
-    .link-section {
+    .button-container {
       margin-top: 30px;
       text-align: center;
+    }
+    .button {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white !important;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -120,7 +131,7 @@ export const prepareEmailContent = (
   </div>
 </body>
 </html>
-  `;
+  `.trim();
 
   return { subject, body };
 };
