@@ -1,4 +1,3 @@
-
 import nodemailer from "npm:nodemailer@6.9.9";
 import { EmailSettings } from "./utils.ts";
 import { isOutlookAuthError, getAlternativeSmtpRecommendation, createErrorLog } from "./error-handler.ts";
