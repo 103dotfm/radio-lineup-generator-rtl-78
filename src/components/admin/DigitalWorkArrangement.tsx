@@ -1,420 +1,906 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
-import { toast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
-import { format, startOfWeek, addDays } from 'date-fns';
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { PlusCircle, Pencil, Trash2, MoreVertical, MoveVertical } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-// Import necessary icons from lucide-react
-import { ChevronLeft, ChevronRight, Plus, Trash, Edit, Eye, EyeOff, Search, Check, Upload, FileUp, Link } from 'lucide-react';
+interface Shift {
+  id: string;
+  section_name: string;
+  day_of_week: number;
+  shift_type: string;
+  start_time: string;
+  end_time: string;
+  person_name: string | null;
+  additional_text: string | null;
+  is_custom_time: boolean;
+  is_hidden: boolean;
+  position: number;
+}
 
-// Define types for database work arrangements
-type DBWorkArrangement = {
+interface CustomRow {
+  id: string;
+  section_name: string;
+  contents: Record<number, string>;
+  position: number;
+}
+
+interface WorkArrangement {
   id: string;
   week_start: string;
-  created_at?: string;
-  updated_at?: string;
-  filename: string;
-  url: string;
-  type: string;
+  notes: string | null;
+  footer_text: string | null;
+  footer_image_url: string | null;
+  comic_prompt: string | null;
+}
+
+const SECTION_NAMES = {
+  DIGITAL_SHIFTS: 'digital_shifts',
+  RADIO_NORTH: 'radio_north',
+  TRANSCRIPTION_SHIFTS: 'transcription_shifts',
+  LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
 };
 
-// Define our internal work arrangement type
-type WorkArrangement = {
-  id: string;
-  week_start: string;
-  arrangement_data?: any;
-  is_published: boolean;
-  created_at?: string;
-  updated_at?: string;
-  url?: string;
-  filename?: string;
+const SHIFT_TYPES = {
+  MORNING: 'morning',
+  AFTERNOON: 'afternoon',
+  EVENING: 'evening',
+  CUSTOM: 'custom'
 };
 
-const DigitalWorkArrangement = () => {
-  // State variables
-  const [workArrangements, setWorkArrangements] = useState<WorkArrangement[]>([]);
-  const [currentArrangement, setCurrentArrangement] = useState<WorkArrangement | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [uploadingFile, setUploadingFile] = useState<boolean>(false);
-  const [arrangementType, setArrangementType] = useState<string>('digital');
-  const [fileUrl, setFileUrl] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
-  
-  useEffect(() => {
-    fetchWorkArrangements();
-  }, []);
+const DigitalWorkArrangement: React.FC = () => {
+  const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [customRows, setCustomRows] = useState<CustomRow[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [weekDate, setWeekDate] = useState<Date>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
+  const [currentSection, setCurrentSection] = useState(SECTION_NAMES.DIGITAL_SHIFTS);
+  const [comicPromptDialogOpen, setComicPromptDialogOpen] = useState(false);
+  const [comicPrompt, setComicPrompt] = useState('');
+  const [footerTextDialogOpen, setFooterTextDialogOpen] = useState(false);
+  const [footerText, setFooterText] = useState('');
+
+  // Dialog data states
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editingCustomRow, setEditingCustomRow] = useState<CustomRow | null>(null);
+  const [newShiftData, setNewShiftData] = useState({
+    section_name: SECTION_NAMES.DIGITAL_SHIFTS,
+    day_of_week: 0,
+    shift_type: SHIFT_TYPES.MORNING,
+    start_time: '09:00',
+    end_time: '12:00',
+    person_name: '',
+    additional_text: '',
+    is_custom_time: false,
+    is_hidden: false
+  });
+  const [newCustomRowData, setNewCustomRowData] = useState({
+    section_name: SECTION_NAMES.DIGITAL_SHIFTS,
+    contents: {} as Record<number, string>
+  });
+
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Find matching arrangement for selected date
-    const weekStart = format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd');
-    const matchingArrangement = workArrangements.find(arr => arr.week_start === weekStart);
-    setCurrentArrangement(matchingArrangement || null);
-  }, [selectedDate, workArrangements]);
+    fetchArrangement();
+  }, [weekDate]);
 
-  const fetchWorkArrangements = async () => {
+  const fetchArrangement = async () => {
+    setIsLoadingData(true);
+    const weekStartStr = format(weekDate, 'yyyy-MM-dd');
+    
     try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('work_arrangements')
+      // First try to fetch an existing arrangement
+      const { data: arrangementData, error: arrangementError } = await supabase
+        .from('digital_work_arrangements')
         .select('*')
-        .order('week_start', { ascending: false });
-
-      if (error) {
-        throw error;
+        .eq('week_start', weekStartStr)
+        .maybeSingle();
+      
+      if (arrangementError) {
+        throw arrangementError;
       }
-
-      if (data) {
-        // Transform data to match our WorkArrangement type
-        const transformedData: WorkArrangement[] = data.map((item: DBWorkArrangement) => ({
-          id: item.id,
-          week_start: item.week_start,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
-          url: item.url,
-          filename: item.filename,
-          arrangement_data: null, // Will be populated later if needed
-          is_published: item.type === 'published' // Determine published status from type
-        }));
+      
+      // If arrangement exists, fetch shifts and custom rows
+      if (arrangementData) {
+        setArrangement(arrangementData);
+        setComicPrompt(arrangementData.comic_prompt || '');
+        setFooterText(arrangementData.footer_text || '');
         
-        setWorkArrangements(transformedData);
+        // Fetch shifts
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('digital_shifts')
+          .select('*')
+          .eq('arrangement_id', arrangementData.id)
+          .order('position', { ascending: true });
         
-        // Set current arrangement if available
-        if (transformedData.length > 0) {
-          // Find arrangement for the selected date
-          const weekStart = format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd');
-          const matchingArrangement = transformedData.find(arr => arr.week_start === weekStart);
-          setCurrentArrangement(matchingArrangement || transformedData[0]);
+        if (shiftsError) {
+          throw shiftsError;
         }
+        
+        // Fetch custom rows
+        const { data: customRowsData, error: customRowsError } = await supabase
+          .from('digital_shift_custom_rows')
+          .select('*')
+          .eq('arrangement_id', arrangementData.id)
+          .order('position', { ascending: true });
+        
+        if (customRowsError) {
+          throw customRowsError;
+        }
+        
+        // Process custom rows - parse contents JSON
+        const processedCustomRows = (customRowsData || []).map(row => {
+          const contents: Record<number, string> = {};
+          
+          try {
+            if (row.contents) {
+              const parsedContents = typeof row.contents === 'string' 
+                ? JSON.parse(row.contents) 
+                : row.contents;
+              
+              // Ensure each day has content
+              for (let i = 0; i < 6; i++) {
+                contents[i] = (parsedContents[i] || '').toString();
+              }
+            } else if (row.content) {
+              // Legacy format - same content for all days
+              for (let i = 0; i < 6; i++) {
+                contents[i] = row.content;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing custom row contents:', e);
+          }
+          
+          return {
+            id: row.id,
+            section_name: row.section_name,
+            contents: contents,
+            position: row.position
+          };
+        });
+        
+        setShifts(shiftsData || []);
+        setCustomRows(processedCustomRows);
+      } else {
+        // Create a new arrangement
+        const { data: newArrangement, error: createError } = await supabase
+          .from('digital_work_arrangements')
+          .insert([{
+            week_start: weekStartStr,
+            notes: null,
+            footer_text: null,
+            footer_image_url: null,
+            comic_prompt: null
+          }])
+          .select()
+          .single();
+        
+        if (createError) {
+          throw createError;
+        }
+        
+        setArrangement(newArrangement);
+        setShifts([]);
+        setCustomRows([]);
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error fetching digital work arrangement:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: `Error fetching work arrangements: ${error.message}`
+        description: "Could not load the digital work arrangement.",
+        variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsLoadingData(false);
     }
   };
 
-  const handlePreviousWeek = () => {
-    const prevWeek = new Date(selectedDate);
-    prevWeek.setDate(prevWeek.getDate() - 7);
-    setSelectedDate(prevWeek);
-  };
-
-  const handleNextWeek = () => {
-    const nextWeek = new Date(selectedDate);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    setSelectedDate(nextWeek);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        if (event.target?.result) {
-          const base64Data = event.target.result.toString().split(',')[1];
-          const url = `data:${file.type};base64,${base64Data}`;
-          setFileUrl(url);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const uploadArrangement = async () => {
-    if (!fileUrl || !fileName) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please select a file to upload"
-      });
-      return;
-    }
-
+  // Handle shift creation/update
+  const handleSaveShift = async () => {
+    if (!arrangement) return;
+    
     try {
-      setUploadingFile(true);
-      const weekStart = format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd');
-      
-      // Check if an arrangement already exists for this date and type
-      const { data: existingData, error: existingError } = await supabase
-        .from('work_arrangements')
-        .select('*')
-        .eq('week_start', weekStart)
-        .eq('type', arrangementType);
-      
-      if (existingError) throw existingError;
-      
-      let operationPromise;
-      
-      if (existingData && existingData.length > 0) {
-        // Update existing arrangement
-        operationPromise = supabase
-          .from('work_arrangements')
+      if (editingShift) {
+        // Update existing shift
+        const { error } = await supabase
+          .from('digital_shifts')
           .update({
-            filename: fileName,
-            url: fileUrl,
-            updated_at: new Date().toISOString()
+            section_name: newShiftData.section_name,
+            day_of_week: newShiftData.day_of_week,
+            shift_type: newShiftData.shift_type,
+            start_time: newShiftData.start_time,
+            end_time: newShiftData.end_time,
+            person_name: newShiftData.person_name || null,
+            additional_text: newShiftData.additional_text || null,
+            is_custom_time: newShiftData.is_custom_time,
+            is_hidden: newShiftData.is_hidden
           })
-          .eq('id', existingData[0].id);
+          .eq('id', editingShift.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Shift updated successfully"
+        });
       } else {
-        // Create new arrangement
-        operationPromise = supabase
-          .from('work_arrangements')
+        // Create new shift
+        const position = shifts
+          .filter(s => s.section_name === newShiftData.section_name && 
+                       s.day_of_week === newShiftData.day_of_week && 
+                       s.shift_type === newShiftData.shift_type)
+          .length;
+        
+        const { data, error } = await supabase
+          .from('digital_shifts')
           .insert({
-            id: uuidv4(),
-            week_start: weekStart,
-            filename: fileName,
-            url: fileUrl,
-            type: arrangementType
-          });
+            arrangement_id: arrangement.id,
+            section_name: newShiftData.section_name,
+            day_of_week: newShiftData.day_of_week,
+            shift_type: newShiftData.shift_type,
+            start_time: newShiftData.start_time,
+            end_time: newShiftData.end_time,
+            person_name: newShiftData.person_name || null,
+            additional_text: newShiftData.additional_text || null,
+            is_custom_time: newShiftData.is_custom_time,
+            is_hidden: newShiftData.is_hidden,
+            position: position
+          })
+          .select();
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "New shift created successfully"
+        });
       }
       
-      const { error: operationError } = await operationPromise;
-      if (operationError) throw operationError;
+      // Refresh data
+      fetchArrangement();
+      setShiftDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving shift:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save shift",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle custom row creation/update
+  const handleSaveCustomRow = async () => {
+    if (!arrangement) return;
+    
+    try {
+      if (editingCustomRow) {
+        // Update existing custom row
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .update({
+            section_name: newCustomRowData.section_name,
+            contents: newCustomRowData.contents
+          })
+          .eq('id', editingCustomRow.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Custom row updated successfully"
+        });
+      } else {
+        // Create new custom row
+        const position = customRows
+          .filter(r => r.section_name === newCustomRowData.section_name)
+          .length;
+        
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .insert({
+            arrangement_id: arrangement.id,
+            section_name: newCustomRowData.section_name,
+            contents: newCustomRowData.contents,
+            position: position
+          });
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "New custom row created successfully"
+        });
+      }
       
+      // Refresh data
+      fetchArrangement();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving custom row:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save custom row",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle deletion of a shift
+  const handleDeleteShift = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('digital_shifts')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setShifts(shifts.filter(shift => shift.id !== id));
       toast({
         title: "Success",
-        description: `Work arrangement ${existingData && existingData.length > 0 ? 'updated' : 'uploaded'} successfully`
+        description: "Shift deleted successfully"
       });
-      
-      // Refresh arrangements list
-      fetchWorkArrangements();
-      
-      // Clear form
-      setFileUrl('');
-      setFileName('');
-      
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error deleting shift:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: `Error uploading work arrangement: ${error.message}`
+        description: "Failed to delete shift",
+        variant: "destructive"
       });
-    } finally {
-      setUploadingFile(false);
     }
   };
 
-  const deleteArrangement = async (arrangementId: string) => {
-    if (!confirm('Are you sure you want to delete this arrangement?')) {
-      return;
+  // Handle deletion of a custom row
+  const handleDeleteCustomRow = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('digital_shift_custom_rows')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCustomRows(customRows.filter(row => row.id !== id));
+      toast({
+        title: "Success",
+        description: "Custom row deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting custom row:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete custom row",
+        variant: "destructive"
+      });
     }
+  };
+
+  // Handle comic prompt update
+  const handleSaveComicPrompt = async () => {
+    if (!arrangement) return;
     
     try {
       const { error } = await supabase
-        .from('work_arrangements')
-        .delete()
-        .eq('id', arrangementId);
+        .from('digital_work_arrangements')
+        .update({ comic_prompt: comicPrompt })
+        .eq('id', arrangement.id);
       
       if (error) throw error;
       
       toast({
         title: "Success",
-        description: "Work arrangement deleted successfully"
+        description: "Comic prompt updated successfully"
       });
-      
-      // Refresh arrangements list
-      fetchWorkArrangements();
-    } catch (error: any) {
+      setComicPromptDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating comic prompt:', error);
       toast({
-        variant: "destructive",
         title: "Error",
-        description: `Error deleting work arrangement: ${error.message}`
+        description: "Failed to update comic prompt",
+        variant: "destructive"
       });
     }
   };
 
-  const generateWeekDisplay = () => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    const weekEnd = addDays(weekStart, 6);
-    return `${format(weekStart, 'dd/MM/yyyy')} - ${format(weekEnd, 'dd/MM/yyyy')}`;
+  // Handle footer text update
+  const handleSaveFooterText = async () => {
+    if (!arrangement) return;
+    
+    try {
+      const { error } = await supabase
+        .from('digital_work_arrangements')
+        .update({ footer_text: footerText })
+        .eq('id', arrangement.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Footer text updated successfully"
+      });
+      setFooterTextDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating footer text:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update footer text",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Open edit dialog for shift
+  const openShiftDialog = (shift?: Shift) => {
+    if (shift) {
+      setEditingShift(shift);
+      setNewShiftData({
+        section_name: shift.section_name,
+        day_of_week: shift.day_of_week,
+        shift_type: shift.shift_type,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        person_name: shift.person_name || '',
+        additional_text: shift.additional_text || '',
+        is_custom_time: shift.is_custom_time,
+        is_hidden: shift.is_hidden
+      });
+    } else {
+      setEditingShift(null);
+      setNewShiftData({
+        section_name: currentSection,
+        day_of_week: 0,
+        shift_type: SHIFT_TYPES.MORNING,
+        start_time: '09:00',
+        end_time: '12:00',
+        person_name: '',
+        additional_text: '',
+        is_custom_time: false,
+        is_hidden: false
+      });
+    }
+    setShiftDialogOpen(true);
+  };
+
+  // Open edit dialog for custom row
+  const openCustomRowDialog = (row?: CustomRow) => {
+    if (row) {
+      setEditingCustomRow(row);
+      setNewCustomRowData({
+        section_name: row.section_name,
+        contents: { ...row.contents }
+      });
+    } else {
+      setEditingCustomRow(null);
+      const contents: Record<number, string> = {};
+      for (let i = 0; i < 6; i++) {
+        contents[i] = '';
+      }
+      setNewCustomRowData({
+        section_name: currentSection,
+        contents: contents
+      });
+    }
+    setDialogOpen(true);
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Digital Work Arrangement</h1>
-      
-      {/* Date selection and controls */}
-      <div className="flex items-center mb-4 space-x-2">
-        <Button variant="outline" size="icon" onClick={handlePreviousWeek}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        
-        <DatePicker 
-          date={selectedDate} 
-          onSelect={(date) => date && setSelectedDate(date)} 
-        />
-        
-        <Button variant="outline" size="icon" onClick={handleNextWeek}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-
-        <div className="ml-4 text-sm text-gray-500">
-          Week: {generateWeekDisplay()}
+    <div className="space-y-6" dir="rtl">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">עורך סידור עבודה דיגיטל</h2>
+        <div className="flex items-center gap-2">
+          <DatePicker 
+            date={weekDate}
+            onSelect={(date) => date && setWeekDate(date)}
+          />
         </div>
       </div>
-      
-      {/* Upload section */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Upload Work Arrangement</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            <div>
-              <Label htmlFor="arrangement-type">Department</Label>
-              <Select 
-                value={arrangementType} 
-                onValueChange={setArrangementType}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="digital">Digital</SelectItem>
-                  <SelectItem value="producers">Producers</SelectItem>
-                  <SelectItem value="engineers">Engineers</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="file-upload">Upload PDF File</Label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  id="file-upload" 
-                  type="file" 
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="flex-1" 
-                />
-                <Button 
-                  onClick={uploadArrangement} 
-                  disabled={uploadingFile || !fileUrl}
-                >
-                  {uploadingFile ? "Uploading..." : "Upload"}
-                  <FileUp className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+
+      {isLoadingData ? (
+        <div className="flex justify-center my-8">
+          <p>טוען נתונים...</p>
+        </div>
+      ) : (
+        <>
+          {/* Section Tabs */}
+          <div className="flex space-x-2 space-x-reverse">
+            <Button
+              variant={currentSection === SECTION_NAMES.DIGITAL_SHIFTS ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.DIGITAL_SHIFTS)}
+            >
+              משמרות דיגיטל
+            </Button>
+            <Button
+              variant={currentSection === SECTION_NAMES.RADIO_NORTH ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.RADIO_NORTH)}
+            >
+              רדיו צפון
+            </Button>
+            <Button
+              variant={currentSection === SECTION_NAMES.TRANSCRIPTION_SHIFTS ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
+            >
+              משמרות תמלולים
+            </Button>
+            <Button
+              variant={currentSection === SECTION_NAMES.LIVE_SOCIAL_SHIFTS ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
+            >
+              משמרות לייבים
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-      
-      {/* Current Work Arrangements */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Current Work Arrangements</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div>Loading work arrangements...</div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['digital', 'producers', 'engineers'].map(type => {
-                  const arrangement = workArrangements.find(
-                    arr => arr.week_start === format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd') && 
-                    (type === 'digital' ? arr.filename?.toLowerCase().includes('digital') : 
-                     type === 'producers' ? arr.filename?.toLowerCase().includes('producer') : 
-                     arr.filename?.toLowerCase().includes('engineer'))
-                  );
-                  
-                  return (
-                    <Card key={type} className="p-4">
-                      <h3 className="font-semibold capitalize mb-2">{type}</h3>
-                      {arrangement ? (
-                        <div>
-                          <p className="text-sm mb-2 truncate">{arrangement.filename}</p>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open(arrangement.url, '_blank')}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => deleteArrangement(arrangement.id)}
-                            >
-                              <Trash className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
+
+          {/* Action buttons */}
+          <div className="flex space-x-2 space-x-reverse">
+            <Button onClick={() => openShiftDialog()}>
+              <PlusCircle className="ml-2 h-4 w-4" />
+              הוספת משמרת
+            </Button>
+            <Button onClick={() => openCustomRowDialog()}>
+              <PlusCircle className="ml-2 h-4 w-4" />
+              הוספת שורה מותאמת
+            </Button>
+            <Button onClick={() => setComicPromptDialogOpen(true)}>
+              {arrangement?.comic_prompt ? 'עריכת פרומפט קומיקס' : 'הוספת פרומפט קומיקס'}
+            </Button>
+            <Button onClick={() => setFooterTextDialogOpen(true)}>
+              {arrangement?.footer_text ? 'עריכת טקסט תחתון' : 'הוספת טקסט תחתון'}
+            </Button>
+          </div>
+
+          {/* Shifts Table */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold mb-4">משמרות</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>סוג</TableHead>
+                    <TableHead>יום</TableHead>
+                    <TableHead>שעות</TableHead>
+                    <TableHead>שם</TableHead>
+                    <TableHead>טקסט נוסף</TableHead>
+                    <TableHead>פעולות</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shifts
+                    .filter(shift => shift.section_name === currentSection)
+                    .map((shift) => (
+                      <TableRow key={shift.id} className={shift.is_hidden ? "opacity-50" : ""}>
+                        <TableCell>{shift.shift_type}</TableCell>
+                        <TableCell>{shift.day_of_week}</TableCell>
+                        <TableCell>
+                          {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
+                        </TableCell>
+                        <TableCell>{shift.person_name || '-'}</TableCell>
+                        <TableCell>{shift.additional_text || '-'}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openShiftDialog(shift)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                עריכה
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteShift(shift.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                מחיקה
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Custom Rows Table */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold mb-4">שורות מותאמות</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>תוכן ימים</TableHead>
+                    <TableHead>פעולות</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customRows
+                    .filter(row => row.section_name === currentSection)
+                    .map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell>
+                          <div className="grid grid-cols-6 gap-2">
+                            {[0, 1, 2, 3, 4, 5].map((day) => (
+                              <div key={day} className="text-center">
+                                {row.contents[day] || '-'}
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500">No arrangement uploaded</p>
-                      )}
-                    </Card>
-                  );
-                })}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openCustomRowDialog(row)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                עריכה
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteCustomRow(row.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                מחיקה
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <MoveVertical className="mr-2 h-4 w-4" />
+                                שינוי סדר
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Shift Dialog */}
+          <Dialog open={shiftDialogOpen} onOpenChange={setShiftDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingShift ? 'עריכת משמרת' : 'הוספת משמרת חדשה'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="shift-section">סקשן</Label>
+                  <Select
+                    value={newShiftData.section_name}
+                    onValueChange={(value) => setNewShiftData({...newShiftData, section_name: value})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר סקשן" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SECTION_NAMES.DIGITAL_SHIFTS}>משמרות דיגיטל</SelectItem>
+                      <SelectItem value={SECTION_NAMES.RADIO_NORTH}>רדיו צפון</SelectItem>
+                      <SelectItem value={SECTION_NAMES.TRANSCRIPTION_SHIFTS}>משמרות תמלולים</SelectItem>
+                      <SelectItem value={SECTION_NAMES.LIVE_SOCIAL_SHIFTS}>משמרות לייבים</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="shift-day">יום</Label>
+                  <Select
+                    value={newShiftData.day_of_week.toString()}
+                    onValueChange={(value) => setNewShiftData({...newShiftData, day_of_week: parseInt(value)})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר יום" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">ראשון</SelectItem>
+                      <SelectItem value="1">שני</SelectItem>
+                      <SelectItem value="2">שלישי</SelectItem>
+                      <SelectItem value="3">רביעי</SelectItem>
+                      <SelectItem value="4">חמישי</SelectItem>
+                      <SelectItem value="5">שישי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="shift-type">סוג משמרת</Label>
+                  <Select
+                    value={newShiftData.shift_type}
+                    onValueChange={(value) => setNewShiftData({...newShiftData, shift_type: value})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר סוג משמרת" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SHIFT_TYPES.MORNING}>בוקר</SelectItem>
+                      <SelectItem value={SHIFT_TYPES.AFTERNOON}>צהריים</SelectItem>
+                      <SelectItem value={SHIFT_TYPES.EVENING}>ערב</SelectItem>
+                      <SelectItem value={SHIFT_TYPES.CUSTOM}>מותאם אישית</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="start-time">שעת התחלה</Label>
+                  <Input
+                    id="start-time"
+                    type="time"
+                    value={newShiftData.start_time}
+                    onChange={(e) => setNewShiftData({...newShiftData, start_time: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="end-time">שעת סיום</Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={newShiftData.end_time}
+                    onChange={(e) => setNewShiftData({...newShiftData, end_time: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="person-name">שם</Label>
+                  <Input
+                    id="person-name"
+                    value={newShiftData.person_name}
+                    onChange={(e) => setNewShiftData({...newShiftData, person_name: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="additional-text">טקסט נוסף</Label>
+                  <Input
+                    id="additional-text"
+                    value={newShiftData.additional_text}
+                    onChange={(e) => setNewShiftData({...newShiftData, additional_text: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="is-custom-time" 
+                    checked={newShiftData.is_custom_time}
+                    onCheckedChange={(checked) => 
+                      setNewShiftData({...newShiftData, is_custom_time: checked === true})
+                    }
+                  />
+                  <Label htmlFor="is-custom-time">שעות מותאמות אישית</Label>
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="is-hidden" 
+                    checked={newShiftData.is_hidden}
+                    onCheckedChange={(checked) => 
+                      setNewShiftData({...newShiftData, is_hidden: checked === true})
+                    }
+                  />
+                  <Label htmlFor="is-hidden">הסתר משמרת</Label>
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Digital Arrangement Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Public Schedule Links</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="p-4 border rounded-md">
-              <h3 className="font-semibold mb-2">Public Schedule URL</h3>
-              <div className="flex items-center space-x-2">
-                <Input 
-                  readOnly 
-                  value={`${window.location.origin}/schedule/${format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd')}`} 
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveShift}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Custom Row Dialog */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCustomRow ? 'עריכת שורה מותאמת' : 'הוספת שורה מותאמת'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="row-section">סקשן</Label>
+                  <Select
+                    value={newCustomRowData.section_name}
+                    onValueChange={(value) => setNewCustomRowData({...newCustomRowData, section_name: value})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר סקשן" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SECTION_NAMES.DIGITAL_SHIFTS}>משמרות דיגיטל</SelectItem>
+                      <SelectItem value={SECTION_NAMES.RADIO_NORTH}>רדיו צפון</SelectItem>
+                      <SelectItem value={SECTION_NAMES.TRANSCRIPTION_SHIFTS}>משמרות תמלולים</SelectItem>
+                      <SelectItem value={SECTION_NAMES.LIVE_SOCIAL_SHIFTS}>משמרות לייבים</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="mb-2 block">תוכן לימים בשבוע</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {[0, 1, 2, 3, 4, 5].map((day) => (
+                      <div key={day} className="space-y-1">
+                        <Label className="text-center block">
+                          {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'][day]}
+                        </Label>
+                        <Input
+                          value={newCustomRowData.contents[day] || ''}
+                          onChange={(e) => {
+                            const newContents = {...newCustomRowData.contents};
+                            newContents[day] = e.target.value;
+                            setNewCustomRowData({...newCustomRowData, contents: newContents});
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveCustomRow}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Comic Prompt Dialog */}
+          <Dialog open={comicPromptDialogOpen} onOpenChange={setComicPromptDialogOpen}>
+            <DialogContent dir="rtl">
+              <DialogHeader>
+                <DialogTitle>פרומפט קומיקס</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Textarea
+                  placeholder="הזן פרומפט לקומיקס..."
+                  className="min-h-[200px]"
+                  value={comicPrompt}
+                  onChange={(e) => setComicPrompt(e.target.value)}
                 />
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/schedule/${format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd')}`);
-                    toast({
-                      title: "Copied",
-                      description: "URL copied to clipboard"
-                    });
-                  }}
-                >
-                  <Link className="h-4 w-4 mr-1" />
-                  Copy
-                </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-2">Share this link to provide access to the public schedule</p>
-            </div>
-            
-            <div className="p-4 border rounded-md">
-              <h3 className="font-semibold mb-2">Preview Public View</h3>
-              <Button 
-                onClick={() => window.open(`/schedule/${format(startOfWeek(selectedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd')}`, '_blank')}
-              >
-                <Eye className="h-4 w-4 mr-1" />
-                Open Preview
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveComicPrompt}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Footer Text Dialog */}
+          <Dialog open={footerTextDialogOpen} onOpenChange={setFooterTextDialogOpen}>
+            <DialogContent dir="rtl">
+              <DialogHeader>
+                <DialogTitle>טקסט תחתון</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Textarea
+                  placeholder="הזן טקסט תחתון..."
+                  className="min-h-[200px]"
+                  value={footerText}
+                  onChange={(e) => setFooterText(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveFooterText}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 };
