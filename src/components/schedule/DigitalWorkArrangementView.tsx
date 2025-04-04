@@ -14,6 +14,7 @@ interface Shift {
   start_time: string;
   end_time: string;
   person_name: string | null;
+  additional_text: string | null;
   is_custom_time: boolean;
   is_hidden: boolean;
   position: number;
@@ -22,7 +23,7 @@ interface Shift {
 interface CustomRow {
   id: string;
   section_name: string;
-  content: string | null;
+  contents: Record<number, string>; // Day index -> content mapping
   position: number;
 }
 
@@ -32,6 +33,7 @@ interface WorkArrangement {
   notes: string | null;
   footer_text: string | null;
   footer_image_url: string | null;
+  comic_prompt: string | null;
   shifts: Shift[];
   custom_rows: CustomRow[];
 }
@@ -110,8 +112,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
     try {
       // Check if arrangement exists for this week
-      // Using 'from' syntax and explicit type casting to fix the TypeScript error
-      const { data: existingArrangementData, error: fetchError } = await supabase
+      const { data: arrangementData, error: fetchError } = await supabase
         .from('work_arrangements')
         .select('*')
         .eq('type', 'digital')
@@ -122,21 +123,96 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         throw fetchError;
       }
 
-      if (existingArrangementData) {
-        // Since we're using the work_arrangements table, we need to adapt our approach
-        // Instead of querying digital_work_arrangements, we'll check the PDF URL
-        setArrangement({
-          id: existingArrangementData.id,
-          week_start: existingArrangementData.week_start,
-          notes: null,
-          footer_text: null,
-          footer_image_url: null,
-          shifts: [],
-          custom_rows: []
-        });
+      if (arrangementData) {
+        // Try to fetch from digital work arrangements table if it exists
+        try {
+          const { data: digitalArrangement, error: digitalError } = await supabase
+            .from('digital_work_arrangements')
+            .select('*')
+            .eq('week_start', weekStartStr)
+            .maybeSingle();
+            
+          if (!digitalError && digitalArrangement) {
+            // Fetch shifts
+            const { data: shiftsData, error: shiftsError } = await supabase
+              .from('digital_shifts')
+              .select('*')
+              .eq('arrangement_id', digitalArrangement.id)
+              .order('position', { ascending: true });
+              
+            if (shiftsError) throw shiftsError;
+            
+            // Fetch custom rows
+            const { data: customRowsData, error: customRowsError } = await supabase
+              .from('digital_shift_custom_rows')
+              .select('*')
+              .eq('arrangement_id', digitalArrangement.id)
+              .order('position', { ascending: true });
+              
+            if (customRowsError) throw customRowsError;
+            
+            // Process custom rows to convert from string to object if needed
+            const processedCustomRows: CustomRow[] = (customRowsData || []).map(row => {
+              let contents: Record<number, string> = {};
+              
+              try {
+                if (row.contents) {
+                  contents = JSON.parse(row.contents);
+                } else if (row.content) {
+                  // Legacy support
+                  for (let i = 0; i < 6; i++) {
+                    contents[i] = row.content;
+                  }
+                }
+              } catch (e) {
+                console.error('Error parsing contents', e);
+              }
+              
+              return {
+                id: row.id,
+                section_name: row.section_name,
+                contents,
+                position: row.position
+              };
+            });
+            
+            setArrangement({
+              id: digitalArrangement.id,
+              week_start: digitalArrangement.week_start,
+              notes: digitalArrangement.notes,
+              footer_text: digitalArrangement.footer_text,
+              footer_image_url: digitalArrangement.footer_image_url,
+              comic_prompt: digitalArrangement.comic_prompt || null,
+              shifts: shiftsData || [],
+              custom_rows: processedCustomRows
+            });
+          } else {
+            // Fall back to default arrangement from work_arrangements
+            setArrangement({
+              id: arrangementData.id,
+              week_start: arrangementData.week_start,
+              notes: null,
+              footer_text: null,
+              footer_image_url: null, 
+              comic_prompt: null,
+              shifts: [],
+              custom_rows: []
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching digital arrangement details:', error);
+          setArrangement({
+            id: arrangementData.id,
+            week_start: arrangementData.week_start,
+            notes: null,
+            footer_text: null,
+            footer_image_url: null,
+            comic_prompt: null,
+            shifts: [],
+            custom_rows: []
+          });
+        }
       } else {
-        // Try to fetch from the custom digital arrangement system if it exists
-        // This is just a placeholder until we implement the SQL schema properly
         console.log("No digital work arrangement found for this week");
         setArrangement(null);
       }
@@ -170,9 +246,16 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         {shifts.map((shift) => (
           <div key={shift.id} className="mb-1">
             <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-              <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+              {/* Display in RTL order: end_time - start_time */}
+              <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
-            <div>{shift.person_name || '-'}</div>
+            <div>
+              {shift.person_name && <span className="font-bold">{shift.person_name}</span>}
+              {shift.additional_text && (
+                <span className="block text-sm">{shift.additional_text}</span>
+              )}
+              {!shift.person_name && !shift.additional_text && '-'}
+            </div>
           </div>
         ))}
       </TableCell>
@@ -197,9 +280,16 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         {shifts.map((shift) => (
           <div key={shift.id}>
             <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-              <span>{shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}</span>
+              {/* Display in RTL order: end_time - start_time */}
+              <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
-            <div>{shift.person_name || '-'}</div>
+            <div>
+              {shift.person_name && <span className="font-bold">{shift.person_name}</span>}
+              {shift.additional_text && (
+                <span className="block text-sm">{shift.additional_text}</span>
+              )}
+              {!shift.person_name && !shift.additional_text && '-'}
+            </div>
           </div>
         ))}
       </TableCell>
@@ -215,9 +305,12 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     
     return rows.map((row) => (
       <TableRow key={row.id}>
-        <TableCell colSpan={6} className="p-2 border text-center">
-          {row.content}
-        </TableCell>
+        {/* Render each day's content in separate cells */}
+        {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
+          <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center">
+            {row.contents[dayIndex] || ''}
+          </TableCell>
+        ))}
       </TableRow>
     ));
   };
@@ -249,7 +342,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   }
 
   return (
-    <Card className="digital-work-arrangement-view">
+    <Card className="digital-work-arrangement-view" dir="rtl">
       <CardHeader>
         <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
         <div className="text-center">{formatDateRange()}</div>
@@ -301,6 +394,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                   {[...Array(5)].map((_, day) => renderRadioNorthCell(day))}
                   <TableCell className="border"></TableCell>
                 </TableRow>
+                {/* Custom rows */}
+                {renderCustomRows(SECTION_NAMES.RADIO_NORTH)}
               </TableBody>
             </Table>
           </div>
@@ -357,7 +452,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
           {/* Footer */}
           {arrangement.footer_text && (
-            <div className="p-4 text-center">
+            <div className="p-4 text-center min-h-[150px]">
               {arrangement.footer_text}
             </div>
           )}
