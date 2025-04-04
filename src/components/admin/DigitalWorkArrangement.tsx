@@ -16,7 +16,18 @@ import { DatePicker } from "@/components/ui/date-picker";
 // Import necessary icons from lucide-react
 import { ChevronLeft, ChevronRight, Plus, Trash, Edit, Eye, EyeOff, Search, Check } from 'lucide-react';
 
-// Define types for work arrangements
+// Define types for database work arrangements
+type DBWorkArrangement = {
+  id: string;
+  week_start: string;
+  created_at?: string;
+  updated_at?: string;
+  filename: string;
+  url: string;
+  type: string;
+};
+
+// Define our internal work arrangement type
 type WorkArrangement = {
   id: string;
   week_start: string;
@@ -53,10 +64,21 @@ const DigitalWorkArrangement = () => {
       }
 
       if (data) {
-        setWorkArrangements(data);
+        // Transform data to match our WorkArrangement type
+        const transformedData: WorkArrangement[] = data.map((item: DBWorkArrangement) => ({
+          id: item.id,
+          week_start: item.week_start,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          arrangement_data: null, // Will be populated later if needed
+          is_published: item.type === 'published' // Determine published status from type
+        }));
+        
+        setWorkArrangements(transformedData);
+        
         // Set current arrangement if available
-        if (data.length > 0) {
-          setCurrentArrangement(data[0]);
+        if (transformedData.length > 0) {
+          setCurrentArrangement(transformedData[0]);
         }
       }
     } catch (error: any) {

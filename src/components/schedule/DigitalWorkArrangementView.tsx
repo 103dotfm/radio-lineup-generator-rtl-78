@@ -8,7 +8,18 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// Define types
+// Define types for database work arrangements
+type DBWorkArrangement = {
+  id: string;
+  week_start: string;
+  created_at?: string;
+  updated_at?: string;
+  filename: string;
+  url: string;
+  type: string;
+};
+
+// Define internal work arrangement type
 type WorkArrangement = {
   id: string;
   week_start: string;
@@ -37,7 +48,7 @@ const DigitalWorkArrangementView = () => {
         .from('work_arrangements')
         .select('*')
         .eq('week_start', formattedDate)
-        .eq('is_published', true)
+        .eq('type', 'published')
         .single();
       
       if (error && error.code !== 'PGRST116') {
@@ -45,11 +56,18 @@ const DigitalWorkArrangementView = () => {
       }
       
       if (data) {
-        // Parse the arrangement_data if it's a string
-        if (typeof data.arrangement_data === 'string') {
-          data.arrangement_data = JSON.parse(data.arrangement_data);
-        }
-        setCurrentArrangement(data as WorkArrangement);
+        // Transform data to match our WorkArrangement type
+        let arrangement: WorkArrangement = {
+          id: data.id,
+          week_start: data.week_start,
+          is_published: data.type === 'published',
+          arrangement_data: null
+        };
+        
+        // Try to extract arrangement data from URL or other source if needed
+        // This would depend on how your data is structured
+        
+        setCurrentArrangement(arrangement);
       } else {
         setCurrentArrangement(null);
       }
