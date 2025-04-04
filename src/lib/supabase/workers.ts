@@ -1,67 +1,91 @@
 
-import { supabase } from '@/lib/supabase';
-import { Worker } from '@/components/schedule/workers/WorkerSelector';
+import { supabase } from "@/lib/supabase";
+import { Worker } from "@/components/schedule/workers/WorkerSelector";
 
-// Get all workers
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
-      .from('workers')
-      .select('*')
-      .order('name', { ascending: true });
+      .from('digital_employees')
+      .select('id, full_name, department, position, email, phone')
+      .eq('is_active', true)
+      .order('full_name');
     
     if (error) throw error;
-    return data || [];
+    
+    return data.map(employee => ({
+      id: employee.id,
+      name: employee.full_name,
+      department: employee.department,
+      position: employee.position
+    }));
   } catch (error) {
     console.error('Error fetching workers:', error);
     return [];
   }
 };
 
-// Create a new worker
-export const createWorker = async (worker: Omit<Worker, 'id'>): Promise<Worker | null> => {
+export const createWorker = async (worker: Partial<Worker>): Promise<Worker | null> => {
   try {
     const { data, error } = await supabase
-      .from('workers')
-      .insert(worker)
+      .from('digital_employees')
+      .insert({
+        full_name: worker.name,
+        department: worker.department,
+        position: worker.position
+      })
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      name: data.full_name,
+      department: data.department,
+      position: data.position
+    };
   } catch (error) {
     console.error('Error creating worker:', error);
     return null;
   }
 };
 
-// Update a worker
 export const updateWorker = async (id: string, worker: Partial<Worker>): Promise<Worker | null> => {
   try {
     const { data, error } = await supabase
-      .from('workers')
-      .update(worker)
+      .from('digital_employees')
+      .update({
+        full_name: worker.name,
+        department: worker.department,
+        position: worker.position
+      })
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
-    return data;
+    
+    return {
+      id: data.id,
+      name: data.full_name,
+      department: data.department,
+      position: data.position
+    };
   } catch (error) {
     console.error('Error updating worker:', error);
     return null;
   }
 };
 
-// Delete a worker
 export const deleteWorker = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('workers')
+      .from('digital_employees')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+    
     return true;
   } catch (error) {
     console.error('Error deleting worker:', error);
