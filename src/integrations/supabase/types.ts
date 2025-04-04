@@ -37,6 +37,7 @@ export type Database = {
         Row: {
           arrangement_id: string
           content: string | null
+          contents: Json | null
           created_at: string | null
           id: string
           position: number
@@ -46,6 +47,7 @@ export type Database = {
         Insert: {
           arrangement_id: string
           content?: string | null
+          contents?: Json | null
           created_at?: string | null
           id?: string
           position: number
@@ -55,6 +57,7 @@ export type Database = {
         Update: {
           arrangement_id?: string
           content?: string | null
+          contents?: Json | null
           created_at?: string | null
           id?: string
           position?: number
@@ -73,6 +76,7 @@ export type Database = {
       }
       digital_shifts: {
         Row: {
+          additional_text: string | null
           arrangement_id: string
           created_at: string | null
           day_of_week: number
@@ -88,6 +92,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          additional_text?: string | null
           arrangement_id: string
           created_at?: string | null
           day_of_week: number
@@ -103,6 +108,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          additional_text?: string | null
           arrangement_id?: string
           created_at?: string | null
           day_of_week?: number
@@ -129,6 +135,7 @@ export type Database = {
       }
       digital_work_arrangements: {
         Row: {
+          comic_prompt: string | null
           created_at: string | null
           footer_image_url: string | null
           footer_text: string | null
@@ -138,6 +145,7 @@ export type Database = {
           week_start: string
         }
         Insert: {
+          comic_prompt?: string | null
           created_at?: string | null
           footer_image_url?: string | null
           footer_text?: string | null
@@ -147,6 +155,7 @@ export type Database = {
           week_start: string
         }
         Update: {
+          comic_prompt?: string | null
           created_at?: string | null
           footer_image_url?: string | null
           footer_text?: string | null
@@ -762,6 +771,39 @@ export type Database = {
           updated_at?: string | null
           url?: string
           week_start?: string
+        }
+        Relationships: []
+      }
+      workers: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          position: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
