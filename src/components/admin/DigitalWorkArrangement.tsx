@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -22,6 +21,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import WorkerSelector from '@/components/schedule/workers/WorkerSelector';
 
 interface Shift {
   id: string;
@@ -81,7 +81,6 @@ const DigitalWorkArrangement: React.FC = () => {
   const [footerTextDialogOpen, setFooterTextDialogOpen] = useState(false);
   const [footerText, setFooterText] = useState('');
 
-  // Dialog data states
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [editingCustomRow, setEditingCustomRow] = useState<CustomRow | null>(null);
   const [newShiftData, setNewShiftData] = useState({
@@ -111,46 +110,41 @@ const DigitalWorkArrangement: React.FC = () => {
     const weekStartStr = format(weekDate, 'yyyy-MM-dd');
     
     try {
-      // First try to fetch an existing arrangement
       const { data: arrangementData, error: arrangementError } = await supabase
         .from('digital_work_arrangements')
         .select('*')
-        .eq('week_start', weekStartStr)
-        .maybeSingle();
+        .eq('week_start', weekStartStr);
       
       if (arrangementError) {
         throw arrangementError;
       }
       
-      // If arrangement exists, fetch shifts and custom rows
-      if (arrangementData) {
-        setArrangement(arrangementData);
-        setComicPrompt(arrangementData.comic_prompt || '');
-        setFooterText(arrangementData.footer_text || '');
+      if (arrangementData && arrangementData.length > 0) {
+        const firstArrangement = arrangementData[0];
+        setArrangement(firstArrangement);
+        setComicPrompt(firstArrangement.comic_prompt || '');
+        setFooterText(firstArrangement.footer_text || '');
         
-        // Fetch shifts
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('digital_shifts')
           .select('*')
-          .eq('arrangement_id', arrangementData.id)
+          .eq('arrangement_id', firstArrangement.id)
           .order('position', { ascending: true });
         
         if (shiftsError) {
           throw shiftsError;
         }
         
-        // Fetch custom rows
         const { data: customRowsData, error: customRowsError } = await supabase
           .from('digital_shift_custom_rows')
           .select('*')
-          .eq('arrangement_id', arrangementData.id)
+          .eq('arrangement_id', firstArrangement.id)
           .order('position', { ascending: true });
         
         if (customRowsError) {
           throw customRowsError;
         }
         
-        // Process custom rows - parse contents JSON
         const processedCustomRows = (customRowsData || []).map(row => {
           const contents: Record<number, string> = {};
           
@@ -160,12 +154,10 @@ const DigitalWorkArrangement: React.FC = () => {
                 ? JSON.parse(row.contents) 
                 : row.contents;
               
-              // Ensure each day has content
               for (let i = 0; i < 6; i++) {
                 contents[i] = (parsedContents[i] || '').toString();
               }
             } else if (row.content) {
-              // Legacy format - same content for all days
               for (let i = 0; i < 6; i++) {
                 contents[i] = row.content;
               }
@@ -185,7 +177,6 @@ const DigitalWorkArrangement: React.FC = () => {
         setShifts(shiftsData || []);
         setCustomRows(processedCustomRows);
       } else {
-        // Create a new arrangement
         const { data: newArrangement, error: createError } = await supabase
           .from('digital_work_arrangements')
           .insert([{
@@ -218,13 +209,11 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Handle shift creation/update
   const handleSaveShift = async () => {
     if (!arrangement) return;
     
     try {
       if (editingShift) {
-        // Update existing shift
         const { error } = await supabase
           .from('digital_shifts')
           .update({
@@ -247,7 +236,6 @@ const DigitalWorkArrangement: React.FC = () => {
           description: "Shift updated successfully"
         });
       } else {
-        // Create new shift
         const position = shifts
           .filter(s => s.section_name === newShiftData.section_name && 
                        s.day_of_week === newShiftData.day_of_week && 
@@ -279,7 +267,6 @@ const DigitalWorkArrangement: React.FC = () => {
         });
       }
       
-      // Refresh data
       fetchArrangement();
       setShiftDialogOpen(false);
     } catch (error) {
@@ -292,13 +279,11 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Handle custom row creation/update
   const handleSaveCustomRow = async () => {
     if (!arrangement) return;
     
     try {
       if (editingCustomRow) {
-        // Update existing custom row
         const { error } = await supabase
           .from('digital_shift_custom_rows')
           .update({
@@ -314,7 +299,6 @@ const DigitalWorkArrangement: React.FC = () => {
           description: "Custom row updated successfully"
         });
       } else {
-        // Create new custom row
         const position = customRows
           .filter(r => r.section_name === newCustomRowData.section_name)
           .length;
@@ -336,7 +320,6 @@ const DigitalWorkArrangement: React.FC = () => {
         });
       }
       
-      // Refresh data
       fetchArrangement();
       setDialogOpen(false);
     } catch (error) {
@@ -349,7 +332,6 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Handle deletion of a shift
   const handleDeleteShift = async (id: string) => {
     try {
       const { error } = await supabase
@@ -374,7 +356,6 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Handle deletion of a custom row
   const handleDeleteCustomRow = async (id: string) => {
     try {
       const { error } = await supabase
@@ -399,7 +380,6 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Handle comic prompt update
   const handleSaveComicPrompt = async () => {
     if (!arrangement) return;
     
@@ -426,7 +406,6 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Handle footer text update
   const handleSaveFooterText = async () => {
     if (!arrangement) return;
     
@@ -453,7 +432,6 @@ const DigitalWorkArrangement: React.FC = () => {
     }
   };
 
-  // Open edit dialog for shift
   const openShiftDialog = (shift?: Shift) => {
     if (shift) {
       setEditingShift(shift);
@@ -485,7 +463,6 @@ const DigitalWorkArrangement: React.FC = () => {
     setShiftDialogOpen(true);
   };
 
-  // Open edit dialog for custom row
   const openCustomRowDialog = (row?: CustomRow) => {
     if (row) {
       setEditingCustomRow(row);
@@ -507,6 +484,21 @@ const DigitalWorkArrangement: React.FC = () => {
     setDialogOpen(true);
   };
 
+  const handleShiftPersonChange = (shiftId: string, personId: string | null, additionalText?: string) => {
+    const updatedShifts = shifts.map(shift => {
+      if (shift.id === shiftId) {
+        return {
+          ...shift,
+          person_name: personId,
+          additional_text: additionalText || shift.additional_text
+        };
+      }
+      return shift;
+    });
+    
+    setShifts(updatedShifts);
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
@@ -525,7 +517,6 @@ const DigitalWorkArrangement: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Section Tabs */}
           <div className="flex space-x-2 space-x-reverse">
             <Button
               variant={currentSection === SECTION_NAMES.DIGITAL_SHIFTS ? "default" : "outline"}
@@ -553,7 +544,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </Button>
           </div>
 
-          {/* Action buttons */}
           <div className="flex space-x-2 space-x-reverse">
             <Button onClick={() => openShiftDialog()}>
               <PlusCircle className="ml-2 h-4 w-4" />
@@ -571,7 +561,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </Button>
           </div>
 
-          {/* Shifts Table */}
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold mb-4">משמרות</h3>
@@ -624,7 +613,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Custom Rows Table */}
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-semibold mb-4">שורות מותאמות</h3>
@@ -679,7 +667,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Shift Dialog */}
           <Dialog open={shiftDialogOpen} onOpenChange={setShiftDialogOpen}>
             <DialogContent className="sm:max-w-[425px]" dir="rtl">
               <DialogHeader>
@@ -763,12 +750,20 @@ const DigitalWorkArrangement: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right" htmlFor="person-name">שם</Label>
-                  <Input
-                    id="person-name"
-                    value={newShiftData.person_name}
-                    onChange={(e) => setNewShiftData({...newShiftData, person_name: e.target.value})}
-                    className="col-span-3"
-                  />
+                  <div className="col-span-3">
+                    <WorkerSelector 
+                      value={newShiftData.person_name || null}
+                      onChange={(value, additionalText) => 
+                        setNewShiftData({
+                          ...newShiftData, 
+                          person_name: value || '', 
+                          additional_text: additionalText || ''
+                        })
+                      }
+                      additionalText={newShiftData.additional_text}
+                      placeholder="בחר עובד..."
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right" htmlFor="additional-text">טקסט נוסף</Label>
@@ -787,7 +782,7 @@ const DigitalWorkArrangement: React.FC = () => {
                       setNewShiftData({...newShiftData, is_custom_time: checked === true})
                     }
                   />
-                  <Label htmlFor="is-custom-time">שעות מותאמות אישית</Label>
+                  <Label htmlFor="is-custom-time">שעו�� מותאמות אישית</Label>
                 </div>
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Checkbox 
@@ -806,7 +801,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Custom Row Dialog */}
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogContent className="sm:max-w-[600px]" dir="rtl">
               <DialogHeader>
@@ -860,7 +854,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Comic Prompt Dialog */}
           <Dialog open={comicPromptDialogOpen} onOpenChange={setComicPromptDialogOpen}>
             <DialogContent dir="rtl">
               <DialogHeader>
@@ -880,7 +873,6 @@ const DigitalWorkArrangement: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Footer Text Dialog */}
           <Dialog open={footerTextDialogOpen} onOpenChange={setFooterTextDialogOpen}>
             <DialogContent dir="rtl">
               <DialogHeader>
