@@ -111,26 +111,27 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         .from('work_arrangements')
         .select('*')
         .eq('type', 'digital')
-        .eq('week_start', weekStartStr)
-        .maybeSingle();
+        .eq('week_start', weekStartStr);
 
       if (fetchError) {
         throw fetchError;
       }
 
-      if (arrangementData) {
+      if (arrangementData && arrangementData.length > 0) {
         try {
           const { data: digitalArrangement, error: digitalError } = await supabase
             .from('digital_work_arrangements')
             .select('*')
-            .eq('week_start', weekStartStr)
-            .maybeSingle();
+            .eq('week_start', weekStartStr);
             
-          if (!digitalError && digitalArrangement) {
+          if (!digitalError && digitalArrangement && digitalArrangement.length > 0) {
+            // Use the first arrangement if multiple exist
+            const firstArrangement = digitalArrangement[0];
+            
             const { data: shiftsData, error: shiftsError } = await supabase
               .from('digital_shifts')
               .select('*')
-              .eq('arrangement_id', digitalArrangement.id)
+              .eq('arrangement_id', firstArrangement.id)
               .order('position', { ascending: true });
               
             if (shiftsError) throw shiftsError;
@@ -138,7 +139,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             const { data: customRowsData, error: customRowsError } = await supabase
               .from('digital_shift_custom_rows')
               .select('*')
-              .eq('arrangement_id', digitalArrangement.id)
+              .eq('arrangement_id', firstArrangement.id)
               .order('position', { ascending: true });
               
             if (customRowsError) throw customRowsError;
@@ -178,19 +179,19 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             }));
             
             setArrangement({
-              id: digitalArrangement.id,
-              week_start: digitalArrangement.week_start,
-              notes: digitalArrangement.notes,
-              footer_text: digitalArrangement.footer_text,
-              footer_image_url: digitalArrangement.footer_image_url,
-              comic_prompt: digitalArrangement.comic_prompt || "",
+              id: firstArrangement.id,
+              week_start: firstArrangement.week_start,
+              notes: firstArrangement.notes,
+              footer_text: firstArrangement.footer_text,
+              footer_image_url: firstArrangement.footer_image_url,
+              comic_prompt: firstArrangement.comic_prompt || "",
               shifts: mappedShifts,
               custom_rows: processedCustomRows
             });
           } else {
             setArrangement({
-              id: arrangementData.id,
-              week_start: arrangementData.week_start,
+              id: arrangementData[0].id,
+              week_start: arrangementData[0].week_start,
               notes: null,
               footer_text: null,
               footer_image_url: null,
@@ -202,8 +203,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         } catch (error) {
           console.error('Error fetching digital arrangement details:', error);
           setArrangement({
-            id: arrangementData.id,
-            week_start: arrangementData.week_start,
+            id: arrangementData[0].id,
+            week_start: arrangementData[0].week_start,
             notes: null,
             footer_text: null,
             footer_image_url: null,
