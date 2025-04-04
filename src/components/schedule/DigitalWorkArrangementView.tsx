@@ -12,7 +12,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 type WorkArrangement = {
   id: string;
   week_start: string;
-  arrangement_data: any;
+  arrangement_data?: any;
   is_published: boolean;
 };
 
@@ -49,7 +49,7 @@ const DigitalWorkArrangementView = () => {
         if (typeof data.arrangement_data === 'string') {
           data.arrangement_data = JSON.parse(data.arrangement_data);
         }
-        setCurrentArrangement(data);
+        setCurrentArrangement(data as WorkArrangement);
       } else {
         setCurrentArrangement(null);
       }
@@ -86,7 +86,7 @@ const DigitalWorkArrangementView = () => {
       <h1 className="text-2xl font-bold mb-4 text-center">סידור עבודה שבועי</h1>
       
       <div className="flex justify-center items-center space-x-2 mb-6">
-        <Button variant="outline" size="icon" onClick={handlePreviousWeek}>
+        <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
         
@@ -95,7 +95,7 @@ const DigitalWorkArrangementView = () => {
           onSelect={(date) => date && setSelectedDate(date)} 
         />
         
-        <Button variant="outline" size="icon" onClick={handleNextWeek}>
+        <Button variant="outline" size="sm" onClick={handleNextWeek}>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
