@@ -4,6 +4,7 @@
 .digital-work-arrangement-view table {
   border-collapse: collapse;
   width: 100%;
+  direction: rtl;
 }
 
 .digital-work-arrangement th,
@@ -24,6 +25,19 @@
 /* Custom styles for highlighting custom times */
 .digital-work-arrangement .bg-yellow-100 {
   background-color: #fef9c3;
+}
+
+/* Style for worker names */
+.digital-work-arrangement .worker-name,
+.digital-work-arrangement-view .worker-name {
+  font-weight: bold;
+}
+
+/* Style for additional text */
+.digital-work-arrangement .additional-text,
+.digital-work-arrangement-view .additional-text {
+  font-weight: normal;
+  font-size: 0.9em;
 }
 
 /* Print styles */
@@ -49,4 +63,25 @@
   outline: none;
   border-color: #3b82f6;
   background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Styles for RTL display */
+.digital-work-arrangement [dir="rtl"],
+.digital-work-arrangement-view [dir="rtl"],
+[dir="rtl"] .digital-work-arrangement,
+[dir="rtl"] .digital-work-arrangement-view {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Comic sketch generator styles */
+.comic-sketch-preview {
+  max-height: 400px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* Textarea for larger footer text */
+.digital-work-arrangement textarea.footer-text {
+  min-height: 150px;
 }

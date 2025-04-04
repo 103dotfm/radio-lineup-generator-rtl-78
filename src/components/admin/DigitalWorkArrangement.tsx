@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -17,6 +16,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { PlusCircle, Trash2, ChevronLeft, ChevronRight, Save, AlertCircle, Edit } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import WorkerSelector from '../schedule/workers/WorkerSelector';
+import CustomRowColumns from '../schedule/workers/CustomRowColumns';
+import ComicSketchGenerator from '../schedule/workers/ComicSketchGenerator';
 
 interface Shift {
   id: string;
@@ -26,6 +28,7 @@ interface Shift {
   start_time: string;
   end_time: string;
   person_name: string | null;
+  additional_text: string | null;
   is_custom_time: boolean;
   is_hidden: boolean;
   position: number;
@@ -34,7 +37,7 @@ interface Shift {
 interface CustomRow {
   id: string;
   section_name: string;
-  content: string | null;
+  contents: Record<number, string>;
   position: number;
 }
 
@@ -44,6 +47,7 @@ interface WorkArrangement {
   notes: string | null;
   footer_text: string | null;
   footer_image_url: string | null;
+  comic_prompt: string | null;
   shifts: Shift[];
   custom_rows: CustomRow[];
 }
@@ -153,6 +157,7 @@ const DigitalWorkArrangement = () => {
   const [notes, setNotes] = useState<string>('');
   const [footerText, setFooterText] = useState<string>('');
   const [footerImageUrl, setFooterImageUrl] = useState<string>('');
+  const [comicPrompt, setComicPrompt] = useState<string>('');
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [customRows, setCustomRows] = useState<CustomRow[]>([]);
   
@@ -197,23 +202,52 @@ const DigitalWorkArrangement = () => {
           
         if (customRowsError) throw customRowsError;
         
+        // Process custom rows to the new format with day-specific contents
+        const processedCustomRows: CustomRow[] = (customRowsData || []).map(row => {
+          // For backward compatibility, parse existing content into the new structure
+          let contents: Record<number, string> = {};
+          
+          try {
+            if (row.contents) {
+              // If it's already in the new format
+              contents = JSON.parse(row.contents);
+            } else if (row.content) {
+              // Old format - single content for all days
+              for (let i = 0; i < 6; i++) {
+                contents[i] = row.content;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing custom row contents', e);
+          }
+          
+          return {
+            id: row.id,
+            section_name: row.section_name,
+            contents,
+            position: row.position
+          };
+        });
+        
         setArrangement({
           ...existingArrangement,
           shifts: shiftsData || [],
-          custom_rows: customRowsData || []
+          custom_rows: processedCustomRows
         });
         
         setNotes(existingArrangement.notes || '');
         setFooterText(existingArrangement.footer_text || '');
         setFooterImageUrl(existingArrangement.footer_image_url || '');
+        setComicPrompt(existingArrangement.comic_prompt || '');
         setShifts(shiftsData || []);
-        setCustomRows(customRowsData || []);
+        setCustomRows(processedCustomRows);
       } else {
         // Create default arrangement
         setArrangement(null);
         setNotes('');
         setFooterText('');
         setFooterImageUrl('');
+        setComicPrompt('');
         setShifts(generateDefaultShifts());
         setCustomRows([]);
       }
@@ -279,6 +313,7 @@ const DigitalWorkArrangement = () => {
             start_time: startTime,
             end_time: endTime,
             person_name: null,
+            additional_text: null,
             is_custom_time: false,
             is_hidden: false,
             position: position++
@@ -298,6 +333,7 @@ const DigitalWorkArrangement = () => {
         start_time: DEFAULT_SHIFTS[SECTION_NAMES.RADIO_NORTH].default.startTime,
         end_time: DEFAULT_SHIFTS[SECTION_NAMES.RADIO_NORTH].default.endTime,
         person_name: null,
+        additional_text: null,
         is_custom_time: false,
         is_hidden: false,
         position: position++
@@ -331,6 +367,7 @@ const DigitalWorkArrangement = () => {
           start_time: startTime,
           end_time: endTime,
           person_name: null,
+          additional_text: null,
           is_custom_time: false,
           is_hidden: false,
           position: position++
@@ -365,6 +402,7 @@ const DigitalWorkArrangement = () => {
           start_time: startTime,
           end_time: endTime,
           person_name: null,
+          additional_text: null,
           is_custom_time: false,
           is_hidden: false,
           position: position++
@@ -383,11 +421,15 @@ const DigitalWorkArrangement = () => {
     }
   };
 
-  // Update a shift's person name
-  const updatePersonName = (shiftId: string, name: string | null) => {
+  // Update a shift's person name and additional text
+  const updatePersonData = (shiftId: string, name: string | null, additionalText: string | null) => {
     setShifts(currentShifts => 
       currentShifts.map(shift => 
-        shift.id === shiftId ? { ...shift, person_name: name } : shift
+        shift.id === shiftId ? { 
+          ...shift, 
+          person_name: name,
+          additional_text: additionalText
+        } : shift
       )
     );
   };
@@ -421,19 +463,24 @@ const DigitalWorkArrangement = () => {
     const newRow: CustomRow = {
       id: `new-custom-${Date.now()}`,
       section_name: sectionName,
-      content: '',
+      contents: {},
       position: newPosition
     };
     
     setCustomRows([...customRows, newRow]);
   };
 
-  // Update custom row content
-  const updateCustomRowContent = (rowId: string, content: string) => {
+  // Update custom row content for a specific day
+  const updateCustomRowContent = (rowId: string, dayIndex: number, content: string) => {
     setCustomRows(currentRows => 
-      currentRows.map(row => 
-        row.id === rowId ? { ...row, content } : row
-      )
+      currentRows.map(row => {
+        if (row.id === rowId) {
+          const updatedContents = { ...row.contents };
+          updatedContents[dayIndex] = content;
+          return { ...row, contents: updatedContents };
+        }
+        return row;
+      })
     );
   };
 
@@ -461,7 +508,8 @@ const DigitalWorkArrangement = () => {
           .update({
             notes,
             footer_text: footerText,
-            footer_image_url: footerImageUrl
+            footer_image_url: footerImageUrl,
+            comic_prompt: comicPrompt
           })
           .eq('id', arrangementId);
           
@@ -474,7 +522,8 @@ const DigitalWorkArrangement = () => {
             week_start: weekStartStr,
             notes,
             footer_text: footerText,
-            footer_image_url: footerImageUrl
+            footer_image_url: footerImageUrl,
+            comic_prompt: comicPrompt
           })
           .select()
           .single();
@@ -499,6 +548,7 @@ const DigitalWorkArrangement = () => {
               start_time: shift.start_time,
               end_time: shift.end_time,
               person_name: shift.person_name,
+              additional_text: shift.additional_text,
               is_custom_time: shift.is_custom_time,
               is_hidden: shift.is_hidden,
               position: shift.position
@@ -513,6 +563,7 @@ const DigitalWorkArrangement = () => {
               start_time: shift.start_time,
               end_time: shift.end_time,
               person_name: shift.person_name,
+              additional_text: shift.additional_text,
               is_custom_time: shift.is_custom_time,
               is_hidden: shift.is_hidden,
               position: shift.position
@@ -524,8 +575,8 @@ const DigitalWorkArrangement = () => {
       }
       
       // Process custom rows
-      // First, delete all existing custom rows for this arrangement to avoid conflicts
-      if (!arrangement?.id) {
+      // First, delete all existing custom rows for this arrangement
+      if (arrangement?.id) {
         const { error: deleteRowsError } = await supabase
           .from('digital_shift_custom_rows')
           .delete()
@@ -536,32 +587,20 @@ const DigitalWorkArrangement = () => {
       
       // Then insert all current custom rows
       for (const row of customRows) {
-        if (row.content) { // Only save rows with content
-          if (row.id.startsWith('new-')) {
-            // Create new custom row
-            const { error: rowError } = await supabase
-              .from('digital_shift_custom_rows')
-              .insert({
-                arrangement_id: arrangementId,
-                section_name: row.section_name,
-                content: row.content,
-                position: row.position
-              });
-              
-            if (rowError) throw rowError;
-          } else {
-            // Update existing custom row
-            const { error: rowError } = await supabase
-              .from('digital_shift_custom_rows')
-              .update({
-                content: row.content,
-                position: row.position
-              })
-              .eq('id', row.id);
-              
-            if (rowError) throw rowError;
-          }
-        }
+        // Convert the contents to JSON string
+        const contentsJson = JSON.stringify(row.contents);
+        
+        // Create new custom row
+        const { error: rowError } = await supabase
+          .from('digital_shift_custom_rows')
+          .insert({
+            arrangement_id: arrangementId,
+            section_name: row.section_name,
+            contents: contentsJson,
+            position: row.position
+          });
+          
+        if (rowError) throw rowError;
       }
       
       toast({
@@ -602,9 +641,9 @@ const DigitalWorkArrangement = () => {
         <Table className="digital-work-arrangement">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-1/6">שעות</TableHead>
-              {DAYS_OF_WEEK.map((day, index) => (
-                <TableHead key={index}>{day}</TableHead>
+              <TableHead className="w-1/6 text-right">שעות</TableHead>
+              {DAYS_OF_WEEK.slice().map((day, index) => (
+                <TableHead key={index} className="text-center">{day}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -616,13 +655,14 @@ const DigitalWorkArrangement = () => {
               
               // Get first shift for this type to display time
               const firstShift = typeShifts[0];
-              const shiftLabel = `${firstShift.start_time.slice(0, 5)}-${firstShift.end_time.slice(0, 5)}`;
+              // Show in RTL order: end time - start time
+              const shiftLabel = `${firstShift.end_time.slice(0, 5)} - ${firstShift.start_time.slice(0, 5)}`;
               
               return (
                 <TableRow key={`${sectionName}-${shiftType}`}>
-                  <TableCell className="font-bold">{shiftLabel}</TableCell>
+                  <TableCell className="font-bold text-right">{shiftLabel}</TableCell>
                   
-                  {/* Render cells for each day */}
+                  {/* Render cells for each day in RTL order */}
                   {[0, 1, 2, 3, 4, 5].map(dayOfWeek => {
                     const dayShift = typeShifts.find(s => s.day_of_week === dayOfWeek);
                     if (!dayShift) return <TableCell key={dayOfWeek} />;
@@ -633,41 +673,34 @@ const DigitalWorkArrangement = () => {
                         className={dayShift.is_hidden ? 'opacity-50' : ''}
                       >
                         <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <Input 
-                              type="text"
-                              value={dayShift.person_name || ''}
-                              onChange={e => updatePersonName(dayShift.id, e.target.value)}
-                              placeholder="שם העובד"
-                              className="flex-1"
-                            />
-                            
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              onClick={() => toggleShiftVisibility(dayShift.id)}
-                              className="h-8 w-8 p-0"
-                            >
-                              {dayShift.is_hidden ? (
-                                <AlertCircle className="h-4 w-4" />
-                              ) : (
-                                <Edit className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
+                          {!dayShift.is_hidden && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <WorkerSelector
+                                value={dayShift.person_name || null}
+                                onChange={(name, additionalText) => 
+                                  updatePersonData(dayShift.id, name, additionalText || null)
+                                }
+                                additionalText={dayShift.additional_text || ""}
+                                className="flex-1"
+                              />
+                              
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => toggleShiftVisibility(dayShift.id)}
+                                className="h-8 w-8 p-0 shrink-0"
+                              >
+                                {dayShift.is_hidden ? (
+                                  <AlertCircle className="h-4 w-4" />
+                                ) : (
+                                  <Edit className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          )}
                           
                           {!dayShift.is_hidden && (
-                            <div className="flex items-center gap-2">
-                              <Input 
-                                type="time"
-                                value={dayShift.start_time}
-                                onChange={e => updateShiftTime(
-                                  dayShift.id, 
-                                  e.target.value, 
-                                  dayShift.end_time
-                                )}
-                                className="w-1/2"
-                              />
+                            <div className="flex items-center gap-2 rtl">
                               <Input 
                                 type="time"
                                 value={dayShift.end_time}
@@ -675,6 +708,17 @@ const DigitalWorkArrangement = () => {
                                   dayShift.id, 
                                   dayShift.start_time, 
                                   e.target.value
+                                )}
+                                className="w-1/2"
+                              />
+                              <span className="mx-1">-</span>
+                              <Input 
+                                type="time"
+                                value={dayShift.start_time}
+                                onChange={e => updateShiftTime(
+                                  dayShift.id, 
+                                  e.target.value,
+                                  dayShift.end_time
                                 )}
                                 className="w-1/2"
                               />
@@ -688,29 +732,15 @@ const DigitalWorkArrangement = () => {
               );
             })}
             
-            {/* Render custom rows */}
-            {sectionRows.map(row => (
-              <TableRow key={row.id}>
-                <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => deleteCustomRow(row.id)}
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-                <TableCell colSpan={6}>
-                  <Input 
-                    type="text"
-                    value={row.content || ''}
-                    onChange={e => updateCustomRowContent(row.id, e.target.value)}
-                    placeholder="תוכן שורה מותאמת אישית"
-                    className="w-full"
-                  />
-                </TableCell>
-              </TableRow>
+            {/* Render custom rows - each with 6 separate columns */}
+            {sectionRows.map((row) => (
+              <CustomRowColumns 
+                key={row.id}
+                rowId={row.id}
+                values={row.contents}
+                onValueChange={updateCustomRowContent}
+                onDelete={deleteCustomRow}
+              />
             ))}
             
             {/* Add custom row button */}
@@ -772,7 +802,8 @@ const DigitalWorkArrangement = () => {
                 value={notes} 
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="הערות כלליות לסידור העבודה"
-                className="min-h-[80px]"
+                className="min-h-[80px] text-right"
+                dir="rtl"
               />
             </div>
             
@@ -782,15 +813,13 @@ const DigitalWorkArrangement = () => {
             {renderShiftSection(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
             {renderShiftSection(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
             
-            {/* Footer section */}
-            <div className="mt-6 space-y-4">
-              <div>
-                <Label htmlFor="footerText" className="mb-2 block">טקסט תחתית</Label>
-                <Input 
-                  id="footerText" 
-                  value={footerText} 
-                  onChange={(e) => setFooterText(e.target.value)}
-                  placeholder="טקסט לתצוגה בתחתית סידור העבודה"
+            {/* Comic sketch generator and footer section */}
+            <div className="mt-8 space-y-6">
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <h3 className="text-lg font-bold mb-4">יצירת איור קומיקס וטקסט תחתית</h3>
+                <ComicSketchGenerator 
+                  initialText={footerText} 
+                  onTextChange={setFooterText} 
                 />
               </div>
               
@@ -801,6 +830,8 @@ const DigitalWorkArrangement = () => {
                   value={footerImageUrl} 
                   onChange={(e) => setFooterImageUrl(e.target.value)}
                   placeholder="URL לתמונה שתוצג בתחתית סידור העבודה"
+                  className="text-right"
+                  dir="rtl"
                 />
               </div>
             </div>
