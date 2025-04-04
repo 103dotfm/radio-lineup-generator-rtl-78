@@ -14,18 +14,18 @@ export const getWorkers = async (): Promise<Worker[]> => {
       return [];
     }
     
-    if (!data || !Array.isArray(data)) {
-      console.error('No data returned or data is not an array');
+    if (!data) {
+      console.error('No data returned from workers query');
       return [];
     }
     
-    // Ensure we're actually returning an array
-    return data.map(worker => ({
-      id: worker.id,
-      name: worker.name,
+    // Ensure we're actually returning an array of workers with valid properties
+    return Array.isArray(data) ? data.map(worker => ({
+      id: worker.id || '',
+      name: worker.name || '',
       department: worker.department || '',
       position: worker.position || ''
-    }));
+    })) : [];
   } catch (error) {
     console.error('Error fetching workers:', error);
     return [];
@@ -61,8 +61,8 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
     return {
       id: data.id,
       name: data.name,
-      department: data.department,
-      position: data.position
+      department: data.department || '',
+      position: data.position || ''
     };
   } catch (error) {
     console.error('Error creating worker:', error);
@@ -102,8 +102,8 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
     return {
       id: data.id,
       name: data.name,
-      department: data.department,
-      position: data.position
+      department: data.department || '',
+      position: data.position || ''
     };
   } catch (error) {
     console.error('Error updating worker:', error);

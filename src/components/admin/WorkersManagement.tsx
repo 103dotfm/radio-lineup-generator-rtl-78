@@ -54,7 +54,7 @@ const WorkersManagement = () => {
     setIsLoading(true);
     try {
       const fetchedWorkers = await getWorkers();
-      setWorkers(fetchedWorkers || []);
+      setWorkers(Array.isArray(fetchedWorkers) ? fetchedWorkers : []);
     } catch (error) {
       console.error('Error loading workers:', error);
       toast({
@@ -113,7 +113,7 @@ const WorkersManagement = () => {
         });
         
         if (newWorker) {
-          setWorkers(prev => [...(Array.isArray(prev) ? prev : []), newWorker]);
+          setWorkers(prev => [...prev, newWorker]);
           toast({
             title: "העובד נוסף בהצלחה",
             description: `העובד ${name} נוסף בהצלחה`
@@ -127,7 +127,7 @@ const WorkersManagement = () => {
         });
         
         if (updatedWorker) {
-          setWorkers(prev => (Array.isArray(prev) ? prev.map(w => w.id === updatedWorker.id ? updatedWorker : w) : [updatedWorker]));
+          setWorkers(prev => prev.map(w => w.id === updatedWorker.id ? updatedWorker : w));
           toast({
             title: "העובד עודכן בהצלחה",
             description: `העובד ${name} עודכן בהצלחה`
@@ -154,7 +154,7 @@ const WorkersManagement = () => {
       const success = await deleteWorker(worker.id);
       
       if (success) {
-        setWorkers(prev => (Array.isArray(prev) ? prev.filter(w => w.id !== worker.id) : []));
+        setWorkers(prev => prev.filter(w => w.id !== worker.id));
         toast({
           title: "העובד נמחק בהצלחה",
           description: `העובד ${worker.name} נמחק בהצלחה`
@@ -170,11 +170,8 @@ const WorkersManagement = () => {
     }
   };
   
-  // Make sure workers is always an array
-  const workersArray = Array.isArray(workers) ? workers : [];
-  
   // Filter workers based on search query
-  const filteredWorkers = workersArray.filter(worker => 
+  const filteredWorkers = workers.filter(worker => 
     worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (worker.department && worker.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (worker.position && worker.position.toLowerCase().includes(searchQuery.toLowerCase()))
