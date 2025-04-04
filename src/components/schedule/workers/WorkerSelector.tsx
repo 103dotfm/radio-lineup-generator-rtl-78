@@ -39,12 +39,20 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "×
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('workers')
+          .from('digital_employees')
           .select('*')
-          .order('name', { ascending: true });
+          .order('full_name', { ascending: true });
         
         if (error) throw error;
-        setWorkers(data || []);
+        
+        const mappedWorkers: Worker[] = (data || []).map(worker => ({
+          id: worker.id,
+          name: worker.full_name,
+          department: worker.department,
+          position: worker.position
+        }));
+        
+        setWorkers(mappedWorkers);
       } catch (error) {
         console.error('Error fetching workers:', error);
       } finally {
