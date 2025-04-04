@@ -1,143 +1,460 @@
-
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { format, addDays, startOfWeek } from 'date-fns';
+import { format, parse, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Card } from "@/components/ui/card";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { supabase } from "@/lib/supabase";
 
-// Define types for database work arrangements
-type DBWorkArrangement = {
+interface Shift {
+  id: string;
+  section_name: string;
+  day_of_week: number;
+  shift_type: string;
+  start_time: string;
+  end_time: string;
+  person_name: string | null;
+  additional_text: string | null;
+  is_custom_time: boolean;
+  is_hidden: boolean;
+  position: number;
+}
+
+interface CustomRow {
+  id: string;
+  section_name: string;
+  contents: Record<number, string>; // Day index -> content mapping
+  position: number;
+}
+
+interface WorkArrangement {
   id: string;
   week_start: string;
-  created_at?: string;
-  updated_at?: string;
-  filename: string;
-  url: string;
-  type: string;
+  notes: string | null;
+  footer_text: string | null;
+  footer_image_url: string | null;
+  comic_prompt: string | null;
+  shifts: Shift[];
+  custom_rows: CustomRow[];
+}
+
+const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+
+const SECTION_NAMES = {
+  DIGITAL_SHIFTS: 'digital_shifts',
+  RADIO_NORTH: 'radio_north',
+  TRANSCRIPTION_SHIFTS: 'transcription_shifts',
+  LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
 };
 
-// Define internal work arrangement type
-type WorkArrangement = {
-  id: string;
-  week_start: string;
-  arrangement_data?: any;
-  is_published: boolean;
-  url?: string;
+const SECTION_TITLES = {
+  [SECTION_NAMES.DIGITAL_SHIFTS]: '',
+  [SECTION_NAMES.RADIO_NORTH]: 'רדיו צפון 12:00-09:00',
+  [SECTION_NAMES.TRANSCRIPTION_SHIFTS]: 'משמרות תמלולים וכו\'',
+  [SECTION_NAMES.LIVE_SOCIAL_SHIFTS]: 'משמרות לייבים, סושיאל ועוד'
 };
 
-const DigitalWorkArrangementView = () => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [currentArrangement, setCurrentArrangement] = useState<WorkArrangement | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+const SHIFT_TYPES = {
+  MORNING: 'morning',
+  AFTERNOON: 'afternoon',
+  EVENING: 'evening',
+  CUSTOM: 'custom'
+};
+
+interface DigitalWorkArrangementViewProps {
+  weekDate?: string; // Format: 'yyyy-MM-dd'
+}
+
+const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({ weekDate }) => {
+  const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentWeek, setCurrentWeek] = useState<Date>(() => {
+    if (weekDate) {
+      try {
+        const parsedDate = parse(weekDate, 'yyyy-MM-dd', new Date());
+        return startOfWeek(parsedDate, { weekStartsOn: 0 });
+      } catch (e) {
+        console.error('Error parsing weekDate:', e);
+      }
+    }
+    return startOfWeek(new Date(), { weekStartsOn: 0 });
+  });
+  const [weekDates, setWeekDates] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchWorkArrangement();
-  }, [selectedDate]);
+    const dates = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date(currentWeek);
+      date.setDate(date.getDate() + i);
+      return format(date, 'dd/MM', { locale: he });
+    });
+    setWeekDates(dates);
+  }, [currentWeek]);
 
-  const fetchWorkArrangement = async () => {
+  const formatDateRange = () => {
+    const startDay = format(currentWeek, 'dd', { locale: he });
+    const endDate = new Date(currentWeek);
+    endDate.setDate(endDate.getDate() + 5); // Friday
+    const endDay = format(endDate, 'dd', { locale: he });
+    const month = format(currentWeek, 'MMMM yyyy', { locale: he });
+    return `${endDay}-${startDay} ב${month}`;
+  };
+
+  useEffect(() => {
+    fetchArrangement();
+  }, [currentWeek]);
+
+  const fetchArrangement = async () => {
+    setIsLoading(true);
+    const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
+
     try {
-      setLoading(true);
-      
-      // Format the date to match the database format (YYYY-MM-DD)
-      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-      const formattedDate = format(weekStart, 'yyyy-MM-dd');
-      
-      const { data, error } = await supabase
+      const { data: arrangementData, error: fetchError } = await supabase
         .from('work_arrangements')
         .select('*')
-        .eq('week_start', formattedDate)
         .eq('type', 'digital')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+        .eq('week_start', weekStartStr)
+        .maybeSingle();
+
+      if (fetchError) {
+        throw fetchError;
       }
-      
-      if (data) {
-        // Transform data to match our WorkArrangement type
-        const arrangement: WorkArrangement = {
-          id: data.id,
-          week_start: data.week_start,
-          is_published: data.type === 'published',
-          url: data.url,
-          arrangement_data: null // This would be populated if needed
-        };
-        
-        setCurrentArrangement(arrangement);
+
+      if (arrangementData) {
+        try {
+          const { data: digitalArrangement, error: digitalError } = await supabase
+            .from('digital_work_arrangements')
+            .select('*')
+            .eq('week_start', weekStartStr)
+            .maybeSingle();
+            
+          if (!digitalError && digitalArrangement) {
+            const { data: shiftsData, error: shiftsError } = await supabase
+              .from('digital_shifts')
+              .select('*')
+              .eq('arrangement_id', digitalArrangement.id)
+              .order('position', { ascending: true });
+              
+            if (shiftsError) throw shiftsError;
+            
+            const { data: customRowsData, error: customRowsError } = await supabase
+              .from('digital_shift_custom_rows')
+              .select('*')
+              .eq('arrangement_id', digitalArrangement.id)
+              .order('position', { ascending: true });
+              
+            if (customRowsError) throw customRowsError;
+            
+            const processedCustomRows: CustomRow[] = (customRowsData || []).map(row => {
+              let contents: Record<number, string> = {};
+              
+              try {
+                if (row.contents) {
+                  if (typeof row.contents === 'string') {
+                    contents = JSON.parse(row.contents);
+                  } else if (typeof row.contents === 'object') {
+                    Object.entries(row.contents).forEach(([key, value]) => {
+                      contents[Number(key)] = String(value || '');
+                    });
+                  }
+                } else if (row.content) {
+                  for (let i = 0; i < 6; i++) {
+                    contents[i] = String(row.content || '');
+                  }
+                }
+              } catch (e) {
+                console.error('Error parsing contents', e);
+              }
+              
+              return {
+                id: row.id,
+                section_name: row.section_name,
+                contents,
+                position: row.position
+              };
+            });
+            
+            const mappedShifts = shiftsData.map(shift => ({
+              ...shift,
+              additional_text: shift.additional_text || ""
+            }));
+            
+            setArrangement({
+              id: digitalArrangement.id,
+              week_start: digitalArrangement.week_start,
+              notes: digitalArrangement.notes,
+              footer_text: digitalArrangement.footer_text,
+              footer_image_url: digitalArrangement.footer_image_url,
+              comic_prompt: digitalArrangement.comic_prompt || "",
+              shifts: mappedShifts,
+              custom_rows: processedCustomRows
+            });
+          } else {
+            setArrangement({
+              id: arrangementData.id,
+              week_start: arrangementData.week_start,
+              notes: null,
+              footer_text: null,
+              footer_image_url: null,
+              comic_prompt: null,
+              shifts: [],
+              custom_rows: []
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching digital arrangement details:', error);
+          setArrangement({
+            id: arrangementData.id,
+            week_start: arrangementData.week_start,
+            notes: null,
+            footer_text: null,
+            footer_image_url: null,
+            comic_prompt: null,
+            shifts: [],
+            custom_rows: []
+          });
+        }
       } else {
-        setCurrentArrangement(null);
+        console.log("No digital work arrangement found for this week");
+        setArrangement(null);
       }
-    } catch (error: any) {
-      console.error('Error fetching work arrangement:', error);
-      setCurrentArrangement(null);
+    } catch (error) {
+      console.error('Error fetching arrangement:', error);
+      setArrangement(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handlePreviousWeek = () => {
-    const prevWeek = new Date(selectedDate);
-    prevWeek.setDate(prevWeek.getDate() - 7);
-    setSelectedDate(prevWeek);
+  const renderShiftCell = (section: string, day: number, shiftType: string) => {
+    if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
+    
+    const shifts = arrangement.shifts.filter(shift =>
+      shift.section_name === section && 
+      shift.day_of_week === day && 
+      shift.shift_type === shiftType &&
+      !shift.is_hidden
+    );
+    
+    if (shifts.length === 0) {
+      return <TableCell className="p-2 border text-center">-</TableCell>;
+    }
+    
+    return (
+      <TableCell className="p-2 border text-center">
+        {shifts.map((shift) => (
+          <div key={shift.id} className="mb-1">
+            <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
+              <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
+            </div>
+            <div>
+              {shift.person_name && <span className="font-bold">{shift.person_name}</span>}
+              {shift.additional_text && (
+                <span className="block text-sm">{shift.additional_text}</span>
+              )}
+              {!shift.person_name && !shift.additional_text && '-'}
+            </div>
+          </div>
+        ))}
+      </TableCell>
+    );
   };
 
-  const handleNextWeek = () => {
-    const nextWeek = new Date(selectedDate);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    setSelectedDate(nextWeek);
+  const renderRadioNorthCell = (day: number) => {
+    if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
+    
+    const shifts = arrangement.shifts.filter(shift =>
+      shift.section_name === SECTION_NAMES.RADIO_NORTH && 
+      shift.day_of_week === day &&
+      !shift.is_hidden
+    );
+    
+    if (shifts.length === 0) {
+      return <TableCell className="p-2 border text-center">-</TableCell>;
+    }
+    
+    return (
+      <TableCell className="p-2 border text-center">
+        {shifts.map((shift) => (
+          <div key={shift.id}>
+            <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
+              <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
+            </div>
+            <div>
+              {shift.person_name && <span className="font-bold">{shift.person_name}</span>}
+              {shift.additional_text && (
+                <span className="block text-sm">{shift.additional_text}</span>
+              )}
+              {!shift.person_name && !shift.additional_text && '-'}
+            </div>
+          </div>
+        ))}
+      </TableCell>
+    );
   };
 
-  // Generate the dates for the week
-  const generateWeekDates = () => {
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const renderCustomRows = (sectionName: string) => {
+    if (!arrangement) return null;
+    
+    const rows = arrangement.custom_rows.filter(row => row.section_name === sectionName);
+    
+    if (rows.length === 0) return null;
+    
+    return rows.map((row) => (
+      <TableRow key={row.id}>
+        {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
+          <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center">
+            {renderTableCellContent(row, dayIndex)}
+          </TableCell>
+        ))}
+      </TableRow>
+    ));
   };
-  
-  const weekDates = generateWeekDates();
+
+  const renderTableCellContent = (customRow: CustomRow, columnIndex: number) => {
+    if (customRow.contents && customRow.contents[columnIndex]) {
+      return String(customRow.contents[columnIndex]);
+    } else if ((customRow as any).content) {
+      return String((customRow as any).content || '');
+    } else {
+      return "";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center">טוען...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!arrangement) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center">אין סידור עבודה לשבוע זה</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4 text-center">סידור עבודה שבועי</h1>
-      
-      <div className="flex justify-center items-center space-x-2 mb-6">
-        <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        
-        <DatePicker 
-          date={selectedDate} 
-          onSelect={(date) => date && setSelectedDate(date)} 
-        />
-        
-        <Button variant="outline" size="sm" onClick={handleNextWeek}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      {loading ? (
-        <div className="text-center">טוען סידור עבודה...</div>
-      ) : currentArrangement && currentArrangement.url ? (
-        <Card className="p-4 overflow-x-auto">
-          <div className="w-full h-screen md:h-[800px]">
-            <object data={currentArrangement.url} type="application/pdf" className="w-full h-full">
-              <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
-                <p className="text-gray-500 mb-4">לא ניתן להציג את הקובץ במכשירך</p>
-                <a href={currentArrangement.url} target="_blank" rel="noopener noreferrer" className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90">
-                  הורד את הקובץ
-                </a>
-              </div>
-            </object>
+    <Card className="digital-work-arrangement-view" dir="rtl">
+      <CardHeader>
+        <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
+        <div className="text-center">{formatDateRange()}</div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div className="bg-white rounded-md overflow-x-auto">
+            <Table className="border">
+              <TableHeader>
+                <TableRow className="bg-black text-white">
+                  {DAYS_OF_WEEK.map((day, index) => (
+                    <TableHead key={day} className="text-center text-white border">
+                      <div>{day}</div>
+                      <div className="text-sm">{weekDates[index]}</div>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.MORNING))}
+                </TableRow>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON))}
+                </TableRow>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => {
+                    if (day === 5) {
+                      return <TableCell key={`evening-${day}`} className="border text-center">-</TableCell>;
+                    }
+                    return renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.EVENING);
+                  })}
+                </TableRow>
+                {renderCustomRows(SECTION_NAMES.DIGITAL_SHIFTS)}
+              </TableBody>
+            </Table>
           </div>
-        </Card>
-      ) : (
-        <div className="text-center p-6 bg-gray-100 rounded-lg">
-          אין סידור עבודה פורסם לשבוע זה
+
+          <div className="overflow-x-auto">
+            <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.RADIO_NORTH]}</div>
+            <Table className="border">
+              <TableBody>
+                <TableRow>
+                  {[...Array(5)].map((_, day) => renderRadioNorthCell(day))}
+                  <TableCell className="border"></TableCell>
+                </TableRow>
+                {renderCustomRows(SECTION_NAMES.RADIO_NORTH)}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.TRANSCRIPTION_SHIFTS]}</div>
+            <Table className="border">
+              <TableBody>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.MORNING))}
+                </TableRow>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => {
+                    if (day === 5) {
+                      return <TableCell key={`transcription-afternoon-${day}`} className="border text-center">-</TableCell>;
+                    }
+                    return renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
+                  })}
+                </TableRow>
+                {renderCustomRows(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.LIVE_SOCIAL_SHIFTS]}</div>
+            <Table className="border">
+              <TableBody>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.MORNING))}
+                </TableRow>
+                <TableRow>
+                  {[...Array(6)].map((_, day) => {
+                    if (day === 5) {
+                      return <TableCell key={`live-social-afternoon-${day}`} className="border text-center">-</TableCell>;
+                    }
+                    return renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
+                  })}
+                </TableRow>
+                {renderCustomRows(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
+              </TableBody>
+            </Table>
+          </div>
+
+          {arrangement.footer_text && (
+            <div className="p-4 text-center min-h-[150px]">
+              {arrangement.footer_text}
+            </div>
+          )}
+          {arrangement.footer_image_url && (
+            <div className="flex justify-center">
+              <img 
+                src={arrangement.footer_image_url} 
+                alt="Footer" 
+                className="max-h-[300px]"
+              />
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

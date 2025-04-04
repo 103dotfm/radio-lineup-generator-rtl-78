@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
@@ -204,7 +205,7 @@ const SchedulePage = () => {
 
           <TabsContent value="digital-view" className="mt-4">
             <div className="border rounded-lg overflow-hidden bg-white p-4">
-              <DigitalWorkArrangementView />
+              <DigitalWorkArrangementView weekDate={weekDate} />
             </div>
           </TabsContent>
         </Tabs>
@@ -258,7 +259,7 @@ const SchedulePage = () => {
           
           {selectedTab === "digital-view" && (
             <div className="border rounded-lg overflow-hidden bg-white p-2">
-              <DigitalWorkArrangementView />
+              <DigitalWorkArrangementView weekDate={weekDate} />
             </div>
           )}
         </div>
