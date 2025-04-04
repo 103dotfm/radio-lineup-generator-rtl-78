@@ -1,955 +1,907 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { v4 as uuidv4 } from 'uuid';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TableContainer,
-  Paper,
-  Button,
-  TextField,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  Checkbox,
-  IconButton,
-  Menu,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
-  TextareaAutosize,
-} from '@mui/material';
-import { styled } from '@mui/system';
-import { MoreVert as MoreVertIcon, Delete as DeleteIcon, Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs, { Dayjs } from 'dayjs';
-import 'dayjs/locale/he';
-import localeData from 'dayjs/plugin/localeData';
-import isBetween from 'dayjs/plugin/isBetween';
-import { debounce } from 'lodash';
 
-dayjs.extend(localeData);
-dayjs.extend(isBetween);
-dayjs.locale('he');
+import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { PlusCircle, Pencil, Trash2, MoreVertical, MoveVertical } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Shift {
   id: string;
-  name: string;
+  section_name: string;
+  day_of_week: number;
+  shift_type: string;
   start_time: string;
   end_time: string;
-  additional_text: string;
+  person_name: string | null;
+  additional_text: string | null;
+  is_custom_time: boolean;
+  is_hidden: boolean;
+  position: number;
 }
 
 interface CustomRow {
   id: string;
-  name: string;
-  content?: string;
-  contents?: string[];
-  is_header: boolean;
-  is_bold: boolean;
-  is_double: boolean;
-  is_hidden: boolean;
-  is_shift: boolean;
-  shift_id?: string | null;
-  order: number;
+  section_name: string;
+  contents: Record<number, string>;
+  position: number;
 }
 
-interface DigitalWorkArrangementData {
+interface WorkArrangement {
   id: string;
-  name: string;
-  date: string;
-  columns: number;
-  custom_rows: CustomRow[];
-  shifts: Shift[];
-  comic_prompt: string;
+  week_start: string;
+  notes: string | null;
+  footer_text: string | null;
+  footer_image_url: string | null;
+  comic_prompt: string | null;
 }
 
-interface Props {
-  supabase: SupabaseClient;
-}
+const SECTION_NAMES = {
+  DIGITAL_SHIFTS: 'digital_shifts',
+  RADIO_NORTH: 'radio_north',
+  TRANSCRIPTION_SHIFTS: 'transcription_shifts',
+  LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
+};
 
-const StyledTableContainer = styled(TableContainer)({
-  margin: '20px 0',
-  boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
-});
+const SHIFT_TYPES = {
+  MORNING: 'morning',
+  AFTERNOON: 'afternoon',
+  EVENING: 'evening',
+  CUSTOM: 'custom'
+};
 
-const StyledTable = styled(Table)({
-  minWidth: 700,
-});
-
-const StyledTableCell = styled(TableCell)({
-  fontWeight: 'bold',
-  backgroundColor: '#f5f5f5',
-});
-
-const StyledTableRow = styled(TableRow)({
-  '&:nth-of-type(odd)': {
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-  },
-});
-
-const DigitalWorkArrangement: React.FC<Props> = ({ supabase }) => {
-  const [dataArr, setDataArr] = useState<DigitalWorkArrangementData | null>(null);
-  const [name, setName] = useState('');
-  const [date, setDate] = useState<Dayjs | null>(dayjs());
-  const [columns, setColumns] = useState(1);
-  const [customRows, setCustomRows] = useState<CustomRow[]>([]);
+const DigitalWorkArrangement: React.FC = () => {
+  const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [selectedShift, setSelectedShift] = useState<string | null>(null);
-  const [selectedRow, setSelectedRow] = useState<CustomRow | null>(null);
+  const [customRows, setCustomRows] = useState<CustomRow[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [weekDate, setWeekDate] = useState<Date>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
+  const [currentSection, setCurrentSection] = useState(SECTION_NAMES.DIGITAL_SHIFTS);
+  const [comicPromptDialogOpen, setComicPromptDialogOpen] = useState(false);
   const [comicPrompt, setComicPrompt] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openShiftDialog, setOpenShiftDialog] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isShiftEditMode, setIsShiftEditMode] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [dialogType, setDialogType] = useState<'row' | 'shift'>('row');
-  const [newRowName, setNewRowName] = useState('');
-  const [newRowContent, setNewRowContent] = useState('');
-  const [newRowContents, setNewRowContents] = useState<string[]>([]);
-  const [newRowIsHeader, setNewRowIsHeader] = useState(false);
-  const [newRowIsBold, setNewRowIsBold] = useState(false);
-  const [newRowIsDouble, setNewRowIsDouble] = useState(false);
-  const [newRowIsHidden, setNewRowIsHidden] = useState(false);
-  const [newRowIsShift, setNewRowIsShift] = useState(false);
-  const [newShiftName, setNewShiftName] = useState('');
-  const [newShiftStartTime, setNewShiftStartTime] = useState('');
-  const [newShiftEndTime, setNewShiftEndTime] = useState('');
-  const [newShiftAdditionalText, setNewShiftAdditionalText] = useState('');
-  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isShiftDialogOpen, setIsShiftDialogOpen] = useState(false);
-  const [isComicPromptDialogOpen, setIsComicPromptDialogOpen] = useState(false);
+  const [footerTextDialogOpen, setFooterTextDialogOpen] = useState(false);
+  const [footerText, setFooterText] = useState('');
 
-  const fetchData = useCallback(async () => {
+  // Dialog data states
+  const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editingCustomRow, setEditingCustomRow] = useState<CustomRow | null>(null);
+  const [newShiftData, setNewShiftData] = useState({
+    section_name: SECTION_NAMES.DIGITAL_SHIFTS,
+    day_of_week: 0,
+    shift_type: SHIFT_TYPES.MORNING,
+    start_time: '09:00',
+    end_time: '12:00',
+    person_name: '',
+    additional_text: '',
+    is_custom_time: false,
+    is_hidden: false
+  });
+  const [newCustomRowData, setNewCustomRowData] = useState({
+    section_name: SECTION_NAMES.DIGITAL_SHIFTS,
+    contents: {} as Record<number, string>
+  });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchArrangement();
+  }, [weekDate]);
+
+  const fetchArrangement = async () => {
+    setIsLoadingData(true);
+    const weekStartStr = format(weekDate, 'yyyy-MM-dd');
+    
     try {
-      const { data, error } = await supabase
+      // First try to fetch an existing arrangement
+      const { data: arrangementData, error: arrangementError } = await supabase
         .from('digital_work_arrangements')
-        .select(`
-          id,
-          name,
-          date,
-          columns,
-          comic_prompt,
-          custom_rows (
-            id,
-            name,
-            content,
-            contents,
-            is_header,
-            is_bold,
-            is_double,
-            is_hidden,
-            is_shift,
-            shift_id,
-            order
-          ),
-          shifts (
-            id,
-            name,
-            start_time,
-            end_time,
-            additional_text
-          )
-        `)
-        .order('date', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error) {
-        throw error;
+        .select('*')
+        .eq('week_start', weekStartStr)
+        .maybeSingle();
+      
+      if (arrangementError) {
+        throw arrangementError;
       }
-
-      if (data) {
-        setDataArr(data);
-        setName(data.name);
-        setDate(dayjs(data.date));
-        setColumns(data.columns);
-
-        // Ensure custom_rows is an array and map it
-        const mappedCustomRows = Array.isArray(data.custom_rows) ? data.custom_rows.map(row => ({
-          ...row,
-          contents: row.contents ? JSON.parse(JSON.stringify(row.contents)) : [],
-        })) : [];
-        setCustomRows(mappedCustomRows);
-
-        // Ensure content/contents handling
-        const firstRow = mappedCustomRows[0];
-        if (firstRow) {
-          if (firstRow.contents && Array.isArray(firstRow.contents)) {
-            // console.log('First row contents:', firstRow.contents);
-          } else if (firstRow.content) {
-            // console.log('First row content:', firstRow.content);
+      
+      // If arrangement exists, fetch shifts and custom rows
+      if (arrangementData) {
+        setArrangement(arrangementData);
+        setComicPrompt(arrangementData.comic_prompt || '');
+        setFooterText(arrangementData.footer_text || '');
+        
+        // Fetch shifts
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('digital_shifts')
+          .select('*')
+          .eq('arrangement_id', arrangementData.id)
+          .order('position', { ascending: true });
+        
+        if (shiftsError) {
+          throw shiftsError;
+        }
+        
+        // Fetch custom rows
+        const { data: customRowsData, error: customRowsError } = await supabase
+          .from('digital_shift_custom_rows')
+          .select('*')
+          .eq('arrangement_id', arrangementData.id)
+          .order('position', { ascending: true });
+        
+        if (customRowsError) {
+          throw customRowsError;
+        }
+        
+        // Process custom rows - parse contents JSON
+        const processedCustomRows = (customRowsData || []).map(row => {
+          const contents: Record<number, string> = {};
+          
+          try {
+            if (row.contents) {
+              const parsedContents = typeof row.contents === 'string' 
+                ? JSON.parse(row.contents) 
+                : row.contents;
+              
+              // Ensure each day has content
+              for (let i = 0; i < 6; i++) {
+                contents[i] = (parsedContents[i] || '').toString();
+              }
+            } else if (row.content) {
+              // Legacy format - same content for all days
+              for (let i = 0; i < 6; i++) {
+                contents[i] = row.content;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing custom row contents:', e);
           }
-        }
-
-        // Fix the shifts array type issue by ensuring additional_text is present
-        const mappedShifts = data.shifts.map(shift => ({
-          ...shift,
-          additional_text: shift.additional_text || "" // Add the missing additional_text property with default empty string
-        }));
-        setShifts(mappedShifts);
-
-        // Setting comic_prompt value with default value
-        const comicPrompt = data?.comic_prompt || "";
-        setComicPrompt(comicPrompt);
+          
+          return {
+            id: row.id,
+            section_name: row.section_name,
+            contents: contents,
+            position: row.position
+          };
+        });
+        
+        setShifts(shiftsData || []);
+        setCustomRows(processedCustomRows);
       } else {
-        setDataArr(null);
-        setName('');
-        setDate(dayjs());
-        setColumns(1);
-        setCustomRows([]);
+        // Create a new arrangement
+        const { data: newArrangement, error: createError } = await supabase
+          .from('digital_work_arrangements')
+          .insert([{
+            week_start: weekStartStr,
+            notes: null,
+            footer_text: null,
+            footer_image_url: null,
+            comic_prompt: null
+          }])
+          .select()
+          .single();
+        
+        if (createError) {
+          throw createError;
+        }
+        
+        setArrangement(newArrangement);
         setShifts([]);
-        setComicPrompt('');
+        setCustomRows([]);
       }
-    } catch (err: any) {
-      console.error('Error fetching data:', err);
-      toast.error(`Error fetching data: ${err.message}`);
-    }
-  }, [supabase]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, row: CustomRow) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedRow(row);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedRow(null);
-  };
-
-  const handleEditRow = (row: CustomRow) => {
-    setDialogType('row');
-    setSelectedRow(row);
-    setNewRowName(row.name);
-    setNewRowContent(row.content || '');
-    setNewRowContents(row.contents || []);
-    setNewRowIsHeader(row.is_header);
-    setNewRowIsBold(row.is_bold);
-    setNewRowIsDouble(row.is_double);
-    setNewRowIsHidden(row.is_hidden);
-    setNewRowIsShift(row.is_shift);
-    setSelectedShift(row.shift_id || null);
-    setIsEditMode(true);
-    setOpenDialog(true);
-    handleMenuClose();
-  };
-
-  const handleDeleteRow = async (rowId: string) => {
-    try {
-      const { error } = await supabase
-        .from('custom_rows')
-        .delete()
-        .eq('id', rowId);
-
-      if (error) {
-        throw error;
-      }
-
-      setCustomRows(prevRows => prevRows.filter(row => row.id !== rowId));
-      toast.success('Row deleted successfully!');
-    } catch (err: any) {
-      console.error('Error deleting row:', err);
-      toast.error(`Error deleting row: ${err.message}`);
+    } catch (error) {
+      console.error('Error fetching digital work arrangement:', error);
+      toast({
+        title: "Error",
+        description: "Could not load the digital work arrangement.",
+        variant: "destructive"
+      });
     } finally {
-      handleMenuClose();
+      setIsLoadingData(false);
     }
   };
 
-  const handleOpenDialog = (type: 'row' | 'shift') => {
-    setDialogType(type);
-    setNewRowName('');
-    setNewRowContent('');
-    setNewRowContents(Array(columns).fill(''));
-    setNewRowIsHeader(false);
-    setNewRowIsBold(false);
-    setNewRowIsDouble(false);
-    setNewRowIsHidden(false);
-    setNewRowIsShift(false);
-    setSelectedShift(null);
-    setIsEditMode(false);
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setSelectedColumnIndex(null);
-  };
-
-  const handleOpenShiftDialog = () => {
-    setNewShiftName('');
-    setNewShiftStartTime('');
-    setNewShiftEndTime('');
-    setNewShiftAdditionalText('');
-    setIsShiftEditMode(false);
-    setOpenShiftDialog(true);
-  };
-
-  const handleCloseShiftDialog = () => {
-    setOpenShiftDialog(false);
-  };
-
-  const handleSaveRow = async () => {
-    if (!newRowName.trim()) {
-      toast.error('Row name is required!');
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      const rowData = {
-        name: newRowName,
-        content: newRowContent || null,
-        contents: newRowContents.filter(content => content !== null && content !== ''),
-        is_header: newRowIsHeader,
-        is_bold: newRowIsBold,
-        is_double: newRowIsDouble,
-        is_hidden: newRowIsHidden,
-        is_shift: newRowIsShift,
-        shift_id: newRowIsShift ? selectedShift : null,
-        order: selectedRow?.order || customRows.length,
-      };
-
-      if (isEditMode && selectedRow) {
-        const { data, error } = await supabase
-          .from('custom_rows')
-          .update(rowData)
-          .eq('id', selectedRow.id)
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setCustomRows(prevRows =>
-          prevRows.map(row => (row.id === selectedRow.id ? { ...row, ...rowData } : row))
-        );
-        toast.success('Row updated successfully!');
-      } else {
-        const { data, error } = await supabase
-          .from('custom_rows')
-          .insert([{ ...rowData, digital_work_arrangement_id: dataArr?.id, id: uuidv4() }])
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setCustomRows(prevRows => [...prevRows, data]);
-        toast.success('Row added successfully!');
-      }
-
-      handleCloseDialog();
-    } catch (err: any) {
-      console.error('Error saving row:', err);
-      toast.error(`Error saving row: ${err.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+  // Handle shift creation/update
   const handleSaveShift = async () => {
-    if (!newShiftName.trim() || !newShiftStartTime.trim() || !newShiftEndTime.trim()) {
-      toast.error('Shift name, start time, and end time are required!');
-      return;
-    }
-
+    if (!arrangement) return;
+    
     try {
-      setIsSaving(true);
-      const shiftData = {
-        name: newShiftName,
-        start_time: newShiftStartTime,
-        end_time: newShiftEndTime,
-        additional_text: newShiftAdditionalText,
-      };
-
-      if (isShiftEditMode && selectedRow?.shift_id) {
-        const { data, error } = await supabase
-          .from('shifts')
-          .update(shiftData)
-          .eq('id', selectedRow.shift_id)
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setShifts(prevShifts =>
-          prevShifts.map(shift => (shift.id === selectedRow.shift_id ? { ...shift, ...shiftData } : shift))
-        );
-        toast.success('Shift updated successfully!');
-      } else {
-        const { data, error } = await supabase
-          .from('shifts')
-          .insert([{ ...shiftData, digital_work_arrangement_id: dataArr?.id, id: uuidv4() }])
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        // Ensure additional_text is present
-        const newShift = { ...data, additional_text: data.additional_text || "" };
-        setShifts(prevShifts => [...prevShifts, newShift]);
-        toast.success('Shift added successfully!');
-      }
-
-      handleCloseShiftDialog();
-    } catch (err: any) {
-      console.error('Error saving shift:', err);
-      toast.error(`Error saving shift: ${err.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleEditShift = (shift: Shift) => {
-    setDialogType('shift');
-    setSelectedRow({
-      id: uuidv4(),
-      name: shift.name,
-      is_header: false,
-      is_bold: false,
-      is_double: false,
-      is_hidden: false,
-      is_shift: true,
-      shift_id: shift.id,
-      order: customRows.length,
-    });
-    setNewShiftName(shift.name);
-    setNewShiftStartTime(shift.start_time);
-    setNewShiftEndTime(shift.end_time);
-    setNewShiftAdditionalText(shift.additional_text);
-    setIsShiftEditMode(true);
-    setOpenShiftDialog(true);
-    handleMenuClose();
-  };
-
-  const handleDeleteShift = async (shiftId: string) => {
-    try {
-      const { error } = await supabase
-        .from('shifts')
-        .delete()
-        .eq('id', shiftId);
-
-      if (error) {
-        throw error;
-      }
-
-      setShifts(prevShifts => prevShifts.filter(shift => shift.id !== shiftId));
-      toast.success('Shift deleted successfully!');
-    } catch (err: any) {
-      console.error('Error deleting shift:', err);
-      toast.error(`Error deleting shift: ${err.message}`);
-    } finally {
-      handleMenuClose();
-    }
-  };
-
-  const handleSaveData = debounce(async () => {
-    if (!name.trim()) {
-      toast.error('Name is required!');
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      const dateStr = date ? date.format('YYYY-MM-DD') : '';
-
-      const dataToSave = {
-        name: name,
-        date: dateStr,
-        columns: columns,
-        comic_prompt: comicPrompt,
-      };
-
-      if (dataArr) {
-        const { data, error } = await supabase
-          .from('digital_work_arrangements')
-          .update(dataToSave)
-          .eq('id', dataArr.id)
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setDataArr(data);
-        toast.success('Data updated successfully!');
-      } else {
-        const { data, error } = await supabase
-          .from('digital_work_arrangements')
-          .insert([{ ...dataToSave, id: uuidv4() }])
-          .select()
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        setDataArr(data);
-        toast.success('Data saved successfully!');
-      }
-    } catch (err: any) {
-      console.error('Error saving data:', err);
-      toast.error(`Error saving data: ${err.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  }, 500);
-
-  useEffect(() => {
-    if (dataArr) {
-      handleSaveData();
-    }
-  }, [name, date, columns, comicPrompt, handleSaveData, dataArr]);
-
-  const handleOnDragEnd = async (result: DropResult) => {
-    if (!result.destination) {
-      return;
-    }
-
-    const items = Array.from(customRows);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Update the order property of each item
-    const updatedItems = items.map((item, index) => ({ ...item, order: index }));
-    setCustomRows(updatedItems);
-
-    try {
-      setIsSaving(true);
-      // Update the order in the database
-      for (const item of updatedItems) {
+      if (editingShift) {
+        // Update existing shift
         const { error } = await supabase
-          .from('custom_rows')
-          .update({ order: item.order })
-          .eq('id', item.id);
-
-        if (error) {
-          throw error;
-        }
+          .from('digital_shifts')
+          .update({
+            section_name: newShiftData.section_name,
+            day_of_week: newShiftData.day_of_week,
+            shift_type: newShiftData.shift_type,
+            start_time: newShiftData.start_time,
+            end_time: newShiftData.end_time,
+            person_name: newShiftData.person_name || null,
+            additional_text: newShiftData.additional_text || null,
+            is_custom_time: newShiftData.is_custom_time,
+            is_hidden: newShiftData.is_hidden
+          })
+          .eq('id', editingShift.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Shift updated successfully"
+        });
+      } else {
+        // Create new shift
+        const position = shifts
+          .filter(s => s.section_name === newShiftData.section_name && 
+                       s.day_of_week === newShiftData.day_of_week && 
+                       s.shift_type === newShiftData.shift_type)
+          .length;
+        
+        const { data, error } = await supabase
+          .from('digital_shifts')
+          .insert({
+            arrangement_id: arrangement.id,
+            section_name: newShiftData.section_name,
+            day_of_week: newShiftData.day_of_week,
+            shift_type: newShiftData.shift_type,
+            start_time: newShiftData.start_time,
+            end_time: newShiftData.end_time,
+            person_name: newShiftData.person_name || null,
+            additional_text: newShiftData.additional_text || null,
+            is_custom_time: newShiftData.is_custom_time,
+            is_hidden: newShiftData.is_hidden,
+            position: position
+          })
+          .select();
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "New shift created successfully"
+        });
       }
-      toast.success('Order updated successfully!');
-    } catch (err: any) {
-      console.error('Error updating order:', err);
-      toast.error(`Error updating order: ${err.message}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAddColumn = () => {
-    setColumns(prevColumns => prevColumns + 1);
-    setNewRowContents(prevContents => [...prevContents, '']);
-  };
-
-  const handleRemoveColumn = () => {
-    if (columns > 1) {
-      setColumns(prevColumns => prevColumns - 1);
-      setNewRowContents(prevContents => {
-        const newContents = [...prevContents];
-        newContents.pop();
-        return newContents;
+      
+      // Refresh data
+      fetchArrangement();
+      setShiftDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving shift:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save shift",
+        variant: "destructive"
       });
     }
   };
 
-  const handleColumnContentChange = (index: number, value: string) => {
-    setNewRowContents(prevContents => {
-      const newContents = [...prevContents];
-      newContents[index] = value;
-      return newContents;
-    });
-  };
-
-  const handleOpenShiftDialogFromRow = (row: CustomRow) => {
-    setDialogType('shift');
-    setSelectedRow(row);
-    setNewShiftName('');
-    setNewShiftStartTime('');
-    setNewShiftEndTime('');
-    setNewShiftAdditionalText('');
-    setIsShiftEditMode(false);
-    setOpenShiftDialog(true);
-    handleMenuClose();
-  };
-
-  const handleToggleShiftDialog = () => {
-    setIsShiftDialogOpen(!isShiftDialogOpen);
-  };
-
-  const handleToggleComicPromptDialog = () => {
-    setIsComicPromptDialogOpen(!isComicPromptDialogOpen);
-  };
-
-  const renderTableCellContent = (customRow: CustomRow, columnIndex: number) => {
-    if (customRow.contents && customRow.contents[columnIndex]) {
-      return String(customRow.contents[columnIndex]);
-    } else if (customRow.content) {
-      return customRow.content;
-    } else {
-      return "";
+  // Handle custom row creation/update
+  const handleSaveCustomRow = async () => {
+    if (!arrangement) return;
+    
+    try {
+      if (editingCustomRow) {
+        // Update existing custom row
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .update({
+            section_name: newCustomRowData.section_name,
+            contents: newCustomRowData.contents
+          })
+          .eq('id', editingCustomRow.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "Custom row updated successfully"
+        });
+      } else {
+        // Create new custom row
+        const position = customRows
+          .filter(r => r.section_name === newCustomRowData.section_name)
+          .length;
+        
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .insert({
+            arrangement_id: arrangement.id,
+            section_name: newCustomRowData.section_name,
+            contents: newCustomRowData.contents,
+            position: position
+          });
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Success",
+          description: "New custom row created successfully"
+        });
+      }
+      
+      // Refresh data
+      fetchArrangement();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving custom row:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save custom row",
+        variant: "destructive"
+      });
     }
   };
 
+  // Handle deletion of a shift
+  const handleDeleteShift = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('digital_shifts')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setShifts(shifts.filter(shift => shift.id !== id));
+      toast({
+        title: "Success",
+        description: "Shift deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete shift",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle deletion of a custom row
+  const handleDeleteCustomRow = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('digital_shift_custom_rows')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCustomRows(customRows.filter(row => row.id !== id));
+      toast({
+        title: "Success",
+        description: "Custom row deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting custom row:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete custom row",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle comic prompt update
+  const handleSaveComicPrompt = async () => {
+    if (!arrangement) return;
+    
+    try {
+      const { error } = await supabase
+        .from('digital_work_arrangements')
+        .update({ comic_prompt: comicPrompt })
+        .eq('id', arrangement.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Comic prompt updated successfully"
+      });
+      setComicPromptDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating comic prompt:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update comic prompt",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Handle footer text update
+  const handleSaveFooterText = async () => {
+    if (!arrangement) return;
+    
+    try {
+      const { error } = await supabase
+        .from('digital_work_arrangements')
+        .update({ footer_text: footerText })
+        .eq('id', arrangement.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Footer text updated successfully"
+      });
+      setFooterTextDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating footer text:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update footer text",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Open edit dialog for shift
+  const openShiftDialog = (shift?: Shift) => {
+    if (shift) {
+      setEditingShift(shift);
+      setNewShiftData({
+        section_name: shift.section_name,
+        day_of_week: shift.day_of_week,
+        shift_type: shift.shift_type,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        person_name: shift.person_name || '',
+        additional_text: shift.additional_text || '',
+        is_custom_time: shift.is_custom_time,
+        is_hidden: shift.is_hidden
+      });
+    } else {
+      setEditingShift(null);
+      setNewShiftData({
+        section_name: currentSection,
+        day_of_week: 0,
+        shift_type: SHIFT_TYPES.MORNING,
+        start_time: '09:00',
+        end_time: '12:00',
+        person_name: '',
+        additional_text: '',
+        is_custom_time: false,
+        is_hidden: false
+      });
+    }
+    setShiftDialogOpen(true);
+  };
+
+  // Open edit dialog for custom row
+  const openCustomRowDialog = (row?: CustomRow) => {
+    if (row) {
+      setEditingCustomRow(row);
+      setNewCustomRowData({
+        section_name: row.section_name,
+        contents: { ...row.contents }
+      });
+    } else {
+      setEditingCustomRow(null);
+      const contents: Record<number, string> = {};
+      for (let i = 0; i < 6; i++) {
+        contents[i] = '';
+      }
+      setNewCustomRowData({
+        section_name: currentSection,
+        contents: contents
+      });
+    }
+    setDialogOpen(true);
+  };
+
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} locale="he">
-      <div>
-        <TextField
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          margin="normal"
-          fullWidth
-        />
-        <DatePicker
-          label="Date"
-          value={date}
-          onChange={(newDate) => setDate(newDate)}
-          format="DD/MM/YYYY"
-          sx={{ margin: '20px 0' }}
-        />
-        <div style={{ display: 'flex', alignItems: 'center', margin: '10px 0' }}>
-          <TextField
-            label="Columns"
-            type="number"
-            value={columns}
-            onChange={(e) => setColumns(Number(e.target.value))}
-            margin="normal"
-            sx={{ width: '100px', marginRight: '10px' }}
+    <div className="space-y-6" dir="rtl">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">עורך סידור עבודה דיגיטל</h2>
+        <div className="flex items-center gap-2">
+          <DatePicker 
+            date={weekDate}
+            onSelect={(date) => date && setWeekDate(date)}
           />
-          <Button variant="contained" color="primary" onClick={handleAddColumn} disabled={isSaving}>
-            Add Column
-          </Button>
-          <Button variant="contained" color="secondary" onClick={handleRemoveColumn} disabled={isSaving}>
-            Remove Column
-          </Button>
         </div>
+      </div>
 
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleToggleComicPromptDialog}
-          style={{ marginTop: '20px' }}
-          disabled={isSaving}
-        >
-          {comicPrompt ? 'Edit Comic Prompt' : 'Add Comic Prompt'}
-        </Button>
-
-        <Dialog open={isComicPromptDialogOpen} onClose={handleToggleComicPromptDialog} fullWidth maxWidth="md">
-          <DialogTitle>Comic Prompt</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="Comic Prompt"
-              multiline
-              rows={4}
-              fullWidth
-              value={comicPrompt}
-              onChange={(e) => setComicPrompt(e.target.value)}
-              margin="normal"
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleToggleComicPromptDialog} color="primary">
-              Cancel
-            </Button>
-            <Button onClick={handleToggleComicPromptDialog} color="primary" disabled={isSaving}>
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog('row')}
-          style={{ marginTop: '20px' }}
-          disabled={isSaving}
-        >
-          Add Row
-        </Button>
-
-        <StyledTableContainer component={Paper}>
-          <DragDropContext onDragEnd={handleOnDragEnd}>
-            <Droppable droppableId="customRows">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef}>
-                  <StyledTable aria-label="custom table">
-                    <TableHead>
-                      <TableRow>
-                        <StyledTableCell>Name</StyledTableCell>
-                        {Array.from({ length: columns }, (_, i) => (
-                          <StyledTableCell key={i}>Column {i + 1}</StyledTableCell>
-                        ))}
-                        <StyledTableCell align="right">Actions</StyledTableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {customRows.map((customRow, index) => (
-                        <Draggable key={customRow.id} draggableId={customRow.id} index={index} isDragDisabled={isSaving}>
-                          {(provided) => (
-                            <StyledTableRow
-                              key={customRow.id}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              ref={provided.innerRef}
-                              style={{
-                                ...provided.draggableProps.style,
-                                fontWeight: customRow.is_bold ? 'bold' : 'normal',
-                                display: customRow.is_hidden ? 'none' : 'table-row',
-                                backgroundColor: customRow.is_header ? '#e0e0e0' : 'inherit',
-                                fontSize: customRow.is_double ? '1.2em' : '1em',
-                              }}
-                            >
-                              <TableCell component="th" scope="row">
-                                {customRow.name}
-                              </TableCell>
-                              {Array.from({ length: columns }, (_, i) => (
-                                <TableCell key={i}>
-                                  {renderTableCellContent(customRow, i)}
-                                </TableCell>
-                              ))}
-                              <TableCell align="right">
-                                <IconButton
-                                  aria-label="more"
-                                  aria-controls={`row-menu-${customRow.id}`}
-                                  aria-haspopup="true"
-                                  onClick={(e) => handleMenuOpen(e, customRow)}
-                                  disabled={isSaving}
-                                >
-                                  <MoreVertIcon />
-                                </IconButton>
-                              </TableCell>
-                            </StyledTableRow>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </TableBody>
-                  </StyledTable>
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
-        </StyledTableContainer>
-
-        <Menu
-          id={`row-menu-${selectedRow?.id}`}
-          anchorEl={anchorEl}
-          keepMounted
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={() => selectedRow && handleEditRow(selectedRow)} disabled={isSaving}>
-            <EditIcon style={{ marginRight: '8px' }} /> Edit
-          </MenuItem>
-          <MenuItem onClick={() => selectedRow && handleDeleteRow(selectedRow.id)} disabled={isSaving}>
-            <DeleteIcon style={{ marginRight: '8px' }} /> Delete
-          </MenuItem>
-          <MenuItem onClick={() => selectedRow && handleOpenShiftDialogFromRow(selectedRow)} disabled={isSaving}>
-            <AddIcon style={{ marginRight: '8px' }} /> Add Shift
-          </MenuItem>
-          <MenuItem onClick={handleToggleShiftDialog} disabled={isSaving}>
-            <AddIcon style={{ marginRight: '8px' }} /> Manage Shifts
-          </MenuItem>
-        </Menu>
-
-        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
-          <DialogTitle>{isEditMode ? 'Edit Row' : 'Add Row'}</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="Row Name"
-              value={newRowName}
-              onChange={(e) => setNewRowName(e.target.value)}
-              margin="normal"
-              fullWidth
-            />
-            {Array.from({ length: columns }, (_, i) => (
-              <TextField
-                key={i}
-                label={`Column ${i + 1} Content`}
-                value={newRowContents[i] || ''}
-                onChange={(e) => {
-                  handleColumnContentChange(i, e.target.value);
-                }}
-                margin="normal"
-                fullWidth
-              />
-            ))}
-            <div style={{ display: 'flex', flexDirection: 'column', marginTop: '16px' }}>
-              <FormControlLabel
-                control={<Checkbox checked={newRowIsHeader} onChange={(e) => setNewRowIsHeader(e.target.checked)} />}
-                label="Is Header"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={newRowIsBold} onChange={(e) => setNewRowIsBold(e.target.checked)} />}
-                label="Is Bold"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={newRowIsDouble} onChange={(e) => setNewRowIsDouble(e.target.checked)} />}
-                label="Is Double Size"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={newRowIsHidden} onChange={(e) => setNewRowIsHidden(e.target.checked)} />}
-                label="Is Hidden"
-              />
-              <FormControlLabel
-                control={<Checkbox checked={newRowIsShift} onChange={(e) => setNewRowIsShift(e.target.checked)} />}
-                label="Is Shift"
-              />
-            </div>
-            {newRowIsShift && (
-              <FormControl fullWidth margin="normal">
-                <InputLabel id="shift-select-label">Select Shift</InputLabel>
-                <Select
-                  labelId="shift-select-label"
-                  id="shift-select"
-                  value={selectedShift || ''}
-                  label="Select Shift"
-                  onChange={(e) => setSelectedShift(e.target.value as string)}
-                >
-                  {shifts.map((shift) => (
-                    <MenuItem key={shift.id} value={shift.id}>
-                      {shift.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog} color="primary" disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveRow} color="primary" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog open={openShiftDialog} onClose={handleCloseShiftDialog} fullWidth maxWidth="md">
-          <DialogTitle>{isShiftEditMode ? 'Edit Shift' : 'Add Shift'}</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="Shift Name"
-              value={newShiftName}
-              onChange={(e) => setNewShiftName(e.target.value)}
-              margin="normal"
-              fullWidth
-            />
-            <TextField
-              label="Start Time"
-              value={newShiftStartTime}
-              onChange={(e) => setNewShiftStartTime(e.target.value)}
-              margin="normal"
-              fullWidth
-            />
-            <TextField
-              label="End Time"
-              value={newShiftEndTime}
-              onChange={(e) => setNewShiftEndTime(e.target.value)}
-              margin="normal"
-              fullWidth
-            />
-            <TextField
-              label="Additional Text"
-              value={newShiftAdditionalText}
-              onChange={(e) => setNewShiftAdditionalText(e.target.value)}
-              margin="normal"
-              fullWidth
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseShiftDialog} color="primary" disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveShift} color="primary" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog open={isShiftDialogOpen} onClose={handleToggleShiftDialog} fullWidth maxWidth="md">
-          <DialogTitle>Manage Shifts</DialogTitle>
-          <DialogContent>
+      {isLoadingData ? (
+        <div className="flex justify-center my-8">
+          <p>טוען נתונים...</p>
+        </div>
+      ) : (
+        <>
+          {/* Section Tabs */}
+          <div className="flex space-x-2 space-x-reverse">
             <Button
-              variant="contained"
-              color="primary"
-              onClick={handleOpenShiftDialog}
-              style={{ marginBottom: '16px' }}
-              disabled={isSaving}
+              variant={currentSection === SECTION_NAMES.DIGITAL_SHIFTS ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.DIGITAL_SHIFTS)}
             >
-              Add Shift
+              משמרות דיגיטל
             </Button>
-            <TableContainer component={Paper}>
-              <Table aria-label="shifts table">
-                <TableHead>
+            <Button
+              variant={currentSection === SECTION_NAMES.RADIO_NORTH ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.RADIO_NORTH)}
+            >
+              רדיו צפון
+            </Button>
+            <Button
+              variant={currentSection === SECTION_NAMES.TRANSCRIPTION_SHIFTS ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
+            >
+              משמרות תמלולים
+            </Button>
+            <Button
+              variant={currentSection === SECTION_NAMES.LIVE_SOCIAL_SHIFTS ? "default" : "outline"}
+              onClick={() => setCurrentSection(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
+            >
+              משמרות לייבים
+            </Button>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex space-x-2 space-x-reverse">
+            <Button onClick={() => openShiftDialog()}>
+              <PlusCircle className="ml-2 h-4 w-4" />
+              הוספת משמרת
+            </Button>
+            <Button onClick={() => openCustomRowDialog()}>
+              <PlusCircle className="ml-2 h-4 w-4" />
+              הוספת שורה מותאמת
+            </Button>
+            <Button onClick={() => setComicPromptDialogOpen(true)}>
+              {arrangement?.comic_prompt ? 'עריכת פרומפט קומיקס' : 'הוספת פרומפט קומיקס'}
+            </Button>
+            <Button onClick={() => setFooterTextDialogOpen(true)}>
+              {arrangement?.footer_text ? 'עריכת טקסט תחתון' : 'הוספת טקסט תחתון'}
+            </Button>
+          </div>
+
+          {/* Shifts Table */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold mb-4">משמרות</h3>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Start Time</TableCell>
-                    <TableCell>End Time</TableCell>
-                    <TableCell>Additional Text</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableHead>סוג</TableHead>
+                    <TableHead>יום</TableHead>
+                    <TableHead>שעות</TableHead>
+                    <TableHead>שם</TableHead>
+                    <TableHead>טקסט נוסף</TableHead>
+                    <TableHead>פעולות</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
-                  {shifts.map((shift) => (
-                    <TableRow key={shift.id}>
-                      <TableCell>{shift.name}</TableCell>
-                      <TableCell>{shift.start_time}</TableCell>
-                      <TableCell>{shift.end_time}</TableCell>
-                      <TableCell>{shift.additional_text}</TableCell>
-                      <TableCell align="right">
-                        <IconButton
-                          aria-label="edit"
-                          onClick={() => handleEditShift(shift)}
-                          disabled={isSaving}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          aria-label="delete"
-                          onClick={() => handleDeleteShift(shift.id)}
-                          disabled={isSaving}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {shifts
+                    .filter(shift => shift.section_name === currentSection)
+                    .map((shift) => (
+                      <TableRow key={shift.id} className={shift.is_hidden ? "opacity-50" : ""}>
+                        <TableCell>{shift.shift_type}</TableCell>
+                        <TableCell>{shift.day_of_week}</TableCell>
+                        <TableCell>
+                          {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
+                        </TableCell>
+                        <TableCell>{shift.person_name || '-'}</TableCell>
+                        <TableCell>{shift.additional_text || '-'}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openShiftDialog(shift)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                עריכה
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteShift(shift.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                מחיקה
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
-            </TableContainer>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleToggleShiftDialog} color="primary">
-              Close
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </div>
-    </LocalizationProvider>
+            </CardContent>
+          </Card>
+
+          {/* Custom Rows Table */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold mb-4">שורות מותאמות</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>תוכן ימים</TableHead>
+                    <TableHead>פעולות</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customRows
+                    .filter(row => row.section_name === currentSection)
+                    .map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell>
+                          <div className="grid grid-cols-6 gap-2">
+                            {[0, 1, 2, 3, 4, 5].map((day) => (
+                              <div key={day} className="text-center">
+                                {row.contents[day] || '-'}
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openCustomRowDialog(row)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                עריכה
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteCustomRow(row.id)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                מחיקה
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <MoveVertical className="mr-2 h-4 w-4" />
+                                שינוי סדר
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Shift Dialog */}
+          <Dialog open={shiftDialogOpen} onOpenChange={setShiftDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingShift ? 'עריכת משמרת' : 'הוספת משמרת חדשה'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="shift-section">סקשן</Label>
+                  <Select
+                    value={newShiftData.section_name}
+                    onValueChange={(value) => setNewShiftData({...newShiftData, section_name: value})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר סקשן" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SECTION_NAMES.DIGITAL_SHIFTS}>משמרות דיגיטל</SelectItem>
+                      <SelectItem value={SECTION_NAMES.RADIO_NORTH}>רדיו צפון</SelectItem>
+                      <SelectItem value={SECTION_NAMES.TRANSCRIPTION_SHIFTS}>משמרות תמלולים</SelectItem>
+                      <SelectItem value={SECTION_NAMES.LIVE_SOCIAL_SHIFTS}>משמרות לייבים</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="shift-day">יום</Label>
+                  <Select
+                    value={newShiftData.day_of_week.toString()}
+                    onValueChange={(value) => setNewShiftData({...newShiftData, day_of_week: parseInt(value)})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר יום" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">ראשון</SelectItem>
+                      <SelectItem value="1">שני</SelectItem>
+                      <SelectItem value="2">שלישי</SelectItem>
+                      <SelectItem value="3">רביעי</SelectItem>
+                      <SelectItem value="4">חמישי</SelectItem>
+                      <SelectItem value="5">שישי</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="shift-type">סוג משמרת</Label>
+                  <Select
+                    value={newShiftData.shift_type}
+                    onValueChange={(value) => setNewShiftData({...newShiftData, shift_type: value})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר סוג משמרת" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SHIFT_TYPES.MORNING}>בוקר</SelectItem>
+                      <SelectItem value={SHIFT_TYPES.AFTERNOON}>צהריים</SelectItem>
+                      <SelectItem value={SHIFT_TYPES.EVENING}>ערב</SelectItem>
+                      <SelectItem value={SHIFT_TYPES.CUSTOM}>מותאם אישית</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="start-time">שעת התחלה</Label>
+                  <Input
+                    id="start-time"
+                    type="time"
+                    value={newShiftData.start_time}
+                    onChange={(e) => setNewShiftData({...newShiftData, start_time: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="end-time">שעת סיום</Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={newShiftData.end_time}
+                    onChange={(e) => setNewShiftData({...newShiftData, end_time: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="person-name">שם</Label>
+                  <Input
+                    id="person-name"
+                    value={newShiftData.person_name}
+                    onChange={(e) => setNewShiftData({...newShiftData, person_name: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="additional-text">טקסט נוסף</Label>
+                  <Input
+                    id="additional-text"
+                    value={newShiftData.additional_text}
+                    onChange={(e) => setNewShiftData({...newShiftData, additional_text: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="is-custom-time" 
+                    checked={newShiftData.is_custom_time}
+                    onCheckedChange={(checked) => 
+                      setNewShiftData({...newShiftData, is_custom_time: checked === true})
+                    }
+                  />
+                  <Label htmlFor="is-custom-time">שעות מותאמות אישית</Label>
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox 
+                    id="is-hidden" 
+                    checked={newShiftData.is_hidden}
+                    onCheckedChange={(checked) => 
+                      setNewShiftData({...newShiftData, is_hidden: checked === true})
+                    }
+                  />
+                  <Label htmlFor="is-hidden">הסתר משמרת</Label>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveShift}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Custom Row Dialog */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCustomRow ? 'עריכת שורה מותאמת' : 'הוספת שורה מותאמת'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right" htmlFor="row-section">סקשן</Label>
+                  <Select
+                    value={newCustomRowData.section_name}
+                    onValueChange={(value) => setNewCustomRowData({...newCustomRowData, section_name: value})}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="בחר סקשן" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SECTION_NAMES.DIGITAL_SHIFTS}>משמרות דיגיטל</SelectItem>
+                      <SelectItem value={SECTION_NAMES.RADIO_NORTH}>רדיו צפון</SelectItem>
+                      <SelectItem value={SECTION_NAMES.TRANSCRIPTION_SHIFTS}>משמרות תמלולים</SelectItem>
+                      <SelectItem value={SECTION_NAMES.LIVE_SOCIAL_SHIFTS}>משמרות לייבים</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label className="mb-2 block">תוכן לימים בשבוע</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {[0, 1, 2, 3, 4, 5].map((day) => (
+                      <div key={day} className="space-y-1">
+                        <Label className="text-center block">
+                          {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'][day]}
+                        </Label>
+                        <Input
+                          value={newCustomRowData.contents[day] || ''}
+                          onChange={(e) => {
+                            const newContents = {...newCustomRowData.contents};
+                            newContents[day] = e.target.value;
+                            setNewCustomRowData({...newCustomRowData, contents: newContents});
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveCustomRow}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Comic Prompt Dialog */}
+          <Dialog open={comicPromptDialogOpen} onOpenChange={setComicPromptDialogOpen}>
+            <DialogContent dir="rtl">
+              <DialogHeader>
+                <DialogTitle>פרומפט קומיקס</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Textarea
+                  placeholder="הזן פרומפט לקומיקס..."
+                  className="min-h-[200px]"
+                  value={comicPrompt}
+                  onChange={(e) => setComicPrompt(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveComicPrompt}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Footer Text Dialog */}
+          <Dialog open={footerTextDialogOpen} onOpenChange={setFooterTextDialogOpen}>
+            <DialogContent dir="rtl">
+              <DialogHeader>
+                <DialogTitle>טקסט תחתון</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Textarea
+                  placeholder="הזן טקסט תחתון..."
+                  className="min-h-[200px]"
+                  value={footerText}
+                  onChange={(e) => setFooterText(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveFooterText}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+    </div>
   );
 };
 
