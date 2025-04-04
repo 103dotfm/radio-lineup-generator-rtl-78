@@ -33,6 +33,130 @@ export type Database = {
         }
         Relationships: []
       }
+      digital_shift_custom_rows: {
+        Row: {
+          arrangement_id: string
+          content: string | null
+          created_at: string | null
+          id: string
+          position: number
+          section_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          arrangement_id: string
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          position: number
+          section_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          arrangement_id?: string
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          position?: number
+          section_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_shift_custom_rows_arrangement_id_fkey"
+            columns: ["arrangement_id"]
+            isOneToOne: false
+            referencedRelation: "digital_work_arrangements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_shifts: {
+        Row: {
+          arrangement_id: string
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          is_custom_time: boolean | null
+          is_hidden: boolean | null
+          person_name: string | null
+          position: number
+          section_name: string
+          shift_type: string
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          arrangement_id: string
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_custom_time?: boolean | null
+          is_hidden?: boolean | null
+          person_name?: string | null
+          position: number
+          section_name: string
+          shift_type: string
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          arrangement_id?: string
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_custom_time?: boolean | null
+          is_hidden?: boolean | null
+          person_name?: string | null
+          position?: number
+          section_name?: string
+          shift_type?: string
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_shifts_arrangement_id_fkey"
+            columns: ["arrangement_id"]
+            isOneToOne: false
+            referencedRelation: "digital_work_arrangements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_work_arrangements: {
+        Row: {
+          created_at: string | null
+          footer_image_url: string | null
+          footer_text: string | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+          week_start: string
+        }
+        Insert: {
+          created_at?: string | null
+          footer_image_url?: string | null
+          footer_text?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          week_start: string
+        }
+        Update: {
+          created_at?: string | null
+          footer_image_url?: string | null
+          footer_text?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          week_start?: string
+        }
+        Relationships: []
+      }
       email_recipients: {
         Row: {
           created_at: string
