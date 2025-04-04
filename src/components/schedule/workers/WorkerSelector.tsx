@@ -39,7 +39,7 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "×
       setLoading(true);
       try {
         const data = await getWorkers();
-        setWorkers(data || []);
+        setWorkers(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching workers:', error);
         setWorkers([]);
@@ -70,8 +70,8 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "×
     onChange(value, e.target.value);
   };
   
-  // Ensure we have array of workers to avoid the "not iterable" error
-  const workerItems = Array.isArray(workers) ? workers : [];
+  // Ensure we always have an array of workers
+  const workerItems = workers || [];
   
   return (
     <div className={cn("flex items-center space-x-2 space-x-reverse gap-2", className)} dir="rtl">
