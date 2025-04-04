@@ -5,18 +5,25 @@ import { Worker } from "@/components/schedule/workers/WorkerSelector";
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
-      .from('digital_employees')
-      .select('id, full_name, department, position, email, phone')
-      .eq('is_active', true)
-      .order('full_name');
+      .from('workers')
+      .select('id, name, department, position')
+      .order('name');
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error in getWorkers query:', error);
+      return [];
+    }
     
-    return data.map(employee => ({
-      id: employee.id,
-      name: employee.full_name,
-      department: employee.department,
-      position: employee.position
+    if (!data || !Array.isArray(data)) {
+      console.error('No data returned or data is not an array');
+      return [];
+    }
+    
+    return data.map(worker => ({
+      id: worker.id,
+      name: worker.name,
+      department: worker.department,
+      position: worker.position
     }));
   } catch (error) {
     console.error('Error fetching workers:', error);
@@ -27,9 +34,9 @@ export const getWorkers = async (): Promise<Worker[]> => {
 export const createWorker = async (worker: Partial<Worker>): Promise<Worker | null> => {
   try {
     const { data, error } = await supabase
-      .from('digital_employees')
+      .from('workers')
       .insert({
-        full_name: worker.name,
+        name: worker.name,
         department: worker.department,
         position: worker.position
       })
@@ -40,7 +47,7 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
     
     return {
       id: data.id,
-      name: data.full_name,
+      name: data.name,
       department: data.department,
       position: data.position
     };
@@ -53,9 +60,9 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
 export const updateWorker = async (id: string, worker: Partial<Worker>): Promise<Worker | null> => {
   try {
     const { data, error } = await supabase
-      .from('digital_employees')
+      .from('workers')
       .update({
-        full_name: worker.name,
+        name: worker.name,
         department: worker.department,
         position: worker.position
       })
@@ -67,7 +74,7 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
     
     return {
       id: data.id,
-      name: data.full_name,
+      name: data.name,
       department: data.department,
       position: data.position
     };
@@ -80,7 +87,7 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
 export const deleteWorker = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('digital_employees')
+      .from('workers')
       .delete()
       .eq('id', id);
     
