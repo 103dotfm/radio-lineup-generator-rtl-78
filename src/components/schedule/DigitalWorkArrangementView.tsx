@@ -148,10 +148,16 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               
               try {
                 if (row.contents) {
-                  contents = JSON.parse(row.contents);
+                  if (typeof row.contents === 'string') {
+                    contents = JSON.parse(row.contents);
+                  } else if (typeof row.contents === 'object') {
+                    Object.entries(row.contents).forEach(([key, value]) => {
+                      contents[Number(key)] = String(value || '');
+                    });
+                  }
                 } else if (row.content) {
                   for (let i = 0; i < 6; i++) {
-                    contents[i] = row.content;
+                    contents[i] = String(row.content || '');
                   }
                 }
               } catch (e) {
@@ -296,11 +302,21 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       <TableRow key={row.id}>
         {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
           <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center">
-            {row.contents[dayIndex] && String(row.contents[dayIndex]) || ''}
+            {renderTableCellContent(row, dayIndex)}
           </TableCell>
         ))}
       </TableRow>
     ));
+  };
+
+  const renderTableCellContent = (customRow: CustomRow, columnIndex: number) => {
+    if (customRow.contents && customRow.contents[columnIndex]) {
+      return String(customRow.contents[columnIndex]);
+    } else if ((customRow as any).content) {
+      return String((customRow as any).content || '');
+    } else {
+      return "";
+    }
   };
 
   if (isLoading) {
@@ -364,6 +380,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                     return renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.EVENING);
                   })}
                 </TableRow>
+                {renderCustomRows(SECTION_NAMES.DIGITAL_SHIFTS)}
               </TableBody>
             </Table>
           </div>
