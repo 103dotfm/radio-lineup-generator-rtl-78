@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { getWorkers } from '@/lib/supabase/workers';
 
 export interface Worker {
   id: string;
@@ -38,21 +38,8 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "×
     const fetchWorkers = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('digital_employees')
-          .select('*')
-          .order('full_name', { ascending: true });
-        
-        if (error) throw error;
-        
-        const mappedWorkers: Worker[] = (data || []).map(worker => ({
-          id: worker.id,
-          name: worker.full_name,
-          department: worker.department,
-          position: worker.position
-        }));
-        
-        setWorkers(mappedWorkers);
+        const data = await getWorkers();
+        setWorkers(data);
       } catch (error) {
         console.error('Error fetching workers:', error);
       } finally {
