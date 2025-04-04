@@ -59,7 +59,9 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
     
     // Focus the input after selection for additional text
     setTimeout(() => {
-      inputRef.current?.focus();
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }, 100);
   };
   
@@ -67,6 +69,9 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
     setInputValue(e.target.value);
     onChange(value, e.target.value);
   };
+  
+  // Ensure we have array of workers to avoid the "not iterable" error
+  const workerItems = Array.isArray(workers) ? workers : [];
   
   return (
     <div className={cn("flex items-center space-x-2 space-x-reverse gap-2", className)} dir="rtl">
@@ -89,8 +94,8 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
             <CommandGroup className="max-h-64 overflow-y-auto">
               {loading ? (
                 <CommandItem disabled>טוען עובדים...</CommandItem>
-              ) : workers && workers.length > 0 ? (
-                workers.map((worker) => (
+              ) : workerItems.length > 0 ? (
+                workerItems.map((worker) => (
                   <CommandItem
                     key={worker.id}
                     value={worker.name}

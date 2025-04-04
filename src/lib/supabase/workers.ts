@@ -19,11 +19,12 @@ export const getWorkers = async (): Promise<Worker[]> => {
       return [];
     }
     
+    // Ensure we're actually returning an array
     return data.map(worker => ({
       id: worker.id,
       name: worker.name,
-      department: worker.department,
-      position: worker.position
+      department: worker.department || '',
+      position: worker.position || ''
     }));
   } catch (error) {
     console.error('Error fetching workers:', error);
@@ -33,17 +34,29 @@ export const getWorkers = async (): Promise<Worker[]> => {
 
 export const createWorker = async (worker: Partial<Worker>): Promise<Worker | null> => {
   try {
+    if (!worker.name) {
+      throw new Error('Worker name is required');
+    }
+
     const { data, error } = await supabase
       .from('workers')
       .insert({
         name: worker.name,
-        department: worker.department,
-        position: worker.position
+        department: worker.department || null,
+        position: worker.position || null
       })
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating worker:', error);
+      return null;
+    }
+    
+    if (!data) {
+      console.error('No data returned after creating worker');
+      return null;
+    }
     
     return {
       id: data.id,
@@ -59,18 +72,32 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
 
 export const updateWorker = async (id: string, worker: Partial<Worker>): Promise<Worker | null> => {
   try {
+    const updateData: any = {};
+    
+    if (worker.name) updateData.name = worker.name;
+    if (worker.department !== undefined) updateData.department = worker.department;
+    if (worker.position !== undefined) updateData.position = worker.position;
+    
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('No fields to update');
+    }
+    
     const { data, error } = await supabase
       .from('workers')
-      .update({
-        name: worker.name,
-        department: worker.department,
-        position: worker.position
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating worker:', error);
+      return null;
+    }
+    
+    if (!data) {
+      console.error('No data returned after updating worker');
+      return null;
+    }
     
     return {
       id: data.id,
@@ -91,7 +118,10 @@ export const deleteWorker = async (id: string): Promise<boolean> => {
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting worker:', error);
+      return false;
+    }
     
     return true;
   } catch (error) {
