@@ -54,7 +54,7 @@ const WorkersManagement = () => {
     setIsLoading(true);
     try {
       const fetchedWorkers = await getWorkers();
-      setWorkers(fetchedWorkers);
+      setWorkers(fetchedWorkers || []);
     } catch (error) {
       console.error('Error loading workers:', error);
       toast({
@@ -62,6 +62,7 @@ const WorkersManagement = () => {
         description: "אירעה שגיאה בעת טעינת רשימת העובדים",
         variant: "destructive"
       });
+      setWorkers([]);
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +113,7 @@ const WorkersManagement = () => {
         });
         
         if (newWorker) {
-          setWorkers([...workers, newWorker]);
+          setWorkers(prev => [...(Array.isArray(prev) ? prev : []), newWorker]);
           toast({
             title: "העובד נוסף בהצלחה",
             description: `העובד ${name} נוסף בהצלחה`
@@ -126,7 +127,7 @@ const WorkersManagement = () => {
         });
         
         if (updatedWorker) {
-          setWorkers(workers.map(w => w.id === updatedWorker.id ? updatedWorker : w));
+          setWorkers(prev => (Array.isArray(prev) ? prev.map(w => w.id === updatedWorker.id ? updatedWorker : w) : [updatedWorker]));
           toast({
             title: "העובד עודכן בהצלחה",
             description: `העובד ${name} עודכן בהצלחה`
@@ -147,13 +148,13 @@ const WorkersManagement = () => {
   };
   
   const handleDeleteWorker = async (worker: Worker) => {
-    if (!confirm(`האם למחוק את העובד ${worker.name}?`)) return;
+    if (!worker || !confirm(`האם למחוק את העובד ${worker.name}?`)) return;
     
     try {
       const success = await deleteWorker(worker.id);
       
       if (success) {
-        setWorkers(workers.filter(w => w.id !== worker.id));
+        setWorkers(prev => (Array.isArray(prev) ? prev.filter(w => w.id !== worker.id) : []));
         toast({
           title: "העובד נמחק בהצלחה",
           description: `העובד ${worker.name} נמחק בהצלחה`
@@ -169,8 +170,11 @@ const WorkersManagement = () => {
     }
   };
   
+  // Make sure workers is always an array
+  const workersArray = Array.isArray(workers) ? workers : [];
+  
   // Filter workers based on search query
-  const filteredWorkers = workers.filter(worker => 
+  const filteredWorkers = workersArray.filter(worker => 
     worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (worker.department && worker.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (worker.position && worker.position.toLowerCase().includes(searchQuery.toLowerCase()))

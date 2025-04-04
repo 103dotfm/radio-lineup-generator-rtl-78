@@ -65,30 +65,16 @@ const LineupItem = ({
 
   useEffect(() => {
     if (editor && details !== editor.getHTML()) {
-      editor.commands.setContent(details);
+      editor.commands.setContent(details || '');
     }
   }, [editor, details]);
 
-  // Debug: Explicitly check and convert the boolean flags
-  const isDivider = is_divider === true;
-  const isBreak = is_break === true; 
-  const isNote = is_note === true;
+  // Explicitly check and convert the boolean flags for safety
+  const isDivider = Boolean(is_divider);
+  const isBreak = Boolean(is_break); 
+  const isNote = Boolean(is_note);
 
-  // Debug: Log the exact values coming into the component including explicit conversions
-  console.log(`LineupItem ${id} (${name}) render - raw props:`, { 
-    is_break, 
-    is_note, 
-    is_divider,
-    is_break_type: typeof is_break,
-    is_note_type: typeof is_note,
-    is_divider_type: typeof is_divider,
-    // Explicit boolean conversions for comparison
-    isDivider,
-    isBreak,
-    isNote
-  });
-  
-  // Debug: Log the item properties to help diagnose issues
+  // Log item type for debugging
   console.log(`LineupItem ${id} (${name}) render:`, { 
     is_break: isBreak, 
     is_note: isNote, 
@@ -96,7 +82,7 @@ const LineupItem = ({
     item_type: isDivider ? 'divider' : isBreak ? 'break' : isNote ? 'note' : 'regular'
   });
 
-  // Ensure we check explicitly for is_divider === true - This is crucial!
+  // Ensure we don't try to render dividers as Draggable items
   if (isDivider) {
     console.log(`Item ${id} (${name}) identified as divider, returning null`);
     return null; // Dividers are handled separately in LineupTable
@@ -109,9 +95,9 @@ const LineupItem = ({
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`${is_break ? 'bg-gray-50' : ''} ${is_note ? 'bg-yellow-50' : ''}`}
+          className={`${isBreak ? 'bg-gray-50' : ''} ${isNote ? 'bg-yellow-50' : ''}`}
         >
-          {is_break ? (
+          {isBreak ? (
             <BreakItem
               id={id}
               name={name}
@@ -122,7 +108,7 @@ const LineupItem = ({
               isAuthenticated={isAuthenticated}
               showMinutes={showMinutes}
             />
-          ) : is_note ? (
+          ) : isNote ? (
             <NoteItem
               id={id}
               editor={editor}
