@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,24 +13,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 
-// Import necessary icons from lucide-react instead of MUI
+// Import necessary icons from lucide-react
 import { ChevronLeft, ChevronRight, Plus, Trash, Edit, Eye, EyeOff, Search, Check } from 'lucide-react';
 
 // Define types for work arrangements
 type WorkArrangement = {
   id: string;
   week_start: string;
-  arrangement_data: any;
+  arrangement_data?: any;
   is_published: boolean;
   created_at?: string;
   updated_at?: string;
 };
 
-type Props = {
-  supabase: any;
-};
-
-const DigitalWorkArrangement: React.FC<Props> = ({ supabase }) => {
+const DigitalWorkArrangement = () => {
   // State variables
   const [workArrangements, setWorkArrangements] = useState<WorkArrangement[]>([]);
   const [currentArrangement, setCurrentArrangement] = useState<WorkArrangement | null>(null);
@@ -63,7 +60,11 @@ const DigitalWorkArrangement: React.FC<Props> = ({ supabase }) => {
         }
       }
     } catch (error: any) {
-      toast.error(`Error fetching work arrangements: ${error.message}`);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Error fetching work arrangements: ${error.message}`
+      });
     } finally {
       setLoading(false);
     }
