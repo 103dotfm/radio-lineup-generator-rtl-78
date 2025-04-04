@@ -1,853 +1,955 @@
-import React, { useState, useEffect } from 'react';
-import { format, addDays, startOfWeek, addWeeks, subWeeks } from 'date-fns';
-import { he } from 'date-fns/locale';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { PlusCircle, Trash2, ChevronLeft, ChevronRight, Save, AlertCircle, Edit } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
-import WorkerSelector from '../schedule/workers/WorkerSelector';
-import CustomRowColumns from '../schedule/workers/CustomRowColumns';
-import ComicSketchGenerator from '../schedule/workers/ComicSketchGenerator';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableContainer,
+  Paper,
+  Button,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  Checkbox,
+  IconButton,
+  Menu,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  TextareaAutosize,
+} from '@mui/material';
+import { styled } from '@mui/system';
+import { MoreVert as MoreVertIcon, Delete as DeleteIcon, Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs, { Dayjs } from 'dayjs';
+import 'dayjs/locale/he';
+import localeData from 'dayjs/plugin/localeData';
+import isBetween from 'dayjs/plugin/isBetween';
+import { debounce } from 'lodash';
+
+dayjs.extend(localeData);
+dayjs.extend(isBetween);
+dayjs.locale('he');
 
 interface Shift {
   id: string;
-  section_name: string;
-  day_of_week: number;
-  shift_type: string;
+  name: string;
   start_time: string;
   end_time: string;
-  person_name: string | null;
-  additional_text: string | null;
-  is_custom_time: boolean;
-  is_hidden: boolean;
-  position: number;
+  additional_text: string;
 }
 
 interface CustomRow {
   id: string;
-  section_name: string;
-  contents: Record<number, string>;
-  position: number;
+  name: string;
+  content?: string;
+  contents?: string[];
+  is_header: boolean;
+  is_bold: boolean;
+  is_double: boolean;
+  is_hidden: boolean;
+  is_shift: boolean;
+  shift_id?: string | null;
+  order: number;
 }
 
-interface WorkArrangement {
+interface DigitalWorkArrangementData {
   id: string;
-  week_start: string;
-  notes: string | null;
-  footer_text: string | null;
-  footer_image_url: string | null;
-  comic_prompt: string | null;
-  shifts: Shift[];
+  name: string;
+  date: string;
+  columns: number;
   custom_rows: CustomRow[];
+  shifts: Shift[];
+  comic_prompt: string;
 }
 
-const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+interface Props {
+  supabase: SupabaseClient;
+}
 
-const SECTION_NAMES = {
-  DIGITAL_SHIFTS: 'digital_shifts',
-  RADIO_NORTH: 'radio_north',
-  TRANSCRIPTION_SHIFTS: 'transcription_shifts',
-  LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
-};
+const StyledTableContainer = styled(TableContainer)({
+  margin: '20px 0',
+  boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
+});
 
-const SHIFT_TYPES = {
-  MORNING: 'morning',
-  AFTERNOON: 'afternoon',
-  EVENING: 'evening',
-  CUSTOM: 'custom'
-};
+const StyledTable = styled(Table)({
+  minWidth: 700,
+});
 
-const DEFAULT_SHIFTS = {
-  [SECTION_NAMES.DIGITAL_SHIFTS]: {
-    [SHIFT_TYPES.MORNING]: {
-      startTime: '07:00',
-      endTime: '12:00'
-    },
-    [SHIFT_TYPES.AFTERNOON]: {
-      startTime: '12:00',
-      endTime: '16:00'
-    },
-    [SHIFT_TYPES.EVENING]: {
-      weekdays: {
-        startTime: '16:00',
-        endTime: '22:00'
-      },
-      thursday: {
-        startTime: '16:00',
-        endTime: '21:00'
-      },
-      friday: {
-        exists: false
-      }
-    }
+const StyledTableCell = styled(TableCell)({
+  fontWeight: 'bold',
+  backgroundColor: '#f5f5f5',
+});
+
+const StyledTableRow = styled(TableRow)({
+  '&:nth-of-type(odd)': {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
   },
-  [SECTION_NAMES.RADIO_NORTH]: {
-    default: {
-      startTime: '09:00',
-      endTime: '12:00'
-    }
-  },
-  [SECTION_NAMES.TRANSCRIPTION_SHIFTS]: {
-    [SHIFT_TYPES.MORNING]: {
-      weekdays: {
-        startTime: '07:00',
-        endTime: '14:00'
-      },
-      friday: {
-        startTime: '08:00',
-        endTime: '13:00'
-      }
-    },
-    [SHIFT_TYPES.AFTERNOON]: {
-      weekdays: {
-        startTime: '14:00',
-        endTime: '20:00'
-      },
-      friday: {
-        exists: false
-      }
-    }
-  },
-  [SECTION_NAMES.LIVE_SOCIAL_SHIFTS]: {
-    [SHIFT_TYPES.MORNING]: {
-      weekdays: {
-        startTime: '07:00',
-        endTime: '14:00'
-      },
-      friday: {
-        startTime: '08:00',
-        endTime: '15:00'
-      }
-    },
-    [SHIFT_TYPES.AFTERNOON]: {
-      weekdays: {
-        startTime: '14:00',
-        endTime: '20:00'
-      },
-      friday: {
-        exists: false
-      }
-    }
-  }
-};
+});
 
-const SECTION_TITLES = {
-  [SECTION_NAMES.DIGITAL_SHIFTS]: '',
-  [SECTION_NAMES.RADIO_NORTH]: 'רדיו צפון 12:00-09:00',
-  [SECTION_NAMES.TRANSCRIPTION_SHIFTS]: 'משמרות תמלולים וכו\'',
-  [SECTION_NAMES.LIVE_SOCIAL_SHIFTS]: 'משמרות לייבים, סושיאל ועוד'
-};
-
-const DigitalWorkArrangement = () => {
-  const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
-  const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [notes, setNotes] = useState<string>('');
-  const [footerText, setFooterText] = useState<string>('');
-  const [footerImageUrl, setFooterImageUrl] = useState<string>('');
-  const [comicPrompt, setComicPrompt] = useState<string>('');
-  const [shifts, setShifts] = useState<Shift[]>([]);
+const DigitalWorkArrangement: React.FC<Props> = ({ supabase }) => {
+  const [dataArr, setDataArr] = useState<DigitalWorkArrangementData | null>(null);
+  const [name, setName] = useState('');
+  const [date, setDate] = useState<Dayjs | null>(dayjs());
+  const [columns, setColumns] = useState(1);
   const [customRows, setCustomRows] = useState<CustomRow[]>([]);
-  
-  const { toast } = useToast();
-  
-  useEffect(() => {
-    fetchArrangement();
-  }, [currentWeek]);
-  
-  const fetchArrangement = async () => {
-    setIsLoading(true);
-    const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-    
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [selectedShift, setSelectedShift] = useState<string | null>(null);
+  const [selectedRow, setSelectedRow] = useState<CustomRow | null>(null);
+  const [comicPrompt, setComicPrompt] = useState('');
+  const [openDialog, setOpenDialog] = useState(false);
+  const [openShiftDialog, setOpenShiftDialog] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isShiftEditMode, setIsShiftEditMode] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [dialogType, setDialogType] = useState<'row' | 'shift'>('row');
+  const [newRowName, setNewRowName] = useState('');
+  const [newRowContent, setNewRowContent] = useState('');
+  const [newRowContents, setNewRowContents] = useState<string[]>([]);
+  const [newRowIsHeader, setNewRowIsHeader] = useState(false);
+  const [newRowIsBold, setNewRowIsBold] = useState(false);
+  const [newRowIsDouble, setNewRowIsDouble] = useState(false);
+  const [newRowIsHidden, setNewRowIsHidden] = useState(false);
+  const [newRowIsShift, setNewRowIsShift] = useState(false);
+  const [newShiftName, setNewShiftName] = useState('');
+  const [newShiftStartTime, setNewShiftStartTime] = useState('');
+  const [newShiftEndTime, setNewShiftEndTime] = useState('');
+  const [newShiftAdditionalText, setNewShiftAdditionalText] = useState('');
+  const [selectedColumnIndex, setSelectedColumnIndex] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isShiftDialogOpen, setIsShiftDialogOpen] = useState(false);
+  const [isComicPromptDialogOpen, setIsComicPromptDialogOpen] = useState(false);
+
+  const fetchData = useCallback(async () => {
     try {
-      // Check if arrangement exists for this week
-      const { data: existingArrangement, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('digital_work_arrangements')
-        .select('*')
-        .eq('week_start', weekStartStr)
-        .single();
-        
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
-        throw fetchError;
-      }
-      
-      if (existingArrangement) {
-        // Fetch shifts
-        const { data: shiftsData, error: shiftsError } = await supabase
-          .from('digital_shifts')
-          .select('*')
-          .eq('arrangement_id', existingArrangement.id)
-          .order('position', { ascending: true });
-          
-        if (shiftsError) throw shiftsError;
-        
-        // Fetch custom rows
-        const { data: customRowsData, error: customRowsError } = await supabase
-          .from('digital_shift_custom_rows')
-          .select('*')
-          .eq('arrangement_id', existingArrangement.id)
-          .order('position', { ascending: true });
-          
-        if (customRowsError) throw customRowsError;
-        
-        // Process custom rows to the new format with day-specific contents
-        const processedCustomRows: CustomRow[] = (customRowsData || []).map(row => {
-          // For backward compatibility, parse existing content into the new structure
-          let contents: Record<number, string> = {};
-          
-          try {
-            if (row.contents) {
-              // If it's already in the new format
-              contents = JSON.parse(row.contents);
-            } else if (row.content) {
-              // Old format - single content for all days
-              for (let i = 0; i < 6; i++) {
-                contents[i] = row.content;
-              }
-            }
-          } catch (e) {
-            console.error('Error parsing custom row contents', e);
-          }
-          
-          return {
-            id: row.id,
-            section_name: row.section_name,
+        .select(`
+          id,
+          name,
+          date,
+          columns,
+          comic_prompt,
+          custom_rows (
+            id,
+            name,
+            content,
             contents,
-            position: row.position
-          };
-        });
-        
-        setArrangement({
-          ...existingArrangement,
-          shifts: shiftsData || [],
-          custom_rows: processedCustomRows
-        });
-        
-        setNotes(existingArrangement.notes || '');
-        setFooterText(existingArrangement.footer_text || '');
-        setFooterImageUrl(existingArrangement.footer_image_url || '');
-        setComicPrompt(existingArrangement.comic_prompt || '');
-        setShifts(shiftsData || []);
-        setCustomRows(processedCustomRows);
+            is_header,
+            is_bold,
+            is_double,
+            is_hidden,
+            is_shift,
+            shift_id,
+            order
+          ),
+          shifts (
+            id,
+            name,
+            start_time,
+            end_time,
+            additional_text
+          )
+        `)
+        .order('date', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setDataArr(data);
+        setName(data.name);
+        setDate(dayjs(data.date));
+        setColumns(data.columns);
+
+        // Ensure custom_rows is an array and map it
+        const mappedCustomRows = Array.isArray(data.custom_rows) ? data.custom_rows.map(row => ({
+          ...row,
+          contents: row.contents ? JSON.parse(JSON.stringify(row.contents)) : [],
+        })) : [];
+        setCustomRows(mappedCustomRows);
+
+        // Ensure content/contents handling
+        const firstRow = mappedCustomRows[0];
+        if (firstRow) {
+          if (firstRow.contents && Array.isArray(firstRow.contents)) {
+            // console.log('First row contents:', firstRow.contents);
+          } else if (firstRow.content) {
+            // console.log('First row content:', firstRow.content);
+          }
+        }
+
+        // Fix the shifts array type issue by ensuring additional_text is present
+        const mappedShifts = data.shifts.map(shift => ({
+          ...shift,
+          additional_text: shift.additional_text || "" // Add the missing additional_text property with default empty string
+        }));
+        setShifts(mappedShifts);
+
+        // Setting comic_prompt value with default value
+        const comicPrompt = data?.comic_prompt || "";
+        setComicPrompt(comicPrompt);
       } else {
-        // Create default arrangement
-        setArrangement(null);
-        setNotes('');
-        setFooterText('');
-        setFooterImageUrl('');
-        setComicPrompt('');
-        setShifts(generateDefaultShifts());
+        setDataArr(null);
+        setName('');
+        setDate(dayjs());
+        setColumns(1);
         setCustomRows([]);
+        setShifts([]);
+        setComicPrompt('');
       }
-    } catch (error) {
-      console.error('Error fetching arrangement:', error);
-      toast({
-        title: "שגיאה בטעינת סידור העבודה",
-        description: "אירעה שגיאה בעת טעינת סידור העבודה",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      toast.error(`Error fetching data: ${err.message}`);
     }
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, row: CustomRow) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedRow(row);
   };
 
-  // Generate default shifts for a new arrangement
-  const generateDefaultShifts = (): Shift[] => {
-    const defaultShifts: Shift[] = [];
-    let position = 0;
-    
-    // Digital Shifts Section
-    Object.values(SHIFT_TYPES).forEach(shiftType => {
-      if (shiftType !== SHIFT_TYPES.CUSTOM && DEFAULT_SHIFTS[SECTION_NAMES.DIGITAL_SHIFTS][shiftType]) {
-        const shiftConfig = DEFAULT_SHIFTS[SECTION_NAMES.DIGITAL_SHIFTS][shiftType];
-        
-        for (let day = 0; day < 6; day++) {
-          // Skip Friday evening shift if it doesn't exist
-          if (shiftType === SHIFT_TYPES.EVENING && day === 5 && shiftConfig.friday?.exists === false) {
-            continue;
-          }
-          
-          let startTime, endTime;
-          
-          if (shiftType === SHIFT_TYPES.EVENING) {
-            // Special handling for evening shifts
-            if (day === 4) { // Thursday
-              startTime = shiftConfig.thursday.startTime;
-              endTime = shiftConfig.thursday.endTime;
-            } else if (day === 5) { // Friday
-              startTime = shiftConfig.friday?.startTime || '';
-              endTime = shiftConfig.friday?.endTime || '';
-            } else { // Regular weekday
-              startTime = shiftConfig.weekdays.startTime;
-              endTime = shiftConfig.weekdays.endTime;
-            }
-          } else {
-            // Regular morning/afternoon shifts
-            if (day === 5 && shiftConfig.friday) { // Friday special time
-              startTime = shiftConfig.friday.startTime;
-              endTime = shiftConfig.friday.endTime;
-            } else { // Regular weekday
-              const config = shiftConfig.weekdays || shiftConfig;
-              startTime = config.startTime;
-              endTime = config.endTime;
-            }
-          }
-          
-          defaultShifts.push({
-            id: `new-${SECTION_NAMES.DIGITAL_SHIFTS}-${shiftType}-${day}-${position}`,
-            section_name: SECTION_NAMES.DIGITAL_SHIFTS,
-            day_of_week: day,
-            shift_type: shiftType,
-            start_time: startTime,
-            end_time: endTime,
-            person_name: null,
-            additional_text: null,
-            is_custom_time: false,
-            is_hidden: false,
-            position: position++
-          });
-        }
-      }
-    });
-    
-    // Radio North Section (Optional) - Add if needed
-    // For Radio North, we only have one time slot 09:00-12:00 for each day
-    for (let day = 0; day < 6; day++) {
-      defaultShifts.push({
-        id: `new-${SECTION_NAMES.RADIO_NORTH}-default-${day}-${position}`,
-        section_name: SECTION_NAMES.RADIO_NORTH,
-        day_of_week: day,
-        shift_type: 'default',
-        start_time: DEFAULT_SHIFTS[SECTION_NAMES.RADIO_NORTH].default.startTime,
-        end_time: DEFAULT_SHIFTS[SECTION_NAMES.RADIO_NORTH].default.endTime,
-        person_name: null,
-        additional_text: null,
-        is_custom_time: false,
-        is_hidden: false,
-        position: position++
-      });
-    }
-    
-    // Transcription Shifts Section
-    Object.entries(DEFAULT_SHIFTS[SECTION_NAMES.TRANSCRIPTION_SHIFTS]).forEach(([shiftType, shiftConfig]) => {
-      for (let day = 0; day < 6; day++) {
-        // Skip Friday afternoon if it doesn't exist
-        if (shiftType === SHIFT_TYPES.AFTERNOON && day === 5 && shiftConfig.friday?.exists === false) {
-          continue;
-        }
-        
-        let startTime, endTime;
-        
-        if (day === 5 && shiftConfig.friday) { // Friday special time
-          if (shiftConfig.friday.exists === false) continue;
-          startTime = shiftConfig.friday.startTime;
-          endTime = shiftConfig.friday.endTime;
-        } else { // Regular weekday
-          startTime = shiftConfig.weekdays.startTime;
-          endTime = shiftConfig.weekdays.endTime;
-        }
-        
-        defaultShifts.push({
-          id: `new-${SECTION_NAMES.TRANSCRIPTION_SHIFTS}-${shiftType}-${day}-${position}`,
-          section_name: SECTION_NAMES.TRANSCRIPTION_SHIFTS,
-          day_of_week: day,
-          shift_type: shiftType,
-          start_time: startTime,
-          end_time: endTime,
-          person_name: null,
-          additional_text: null,
-          is_custom_time: false,
-          is_hidden: false,
-          position: position++
-        });
-      }
-    });
-    
-    // Live Social Shifts Section
-    Object.entries(DEFAULT_SHIFTS[SECTION_NAMES.LIVE_SOCIAL_SHIFTS]).forEach(([shiftType, shiftConfig]) => {
-      for (let day = 0; day < 6; day++) {
-        // Skip Friday afternoon if it doesn't exist
-        if (shiftType === SHIFT_TYPES.AFTERNOON && day === 5 && shiftConfig.friday?.exists === false) {
-          continue;
-        }
-        
-        let startTime, endTime;
-        
-        if (day === 5 && shiftConfig.friday) { // Friday special time
-          if (shiftConfig.friday.exists === false) continue;
-          startTime = shiftConfig.friday.startTime;
-          endTime = shiftConfig.friday.endTime;
-        } else { // Regular weekday
-          startTime = shiftConfig.weekdays.startTime;
-          endTime = shiftConfig.weekdays.endTime;
-        }
-        
-        defaultShifts.push({
-          id: `new-${SECTION_NAMES.LIVE_SOCIAL_SHIFTS}-${shiftType}-${day}-${position}`,
-          section_name: SECTION_NAMES.LIVE_SOCIAL_SHIFTS,
-          day_of_week: day,
-          shift_type: shiftType,
-          start_time: startTime,
-          end_time: endTime,
-          person_name: null,
-          additional_text: null,
-          is_custom_time: false,
-          is_hidden: false,
-          position: position++
-        });
-      }
-    });
-    
-    return defaultShifts;
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedRow(null);
   };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      setCurrentWeek(subWeeks(currentWeek, 1));
-    } else {
-      setCurrentWeek(addWeeks(currentWeek, 1));
-    }
+  const handleEditRow = (row: CustomRow) => {
+    setDialogType('row');
+    setSelectedRow(row);
+    setNewRowName(row.name);
+    setNewRowContent(row.content || '');
+    setNewRowContents(row.contents || []);
+    setNewRowIsHeader(row.is_header);
+    setNewRowIsBold(row.is_bold);
+    setNewRowIsDouble(row.is_double);
+    setNewRowIsHidden(row.is_hidden);
+    setNewRowIsShift(row.is_shift);
+    setSelectedShift(row.shift_id || null);
+    setIsEditMode(true);
+    setOpenDialog(true);
+    handleMenuClose();
   };
 
-  // Update a shift's person name and additional text
-  const updatePersonData = (shiftId: string, name: string | null, additionalText: string | null) => {
-    setShifts(currentShifts => 
-      currentShifts.map(shift => 
-        shift.id === shiftId ? { 
-          ...shift, 
-          person_name: name,
-          additional_text: additionalText
-        } : shift
-      )
-    );
-  };
-
-  // Update a shift's time
-  const updateShiftTime = (shiftId: string, startTime: string, endTime: string) => {
-    setShifts(currentShifts => 
-      currentShifts.map(shift => 
-        shift.id === shiftId ? { 
-          ...shift, 
-          start_time: startTime, 
-          end_time: endTime,
-          is_custom_time: true 
-        } : shift
-      )
-    );
-  };
-
-  // Toggle visibility of a shift
-  const toggleShiftVisibility = (shiftId: string) => {
-    setShifts(currentShifts => 
-      currentShifts.map(shift => 
-        shift.id === shiftId ? { ...shift, is_hidden: !shift.is_hidden } : shift
-      )
-    );
-  };
-
-  // Add a custom row to a section
-  const addCustomRow = (sectionName: string) => {
-    const newPosition = customRows.filter(row => row.section_name === sectionName).length;
-    const newRow: CustomRow = {
-      id: `new-custom-${Date.now()}`,
-      section_name: sectionName,
-      contents: {},
-      position: newPosition
-    };
-    
-    setCustomRows([...customRows, newRow]);
-  };
-
-  // Update custom row content for a specific day
-  const updateCustomRowContent = (rowId: string, dayIndex: number, content: string) => {
-    setCustomRows(currentRows => 
-      currentRows.map(row => {
-        if (row.id === rowId) {
-          const updatedContents = { ...row.contents };
-          updatedContents[dayIndex] = content;
-          return { ...row, contents: updatedContents };
-        }
-        return row;
-      })
-    );
-  };
-
-  // Delete a custom row
-  const deleteCustomRow = (rowId: string) => {
-    setCustomRows(currentRows => currentRows.filter(row => row.id !== rowId));
-  };
-
-  // Save the current arrangement
-  const saveArrangement = async () => {
-    setIsSaving(true);
-    
+  const handleDeleteRow = async (rowId: string) => {
     try {
-      const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-      
-      let arrangementId: string;
-      
-      // Check if arrangement exists for this week
-      if (arrangement?.id) {
-        // Update existing arrangement
-        arrangementId = arrangement.id;
-        
-        const { error: updateError } = await supabase
-          .from('digital_work_arrangements')
-          .update({
-            notes,
-            footer_text: footerText,
-            footer_image_url: footerImageUrl,
-            comic_prompt: comicPrompt
-          })
-          .eq('id', arrangementId);
-          
-        if (updateError) throw updateError;
-      } else {
-        // Create new arrangement
-        const { data: newArrangement, error: insertError } = await supabase
-          .from('digital_work_arrangements')
-          .insert({
-            week_start: weekStartStr,
-            notes,
-            footer_text: footerText,
-            footer_image_url: footerImageUrl,
-            comic_prompt: comicPrompt
-          })
+      const { error } = await supabase
+        .from('custom_rows')
+        .delete()
+        .eq('id', rowId);
+
+      if (error) {
+        throw error;
+      }
+
+      setCustomRows(prevRows => prevRows.filter(row => row.id !== rowId));
+      toast.success('Row deleted successfully!');
+    } catch (err: any) {
+      console.error('Error deleting row:', err);
+      toast.error(`Error deleting row: ${err.message}`);
+    } finally {
+      handleMenuClose();
+    }
+  };
+
+  const handleOpenDialog = (type: 'row' | 'shift') => {
+    setDialogType(type);
+    setNewRowName('');
+    setNewRowContent('');
+    setNewRowContents(Array(columns).fill(''));
+    setNewRowIsHeader(false);
+    setNewRowIsBold(false);
+    setNewRowIsDouble(false);
+    setNewRowIsHidden(false);
+    setNewRowIsShift(false);
+    setSelectedShift(null);
+    setIsEditMode(false);
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedColumnIndex(null);
+  };
+
+  const handleOpenShiftDialog = () => {
+    setNewShiftName('');
+    setNewShiftStartTime('');
+    setNewShiftEndTime('');
+    setNewShiftAdditionalText('');
+    setIsShiftEditMode(false);
+    setOpenShiftDialog(true);
+  };
+
+  const handleCloseShiftDialog = () => {
+    setOpenShiftDialog(false);
+  };
+
+  const handleSaveRow = async () => {
+    if (!newRowName.trim()) {
+      toast.error('Row name is required!');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const rowData = {
+        name: newRowName,
+        content: newRowContent || null,
+        contents: newRowContents.filter(content => content !== null && content !== ''),
+        is_header: newRowIsHeader,
+        is_bold: newRowIsBold,
+        is_double: newRowIsDouble,
+        is_hidden: newRowIsHidden,
+        is_shift: newRowIsShift,
+        shift_id: newRowIsShift ? selectedShift : null,
+        order: selectedRow?.order || customRows.length,
+      };
+
+      if (isEditMode && selectedRow) {
+        const { data, error } = await supabase
+          .from('custom_rows')
+          .update(rowData)
+          .eq('id', selectedRow.id)
           .select()
           .single();
-          
-        if (insertError) throw insertError;
-        if (!newArrangement) throw new Error('Failed to create arrangement');
-        
-        arrangementId = newArrangement.id;
-      }
-      
-      // Process shifts
-      for (const shift of shifts) {
-        if (shift.id.startsWith('new-')) {
-          // Create new shift
-          const { error: shiftError } = await supabase
-            .from('digital_shifts')
-            .insert({
-              arrangement_id: arrangementId,
-              section_name: shift.section_name,
-              day_of_week: shift.day_of_week,
-              shift_type: shift.shift_type,
-              start_time: shift.start_time,
-              end_time: shift.end_time,
-              person_name: shift.person_name,
-              additional_text: shift.additional_text,
-              is_custom_time: shift.is_custom_time,
-              is_hidden: shift.is_hidden,
-              position: shift.position
-            });
-            
-          if (shiftError) throw shiftError;
-        } else {
-          // Update existing shift
-          const { error: shiftError } = await supabase
-            .from('digital_shifts')
-            .update({
-              start_time: shift.start_time,
-              end_time: shift.end_time,
-              person_name: shift.person_name,
-              additional_text: shift.additional_text,
-              is_custom_time: shift.is_custom_time,
-              is_hidden: shift.is_hidden,
-              position: shift.position
-            })
-            .eq('id', shift.id);
-            
-          if (shiftError) throw shiftError;
+
+        if (error) {
+          throw error;
         }
+
+        setCustomRows(prevRows =>
+          prevRows.map(row => (row.id === selectedRow.id ? { ...row, ...rowData } : row))
+        );
+        toast.success('Row updated successfully!');
+      } else {
+        const { data, error } = await supabase
+          .from('custom_rows')
+          .insert([{ ...rowData, digital_work_arrangement_id: dataArr?.id, id: uuidv4() }])
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setCustomRows(prevRows => [...prevRows, data]);
+        toast.success('Row added successfully!');
       }
-      
-      // Process custom rows
-      // First, delete all existing custom rows for this arrangement
-      if (arrangement?.id) {
-        const { error: deleteRowsError } = await supabase
-          .from('digital_shift_custom_rows')
-          .delete()
-          .eq('arrangement_id', arrangementId);
-          
-        if (deleteRowsError) throw deleteRowsError;
-      }
-      
-      // Then insert all current custom rows
-      for (const row of customRows) {
-        // Convert the contents to JSON string
-        const contentsJson = JSON.stringify(row.contents);
-        
-        // Create new custom row
-        const { error: rowError } = await supabase
-          .from('digital_shift_custom_rows')
-          .insert({
-            arrangement_id: arrangementId,
-            section_name: row.section_name,
-            contents: contentsJson,
-            position: row.position
-          });
-          
-        if (rowError) throw rowError;
-      }
-      
-      toast({
-        title: "סידור העבודה נשמר בהצלחה",
-        description: "סידור העבודה נשמר בהצלחה"
-      });
-      
-      // Refresh data to get the latest IDs
-      fetchArrangement();
-      
-    } catch (error) {
-      console.error('Error saving arrangement:', error);
-      toast({
-        title: "שגיאה בשמירת סידור העבודה",
-        description: "אירעה שגיאה בעת שמירת סידור העבודה",
-        variant: "destructive"
-      });
+
+      handleCloseDialog();
+    } catch (err: any) {
+      console.error('Error saving row:', err);
+      toast.error(`Error saving row: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Render a section of shifts
-  const renderShiftSection = (sectionName: string) => {
-    const sectionShifts = shifts.filter(shift => shift.section_name === sectionName);
-    const sectionRows = customRows.filter(row => row.section_name === sectionName);
-    
-    if (sectionShifts.length === 0 && sectionRows.length === 0) {
-      return null;
+  const handleSaveShift = async () => {
+    if (!newShiftName.trim() || !newShiftStartTime.trim() || !newShiftEndTime.trim()) {
+      toast.error('Shift name, start time, and end time are required!');
+      return;
     }
-    
-    return (
-      <div key={sectionName} className="mb-6">
-        {SECTION_TITLES[sectionName] && (
-          <h3 className="text-lg font-bold mb-2">{SECTION_TITLES[sectionName]}</h3>
-        )}
-        
-        <Table className="digital-work-arrangement">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-1/6 text-right">שעות</TableHead>
-              {DAYS_OF_WEEK.slice().map((day, index) => (
-                <TableHead key={index} className="text-center">{day}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {/* Group shifts by shift type */}
-            {Object.values(SHIFT_TYPES).map(shiftType => {
-              const typeShifts = sectionShifts.filter(shift => shift.shift_type === shiftType);
-              if (typeShifts.length === 0) return null;
-              
-              // Get first shift for this type to display time
-              const firstShift = typeShifts[0];
-              // Show in RTL order: end time - start time
-              const shiftLabel = `${firstShift.end_time.slice(0, 5)} - ${firstShift.start_time.slice(0, 5)}`;
-              
-              return (
-                <TableRow key={`${sectionName}-${shiftType}`}>
-                  <TableCell className="font-bold text-right">{shiftLabel}</TableCell>
-                  
-                  {/* Render cells for each day in RTL order */}
-                  {[0, 1, 2, 3, 4, 5].map(dayOfWeek => {
-                    const dayShift = typeShifts.find(s => s.day_of_week === dayOfWeek);
-                    if (!dayShift) return <TableCell key={dayOfWeek} />;
-                    
-                    return (
-                      <TableCell 
-                        key={dayOfWeek} 
-                        className={dayShift.is_hidden ? 'opacity-50' : ''}
-                      >
-                        <div className="flex flex-col gap-2">
-                          {!dayShift.is_hidden && (
-                            <div className="flex items-center gap-2 mb-2">
-                              <WorkerSelector
-                                value={dayShift.person_name || null}
-                                onChange={(name, additionalText) => 
-                                  updatePersonData(dayShift.id, name, additionalText || null)
-                                }
-                                additionalText={dayShift.additional_text || ""}
-                                className="flex-1"
-                              />
-                              
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                onClick={() => toggleShiftVisibility(dayShift.id)}
-                                className="h-8 w-8 p-0 shrink-0"
-                              >
-                                {dayShift.is_hidden ? (
-                                  <AlertCircle className="h-4 w-4" />
-                                ) : (
-                                  <Edit className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          )}
-                          
-                          {!dayShift.is_hidden && (
-                            <div className="flex items-center gap-2 rtl">
-                              <Input 
-                                type="time"
-                                value={dayShift.end_time}
-                                onChange={e => updateShiftTime(
-                                  dayShift.id, 
-                                  dayShift.start_time, 
-                                  e.target.value
-                                )}
-                                className="w-1/2"
-                              />
-                              <span className="mx-1">-</span>
-                              <Input 
-                                type="time"
-                                value={dayShift.start_time}
-                                onChange={e => updateShiftTime(
-                                  dayShift.id, 
-                                  e.target.value,
-                                  dayShift.end_time
-                                )}
-                                className="w-1/2"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              );
-            })}
-            
-            {/* Render custom rows - each with 6 separate columns */}
-            {sectionRows.map((row) => (
-              <CustomRowColumns 
-                key={row.id}
-                rowId={row.id}
-                values={row.contents}
-                onValueChange={updateCustomRowContent}
-                onDelete={deleteCustomRow}
-              />
-            ))}
-            
-            {/* Add custom row button */}
-            <TableRow>
-              <TableCell colSpan={7}>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => addCustomRow(sectionName)}
-                  className="w-full flex items-center justify-center"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  הוספת שורה מותאמת אישית
-                </Button>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-    );
+
+    try {
+      setIsSaving(true);
+      const shiftData = {
+        name: newShiftName,
+        start_time: newShiftStartTime,
+        end_time: newShiftEndTime,
+        additional_text: newShiftAdditionalText,
+      };
+
+      if (isShiftEditMode && selectedRow?.shift_id) {
+        const { data, error } = await supabase
+          .from('shifts')
+          .update(shiftData)
+          .eq('id', selectedRow.shift_id)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setShifts(prevShifts =>
+          prevShifts.map(shift => (shift.id === selectedRow.shift_id ? { ...shift, ...shiftData } : shift))
+        );
+        toast.success('Shift updated successfully!');
+      } else {
+        const { data, error } = await supabase
+          .from('shifts')
+          .insert([{ ...shiftData, digital_work_arrangement_id: dataArr?.id, id: uuidv4() }])
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        // Ensure additional_text is present
+        const newShift = { ...data, additional_text: data.additional_text || "" };
+        setShifts(prevShifts => [...prevShifts, newShift]);
+        toast.success('Shift added successfully!');
+      }
+
+      handleCloseShiftDialog();
+    } catch (err: any) {
+      console.error('Error saving shift:', err);
+      toast.error(`Error saving shift: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditShift = (shift: Shift) => {
+    setDialogType('shift');
+    setSelectedRow({
+      id: uuidv4(),
+      name: shift.name,
+      is_header: false,
+      is_bold: false,
+      is_double: false,
+      is_hidden: false,
+      is_shift: true,
+      shift_id: shift.id,
+      order: customRows.length,
+    });
+    setNewShiftName(shift.name);
+    setNewShiftStartTime(shift.start_time);
+    setNewShiftEndTime(shift.end_time);
+    setNewShiftAdditionalText(shift.additional_text);
+    setIsShiftEditMode(true);
+    setOpenShiftDialog(true);
+    handleMenuClose();
+  };
+
+  const handleDeleteShift = async (shiftId: string) => {
+    try {
+      const { error } = await supabase
+        .from('shifts')
+        .delete()
+        .eq('id', shiftId);
+
+      if (error) {
+        throw error;
+      }
+
+      setShifts(prevShifts => prevShifts.filter(shift => shift.id !== shiftId));
+      toast.success('Shift deleted successfully!');
+    } catch (err: any) {
+      console.error('Error deleting shift:', err);
+      toast.error(`Error deleting shift: ${err.message}`);
+    } finally {
+      handleMenuClose();
+    }
+  };
+
+  const handleSaveData = debounce(async () => {
+    if (!name.trim()) {
+      toast.error('Name is required!');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const dateStr = date ? date.format('YYYY-MM-DD') : '';
+
+      const dataToSave = {
+        name: name,
+        date: dateStr,
+        columns: columns,
+        comic_prompt: comicPrompt,
+      };
+
+      if (dataArr) {
+        const { data, error } = await supabase
+          .from('digital_work_arrangements')
+          .update(dataToSave)
+          .eq('id', dataArr.id)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setDataArr(data);
+        toast.success('Data updated successfully!');
+      } else {
+        const { data, error } = await supabase
+          .from('digital_work_arrangements')
+          .insert([{ ...dataToSave, id: uuidv4() }])
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        setDataArr(data);
+        toast.success('Data saved successfully!');
+      }
+    } catch (err: any) {
+      console.error('Error saving data:', err);
+      toast.error(`Error saving data: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  }, 500);
+
+  useEffect(() => {
+    if (dataArr) {
+      handleSaveData();
+    }
+  }, [name, date, columns, comicPrompt, handleSaveData, dataArr]);
+
+  const handleOnDragEnd = async (result: DropResult) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const items = Array.from(customRows);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update the order property of each item
+    const updatedItems = items.map((item, index) => ({ ...item, order: index }));
+    setCustomRows(updatedItems);
+
+    try {
+      setIsSaving(true);
+      // Update the order in the database
+      for (const item of updatedItems) {
+        const { error } = await supabase
+          .from('custom_rows')
+          .update({ order: item.order })
+          .eq('id', item.id);
+
+        if (error) {
+          throw error;
+        }
+      }
+      toast.success('Order updated successfully!');
+    } catch (err: any) {
+      console.error('Error updating order:', err);
+      toast.error(`Error updating order: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddColumn = () => {
+    setColumns(prevColumns => prevColumns + 1);
+    setNewRowContents(prevContents => [...prevContents, '']);
+  };
+
+  const handleRemoveColumn = () => {
+    if (columns > 1) {
+      setColumns(prevColumns => prevColumns - 1);
+      setNewRowContents(prevContents => {
+        const newContents = [...prevContents];
+        newContents.pop();
+        return newContents;
+      });
+    }
+  };
+
+  const handleColumnContentChange = (index: number, value: string) => {
+    setNewRowContents(prevContents => {
+      const newContents = [...prevContents];
+      newContents[index] = value;
+      return newContents;
+    });
+  };
+
+  const handleOpenShiftDialogFromRow = (row: CustomRow) => {
+    setDialogType('shift');
+    setSelectedRow(row);
+    setNewShiftName('');
+    setNewShiftStartTime('');
+    setNewShiftEndTime('');
+    setNewShiftAdditionalText('');
+    setIsShiftEditMode(false);
+    setOpenShiftDialog(true);
+    handleMenuClose();
+  };
+
+  const handleToggleShiftDialog = () => {
+    setIsShiftDialogOpen(!isShiftDialogOpen);
+  };
+
+  const handleToggleComicPromptDialog = () => {
+    setIsComicPromptDialogOpen(!isComicPromptDialogOpen);
+  };
+
+  const renderTableCellContent = (customRow: CustomRow, columnIndex: number) => {
+    if (customRow.contents && customRow.contents[columnIndex]) {
+      return String(customRow.contents[columnIndex]);
+    } else if (customRow.content) {
+      return customRow.content;
+    } else {
+      return "";
+    }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>סידור עבודה דיגיטל</CardTitle>
-        <CardDescription>עריכת סידור עבודה לצוות הדיגיטל</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-between mb-4">
-          <Button variant="outline" onClick={() => navigateWeek('prev')}>
-            <ChevronRight className="mr-2 h-4 w-4" />
-            שבוע קודם
+    <LocalizationProvider dateAdapter={AdapterDayjs} locale="he">
+      <div>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          margin="normal"
+          fullWidth
+        />
+        <DatePicker
+          label="Date"
+          value={date}
+          onChange={(newDate) => setDate(newDate)}
+          format="DD/MM/YYYY"
+          sx={{ margin: '20px 0' }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', margin: '10px 0' }}>
+          <TextField
+            label="Columns"
+            type="number"
+            value={columns}
+            onChange={(e) => setColumns(Number(e.target.value))}
+            margin="normal"
+            sx={{ width: '100px', marginRight: '10px' }}
+          />
+          <Button variant="contained" color="primary" onClick={handleAddColumn} disabled={isSaving}>
+            Add Column
           </Button>
-          
-          <div className="text-lg font-medium">
-            שבוע {format(currentWeek, 'dd/MM/yyyy', { locale: he })} - {format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}
-          </div>
-          
-          <Button variant="outline" onClick={() => navigateWeek('next')}>
-            שבוע הבא
-            <ChevronLeft className="ml-2 h-4 w-4" />
+          <Button variant="contained" color="secondary" onClick={handleRemoveColumn} disabled={isSaving}>
+            Remove Column
           </Button>
         </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center p-8">
-            <div className="text-center">
-              <div className="mb-2">טוען סידור עבודה...</div>
-            </div>
-          </div>
-        ) : (
-          <div className="digital-work-arrangement">
-            {/* Notes field */}
-            <div className="mb-6">
-              <Label htmlFor="notes" className="mb-2 block">הערות כלליות</Label>
-              <Textarea 
-                id="notes" 
-                value={notes} 
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="הערות כלליות לסידור העבודה"
-                className="min-h-[80px] text-right"
-                dir="rtl"
+
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleToggleComicPromptDialog}
+          style={{ marginTop: '20px' }}
+          disabled={isSaving}
+        >
+          {comicPrompt ? 'Edit Comic Prompt' : 'Add Comic Prompt'}
+        </Button>
+
+        <Dialog open={isComicPromptDialogOpen} onClose={handleToggleComicPromptDialog} fullWidth maxWidth="md">
+          <DialogTitle>Comic Prompt</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Comic Prompt"
+              multiline
+              rows={4}
+              fullWidth
+              value={comicPrompt}
+              onChange={(e) => setComicPrompt(e.target.value)}
+              margin="normal"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleToggleComicPromptDialog} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleToggleComicPromptDialog} color="primary" disabled={isSaving}>
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => handleOpenDialog('row')}
+          style={{ marginTop: '20px' }}
+          disabled={isSaving}
+        >
+          Add Row
+        </Button>
+
+        <StyledTableContainer component={Paper}>
+          <DragDropContext onDragEnd={handleOnDragEnd}>
+            <Droppable droppableId="customRows">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef}>
+                  <StyledTable aria-label="custom table">
+                    <TableHead>
+                      <TableRow>
+                        <StyledTableCell>Name</StyledTableCell>
+                        {Array.from({ length: columns }, (_, i) => (
+                          <StyledTableCell key={i}>Column {i + 1}</StyledTableCell>
+                        ))}
+                        <StyledTableCell align="right">Actions</StyledTableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {customRows.map((customRow, index) => (
+                        <Draggable key={customRow.id} draggableId={customRow.id} index={index} isDragDisabled={isSaving}>
+                          {(provided) => (
+                            <StyledTableRow
+                              key={customRow.id}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              ref={provided.innerRef}
+                              style={{
+                                ...provided.draggableProps.style,
+                                fontWeight: customRow.is_bold ? 'bold' : 'normal',
+                                display: customRow.is_hidden ? 'none' : 'table-row',
+                                backgroundColor: customRow.is_header ? '#e0e0e0' : 'inherit',
+                                fontSize: customRow.is_double ? '1.2em' : '1em',
+                              }}
+                            >
+                              <TableCell component="th" scope="row">
+                                {customRow.name}
+                              </TableCell>
+                              {Array.from({ length: columns }, (_, i) => (
+                                <TableCell key={i}>
+                                  {renderTableCellContent(customRow, i)}
+                                </TableCell>
+                              ))}
+                              <TableCell align="right">
+                                <IconButton
+                                  aria-label="more"
+                                  aria-controls={`row-menu-${customRow.id}`}
+                                  aria-haspopup="true"
+                                  onClick={(e) => handleMenuOpen(e, customRow)}
+                                  disabled={isSaving}
+                                >
+                                  <MoreVertIcon />
+                                </IconButton>
+                              </TableCell>
+                            </StyledTableRow>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </TableBody>
+                  </StyledTable>
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </StyledTableContainer>
+
+        <Menu
+          id={`row-menu-${selectedRow?.id}`}
+          anchorEl={anchorEl}
+          keepMounted
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => selectedRow && handleEditRow(selectedRow)} disabled={isSaving}>
+            <EditIcon style={{ marginRight: '8px' }} /> Edit
+          </MenuItem>
+          <MenuItem onClick={() => selectedRow && handleDeleteRow(selectedRow.id)} disabled={isSaving}>
+            <DeleteIcon style={{ marginRight: '8px' }} /> Delete
+          </MenuItem>
+          <MenuItem onClick={() => selectedRow && handleOpenShiftDialogFromRow(selectedRow)} disabled={isSaving}>
+            <AddIcon style={{ marginRight: '8px' }} /> Add Shift
+          </MenuItem>
+          <MenuItem onClick={handleToggleShiftDialog} disabled={isSaving}>
+            <AddIcon style={{ marginRight: '8px' }} /> Manage Shifts
+          </MenuItem>
+        </Menu>
+
+        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="md">
+          <DialogTitle>{isEditMode ? 'Edit Row' : 'Add Row'}</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Row Name"
+              value={newRowName}
+              onChange={(e) => setNewRowName(e.target.value)}
+              margin="normal"
+              fullWidth
+            />
+            {Array.from({ length: columns }, (_, i) => (
+              <TextField
+                key={i}
+                label={`Column ${i + 1} Content`}
+                value={newRowContents[i] || ''}
+                onChange={(e) => {
+                  handleColumnContentChange(i, e.target.value);
+                }}
+                margin="normal"
+                fullWidth
+              />
+            ))}
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: '16px' }}>
+              <FormControlLabel
+                control={<Checkbox checked={newRowIsHeader} onChange={(e) => setNewRowIsHeader(e.target.checked)} />}
+                label="Is Header"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={newRowIsBold} onChange={(e) => setNewRowIsBold(e.target.checked)} />}
+                label="Is Bold"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={newRowIsDouble} onChange={(e) => setNewRowIsDouble(e.target.checked)} />}
+                label="Is Double Size"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={newRowIsHidden} onChange={(e) => setNewRowIsHidden(e.target.checked)} />}
+                label="Is Hidden"
+              />
+              <FormControlLabel
+                control={<Checkbox checked={newRowIsShift} onChange={(e) => setNewRowIsShift(e.target.checked)} />}
+                label="Is Shift"
               />
             </div>
-            
-            {/* Shift sections */}
-            {renderShiftSection(SECTION_NAMES.DIGITAL_SHIFTS)}
-            {renderShiftSection(SECTION_NAMES.RADIO_NORTH)}
-            {renderShiftSection(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
-            {renderShiftSection(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
-            
-            {/* Comic sketch generator and footer section */}
-            <div className="mt-8 space-y-6">
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <h3 className="text-lg font-bold mb-4">יצירת איור קומיקס וטקסט תחתית</h3>
-                <ComicSketchGenerator 
-                  initialText={footerText} 
-                  onTextChange={setFooterText} 
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="footerImage" className="mb-2 block">קישור לתמונה בתחתית</Label>
-                <Input 
-                  id="footerImage" 
-                  value={footerImageUrl} 
-                  onChange={(e) => setFooterImageUrl(e.target.value)}
-                  placeholder="URL לתמונה שתוצג בתחתית סידור העבודה"
-                  className="text-right"
-                  dir="rtl"
-                />
-              </div>
-            </div>
-            
-            <Button 
-              onClick={saveArrangement} 
-              disabled={isSaving} 
-              className="w-full mt-6"
-            >
-              {isSaving ? 'שומר...' : 'שמירת סידור עבודה'}
-              <Save className="ml-2 h-4 w-4" />
+            {newRowIsShift && (
+              <FormControl fullWidth margin="normal">
+                <InputLabel id="shift-select-label">Select Shift</InputLabel>
+                <Select
+                  labelId="shift-select-label"
+                  id="shift-select"
+                  value={selectedShift || ''}
+                  label="Select Shift"
+                  onChange={(e) => setSelectedShift(e.target.value as string)}
+                >
+                  {shifts.map((shift) => (
+                    <MenuItem key={shift.id} value={shift.id}>
+                      {shift.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog} color="primary" disabled={isSaving}>
+              Cancel
             </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            <Button onClick={handleSaveRow} color="primary" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={openShiftDialog} onClose={handleCloseShiftDialog} fullWidth maxWidth="md">
+          <DialogTitle>{isShiftEditMode ? 'Edit Shift' : 'Add Shift'}</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Shift Name"
+              value={newShiftName}
+              onChange={(e) => setNewShiftName(e.target.value)}
+              margin="normal"
+              fullWidth
+            />
+            <TextField
+              label="Start Time"
+              value={newShiftStartTime}
+              onChange={(e) => setNewShiftStartTime(e.target.value)}
+              margin="normal"
+              fullWidth
+            />
+            <TextField
+              label="End Time"
+              value={newShiftEndTime}
+              onChange={(e) => setNewShiftEndTime(e.target.value)}
+              margin="normal"
+              fullWidth
+            />
+            <TextField
+              label="Additional Text"
+              value={newShiftAdditionalText}
+              onChange={(e) => setNewShiftAdditionalText(e.target.value)}
+              margin="normal"
+              fullWidth
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseShiftDialog} color="primary" disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveShift} color="primary" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={isShiftDialogOpen} onClose={handleToggleShiftDialog} fullWidth maxWidth="md">
+          <DialogTitle>Manage Shifts</DialogTitle>
+          <DialogContent>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleOpenShiftDialog}
+              style={{ marginBottom: '16px' }}
+              disabled={isSaving}
+            >
+              Add Shift
+            </Button>
+            <TableContainer component={Paper}>
+              <Table aria-label="shifts table">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Start Time</TableCell>
+                    <TableCell>End Time</TableCell>
+                    <TableCell>Additional Text</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {shifts.map((shift) => (
+                    <TableRow key={shift.id}>
+                      <TableCell>{shift.name}</TableCell>
+                      <TableCell>{shift.start_time}</TableCell>
+                      <TableCell>{shift.end_time}</TableCell>
+                      <TableCell>{shift.additional_text}</TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          aria-label="edit"
+                          onClick={() => handleEditShift(shift)}
+                          disabled={isSaving}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          aria-label="delete"
+                          onClick={() => handleDeleteShift(shift.id)}
+                          disabled={isSaving}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleToggleShiftDialog} color="primary">
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </div>
+    </LocalizationProvider>
   );
 };
 

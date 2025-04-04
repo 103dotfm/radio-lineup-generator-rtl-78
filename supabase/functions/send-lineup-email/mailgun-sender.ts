@@ -64,6 +64,7 @@ export const sendViaMailgun = async (
     
     formData.append("subject", subject);
     formData.append("html", body);
+    formData.append("h:Content-Type", "text/html; charset=UTF-8");
     
     // Log the request URL
     const requestUrl = `${mailgunApiBase}/${domain}/messages`;

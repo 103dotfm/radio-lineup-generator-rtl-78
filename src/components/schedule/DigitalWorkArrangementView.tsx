@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parse, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -81,7 +80,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   });
   const [weekDates, setWeekDates] = useState<string[]>([]);
 
-  // Calculate week dates for display in header
   useEffect(() => {
     const dates = Array.from({ length: 6 }, (_, i) => {
       const date = new Date(currentWeek);
@@ -91,7 +89,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     setWeekDates(dates);
   }, [currentWeek]);
 
-  // Format date for display
   const formatDateRange = () => {
     const startDay = format(currentWeek, 'dd', { locale: he });
     const endDate = new Date(currentWeek);
@@ -101,7 +98,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return `${endDay}-${startDay} ב${month}`;
   };
 
-  // Fetch arrangement
   useEffect(() => {
     fetchArrangement();
   }, [currentWeek]);
@@ -111,7 +107,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
 
     try {
-      // Check if arrangement exists for this week
       const { data: arrangementData, error: fetchError } = await supabase
         .from('work_arrangements')
         .select('*')
@@ -124,7 +119,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       }
 
       if (arrangementData) {
-        // Try to fetch from digital work arrangements table if it exists
         try {
           const { data: digitalArrangement, error: digitalError } = await supabase
             .from('digital_work_arrangements')
@@ -133,7 +127,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             .maybeSingle();
             
           if (!digitalError && digitalArrangement) {
-            // Fetch shifts
             const { data: shiftsData, error: shiftsError } = await supabase
               .from('digital_shifts')
               .select('*')
@@ -142,7 +135,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               
             if (shiftsError) throw shiftsError;
             
-            // Fetch custom rows
             const { data: customRowsData, error: customRowsError } = await supabase
               .from('digital_shift_custom_rows')
               .select('*')
@@ -151,7 +143,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               
             if (customRowsError) throw customRowsError;
             
-            // Process custom rows to convert from string to object if needed
             const processedCustomRows: CustomRow[] = (customRowsData || []).map(row => {
               let contents: Record<number, string> = {};
               
@@ -159,7 +150,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 if (row.contents) {
                   contents = JSON.parse(row.contents);
                 } else if (row.content) {
-                  // Legacy support
                   for (let i = 0; i < 6; i++) {
                     contents[i] = row.content;
                   }
@@ -176,24 +166,28 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               };
             });
             
+            const mappedShifts = shiftsData.map(shift => ({
+              ...shift,
+              additional_text: shift.additional_text || ""
+            }));
+            
             setArrangement({
               id: digitalArrangement.id,
               week_start: digitalArrangement.week_start,
               notes: digitalArrangement.notes,
               footer_text: digitalArrangement.footer_text,
               footer_image_url: digitalArrangement.footer_image_url,
-              comic_prompt: digitalArrangement.comic_prompt || null,
-              shifts: shiftsData || [],
+              comic_prompt: digitalArrangement.comic_prompt || "",
+              shifts: mappedShifts,
               custom_rows: processedCustomRows
             });
           } else {
-            // Fall back to default arrangement from work_arrangements
             setArrangement({
               id: arrangementData.id,
               week_start: arrangementData.week_start,
               notes: null,
               footer_text: null,
-              footer_image_url: null, 
+              footer_image_url: null,
               comic_prompt: null,
               shifts: [],
               custom_rows: []
@@ -227,7 +221,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
     
-    // Find all visible shifts for this section, day and type
     const shifts = arrangement.shifts.filter(shift =>
       shift.section_name === section && 
       shift.day_of_week === day && 
@@ -235,18 +228,15 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       !shift.is_hidden
     );
     
-    // If no shifts, return empty cell
     if (shifts.length === 0) {
       return <TableCell className="p-2 border text-center">-</TableCell>;
     }
     
-    // Render all shifts for this cell
     return (
       <TableCell className="p-2 border text-center">
         {shifts.map((shift) => (
           <div key={shift.id} className="mb-1">
             <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-              {/* Display in RTL order: end_time - start_time */}
               <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
             <div>
@@ -280,7 +270,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         {shifts.map((shift) => (
           <div key={shift.id}>
             <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-              {/* Display in RTL order: end_time - start_time */}
               <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
             <div>
@@ -305,10 +294,9 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     
     return rows.map((row) => (
       <TableRow key={row.id}>
-        {/* Render each day's content in separate cells */}
         {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
           <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center">
-            {row.contents[dayIndex] || ''}
+            {row.contents[dayIndex] && String(row.contents[dayIndex]) || ''}
           </TableCell>
         ))}
       </TableRow>
@@ -349,7 +337,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Digital Shifts Table */}
           <div className="bg-white rounded-md overflow-x-auto">
             <Table className="border">
               <TableHeader>
@@ -363,19 +350,15 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* Morning shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.MORNING))}
                 </TableRow>
-                {/* Afternoon shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON))}
                 </TableRow>
-                {/* Evening shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => {
-                    // Only render evening shift for Sunday-Thursday (0-4)
-                    if (day === 5) { // Friday
+                    if (day === 5) {
                       return <TableCell key={`evening-${day}`} className="border text-center">-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.EVENING);
@@ -385,7 +368,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             </Table>
           </div>
 
-          {/* Radio North Table */}
           <div className="overflow-x-auto">
             <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.RADIO_NORTH]}</div>
             <Table className="border">
@@ -394,63 +376,51 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                   {[...Array(5)].map((_, day) => renderRadioNorthCell(day))}
                   <TableCell className="border"></TableCell>
                 </TableRow>
-                {/* Custom rows */}
                 {renderCustomRows(SECTION_NAMES.RADIO_NORTH)}
               </TableBody>
             </Table>
           </div>
 
-          {/* Transcription Shifts Table */}
           <div className="overflow-x-auto">
             <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.TRANSCRIPTION_SHIFTS]}</div>
             <Table className="border">
               <TableBody>
-                {/* Morning shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.MORNING))}
                 </TableRow>
-                {/* Afternoon shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => {
-                    // Only render afternoon shift for Sunday-Thursday (0-4)
-                    if (day === 5) { // Friday
+                    if (day === 5) {
                       return <TableCell key={`transcription-afternoon-${day}`} className="border text-center">-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
                 </TableRow>
-                {/* Custom rows */}
                 {renderCustomRows(SECTION_NAMES.TRANSCRIPTION_SHIFTS)}
               </TableBody>
             </Table>
           </div>
 
-          {/* Live and Social Shifts Table */}
           <div className="overflow-x-auto">
             <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.LIVE_SOCIAL_SHIFTS]}</div>
             <Table className="border">
               <TableBody>
-                {/* Morning shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.MORNING))}
                 </TableRow>
-                {/* Afternoon shift row */}
                 <TableRow>
                   {[...Array(6)].map((_, day) => {
-                    // Only render afternoon shift for Sunday-Thursday (0-4)
-                    if (day === 5) { // Friday
+                    if (day === 5) {
                       return <TableCell key={`live-social-afternoon-${day}`} className="border text-center">-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
                 </TableRow>
-                {/* Custom rows */}
                 {renderCustomRows(SECTION_NAMES.LIVE_SOCIAL_SHIFTS)}
               </TableBody>
             </Table>
           </div>
 
-          {/* Footer */}
           {arrangement.footer_text && (
             <div className="p-4 text-center min-h-[150px]">
               {arrangement.footer_text}

@@ -81,20 +81,22 @@ export const sendViaGmailApi = async (
     // Add BCC if there are multiple recipients
     const rawBcc = recipientEmails.length > 1 ? recipientEmails.slice(1).join(',') : null;
     
-    // Create simple MIME message with proper encoding
+    // Create MIME message with proper encoding for Hebrew text
     const emailLines = [];
     
-    // Add headers
-    emailLines.push(`From: ${emailSettings.sender_name} <${emailSettings.sender_email}>`);
+    // Add headers with proper encoding
+    emailLines.push(`Content-Type: text/html; charset=UTF-8`);
+    emailLines.push(`MIME-Version: 1.0`);
+    emailLines.push(`Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`);
+    emailLines.push(`From: =?UTF-8?B?${btoa(unescape(encodeURIComponent(emailSettings.sender_name)))}?= <${emailSettings.sender_email}>`);
     emailLines.push(`To: ${rawTo}`);
+    
     if (rawBcc) {
       emailLines.push(`Bcc: ${rawBcc}`);
     }
-    emailLines.push(`Subject: ${subject}`);
-    emailLines.push('MIME-Version: 1.0');
-    emailLines.push('Content-Type: text/html; charset=UTF-8');
-    emailLines.push('Content-Transfer-Encoding: base64');
-    emailLines.push('');
+    
+    emailLines.push(`Content-Transfer-Encoding: base64`);
+    emailLines.push(``);
     
     // Properly encode the body for base64 with UTF-8 support
     // Convert the HTML string to a Uint8Array using TextEncoder
