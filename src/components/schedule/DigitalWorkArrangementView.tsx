@@ -25,6 +25,7 @@ type WorkArrangement = {
   week_start: string;
   arrangement_data?: any;
   is_published: boolean;
+  url?: string;
 };
 
 const DigitalWorkArrangementView = () => {
@@ -48,7 +49,7 @@ const DigitalWorkArrangementView = () => {
         .from('work_arrangements')
         .select('*')
         .eq('week_start', formattedDate)
-        .eq('type', 'published')
+        .eq('type', 'digital')
         .single();
       
       if (error && error.code !== 'PGRST116') {
@@ -57,15 +58,13 @@ const DigitalWorkArrangementView = () => {
       
       if (data) {
         // Transform data to match our WorkArrangement type
-        let arrangement: WorkArrangement = {
+        const arrangement: WorkArrangement = {
           id: data.id,
           week_start: data.week_start,
           is_published: data.type === 'published',
-          arrangement_data: null
+          url: data.url,
+          arrangement_data: null // This would be populated if needed
         };
-        
-        // Try to extract arrangement data from URL or other source if needed
-        // This would depend on how your data is structured
         
         setCurrentArrangement(arrangement);
       } else {
@@ -120,41 +119,18 @@ const DigitalWorkArrangementView = () => {
       
       {loading ? (
         <div className="text-center">טוען סידור עבודה...</div>
-      ) : currentArrangement ? (
+      ) : currentArrangement && currentArrangement.url ? (
         <Card className="p-4 overflow-x-auto">
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="p-2 border"></th>
-                {weekDates.map((date, index) => (
-                  <th key={index} className="p-2 border text-center">
-                    {format(date, 'EEEE', { locale: he })}
-                    <br />
-                    {format(date, 'dd/MM', { locale: he })}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* Render work arrangement data here */}
-              {currentArrangement.arrangement_data && 
-               Array.isArray(currentArrangement.arrangement_data.shifts) && 
-               currentArrangement.arrangement_data.shifts.map((shift: any, shiftIndex: number) => (
-                <tr key={shiftIndex}>
-                  <td className="p-2 border font-bold">
-                    {shift.name} {shift.startTime}-{shift.endTime}
-                  </td>
-                  {Array.from({ length: 7 }, (_, dayIndex) => (
-                    <td key={dayIndex} className="p-2 border text-center">
-                      {shift.days[dayIndex]?.workers?.map((worker: string, workerIndex: number) => (
-                        <div key={workerIndex}>{worker}</div>
-                      ))}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="w-full h-screen md:h-[800px]">
+            <object data={currentArrangement.url} type="application/pdf" className="w-full h-full">
+              <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
+                <p className="text-gray-500 mb-4">לא ניתן להציג את הקובץ במכשירך</p>
+                <a href={currentArrangement.url} target="_blank" rel="noopener noreferrer" className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90">
+                  הורד את הקובץ
+                </a>
+              </div>
+            </object>
+          </div>
         </Card>
       ) : (
         <div className="text-center p-6 bg-gray-100 rounded-lg">
