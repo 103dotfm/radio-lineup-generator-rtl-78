@@ -26,26 +26,6 @@
   background-color: #fef9c3;
 }
 
-/* Remove center text alignment from App.css that affects all elements */
-.digital-work-arrangement h1, 
-.digital-work-arrangement h2, 
-.digital-work-arrangement h3,
-.digital-work-arrangement p, 
-.digital-work-arrangement div,
-.digital-work-arrangement-view h1, 
-.digital-work-arrangement-view h2, 
-.digital-work-arrangement-view h3,
-.digital-work-arrangement-view p, 
-.digital-work-arrangement-view div {
-  text-align: inherit; /* Override any global text centering */
-}
-
-/* RTL support for tables */
-.digital-work-arrangement [dir="rtl"] table,
-.digital-work-arrangement-view[dir="rtl"] table {
-  direction: rtl;
-}
-
 /* Print styles */
 @media print {
   .digital-work-arrangement-view {
@@ -69,26 +49,4 @@
   outline: none;
   border-color: #3b82f6;
   background-color: rgba(59, 130, 246, 0.05);
-}
-
-/* Styles for worker name formatting */
-.digital-work-arrangement .person-name,
-.digital-work-arrangement-view .person-name {
-  font-weight: bold;
-}
-
-.digital-work-arrangement .additional-text,
-.digital-work-arrangement-view .additional-text {
-  font-weight: normal;
-  font-size: 0.9em;
-}
-
-/* Fix for Dashboard layout */
-#root {
-  text-align: initial;
-}
-
-/* Fix for dropdown z-index */
-.digital-work-arrangement .popover-content {
-  z-index: 50;
 }

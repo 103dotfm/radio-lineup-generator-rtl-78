@@ -1,44 +1,12 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAppDomain } from '@/integrations/supabase/client';
 import { User } from '../types';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 export const useUsers = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Helper function to get app domain
-  const getAppDomain = async (): Promise<string> => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'app_domain')
-        .single();
-        
-      if (error) {
-        console.warn("Could not fetch app domain:", error);
-        return window.location.origin;
-      }
-      
-      if (data && data.value) {
-        const domain = data.value;
-        // Ensure domain has protocol
-        if (domain.includes('://')) {
-          return domain;
-        } else {
-          const protocol = domain.startsWith('localhost') ? 'http://' : 'https://';
-          return `${protocol}${domain}`;
-        }
-      }
-      
-      return window.location.origin;
-    } catch (error) {
-      console.error('Error fetching app domain:', error);
-      return window.location.origin;
-    }
-  };
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
