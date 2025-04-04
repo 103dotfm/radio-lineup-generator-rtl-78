@@ -41,7 +41,7 @@ export const prepareEmailContent = (
   
   intervieweesList += "</ul>";
 
-  // Create email subject
+  // Create email subject - ensure proper encoding for Hebrew
   let subject = emailSettings.subject_template.replace(/{{show_name}}/g, show.name);
   subject = subject.replace(/{{show_date}}/g, formattedDate);
   subject = subject.replace(/{{show_time}}/g, show.time || "");
@@ -68,6 +68,7 @@ export const prepareEmailContent = (
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>${subject}</title>
   <style>
     body, table, td, p, a, li, blockquote {

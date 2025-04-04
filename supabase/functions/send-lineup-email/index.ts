@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { 
@@ -354,6 +353,9 @@ async function handleRequest(req: Request) {
       console.log(`Email prepared - Subject: ${subject}`);
       console.log(`Using email method: ${emailSettings.email_method}`);
       
+      // Store the properly encoded sender name
+      const encodedSenderName = emailSettings.sender_name;
+      
       // Send email based on method
       if (emailSettings.email_method === 'mailgun') {
         try {
@@ -402,9 +404,13 @@ async function handleRequest(req: Request) {
           });
           
           const result = await sendViaMailgun(
-            emailSettings as EmailSettings,
+            {
+              ...emailSettings as EmailSettings,
+              // Ensure sender_name is correctly encoded
+              sender_name: encodedSenderName
+            },
             recipientEmails,
-            subject,
+            subject, // The subject is already properly encoded by prepareEmailContent
             body
           );
           
@@ -464,9 +470,13 @@ async function handleRequest(req: Request) {
           console.log("Sending email via Gmail API...");
           
           const result = await sendViaGmailApi(
-            emailSettings as EmailSettings,
+            {
+              ...emailSettings as EmailSettings,
+              // Ensure sender_name is correctly encoded
+              sender_name: encodedSenderName
+            },
             recipientEmails,
-            subject,
+            subject, // The subject is already properly encoded by prepareEmailContent
             body
           );
           
@@ -523,9 +533,13 @@ async function handleRequest(req: Request) {
       } else {
         try {
           const result = await sendViaSmtp(
-            emailSettings as EmailSettings,
+            {
+              ...emailSettings as EmailSettings,
+              // Ensure sender_name is correctly encoded
+              sender_name: encodedSenderName
+            },
             recipientEmails,
-            subject,
+            subject, // The subject is already properly encoded by prepareEmailContent
             body
           );
 
