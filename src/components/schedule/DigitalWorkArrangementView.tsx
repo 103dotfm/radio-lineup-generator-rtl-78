@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parse, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -173,10 +174,10 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               };
             });
             
-            const mappedShifts = shiftsData.map(shift => ({
+            const mappedShifts = shiftsData ? shiftsData.map(shift => ({
               ...shift,
               additional_text: shift.additional_text || ""
-            }));
+            })) : [];
             
             setArrangement({
               id: firstArrangement.id,

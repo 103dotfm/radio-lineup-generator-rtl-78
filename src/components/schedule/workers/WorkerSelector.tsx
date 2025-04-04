@@ -31,7 +31,7 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
   
   // Find the selected worker name
   const selectedWorker = workers.find(worker => worker.id === value);
-  const displayValue = selectedWorker ? selectedWorker.name : value;
+  const displayValue = selectedWorker ? selectedWorker.name : "";
   
   // Fetch workers from database
   useEffect(() => {
@@ -39,9 +39,10 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
       setLoading(true);
       try {
         const data = await getWorkers();
-        setWorkers(data);
+        setWorkers(data || []);
       } catch (error) {
         console.error('Error fetching workers:', error);
+        setWorkers([]);
       } finally {
         setLoading(false);
       }
@@ -77,7 +78,7 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
             aria-expanded={open}
             className="w-full justify-between font-bold"
           >
-            {value ? displayValue : placeholder}
+            {value && displayValue ? displayValue : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -88,7 +89,7 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
             <CommandGroup className="max-h-64 overflow-y-auto">
               {loading ? (
                 <CommandItem disabled>טוען עובדים...</CommandItem>
-              ) : (
+              ) : workers && workers.length > 0 ? (
                 workers.map((worker) => (
                   <CommandItem
                     key={worker.id}
@@ -105,6 +106,8 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
                     {worker.department && <span className="text-gray-500 text-sm mr-2">({worker.department})</span>}
                   </CommandItem>
                 ))
+              ) : (
+                <CommandItem disabled>אין עובדים זמינים</CommandItem>
               )}
             </CommandGroup>
           </Command>
