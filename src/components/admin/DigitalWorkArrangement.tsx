@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -146,7 +147,136 @@ const SECTION_TITLES = {
 };
 
 const DigitalWorkArrangement = () => {
-  // ... keep existing component implementation
+  const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [notes, setNotes] = useState<string>('');
+  const [footerText, setFooterText] = useState<string>('');
+  const [footerImageUrl, setFooterImageUrl] = useState<string>('');
+  
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    fetchArrangement();
+  }, [currentWeek]);
+  
+  const fetchArrangement = async () => {
+    setIsLoading(true);
+    const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
+    
+    try {
+      // Check if arrangement exists for this week
+      const { data: existingArrangement, error: fetchError } = await supabase
+        .from('digital_work_arrangements')
+        .select('*')
+        .eq('week_start', weekStartStr)
+        .single();
+        
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
+        throw fetchError;
+      }
+      
+      if (existingArrangement) {
+        // Fetch shifts
+        const { data: shifts, error: shiftsError } = await supabase
+          .from('digital_shifts')
+          .select('*')
+          .eq('arrangement_id', existingArrangement.id)
+          .order('position', { ascending: true });
+          
+        if (shiftsError) throw shiftsError;
+        
+        // Fetch custom rows
+        const { data: customRows, error: customRowsError } = await supabase
+          .from('digital_shift_custom_rows')
+          .select('*')
+          .eq('arrangement_id', existingArrangement.id)
+          .order('position', { ascending: true });
+          
+        if (customRowsError) throw customRowsError;
+        
+        setArrangement({
+          ...existingArrangement,
+          shifts: shifts || [],
+          custom_rows: customRows || []
+        });
+        
+        setNotes(existingArrangement.notes || '');
+        setFooterText(existingArrangement.footer_text || '');
+        setFooterImageUrl(existingArrangement.footer_image_url || '');
+      } else {
+        setArrangement(null);
+        setNotes('');
+        setFooterText('');
+        setFooterImageUrl('');
+      }
+    } catch (error) {
+      console.error('Error fetching arrangement:', error);
+      toast({
+        title: "שגיאה בטעינת סידור העבודה",
+        description: "אירעה שגיאה בעת טעינת סידור העבודה",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setCurrentWeek(subWeeks(currentWeek, 1));
+    } else {
+      setCurrentWeek(addWeeks(currentWeek, 1));
+    }
+  };
+
+  // Template for a complete component, needs full implementation
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>סידור עבודה דיגיטל</CardTitle>
+        <CardDescription>עריכת סידור עבודה לצוות הדיגיטל</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between mb-4">
+          <Button variant="outline" onClick={() => navigateWeek('prev')}>
+            <ChevronRight className="mr-2 h-4 w-4" />
+            שבוע קודם
+          </Button>
+          
+          <div className="text-lg font-medium">
+            שבוע {format(currentWeek, 'dd/MM/yyyy', { locale: he })} - {format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}
+          </div>
+          
+          <Button variant="outline" onClick={() => navigateWeek('next')}>
+            שבוע הבא
+            <ChevronLeft className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <div className="text-center">
+              <div className="mb-2">טוען סידור עבודה...</div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {/* Digital Work Arrangement editor implementation */}
+            <div className="mb-4">
+              <p>יש להשלים את היישום של עורך סידור עבודה דיגיטל</p>
+            </div>
+            
+            <Button disabled={isSaving} className="w-full">
+              {isSaving ? 'שומר...' : 'שמירת סידור עבודה'}
+              <Save className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 };
 
 export default DigitalWorkArrangement;
