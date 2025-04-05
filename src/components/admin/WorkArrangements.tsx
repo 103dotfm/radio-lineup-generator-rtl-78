@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -77,7 +76,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { supabase } from "@/lib/supabase";
-import DigitalWorkArrangementEditor from "./DigitalWorkArrangementEditor";
+import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
   week_start: z.date(),
@@ -136,12 +135,10 @@ export default function WorkArrangements() {
         return;
       }
 
-      // Fix: Access the path from data instead of Key
       const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
       setFileUrl(url);
       setFilename(file.name);
 
-      // Save file information to the database
       await saveFileToDatabase(url, file.name, weekStartStr);
 
       toast.toast({
@@ -160,7 +157,6 @@ export default function WorkArrangements() {
 
   const saveFileToDatabase = async (url: string, filename: string, weekStart: string) => {
     try {
-      // Fix: Change the upsert to provide a single object, not an array
       const { data, error } = await supabase
         .from('work_arrangements')
         .upsert({
@@ -283,7 +279,7 @@ export default function WorkArrangements() {
             </Card>
           </TabsContent>
           <TabsContent value="digital-editor" className="py-4">
-            <DigitalWorkArrangementEditor />
+            <DigitalWorkArrangement />
           </TabsContent>
         </Tabs>
       </div>
