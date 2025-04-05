@@ -34,7 +34,7 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
         </Button>
       </TableCell>
       
-      {/* CRITICAL FIX: Render cells in order from 0 to 5 for Sunday through Friday */}
+      {/* Render cells in order from 0 to 5 for Sunday through Friday */}
       {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
         <TableCell 
           key={`${rowId}-day-${dayIndex}`} 

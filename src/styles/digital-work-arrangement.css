@@ -76,6 +76,19 @@
   line-height: 1.6;
 }
 
+/* Comic image styling */
+.digital-comic-image {
+  margin-top: 1rem;
+}
+
+.digital-comic-image-content {
+  max-height: 400px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
 /* Footer text styling */
 .digital-footer-text {
   white-space: pre-line;
@@ -96,6 +109,11 @@
   .digital-footer-image {
     max-width: 100%;
     page-break-inside: avoid;
+  }
+
+  .digital-comic-image {
+    page-break-inside: avoid;
+    max-width: 100%;
   }
 }
 
@@ -194,4 +212,15 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
   border: 1px solid #e2e8f0 !important;
   z-index: 9999 !important;
+}
+
+/* Fix for the worker selector dropdown to ensure it appears above everything */
+.worker-selector-container [data-radix-popper-content-wrapper] {
+  z-index: 99999 !important; 
+  background-color: white !important;
+}
+
+.worker-selector-dropdown {
+  z-index: 99999 !important;
+  background-color: white !important;
 }
