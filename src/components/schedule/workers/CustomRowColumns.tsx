@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -23,8 +22,8 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
   onDelete
 }) => {
   return (
-    <TableRow>
-      <TableCell>
+    <TableRow className="digital-custom-row">
+      <TableCell className="p-2 border digital-custom-cell-delete">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -35,9 +34,12 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
         </Button>
       </TableCell>
       
-      {/* Render 6 cells for Sunday through Friday */}
+      {/* CRITICAL FIX: Render cells in order from 0 to 5 for Sunday through Friday */}
       {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
-        <TableCell key={`${rowId}-day-${dayIndex}`} className="p-2 border">
+        <TableCell 
+          key={`${rowId}-day-${dayIndex}`} 
+          className={`p-2 border digital-custom-cell digital-custom-cell-${dayIndex}`}
+        >
           <textarea 
             value={values[dayIndex] || ''}
             onChange={e => onValueChange(rowId, dayIndex, e.target.value)}

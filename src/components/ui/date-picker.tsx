@@ -44,7 +44,15 @@ export function DatePicker({ date, onSelect }: DatePickerProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-white border border-border" align="start" style={{ zIndex: 9999 }}>
+      <PopoverContent 
+        className="w-auto p-0 bg-white border border-border date-picker-content" 
+        align="start" 
+        style={{ 
+          zIndex: 9999,
+          backgroundColor: "white",
+          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+        }}
+      >
         <Calendar
           mode="single"
           selected={selectedDate}
@@ -53,7 +61,7 @@ export function DatePicker({ date, onSelect }: DatePickerProps) {
             if (onSelect) onSelect(date);
           }}
           initialFocus
-          className="p-3 pointer-events-auto bg-white"
+          className="p-3 pointer-events-auto bg-white date-picker-calendar"
         />
       </PopoverContent>
     </Popover>

@@ -142,30 +142,38 @@ const WorkerSelector: React.FC<WorkerSelectorProps> = ({
             variant="outline" 
             role="combobox" 
             aria-expanded={isOpen}
-            className="w-full justify-between"
+            className="w-full justify-between worker-selector-trigger"
           >
             {selectedWorker ? (
               <div className="flex items-center justify-between w-full">
-                <span>{selectedWorker.name}</span>
+                <span className="worker-selector-selected-name">{selectedWorker.name}</span>
                 <X 
-                  className="h-4 w-4 hover:text-red-500 cursor-pointer" 
+                  className="h-4 w-4 hover:text-red-500 cursor-pointer worker-selector-clear" 
                   onClick={handleClearSelection}
                 />
               </div>
             ) : (
-              <span className="text-muted-foreground">בחר עובד</span>
+              <span className="text-muted-foreground worker-selector-placeholder">בחר עובד</span>
             )}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50 worker-selector-chevron" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="worker-selector-dropdown w-full p-0 bg-white" style={{ zIndex: 9999 }}>
-          <div className="flex items-center border-b p-2">
+        <PopoverContent 
+          className="worker-selector-dropdown w-[calc(var(--radix-popover-trigger-width))] p-0" 
+          style={{ 
+            zIndex: 9999,
+            backgroundColor: "white",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+          }}
+        >
+          <div className="flex items-center border-b p-2 worker-selector-search-container">
             <Input
               ref={inputRef}
               value={searchQuery}
               onChange={handleInputChange}
               placeholder="חפש או הוסף עובד..."
-              className="flex-1 bg-white"
+              className="flex-1 worker-selector-search bg-white"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && filteredWorkers.length === 0 && searchQuery) {
                   handleAddWorker();
@@ -174,13 +182,13 @@ const WorkerSelector: React.FC<WorkerSelectorProps> = ({
               autoFocus
             />
           </div>
-          <div className="max-h-[300px] overflow-y-auto">
+          <div className="max-h-[300px] overflow-y-auto worker-selector-items-container bg-white">
             {filteredWorkers.length > 0 ? (
               <div className="worker-selector-items py-2">
                 {filteredWorkers.map(worker => (
                   <button
                     key={worker.id}
-                    className="w-full text-right px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors"
+                    className="w-full text-right px-3 py-2 hover:bg-gray-100 cursor-pointer transition-colors worker-selector-item"
                     onClick={() => handleSelectWorker(worker)}
                   >
                     {worker.name}
@@ -188,11 +196,16 @@ const WorkerSelector: React.FC<WorkerSelectorProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="p-4 text-center text-sm">
+              <div className="p-4 text-center text-sm worker-selector-empty">
                 {searchQuery ? (
-                  <div className="space-y-2">
+                  <div className="space-y-2 worker-selector-add-new">
                     <p>לא נמצאו תוצאות עבור "{searchQuery}"</p>
-                    <Button size="sm" variant="outline" onClick={handleAddWorker}>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleAddWorker}
+                      className="worker-selector-add-btn"
+                    >
                       הוסף עובד חדש: {searchQuery}
                     </Button>
                   </div>

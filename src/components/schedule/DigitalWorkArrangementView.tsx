@@ -34,6 +34,7 @@ interface WorkArrangement {
   footer_text: string | null;
   footer_image_url: string | null;
   comic_prompt: string | null;
+  comic_image_url: string | null;
   shifts: Shift[];
   custom_rows: CustomRow[];
 }
@@ -221,6 +222,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               footer_text: firstArrangement.footer_text,
               footer_image_url: firstArrangement.footer_image_url,
               comic_prompt: firstArrangement.comic_prompt || "",
+              comic_image_url: firstArrangement.comic_image_url || null,
               shifts: mappedShifts,
               custom_rows: processedCustomRows
             });
@@ -232,6 +234,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               footer_text: null,
               footer_image_url: null,
               comic_prompt: null,
+              comic_image_url: null,
               shifts: [],
               custom_rows: []
             });
@@ -245,6 +248,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             footer_text: null,
             footer_image_url: null,
             comic_prompt: null,
+            comic_image_url: null,
             shifts: [],
             custom_rows: []
           });
@@ -272,17 +276,18 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className="digital-shift-cell digital-shift-empty p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+      return <TableCell className={`digital-shift-cell digital-shift-empty digital-shift-empty-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
       <TableCell className={`digital-shift-cell digital-shift-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
-          <div key={shift.id} className="digital-shift-entry mb-1">
+          <div key={shift.id} className={`digital-shift-entry digital-shift-entry-${section}-${day}-${shiftType}-${shift.id} mb-1`}>
             <div className={`digital-shift-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-shift-custom-time font-bold' : ''}`}>
-              <span>{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
+              {/* Fixed: RTL time display */}
+              <span dir="rtl">{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
-            <div className="digital-shift-content">
+            <div className={`digital-shift-content digital-shift-content-${section}-${day}-${shiftType}`}>
               {shift.person_name && (
                 <span className="digital-shift-person font-bold">
                   {workerNames[shift.person_name] || shift.person_name}
@@ -309,17 +314,18 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className="digital-radio-cell digital-radio-empty p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+      return <TableCell className={`digital-radio-cell digital-radio-empty digital-radio-empty-${day} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
       <TableCell className={`digital-radio-cell digital-radio-${day} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
-          <div key={shift.id} className="digital-radio-entry">
+          <div key={shift.id} className={`digital-radio-entry digital-radio-entry-${day}-${shift.id} mb-1`}>
             <div className={`digital-radio-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-radio-custom-time font-bold' : ''}`}>
-              <span>{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
+              {/* Fixed: RTL time display */}
+              <span dir="rtl">{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
-            <div className="digital-radio-content">
+            <div className={`digital-radio-content digital-radio-content-${day}`}>
               {shift.person_name && (
                 <span className="digital-radio-person font-bold">
                   {workerNames[shift.person_name] || shift.person_name}
@@ -407,7 +413,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               <TableHeader>
                 <TableRow className="digital-main-shifts-header bg-black text-white">
                   {DAYS_OF_WEEK.map((day, index) => (
-                    <TableHead key={day} className="digital-day-header text-center text-white border" style={{ width: COLUMN_WIDTH }}>
+                    <TableHead key={day} className={`digital-day-header digital-day-header-${index} text-center text-white border`} style={{ width: COLUMN_WIDTH }}>
                       <div className="digital-day-name">{day}</div>
                       <div className="digital-day-date text-sm">{weekDates[index]}</div>
                     </TableHead>
@@ -477,7 +483,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 <TableRow className="digital-social-afternoon-row">
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`live-social-afternoon-${day}`} className="digital-social-afternoon-empty-5 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+                      return <TableCell key={`live-social-afternoon-${day}`} className="digital-social-afternoon-empty-5 border text-center" style={{ width: COLUMN_WIDTH }}></TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
@@ -489,8 +495,18 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
           {arrangement.comic_prompt && (
             <div className="digital-comic-prompt p-4 text-center border-t pt-6">
-              <h3 className="font-bold text-lg mb-2">קומיקס השבוע</h3>
+              <h3 className="font-bold text-lg mb-2 digital-comic-title">קומיקס השבוע</h3>
               <p className="digital-comic-text">{arrangement.comic_prompt}</p>
+              
+              {arrangement.comic_image_url && (
+                <div className="digital-comic-image mt-4">
+                  <img 
+                    src={arrangement.comic_image_url} 
+                    alt="Comic Sketch" 
+                    className="digital-comic-image-content mx-auto max-h-[400px] max-w-full"
+                  />
+                </div>
+              )}
             </div>
           )}
 

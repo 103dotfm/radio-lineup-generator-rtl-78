@@ -125,21 +125,48 @@
   text-align: right;
 }
 
-/* Solid backgrounds for all dropdowns */
+/* Solid backgrounds for all dropdowns and popovers - CRITICAL FIX */
 .worker-selector-dropdown,
 .Popover-content,
 .Select-content,
 .Command-content,
 .popover-content,
 .select-content,
-.command-content {
+.command-content,
+[data-radix-popper-content-wrapper] {
   background-color: white !important;
   z-index: 9999 !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Comic sketch generator styles */
+/* Ensure date picker is fully visible */
+.react-datepicker-popper,
+.react-datepicker-wrapper,
+.react-datepicker__input-container {
+  z-index: 9999 !important;
+  background-color: white !important;
+}
+
+/* Ensure all popovers and select menus have solid backgrounds - CRITICAL FIX */
+.popover-content,
+.select-content,
+.date-picker-calendar,
+.react-datepicker,
+.react-datepicker__month-container,
+[data-radix-popper-content-wrapper] > div {
+  z-index: 9999 !important;
+  background-color: white !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Fix for date picker widget */
+.date-picker-content {
+  background-color: white !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Comics sketch generator styles */
 .comic-sketch-preview {
   max-height: 400px;
   max-width: 100%;
@@ -151,17 +178,20 @@
   min-height: 150px;
 }
 
-/* Fix for calendar popover */
-.react-datepicker-popper,
-.react-datepicker-wrapper,
-.react-datepicker__input-container {
-  z-index: 9999 !important;
+/* Force proper display of all Radix popups and dropdowns */
+[data-radix-popper-content-wrapper] {
   background-color: white !important;
 }
 
-.popover-content,
-.select-content,
-.date-picker-calendar {
-  z-index: 9999 !important;
+/* Ensure all dropdown components have solid backgrounds */
+.PopoverContent,
+.SelectContent,
+.CalendarContent,
+.DialogContent,
+.TooltipContent,
+.DropdownMenuContent {
   background-color: white !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid #e2e8f0 !important;
+  z-index: 9999 !important;
 }
