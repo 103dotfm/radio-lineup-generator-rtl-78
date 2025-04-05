@@ -40,6 +40,7 @@ export const WorkerSelector = ({
         setWorkers(data || []);
       } catch (error) {
         console.error('Error fetching workers:', error);
+        // Ensure workers is always an array even on error
         setWorkers([]);
       } finally {
         setLoading(false);
@@ -76,14 +77,14 @@ export const WorkerSelector = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0 bg-background" align="start">
-          <Command dir="rtl">
+          {/* Use a key on Command to force re-render when workers changes */}
+          <Command dir="rtl" key={workers.length}>
             <CommandInput placeholder="חיפוש עובדים..." />
             <CommandEmpty>לא נמצאו עובדים</CommandEmpty>
             <CommandGroup className="max-h-64 overflow-y-auto">
               {loading ? (
                 <CommandItem disabled>טוען עובדים...</CommandItem>
-              ) : (
-                workers && workers.length > 0 ? 
+              ) : workers.length > 0 ? (
                 workers.map((worker) => (
                   <CommandItem
                     key={worker.id}
@@ -99,9 +100,9 @@ export const WorkerSelector = ({
                     {worker.name}
                     {worker.department && <span className="text-gray-500 text-sm mr-2">({worker.department})</span>}
                   </CommandItem>
-                )) : (
-                  <CommandItem disabled>אין עובדים זמינים</CommandItem>
-                )
+                ))
+              ) : (
+                <CommandItem disabled>אין עובדים זמינים</CommandItem>
               )}
             </CommandGroup>
           </Command>
