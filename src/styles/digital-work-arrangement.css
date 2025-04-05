@@ -22,22 +22,65 @@
   padding: 8px;
 }
 
-/* Custom styles for highlighting custom times */
-.digital-work-arrangement .bg-yellow-100 {
-  background-color: #fef9c3;
+/* Fixed column width for better alignment */
+.digital-work-arrangement-view td,
+.digital-work-arrangement-view th {
+  width: 16.66% !important;
+}
+
+/* RTL direction for time display */
+.digital-shift-time,
+.digital-radio-time {
+  direction: rtl;
+}
+
+/* Custom styling for time ranges */
+.digital-shift-time,
+.digital-radio-time {
+  font-weight: 500;
+}
+
+.digital-shift-custom-time,
+.digital-radio-custom-time {
+  font-weight: bold;
+  color: #333;
 }
 
 /* Style for worker names */
+.digital-shift-person,
+.digital-radio-person,
 .digital-work-arrangement .worker-name,
 .digital-work-arrangement-view .worker-name {
   font-weight: bold;
 }
 
 /* Style for additional text */
+.digital-shift-note,
+.digital-radio-note,
 .digital-work-arrangement .additional-text,
 .digital-work-arrangement-view .additional-text {
   font-weight: normal;
   font-size: 0.9em;
+}
+
+/* Comic prompt styling */
+.digital-comic-prompt {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+}
+
+.digital-comic-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* Footer text styling */
+.digital-footer-text {
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 1.1rem;
 }
 
 /* Print styles */
@@ -49,17 +92,25 @@
   .digital-work-arrangement-view table {
     page-break-inside: avoid;
   }
+  
+  .digital-footer-image {
+    max-width: 100%;
+    page-break-inside: avoid;
+  }
 }
 
 /* Improved input styling */
 .digital-work-arrangement input[type="time"],
-.digital-work-arrangement input[type="text"] {
+.digital-work-arrangement input[type="text"],
+.digital-work-arrangement textarea {
   font-size: 14px;
   transition: all 0.2s;
+  background-color: white;
 }
 
 .digital-work-arrangement input[type="time"]:focus,
-.digital-work-arrangement input[type="text"]:focus {
+.digital-work-arrangement input[type="text"]:focus,
+.digital-work-arrangement textarea:focus {
   outline: none;
   border-color: #3b82f6;
   background-color: rgba(59, 130, 246, 0.05);
@@ -74,6 +125,20 @@
   text-align: right;
 }
 
+/* Solid backgrounds for all dropdowns */
+.worker-selector-dropdown,
+.Popover-content,
+.Select-content,
+.Command-content,
+.popover-content,
+.select-content,
+.command-content {
+  background-color: white !important;
+  z-index: 9999 !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
 /* Comic sketch generator styles */
 .comic-sketch-preview {
   max-height: 400px;
@@ -84,4 +149,19 @@
 /* Textarea for larger footer text */
 .digital-work-arrangement textarea.footer-text {
   min-height: 150px;
+}
+
+/* Fix for calendar popover */
+.react-datepicker-popper,
+.react-datepicker-wrapper,
+.react-datepicker__input-container {
+  z-index: 9999 !important;
+  background-color: white !important;
+}
+
+.popover-content,
+.select-content,
+.date-picker-calendar {
+  z-index: 9999 !important;
+  background-color: white !important;
 }

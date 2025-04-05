@@ -32,7 +32,7 @@ export function DatePicker({ date, onSelect }: DatePickerProps) {
         <Button
           variant={"outline"}
           className={cn(
-            "w-[240px] justify-start text-left font-normal bg-background",
+            "w-[240px] justify-start text-left font-normal bg-white border",
             !selectedDate && "text-muted-foreground"
           )}
         >
@@ -44,7 +44,7 @@ export function DatePicker({ date, onSelect }: DatePickerProps) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-background border border-border" align="start">
+      <PopoverContent className="w-auto p-0 bg-white border border-border" align="start" style={{ zIndex: 9999 }}>
         <Calendar
           mode="single"
           selected={selectedDate}
@@ -53,7 +53,7 @@ export function DatePicker({ date, onSelect }: DatePickerProps) {
             if (onSelect) onSelect(date);
           }}
           initialFocus
-          className="p-3 pointer-events-auto"
+          className="p-3 pointer-events-auto bg-white"
         />
       </PopoverContent>
     </Popover>
