@@ -1,6 +1,13 @@
 
 import { supabase } from "@/lib/supabase";
-import { Worker } from "@/components/schedule/workers/WorkerSelector";
+
+// Export the Worker interface so it can be imported by other modules
+export interface Worker {
+  id: string;
+  name: string;
+  department?: string;
+  position?: string;
+}
 
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
