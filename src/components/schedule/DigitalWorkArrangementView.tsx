@@ -177,6 +177,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                   if (typeof row.contents === 'string') {
                     contents = JSON.parse(row.contents);
                   } else if (typeof row.contents === 'object') {
+                    // Safely convert any type to string in the contents object
                     Object.entries(row.contents).forEach(([key, value]) => {
                       contents[Number(key)] = String(value || '');
                     });
@@ -473,7 +474,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           </div>
 
           {arrangement.footer_text && (
-            <div className="p-4 text-center min-h-[250px]">
+            <div className="p-4 text-center min-h-[350px]">
               {arrangement.footer_text}
             </div>
           )}

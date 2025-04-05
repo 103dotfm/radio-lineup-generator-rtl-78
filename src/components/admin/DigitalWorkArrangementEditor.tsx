@@ -203,9 +203,22 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           try {
             if (row.contents) {
               if (typeof row.contents === 'string') {
-                contents = JSON.parse(row.contents);
-              } else {
-                contents = row.contents;
+                try {
+                  contents = JSON.parse(row.contents);
+                } catch {
+                  // If it's not parseable JSON, create an empty object
+                  contents = {};
+                }
+              } else if (typeof row.contents === 'object') {
+                // Safely convert any type to string in the contents object
+                Object.entries(row.contents).forEach(([key, value]) => {
+                  // Ensure we only use values that can be converted to strings
+                  if (value !== null && value !== undefined) {
+                    contents[Number(key)] = String(value);
+                  } else {
+                    contents[Number(key)] = '';
+                  }
+                });
               }
             }
           } catch (e) {
@@ -558,12 +571,15 @@ const DigitalWorkArrangementEditor: React.FC = () => {
 
   // Handle updating custom cell content with debounce to prevent excessive updates
   const [pendingCustomCellUpdates, setPendingCustomCellUpdates] = useState<Record<string, any>>({});
+  const [cellFocused, setCellFocused] = useState<string | null>(null);
   
   const updateCustomCellContent = (rowId: string, dayIndex: number, content: string) => {
+    const key = `${rowId}-${dayIndex}`;
+    
     // Update pending updates
     setPendingCustomCellUpdates(prev => ({
       ...prev,
-      [`${rowId}-${dayIndex}`]: { rowId, dayIndex, content }
+      [key]: { rowId, dayIndex, content }
     }));
     
     // Update local state immediately for UI
@@ -584,6 +600,9 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   // Save pending updates when focus moves away
   const saveCustomCellContent = async (rowId: string, dayIndex: number) => {
     const key = `${rowId}-${dayIndex}`;
+    setCellFocused(null);
+    
+    // Check if there's a pending update for this cell
     const pendingUpdate = pendingCustomCellUpdates[key];
     
     if (pendingUpdate) {
@@ -739,6 +758,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
               <textarea
                 value={row.contents[day] || ''}
                 onChange={(e) => updateCustomCellContent(row.id, day, e.target.value)}
+                onFocus={() => setCellFocused(`${row.id}-${day}`)}
                 onBlur={() => saveCustomCellContent(row.id, day)}
                 className="w-full h-full min-h-[60px] p-2 resize-none border rounded bg-background"
                 placeholder="הזן טקסט..."
