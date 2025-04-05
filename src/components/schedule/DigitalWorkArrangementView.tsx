@@ -61,6 +61,9 @@ const SHIFT_TYPES = {
   CUSTOM: 'custom'
 };
 
+// Define fixed column width
+const COLUMN_WIDTH = "16.66%"; // 100% / 6 columns
+
 interface DigitalWorkArrangementViewProps {
   weekDate?: string; // Format: 'yyyy-MM-dd'
 }
@@ -80,6 +83,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return startOfWeek(new Date(), { weekStartsOn: 0 });
   });
   const [weekDates, setWeekDates] = useState<string[]>([]);
+  const [workerNames, setWorkerNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const dates = Array.from({ length: 6 }, (_, i) => {
@@ -100,6 +104,26 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   useEffect(() => {
+    // Fetch worker names for display
+    const fetchWorkerNames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workers')
+          .select('id, name');
+        
+        if (!error && data) {
+          const namesMap: Record<string, string> = {};
+          data.forEach(worker => {
+            namesMap[worker.id] = worker.name;
+          });
+          setWorkerNames(namesMap);
+        }
+      } catch (error) {
+        console.error('Error fetching worker names:', error);
+      }
+    };
+    
+    fetchWorkerNames();
     fetchArrangement();
   }, [currentWeek]);
 
@@ -227,7 +251,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
-    if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
+    if (!arrangement) return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     
     const shifts = arrangement.shifts.filter(shift =>
       shift.section_name === section && 
@@ -237,18 +261,22 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className="p-2 border text-center">-</TableCell>;
+      return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
-      <TableCell className="p-2 border text-center">
+      <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
           <div key={shift.id} className="mb-1">
             <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
               <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
             <div>
-              {shift.person_name && <span className="font-bold">{shift.person_name}</span>}
+              {shift.person_name && (
+                <span className="font-bold">
+                  {workerNames[shift.person_name] || shift.person_name}
+                </span>
+              )}
               {shift.additional_text && (
                 <span className="block text-sm">{shift.additional_text}</span>
               )}
@@ -261,7 +289,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   const renderRadioNorthCell = (day: number) => {
-    if (!arrangement) return <TableCell className="p-2 border text-center">-</TableCell>;
+    if (!arrangement) return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     
     const shifts = arrangement.shifts.filter(shift =>
       shift.section_name === SECTION_NAMES.RADIO_NORTH && 
@@ -270,18 +298,22 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className="p-2 border text-center">-</TableCell>;
+      return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
-      <TableCell className="p-2 border text-center">
+      <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
           <div key={shift.id}>
             <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
               <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
             </div>
             <div>
-              {shift.person_name && <span className="font-bold">{shift.person_name}</span>}
+              {shift.person_name && (
+                <span className="font-bold">
+                  {workerNames[shift.person_name] || shift.person_name}
+                </span>
+              )}
               {shift.additional_text && (
                 <span className="block text-sm">{shift.additional_text}</span>
               )}
@@ -303,7 +335,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return rows.map((row) => (
       <TableRow key={row.id}>
         {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
-          <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center">
+          <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>
             {renderTableCellContent(row, dayIndex)}
           </TableCell>
         ))}
@@ -360,7 +392,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               <TableHeader>
                 <TableRow className="bg-black text-white">
                   {DAYS_OF_WEEK.map((day, index) => (
-                    <TableHead key={day} className="text-center text-white border">
+                    <TableHead key={day} className="text-center text-white border" style={{ width: COLUMN_WIDTH }}>
                       <div>{day}</div>
                       <div className="text-sm">{weekDates[index]}</div>
                     </TableHead>
@@ -377,7 +409,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 <TableRow>
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`evening-${day}`} className="border text-center">-</TableCell>;
+                      return <TableCell key={`evening-${day}`} className="border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.EVENING);
                   })}
@@ -393,7 +425,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               <TableBody>
                 <TableRow>
                   {[...Array(5)].map((_, day) => renderRadioNorthCell(day))}
-                  <TableCell className="border"></TableCell>
+                  <TableCell className="border" style={{ width: COLUMN_WIDTH }}></TableCell>
                 </TableRow>
                 {renderCustomRows(SECTION_NAMES.RADIO_NORTH)}
               </TableBody>
@@ -410,7 +442,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 <TableRow>
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`transcription-afternoon-${day}`} className="border text-center">-</TableCell>;
+                      return <TableCell key={`transcription-afternoon-${day}`} className="border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
@@ -430,7 +462,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 <TableRow>
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`live-social-afternoon-${day}`} className="border text-center">-</TableCell>;
+                      return <TableCell key={`live-social-afternoon-${day}`} className="border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
@@ -441,7 +473,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           </div>
 
           {arrangement.footer_text && (
-            <div className="p-4 text-center min-h-[150px]">
+            <div className="p-4 text-center min-h-[250px]">
               {arrangement.footer_text}
             </div>
           )}

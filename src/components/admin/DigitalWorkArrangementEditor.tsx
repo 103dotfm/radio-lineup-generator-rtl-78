@@ -39,6 +39,13 @@ interface Shift {
   position: number;
 }
 
+interface CustomRow {
+  id: string;
+  section_name: string;
+  contents: Record<number, string>; // Day index -> content mapping
+  position: number;
+}
+
 interface WorkArrangement {
   id: string;
   week_start: string;
@@ -89,6 +96,7 @@ const DEFAULT_SHIFT_TIMES = {
 const DigitalWorkArrangementEditor: React.FC = () => {
   const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [customRows, setCustomRows] = useState<CustomRow[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekDate, setWeekDate] = useState<Date>(new Date());
@@ -96,11 +104,14 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   
   // Dialogs state
   const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
+  const [customRowDialogOpen, setCustomRowDialogOpen] = useState(false);
   const [footerTextDialogOpen, setFooterTextDialogOpen] = useState(false);
   const [comicPromptDialogOpen, setComicPromptDialogOpen] = useState(false);
   
   // Edit mode state
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
+  const [editingCustomRow, setEditingCustomRow] = useState<CustomRow | null>(null);
+  const [customRowContent, setCustomRowContent] = useState<Record<number, string>>({});
   const [footerText, setFooterText] = useState('');
   const [comicPrompt, setComicPrompt] = useState('');
   
@@ -174,6 +185,42 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         }
         
         setShifts(shiftsData || []);
+        
+        const { data: customRowsData, error: customRowsError } = await supabase
+          .from('digital_shift_custom_rows')
+          .select('*')
+          .eq('arrangement_id', firstArrangement.id)
+          .order('position', { ascending: true });
+          
+        if (customRowsError) {
+          throw customRowsError;
+        }
+        
+        // Process custom rows
+        const processedCustomRows = customRowsData?.map(row => {
+          let contents: Record<number, string> = {};
+          
+          try {
+            if (row.contents) {
+              if (typeof row.contents === 'string') {
+                contents = JSON.parse(row.contents);
+              } else {
+                contents = row.contents;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing contents', e);
+          }
+          
+          return {
+            id: row.id,
+            section_name: row.section_name,
+            contents: contents,
+            position: row.position
+          };
+        }) || [];
+        
+        setCustomRows(processedCustomRows);
       } else {
         const { data: newArrangement, error: createError } = await supabase
           .from('digital_work_arrangements')
@@ -193,6 +240,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         
         setArrangement(newArrangement);
         setShifts([]);
+        setCustomRows([]);
       }
     } catch (error) {
       console.error('Error fetching digital work arrangement:', error);
@@ -275,6 +323,59 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
   };
 
+  const handleSaveCustomRow = async () => {
+    if (!arrangement) return;
+    
+    try {
+      if (editingCustomRow) {
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .update({
+            section_name: currentSection,
+            contents: customRowContent
+          })
+          .eq('id', editingCustomRow.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "בוצע",
+          description: "השורה עודכנה בהצלחה"
+        });
+      } else {
+        const position = customRows
+          .filter(r => r.section_name === currentSection)
+          .length;
+        
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .insert({
+            arrangement_id: arrangement.id,
+            section_name: currentSection,
+            contents: customRowContent,
+            position: position
+          });
+        
+        if (error) throw error;
+        
+        toast({
+          title: "בוצע",
+          description: "השורה נוצרה בהצלחה"
+        });
+      }
+      
+      fetchArrangement();
+      setCustomRowDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving custom row:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לשמור את השורה",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleDeleteShift = async (id: string) => {
     try {
       const { error } = await supabase
@@ -294,6 +395,30 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       toast({
         title: "שגיאה",
         description: "לא ניתן למחוק את המשמרת",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteCustomRow = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('digital_shift_custom_rows')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setCustomRows(customRows.filter(row => row.id !== id));
+      toast({
+        title: "בוצע",
+        description: "השורה נמחקה בהצלחה"
+      });
+    } catch (error) {
+      console.error('Error deleting custom row:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן למחוק את השורה",
         variant: "destructive"
       });
     }
@@ -382,21 +507,45 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     setShiftDialogOpen(true);
   };
 
+  const openCustomRowDialog = (row?: CustomRow) => {
+    if (row) {
+      setEditingCustomRow(row);
+      setCustomRowContent(row.contents);
+    } else {
+      setEditingCustomRow(null);
+      // Initialize empty contents for each day
+      const initialContents: Record<number, string> = {};
+      for (let i = 0; i < 6; i++) {
+        initialContents[i] = '';
+      }
+      setCustomRowContent(initialContents);
+    }
+    setCustomRowDialogOpen(true);
+  };
+
   const updateShiftWorker = async (shift: Shift, workerId: string | null, additionalText?: string) => {
     if (!arrangement) return;
     
     try {
-      const { error } = await supabase
-        .from('digital_shifts')
-        .update({
-          person_name: workerId,
-          additional_text: additionalText || shift.additional_text
-        })
-        .eq('id', shift.id);
-      
-      if (error) throw error;
-      
-      fetchArrangement();
+      // Only update when needed - modified to prevent continuous saving
+      if (shift.person_name !== workerId || shift.additional_text !== additionalText) {
+        const { error } = await supabase
+          .from('digital_shifts')
+          .update({
+            person_name: workerId,
+            additional_text: additionalText || shift.additional_text
+          })
+          .eq('id', shift.id);
+        
+        if (error) throw error;
+        
+        // Update local state to avoid refetching
+        setShifts(shifts.map(s => 
+          s.id === shift.id 
+            ? {...s, person_name: workerId, additional_text: additionalText || s.additional_text}
+            : s
+        ));
+      }
     } catch (error) {
       console.error('Error updating shift worker:', error);
       toast({
@@ -407,6 +556,67 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
   };
 
+  // Handle updating custom cell content with debounce to prevent excessive updates
+  const [pendingCustomCellUpdates, setPendingCustomCellUpdates] = useState<Record<string, any>>({});
+  
+  const updateCustomCellContent = (rowId: string, dayIndex: number, content: string) => {
+    // Update pending updates
+    setPendingCustomCellUpdates(prev => ({
+      ...prev,
+      [`${rowId}-${dayIndex}`]: { rowId, dayIndex, content }
+    }));
+    
+    // Update local state immediately for UI
+    setCustomRows(customRows.map(row => {
+      if (row.id === rowId) {
+        return {
+          ...row,
+          contents: {
+            ...row.contents,
+            [dayIndex]: content
+          }
+        };
+      }
+      return row;
+    }));
+  };
+  
+  // Save pending updates when focus moves away
+  const saveCustomCellContent = async (rowId: string, dayIndex: number) => {
+    const key = `${rowId}-${dayIndex}`;
+    const pendingUpdate = pendingCustomCellUpdates[key];
+    
+    if (pendingUpdate) {
+      try {
+        const row = customRows.find(r => r.id === rowId);
+        if (!row) return;
+        
+        const updatedContents = { ...row.contents, [dayIndex]: pendingUpdate.content };
+        
+        const { error } = await supabase
+          .from('digital_shift_custom_rows')
+          .update({ contents: updatedContents })
+          .eq('id', rowId);
+        
+        if (error) throw error;
+        
+        // Clear the pending update
+        setPendingCustomCellUpdates(prev => {
+          const updated = { ...prev };
+          delete updated[key];
+          return updated;
+        });
+      } catch (error) {
+        console.error('Error updating custom cell content:', error);
+        toast({
+          title: "שגיאה",
+          description: "לא ניתן לעדכן את תוכן התא",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   // Get shifts for a specific section, day, and type
   const getShiftsForCell = (section: string, day: number, shiftType: string) => {
     return shifts.filter(shift => 
@@ -414,6 +624,11 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       shift.day_of_week === day && 
       shift.shift_type === shiftType
     );
+  };
+
+  // Get custom rows for a section
+  const getCustomRowsForSection = (section: string) => {
+    return customRows.filter(row => row.section_name === section);
   };
 
   // Render a table cell for a shift
@@ -465,7 +680,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="bg-background border border-border">
                   <DropdownMenuItem onClick={() => openShiftDialog(shift)}>
                     <Edit className="mr-2 h-4 w-4" />
                     ערוך
@@ -491,6 +706,68 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         ))}
       </TableCell>
     );
+  };
+
+  // Render custom rows for a section
+  const renderCustomRows = (section: string) => {
+    const rows = getCustomRowsForSection(section);
+    
+    if (rows.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="text-center py-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCurrentSection(section);
+                openCustomRowDialog();
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              הוסף שורה מותאמת אישית
+            </Button>
+          </TableCell>
+        </TableRow>
+      );
+    }
+    
+    return rows.map((row) => (
+      <TableRow key={row.id}>
+        {[0, 1, 2, 3, 4, 5].map((day) => (
+          <TableCell key={`${row.id}-${day}`} className="p-2 border text-center">
+            <div className="relative min-h-[60px]">
+              <textarea
+                value={row.contents[day] || ''}
+                onChange={(e) => updateCustomCellContent(row.id, day, e.target.value)}
+                onBlur={() => saveCustomCellContent(row.id, day)}
+                className="w-full h-full min-h-[60px] p-2 resize-none border rounded bg-background"
+                placeholder="הזן טקסט..."
+              />
+              
+              <div className="absolute top-1 right-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-background border border-border">
+                    <DropdownMenuItem onClick={() => openCustomRowDialog(row)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      ערוך
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDeleteCustomRow(row.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      מחק
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </TableCell>
+        ))}
+      </TableRow>
+    ));
   };
 
   // Format the date range for display
@@ -568,6 +845,9 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                       ))}
                     </TableRow>
                   ))}
+                  
+                  {/* Custom rows */}
+                  {renderCustomRows(currentSection)}
                 </TableBody>
               </Table>
             </CardContent>
@@ -575,7 +855,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
 
           {/* Shift Edit Dialog */}
           <Dialog open={shiftDialogOpen} onOpenChange={setShiftDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+            <DialogContent className="sm:max-w-[425px] bg-background" dir="rtl">
               <DialogHeader>
                 <DialogTitle>
                   {editingShift ? 'עריכת משמרת' : 'הוספת משמרת חדשה'}
@@ -588,10 +868,10 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                     value={newShiftData.section_name}
                     onValueChange={(value) => setNewShiftData({...newShiftData, section_name: value})}
                   >
-                    <SelectTrigger className="col-span-3">
+                    <SelectTrigger className="col-span-3 bg-background">
                       <SelectValue placeholder="בחר סקשן" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background">
                       {Object.entries(SECTION_TITLES).map(([key, title]) => (
                         <SelectItem key={key} value={key}>{title}</SelectItem>
                       ))}
@@ -605,10 +885,10 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                     value={newShiftData.day_of_week.toString()}
                     onValueChange={(value) => setNewShiftData({...newShiftData, day_of_week: parseInt(value)})}
                   >
-                    <SelectTrigger className="col-span-3">
+                    <SelectTrigger className="col-span-3 bg-background">
                       <SelectValue placeholder="בחר יום" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background">
                       {DAYS_OF_WEEK.map((day, index) => (
                         <SelectItem key={index} value={index.toString()}>{day}</SelectItem>
                       ))}
@@ -629,10 +909,10 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                       });
                     }}
                   >
-                    <SelectTrigger className="col-span-3">
+                    <SelectTrigger className="col-span-3 bg-background">
                       <SelectValue placeholder="בחר סוג משמרת" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background">
                       {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => (
                         <SelectItem key={type} value={type}>{label}</SelectItem>
                       ))}
@@ -647,7 +927,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                     type="time"
                     value={newShiftData.start_time}
                     onChange={(e) => setNewShiftData({...newShiftData, start_time: e.target.value})}
-                    className="col-span-3"
+                    className="col-span-3 bg-background"
                   />
                 </div>
                 
@@ -658,7 +938,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                     type="time"
                     value={newShiftData.end_time}
                     onChange={(e) => setNewShiftData({...newShiftData, end_time: e.target.value})}
-                    className="col-span-3"
+                    className="col-span-3 bg-background"
                   />
                 </div>
                 
@@ -708,16 +988,43 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             </DialogContent>
           </Dialog>
 
+          {/* Custom Row Dialog */}
+          <Dialog open={customRowDialogOpen} onOpenChange={setCustomRowDialogOpen}>
+            <DialogContent className="max-w-4xl bg-background" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCustomRow ? 'עריכת שורה מותאמת אישית' : 'הוספת שורה מותאמת אישית'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-6 gap-4 py-4">
+                {[0, 1, 2, 3, 4, 5].map((day) => (
+                  <div key={day} className="flex flex-col">
+                    <Label className="mb-2 text-center">{DAYS_OF_WEEK[day]}</Label>
+                    <Textarea
+                      value={customRowContent[day] || ''}
+                      onChange={(e) => setCustomRowContent({...customRowContent, [day]: e.target.value})}
+                      className="min-h-[100px] bg-background"
+                      placeholder="הזן טקסט..."
+                    />
+                  </div>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveCustomRow}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Comic Prompt Dialog */}
           <Dialog open={comicPromptDialogOpen} onOpenChange={setComicPromptDialogOpen}>
-            <DialogContent dir="rtl">
+            <DialogContent className="bg-background" dir="rtl">
               <DialogHeader>
                 <DialogTitle>פרומפט קומיקס</DialogTitle>
               </DialogHeader>
               <div className="py-4">
                 <Textarea
                   placeholder="הזן פרומפט לקומיקס..."
-                  className="min-h-[200px]"
+                  className="min-h-[200px] bg-background"
                   value={comicPrompt}
                   onChange={(e) => setComicPrompt(e.target.value)}
                 />
@@ -730,14 +1037,14 @@ const DigitalWorkArrangementEditor: React.FC = () => {
 
           {/* Footer Text Dialog */}
           <Dialog open={footerTextDialogOpen} onOpenChange={setFooterTextDialogOpen}>
-            <DialogContent dir="rtl">
+            <DialogContent className="bg-background" dir="rtl">
               <DialogHeader>
                 <DialogTitle>טקסט תחתון</DialogTitle>
               </DialogHeader>
               <div className="py-4">
                 <Textarea
                   placeholder="הזן טקסט תחתון..."
-                  className="min-h-[200px]"
+                  className="min-h-[200px] bg-background"
                   value={footerText}
                   onChange={(e) => setFooterText(e.target.value)}
                 />
