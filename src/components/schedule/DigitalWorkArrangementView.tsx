@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parse, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
+import { DigitalWorkArrangement } from "@/types/schedule";
 
 interface Shift {
   id: string;
@@ -62,7 +62,6 @@ const SHIFT_TYPES = {
   CUSTOM: 'custom'
 };
 
-// Define fixed column width
 const COLUMN_WIDTH = "16.66%"; // 100% / 6 columns
 
 interface DigitalWorkArrangementViewProps {
@@ -105,7 +104,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   useEffect(() => {
-    // Fetch worker names for display
     const fetchWorkerNames = async () => {
       try {
         const { data, error } = await supabase
@@ -151,7 +149,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             .eq('week_start', weekStartStr);
             
           if (!digitalError && digitalArrangement && digitalArrangement.length > 0) {
-            // Use the first arrangement if multiple exist
             const firstArrangement = digitalArrangement[0];
             
             const { data: shiftsData, error: shiftsError } = await supabase
@@ -179,13 +176,10 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                     try {
                       contents = JSON.parse(row.contents);
                     } catch {
-                      // If it's not parseable JSON, create an empty object
                       contents = {};
                     }
                   } else if (typeof row.contents === 'object') {
-                    // Safely convert any type to string in the contents object
                     Object.entries(row.contents).forEach(([key, value]) => {
-                      // Ensure we only use values that can be converted to strings
                       if (value !== null && value !== undefined) {
                         contents[Number(key)] = String(value);
                       } else {
@@ -284,7 +278,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         {shifts.map((shift) => (
           <div key={shift.id} className={`digital-shift-entry digital-shift-entry-${section}-${day}-${shiftType}-${shift.id} mb-1`}>
             <div className={`digital-shift-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-shift-custom-time font-bold' : ''}`}>
-              {/* Fixed: RTL time display */}
               <span dir="rtl">{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
             </div>
             <div className={`digital-shift-content digital-shift-content-${section}-${day}-${shiftType}`}>
@@ -322,7 +315,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         {shifts.map((shift) => (
           <div key={shift.id} className={`digital-radio-entry digital-radio-entry-${day}-${shift.id} mb-1`}>
             <div className={`digital-radio-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-radio-custom-time font-bold' : ''}`}>
-              {/* Fixed: RTL time display */}
               <span dir="rtl">{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
             </div>
             <div className={`digital-radio-content digital-radio-content-${day}`}>

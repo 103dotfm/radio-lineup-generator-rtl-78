@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +28,6 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
   const [image, setImage] = useState<string | null>(initialImageUrl || null);
   const { toast } = useToast();
 
-  // Update internal state when props change
   useEffect(() => {
     setText(initialText);
   }, [initialText]);
@@ -44,7 +42,6 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
   };
 
   const generatePrompt = () => {
-    // Generate a prompt based on the text
     const basePrompt = "צייר קומיקס מצחיק המבוסס על הטקסט הבא: ";
     setPrompt(basePrompt + text);
     toast({
@@ -66,15 +63,11 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
     setIsGenerating(true);
     
     try {
-      // This is a mockup - in a real implementation, you'd call an AI image generator API
-      // For now, we'll just simulate a delay and use a placeholder
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Use a placeholder image for now
       const imageUrl = "https://placehold.co/600x400/e2e8f0/1e293b?text=AI+Comic+Sketch";
       setImage(imageUrl);
       
-      // Update arrangement if arrangementId is provided
       if (arrangementId && onImageGenerated) {
         try {
           await supabase
@@ -168,7 +161,6 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
           </div>
         </div>
         
-        {/* Image preview area */}
         <Card className="flex flex-col items-center justify-center p-4 min-h-[200px] comic-sketch-preview-card">
           <CardContent className="p-0 w-full comic-sketch-preview-content">
             {image ? (
