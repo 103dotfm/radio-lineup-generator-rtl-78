@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,7 +15,13 @@ interface WorkerSelectorProps {
   className?: string;
 }
 
-const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "בחר עובד...", className }: WorkerSelectorProps) => {
+export const WorkerSelector = ({ 
+  value, 
+  onChange, 
+  additionalText = "", 
+  placeholder = "בחר עובד...", 
+  className 
+}: WorkerSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(additionalText || "");
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -55,14 +62,14 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
   };
   
   return (
-    <div className={cn("flex items-center space-x-2 space-x-reverse gap-2", className)} dir="rtl">
+    <div className={cn("flex flex-col gap-2", className)} dir="rtl">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between font-bold"
+            className="w-full justify-between"
           >
             {value && displayValue ? displayValue : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -103,11 +110,9 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
         value={inputValue}
         onChange={handleInputChange}
         placeholder="הערות נוספות..."
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 font-normal text-sm"
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         dir="rtl"
       />
     </div>
   );
 };
-
-export default WorkerSelector;
