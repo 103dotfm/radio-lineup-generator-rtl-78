@@ -9,6 +9,8 @@ interface CustomRowColumnsProps {
   rowId: string;
   values: Record<number, string>;
   onValueChange: (rowId: string, dayIndex: number, value: string) => void;
+  onFocusCell: (rowId: string, dayIndex: number) => void;
+  onBlurCell: (rowId: string, dayIndex: number) => void;
   onDelete: (rowId: string) => void;
 }
 
@@ -16,6 +18,8 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
   rowId,
   values,
   onValueChange,
+  onFocusCell,
+  onBlurCell,
   onDelete
 }) => {
   return (
@@ -34,12 +38,13 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
       {/* Render 6 cells for Sunday through Friday */}
       {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
         <TableCell key={`${rowId}-day-${dayIndex}`} className="p-2 border">
-          <Input 
-            type="text"
+          <textarea 
             value={values[dayIndex] || ''}
             onChange={e => onValueChange(rowId, dayIndex, e.target.value)}
+            onFocus={() => onFocusCell(rowId, dayIndex)}
+            onBlur={() => onBlurCell(rowId, dayIndex)}
             placeholder="הזן תוכן..."
-            className="w-full text-right"
+            className="w-full h-full min-h-[60px] p-2 resize-none border rounded text-right bg-background"
             dir="rtl"
           />
         </TableCell>

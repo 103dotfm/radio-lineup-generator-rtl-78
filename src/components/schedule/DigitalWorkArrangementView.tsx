@@ -175,11 +175,21 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               try {
                 if (row.contents) {
                   if (typeof row.contents === 'string') {
-                    contents = JSON.parse(row.contents);
+                    try {
+                      contents = JSON.parse(row.contents);
+                    } catch {
+                      // If it's not parseable JSON, create an empty object
+                      contents = {};
+                    }
                   } else if (typeof row.contents === 'object') {
                     // Safely convert any type to string in the contents object
                     Object.entries(row.contents).forEach(([key, value]) => {
-                      contents[Number(key)] = String(value || '');
+                      // Ensure we only use values that can be converted to strings
+                      if (value !== null && value !== undefined) {
+                        contents[Number(key)] = String(value);
+                      } else {
+                        contents[Number(key)] = '';
+                      }
                     });
                   }
                 } else if (row.content) {
@@ -252,7 +262,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
-    if (!arrangement) return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+    if (!arrangement) return <TableCell className="digital-shift-cell p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     
     const shifts = arrangement.shifts.filter(shift =>
       shift.section_name === section && 
@@ -262,24 +272,24 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+      return <TableCell className="digital-shift-cell digital-shift-empty p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
-      <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>
+      <TableCell className={`digital-shift-cell digital-shift-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
-          <div key={shift.id} className="mb-1">
-            <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-              <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
+          <div key={shift.id} className="digital-shift-entry mb-1">
+            <div className={`digital-shift-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-shift-custom-time font-bold' : ''}`}>
+              <span>{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
             </div>
-            <div>
+            <div className="digital-shift-content">
               {shift.person_name && (
-                <span className="font-bold">
+                <span className="digital-shift-person font-bold">
                   {workerNames[shift.person_name] || shift.person_name}
                 </span>
               )}
               {shift.additional_text && (
-                <span className="block text-sm">{shift.additional_text}</span>
+                <span className="digital-shift-note block text-sm">{shift.additional_text}</span>
               )}
               {!shift.person_name && !shift.additional_text && '-'}
             </div>
@@ -290,7 +300,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   const renderRadioNorthCell = (day: number) => {
-    if (!arrangement) return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+    if (!arrangement) return <TableCell className="digital-radio-cell p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     
     const shifts = arrangement.shifts.filter(shift =>
       shift.section_name === SECTION_NAMES.RADIO_NORTH && 
@@ -299,24 +309,24 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+      return <TableCell className="digital-radio-cell digital-radio-empty p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
-      <TableCell className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>
+      <TableCell className={`digital-radio-cell digital-radio-${day} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
-          <div key={shift.id}>
-            <div className={`flex justify-center mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
-              <span>{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
+          <div key={shift.id} className="digital-radio-entry">
+            <div className={`digital-radio-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-radio-custom-time font-bold' : ''}`}>
+              <span>{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
             </div>
-            <div>
+            <div className="digital-radio-content">
               {shift.person_name && (
-                <span className="font-bold">
+                <span className="digital-radio-person font-bold">
                   {workerNames[shift.person_name] || shift.person_name}
                 </span>
               )}
               {shift.additional_text && (
-                <span className="block text-sm">{shift.additional_text}</span>
+                <span className="digital-radio-note block text-sm">{shift.additional_text}</span>
               )}
               {!shift.person_name && !shift.additional_text && '-'}
             </div>
@@ -333,10 +343,14 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     
     if (rows.length === 0) return null;
     
-    return rows.map((row) => (
-      <TableRow key={row.id}>
+    return rows.map((row, index) => (
+      <TableRow key={row.id} className={`digital-custom-row digital-custom-row-${sectionName}-${index}`}>
         {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
-          <TableCell key={`${row.id}-day-${dayIndex}`} className="p-2 border text-center" style={{ width: COLUMN_WIDTH }}>
+          <TableCell 
+            key={`${row.id}-day-${dayIndex}`} 
+            className={`digital-custom-cell digital-custom-cell-${sectionName}-${index}-${dayIndex} p-2 border text-center`} 
+            style={{ width: COLUMN_WIDTH }}
+          >
             {renderTableCellContent(row, dayIndex)}
           </TableCell>
         ))}
@@ -356,7 +370,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="digital-work-arrangement-view digital-work-arrangement-loading">
         <CardHeader>
           <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
         </CardHeader>
@@ -369,7 +383,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
   if (!arrangement) {
     return (
-      <Card>
+      <Card className="digital-work-arrangement-view digital-work-arrangement-empty">
         <CardHeader>
           <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
         </CardHeader>
@@ -382,35 +396,35 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
   return (
     <Card className="digital-work-arrangement-view" dir="rtl">
-      <CardHeader>
-        <CardTitle className="text-center">לוח משמרות דיגיטל</CardTitle>
-        <div className="text-center">{formatDateRange()}</div>
+      <CardHeader className="digital-work-arrangement-header">
+        <CardTitle className="digital-work-arrangement-title text-center">לוח משמרות דיגיטל</CardTitle>
+        <div className="digital-work-arrangement-date-range text-center">{formatDateRange()}</div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="digital-work-arrangement-content">
         <div className="space-y-6">
-          <div className="bg-white rounded-md overflow-x-auto">
-            <Table className="border">
+          <div className="digital-main-shifts-section bg-white rounded-md overflow-x-auto">
+            <Table className="digital-main-shifts-table border">
               <TableHeader>
-                <TableRow className="bg-black text-white">
+                <TableRow className="digital-main-shifts-header bg-black text-white">
                   {DAYS_OF_WEEK.map((day, index) => (
-                    <TableHead key={day} className="text-center text-white border" style={{ width: COLUMN_WIDTH }}>
-                      <div>{day}</div>
-                      <div className="text-sm">{weekDates[index]}</div>
+                    <TableHead key={day} className="digital-day-header text-center text-white border" style={{ width: COLUMN_WIDTH }}>
+                      <div className="digital-day-name">{day}</div>
+                      <div className="digital-day-date text-sm">{weekDates[index]}</div>
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
+                <TableRow className="digital-main-morning-row">
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.MORNING))}
                 </TableRow>
-                <TableRow>
+                <TableRow className="digital-main-afternoon-row">
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON))}
                 </TableRow>
-                <TableRow>
+                <TableRow className="digital-main-evening-row">
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`evening-${day}`} className="border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+                      return <TableCell key={`evening-${day}`} className="digital-shift-cell digital-shift-empty-evening-5 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.DIGITAL_SHIFTS, day, SHIFT_TYPES.EVENING);
                   })}
@@ -420,30 +434,30 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             </Table>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.RADIO_NORTH]}</div>
-            <Table className="border">
+          <div className="digital-radio-north-section overflow-x-auto">
+            <div className="digital-radio-north-title font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.RADIO_NORTH]}</div>
+            <Table className="digital-radio-north-table border">
               <TableBody>
-                <TableRow>
+                <TableRow className="digital-radio-north-row">
                   {[...Array(5)].map((_, day) => renderRadioNorthCell(day))}
-                  <TableCell className="border" style={{ width: COLUMN_WIDTH }}></TableCell>
+                  <TableCell className="digital-radio-north-empty-cell border" style={{ width: COLUMN_WIDTH }}></TableCell>
                 </TableRow>
                 {renderCustomRows(SECTION_NAMES.RADIO_NORTH)}
               </TableBody>
             </Table>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.TRANSCRIPTION_SHIFTS]}</div>
-            <Table className="border">
+          <div className="digital-transcription-section overflow-x-auto">
+            <div className="digital-transcription-title font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.TRANSCRIPTION_SHIFTS]}</div>
+            <Table className="digital-transcription-table border">
               <TableBody>
-                <TableRow>
+                <TableRow className="digital-transcription-morning-row">
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.MORNING))}
                 </TableRow>
-                <TableRow>
+                <TableRow className="digital-transcription-afternoon-row">
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`transcription-afternoon-${day}`} className="border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+                      return <TableCell key={`transcription-afternoon-${day}`} className="digital-transcription-afternoon-empty-5 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
@@ -453,17 +467,17 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             </Table>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.LIVE_SOCIAL_SHIFTS]}</div>
-            <Table className="border">
+          <div className="digital-social-section overflow-x-auto">
+            <div className="digital-social-title font-bold mb-2 text-center">{SECTION_TITLES[SECTION_NAMES.LIVE_SOCIAL_SHIFTS]}</div>
+            <Table className="digital-social-table border">
               <TableBody>
-                <TableRow>
+                <TableRow className="digital-social-morning-row">
                   {[...Array(6)].map((_, day) => renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.MORNING))}
                 </TableRow>
-                <TableRow>
+                <TableRow className="digital-social-afternoon-row">
                   {[...Array(6)].map((_, day) => {
                     if (day === 5) {
-                      return <TableCell key={`live-social-afternoon-${day}`} className="border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+                      return <TableCell key={`live-social-afternoon-${day}`} className="digital-social-afternoon-empty-5 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
                     }
                     return renderShiftCell(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, day, SHIFT_TYPES.AFTERNOON);
                   })}
@@ -473,17 +487,25 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             </Table>
           </div>
 
+          {arrangement.comic_prompt && (
+            <div className="digital-comic-prompt p-4 text-center border-t pt-6">
+              <h3 className="font-bold text-lg mb-2">קומיקס השבוע</h3>
+              <p className="digital-comic-text">{arrangement.comic_prompt}</p>
+            </div>
+          )}
+
           {arrangement.footer_text && (
-            <div className="p-4 text-center min-h-[350px]">
+            <div className="digital-footer-text p-4 text-center min-h-[350px]">
               {arrangement.footer_text}
             </div>
           )}
+          
           {arrangement.footer_image_url && (
-            <div className="flex justify-center">
+            <div className="digital-footer-image flex justify-center">
               <img 
                 src={arrangement.footer_image_url} 
                 alt="Footer" 
-                className="max-h-[300px]"
+                className="digital-footer-image-content max-h-[300px]"
               />
             </div>
           )}
