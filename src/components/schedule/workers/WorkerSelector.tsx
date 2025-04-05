@@ -62,6 +62,34 @@ export const WorkerSelector = ({
     onChange(value, e.target.value);
   };
   
+  // Safe rendering of command items
+  const renderCommandItems = () => {
+    if (loading) {
+      return <CommandItem disabled>טוען עובדים...</CommandItem>;
+    }
+    
+    if (!workers || workers.length === 0) {
+      return <CommandItem disabled>אין עובדים זמינים</CommandItem>;
+    }
+    
+    return workers.map((worker) => (
+      <CommandItem
+        key={worker.id}
+        value={worker.name}
+        onSelect={() => handleSelect(worker.id)}
+      >
+        <Check
+          className={cn(
+            "mr-2 h-4 w-4",
+            value === worker.id ? "opacity-100" : "opacity-0"
+          )}
+        />
+        {worker.name}
+        {worker.department && <span className="text-gray-500 text-sm mr-2">({worker.department})</span>}
+      </CommandItem>
+    ));
+  };
+  
   return (
     <div className={cn("flex flex-col gap-2", className)} dir="rtl">
       <Popover open={open} onOpenChange={setOpen}>
@@ -77,35 +105,16 @@ export const WorkerSelector = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0 bg-background" align="start">
-          {/* Use a key on Command to force re-render when workers changes */}
-          <Command dir="rtl" key={workers.length}>
-            <CommandInput placeholder="חיפוש עובדים..." />
-            <CommandEmpty>לא נמצאו עובדים</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-y-auto">
-              {loading ? (
-                <CommandItem disabled>טוען עובדים...</CommandItem>
-              ) : workers.length > 0 ? (
-                workers.map((worker) => (
-                  <CommandItem
-                    key={worker.id}
-                    value={worker.name}
-                    onSelect={() => handleSelect(worker.id)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === worker.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {worker.name}
-                    {worker.department && <span className="text-gray-500 text-sm mr-2">({worker.department})</span>}
-                  </CommandItem>
-                ))
-              ) : (
-                <CommandItem disabled>אין עובדים זמינים</CommandItem>
-              )}
-            </CommandGroup>
-          </Command>
+          {/* Simplified Command component with more reliable rendering */}
+          <div className="command-wrapper" dir="rtl">
+            <Command dir="rtl" className="w-full">
+              <CommandInput placeholder="חיפוש עובדים..." />
+              <CommandEmpty>לא נמצאו עובדים</CommandEmpty>
+              <CommandGroup className="max-h-64 overflow-y-auto">
+                {renderCommandItems()}
+              </CommandGroup>
+            </Command>
+          </div>
         </PopoverContent>
       </Popover>
       
