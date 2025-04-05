@@ -1,320 +1,228 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardContent 
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from "@/components/ui/table";
-import { PlusCircle, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Worker, getWorkers, createWorker, updateWorker, deleteWorker } from '@/lib/supabase/workers';
 import { useToast } from "@/hooks/use-toast";
-import { getWorkers, createWorker, updateWorker, deleteWorker } from '@/lib/supabase/workers';
-import { Worker } from '@/components/schedule/workers/WorkerSelector';
 
 const WorkersManagement = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
-  const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
-  const [currentWorker, setCurrentWorker] = useState<Worker | null>(null);
-  const [name, setName] = useState('');
-  const [department, setDepartment] = useState('');
-  const [position, setPosition] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    department: '',
+    position: ''
+  });
   
   const { toast } = useToast();
   
+  const fetchWorkers = async () => {
+    setLoading(true);
+    try {
+      const data = await getWorkers();
+      setWorkers(data);
+    } catch (error) {
+      console.error('Error fetching workers:', error);
+      toast({
+        title: "שגיאה",
+        description: "שגיאה בטעינת רשימת העובדים",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
-    loadWorkers();
+    fetchWorkers();
   }, []);
   
-  const loadWorkers = async () => {
-    setIsLoading(true);
-    try {
-      const fetchedWorkers = await getWorkers();
-      setWorkers(Array.isArray(fetchedWorkers) ? fetchedWorkers : []);
-    } catch (error) {
-      console.error('Error loading workers:', error);
-      toast({
-        title: "שגיאה בטעינת עובדים",
-        description: "אירעה שגיאה בעת טעינת רשימת העובדים",
-        variant: "destructive"
+  const handleOpenDialog = (worker?: Worker) => {
+    if (worker) {
+      setEditingWorker(worker);
+      setFormData({
+        name: worker.name,
+        department: worker.department || '',
+        position: worker.position || ''
       });
-      setWorkers([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleAddWorker = () => {
-    setDialogMode('add');
-    setCurrentWorker(null);
-    resetForm();
-    setShowDialog(true);
-  };
-  
-  const handleEditWorker = (worker: Worker) => {
-    setDialogMode('edit');
-    setCurrentWorker(worker);
-    setName(worker.name);
-    setDepartment(worker.department || '');
-    setPosition(worker.position || '');
-    setEmail(''); // Add email field if it exists in the worker object
-    setPhone(''); // Add phone field if it exists in the worker object
-    setShowDialog(true);
-  };
-  
-  const resetForm = () => {
-    setName('');
-    setDepartment('');
-    setPosition('');
-    setEmail('');
-    setPhone('');
-  };
-  
-  const handleSave = async () => {
-    if (!name.trim()) {
-      toast({
-        title: "שם נדרש",
-        description: "נא להזין שם לעובד",
-        variant: "destructive"
+    } else {
+      setEditingWorker(null);
+      setFormData({
+        name: '',
+        department: '',
+        position: ''
       });
-      return;
     }
-    
+    setDialogOpen(true);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleSubmit = async () => {
     try {
-      if (dialogMode === 'add') {
-        const newWorker = await createWorker({
-          name,
-          department,
-          position
+      if (!formData.name.trim()) {
+        toast({
+          title: "שגיאה",
+          description: "יש להזין שם עובד",
+          variant: "destructive",
         });
-        
-        if (newWorker) {
-          setWorkers(prev => [...prev, newWorker]);
-          toast({
-            title: "העובד נוסף בהצלחה",
-            description: `העובד ${name} נוסף בהצלחה`
-          });
-        }
-      } else if (dialogMode === 'edit' && currentWorker) {
-        const updatedWorker = await updateWorker(currentWorker.id, {
-          name,
-          department,
-          position
-        });
-        
-        if (updatedWorker) {
-          setWorkers(prev => prev.map(w => w.id === updatedWorker.id ? updatedWorker : w));
-          toast({
-            title: "העובד עודכן בהצלחה",
-            description: `העובד ${name} עודכן בהצלחה`
-          });
-        }
+        return;
       }
       
-      setShowDialog(false);
-      resetForm();
+      if (editingWorker) {
+        await updateWorker(editingWorker.id, formData);
+        toast({
+          title: "עודכן בהצלחה",
+          description: "פרטי העובד עודכנו בהצלחה",
+        });
+      } else {
+        await createWorker(formData);
+        toast({
+          title: "נוסף בהצלחה",
+          description: "העובד נוסף בהצלחה",
+        });
+      }
+      
+      setDialogOpen(false);
+      fetchWorkers();
     } catch (error) {
       console.error('Error saving worker:', error);
       toast({
-        title: "שגיאה בשמירת העובד",
-        description: "אירעה שגיאה בעת שמירת פרטי העובד",
-        variant: "destructive"
+        title: "שגיאה",
+        description: "שגיאה בשמירת העובד",
+        variant: "destructive",
       });
     }
   };
   
-  const handleDeleteWorker = async (worker: Worker) => {
-    if (!worker || !confirm(`האם למחוק את העובד ${worker.name}?`)) return;
-    
-    try {
-      const success = await deleteWorker(worker.id);
-      
-      if (success) {
-        setWorkers(prev => prev.filter(w => w.id !== worker.id));
+  const handleDeleteWorker = async (id: string) => {
+    if (confirm('האם אתה בטוח שברצונך למחוק את העובד?')) {
+      try {
+        await deleteWorker(id);
         toast({
-          title: "העובד נמחק בהצלחה",
-          description: `העובד ${worker.name} נמחק בהצלחה`
+          title: "נמחק בהצלחה",
+          description: "העובד נמחק בהצלחה",
+        });
+        fetchWorkers();
+      } catch (error) {
+        console.error('Error deleting worker:', error);
+        toast({
+          title: "שגיאה",
+          description: "שגיאה במחיקת העובד",
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error('Error deleting worker:', error);
-      toast({
-        title: "שגיאה במחיקת העובד",
-        description: "אירעה שגיאה בעת מחיקת העובד",
-        variant: "destructive"
-      });
     }
   };
   
-  // Filter workers based on search query
-  const filteredWorkers = workers.filter(worker => 
-    worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (worker.department && worker.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (worker.position && worker.position.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>ניהול עובדים</CardTitle>
-        <CardDescription>הוספה, עריכה ומחיקה של עובדים במערכת</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-between items-center mb-4">
-          <div className="relative w-full md:w-1/2">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <Input
-              placeholder="חיפוש עובדים..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 text-right"
-              dir="rtl"
-            />
-          </div>
-          <Button onClick={handleAddWorker} className="mr-2">
-            <PlusCircle className="ml-2 h-4 w-4" />
+    <div className="space-y-4" dir="rtl">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>ניהול עובדים</CardTitle>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
             הוספת עובד
           </Button>
-        </div>
-        
-        {isLoading ? (
-          <div className="text-center p-4">טוען עובדים...</div>
-        ) : filteredWorkers.length > 0 ? (
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="text-right">שם</TableHead>
                 <TableHead className="text-right">מחלקה</TableHead>
                 <TableHead className="text-right">תפקיד</TableHead>
-                <TableHead className="w-24">פעולות</TableHead>
+                <TableHead className="text-right">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredWorkers.map((worker) => (
-                <TableRow key={worker.id}>
-                  <TableCell className="text-right font-medium">{worker.name}</TableCell>
-                  <TableCell className="text-right">{worker.department || '-'}</TableCell>
-                  <TableCell className="text-right">{worker.position || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2 space-x-reverse justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditWorker(worker)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">טוען נתונים...</TableCell>
                 </TableRow>
-              ))}
+              ) : workers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">אין עובדים להצגה</TableCell>
+                </TableRow>
+              ) : (
+                workers.map((worker) => (
+                  <TableRow key={worker.id}>
+                    <TableCell className="font-medium">{worker.name}</TableCell>
+                    <TableCell>{worker.department || '-'}</TableCell>
+                    <TableCell>{worker.position || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenDialog(worker)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteWorker(worker.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
-        ) : (
-          <div className="text-center p-4 border rounded-md bg-gray-50">
-            {searchQuery ? 'לא נמצאו עובדים התואמים את החיפוש' : 'אין עובדים במערכת'}
-          </div>
-        )}
-        
-        {/* Add/Edit Worker Dialog */}
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="sm:max-w-md" dir="rtl">
-            <DialogHeader>
-              <DialogTitle>{dialogMode === 'add' ? 'הוספת עובד חדש' : 'עריכת פרטי עובד'}</DialogTitle>
-              <DialogDescription>
-                {dialogMode === 'add' 
-                  ? 'הוסף עובד חדש למערכת'
-                  : 'ערוך את פרטי העובד הקיים'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">שם העובד</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="הזן שם מלא"
-                  className="text-right"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="department">מחלקה</Label>
-                <Input
-                  id="department"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="הזן מחלקה"
-                  className="text-right"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="position">תפקיד</Label>
-                <Input
-                  id="position"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                  placeholder="הזן תפקיד"
-                  className="text-right"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">אימייל</Label>
-                <Input
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="הזן אימייל"
-                  type="email"
-                  className="text-right"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">טלפון</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="הזן טלפון"
-                  className="text-right"
-                />
-              </div>
+        </CardContent>
+      </Card>
+      
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>{editingWorker ? 'עריכת עובד' : 'הוספת עובד חדש'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">שם</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDialog(false)}>
-                ביטול
-              </Button>
-              <Button onClick={handleSave}>
-                {dialogMode === 'add' ? 'הוספה' : 'עדכון'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="department" className="text-right">מחלקה</Label>
+              <Input
+                id="department"
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="position" className="text-right">תפקיד</Label>
+              <Input
+                id="position"
+                name="position"
+                value={formData.position}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="default" onClick={handleSubmit}>
+              {editingWorker ? 'עדכון' : 'הוספה'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

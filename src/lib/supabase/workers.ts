@@ -14,18 +14,18 @@ export const getWorkers = async (): Promise<Worker[]> => {
       return [];
     }
     
-    if (!data) {
-      console.error('No data returned from workers query');
+    if (!data || !Array.isArray(data)) {
+      console.error('No valid data returned from workers query');
       return [];
     }
     
-    // Ensure we're actually returning an array of workers with valid properties
-    return Array.isArray(data) ? data.map(worker => ({
+    // Ensure we're returning an array of workers with valid properties
+    return data.map(worker => ({
       id: worker.id || '',
       name: worker.name || '',
       department: worker.department || '',
       position: worker.position || ''
-    })) : [];
+    }));
   } catch (error) {
     console.error('Error fetching workers:', error);
     return [];

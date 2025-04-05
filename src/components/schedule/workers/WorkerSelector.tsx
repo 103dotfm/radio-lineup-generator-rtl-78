@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
   const [inputValue, setInputValue] = useState(additionalText || "");
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   
   // Find the selected worker name
   const selectedWorker = workers.find(worker => worker.id === value);
@@ -39,7 +38,7 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
       setLoading(true);
       try {
         const data = await getWorkers();
-        setWorkers(Array.isArray(data) ? data : []);
+        setWorkers(data || []);
       } catch (error) {
         console.error('Error fetching workers:', error);
         setWorkers([]);
@@ -56,22 +55,12 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
     const newValue = value === currentValue ? null : currentValue;
     onChange(newValue, inputValue);
     setOpen(false);
-    
-    // Focus the input after selection for additional text
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 100);
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     onChange(value, e.target.value);
   };
-  
-  // Ensure we always have an array of workers
-  const workerItems = workers || [];
   
   return (
     <div className={cn("flex items-center space-x-2 space-x-reverse gap-2", className)} dir="rtl">
@@ -94,8 +83,8 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
             <CommandGroup className="max-h-64 overflow-y-auto">
               {loading ? (
                 <CommandItem disabled>טוען עובדים...</CommandItem>
-              ) : workerItems.length > 0 ? (
-                workerItems.map((worker) => (
+              ) : (
+                workers.map((worker) => (
                   <CommandItem
                     key={worker.id}
                     value={worker.name}
@@ -111,8 +100,6 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
                     {worker.department && <span className="text-gray-500 text-sm mr-2">({worker.department})</span>}
                   </CommandItem>
                 ))
-              ) : (
-                <CommandItem disabled>אין עובדים זמינים</CommandItem>
               )}
             </CommandGroup>
           </Command>
@@ -121,7 +108,6 @@ const WorkerSelector = ({ value, onChange, additionalText = "", placeholder = "�
       
       <input
         type="text"
-        ref={inputRef}
         value={inputValue}
         onChange={handleInputChange}
         placeholder="הערות נוספות..."
