@@ -285,7 +285,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           <div key={shift.id} className={`digital-shift-entry digital-shift-entry-${section}-${day}-${shiftType}-${shift.id} mb-1`}>
             <div className={`digital-shift-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-shift-custom-time font-bold' : ''}`}>
               {/* Fixed: RTL time display */}
-              <span dir="rtl">{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
+              <span dir="rtl">{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
             </div>
             <div className={`digital-shift-content digital-shift-content-${section}-${day}-${shiftType}`}>
               {shift.person_name && (
@@ -323,7 +323,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           <div key={shift.id} className={`digital-radio-entry digital-radio-entry-${day}-${shift.id} mb-1`}>
             <div className={`digital-radio-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-radio-custom-time font-bold' : ''}`}>
               {/* Fixed: RTL time display */}
-              <span dir="rtl">{shift.end_time.substring(0, 5)} - {shift.start_time.substring(0, 5)}</span>
+              <span dir="rtl">{shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}</span>
             </div>
             <div className={`digital-radio-content digital-radio-content-${day}`}>
               {shift.person_name && (
