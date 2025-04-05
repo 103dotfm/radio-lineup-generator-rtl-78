@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -23,9 +24,12 @@ const EditModeDialog: React.FC<EditModeDialogProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent aria-describedby="edit-mode-description">
         <DialogHeader>
           <DialogTitle>עריכת משבצת שידור</DialogTitle>
+          <DialogDescription id="edit-mode-description">
+            בחר כיצד לערוך את המשבצת
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 pt-4">
           <Button onClick={onEditCurrent} variant="outline">
