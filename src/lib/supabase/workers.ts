@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -7,13 +6,15 @@ export interface Worker {
   name: string;
   department?: string;
   position?: string;
+  email?: string;
+  phone?: string;
 }
 
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
       .from('workers')
-      .select('id, name, department, position')
+      .select('id, name, department, position, email, phone')
       .order('name');
     
     if (error) {
@@ -31,7 +32,9 @@ export const getWorkers = async (): Promise<Worker[]> => {
       id: worker.id || '',
       name: worker.name || '',
       department: worker.department || '',
-      position: worker.position || ''
+      position: worker.position || '',
+      email: worker.email || '',
+      phone: worker.phone || ''
     }));
   } catch (error) {
     console.error('Error fetching workers:', error);
@@ -50,7 +53,9 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
       .insert({
         name: worker.name,
         department: worker.department || null,
-        position: worker.position || null
+        position: worker.position || null,
+        email: worker.email || null,
+        phone: worker.phone || null
       })
       .select()
       .single();
@@ -69,7 +74,9 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
       id: data.id,
       name: data.name,
       department: data.department || '',
-      position: data.position || ''
+      position: data.position || '',
+      email: data.email || '',
+      phone: data.phone || ''
     };
   } catch (error) {
     console.error('Error creating worker:', error);
@@ -84,6 +91,8 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
     if (worker.name) updateData.name = worker.name;
     if (worker.department !== undefined) updateData.department = worker.department;
     if (worker.position !== undefined) updateData.position = worker.position;
+    if (worker.email !== undefined) updateData.email = worker.email;
+    if (worker.phone !== undefined) updateData.phone = worker.phone;
     
     if (Object.keys(updateData).length === 0) {
       throw new Error('No fields to update');
@@ -110,7 +119,9 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
       id: data.id,
       name: data.name,
       department: data.department || '',
-      position: data.position || ''
+      position: data.position || '',
+      email: data.email || '',
+      phone: data.phone || ''
     };
   } catch (error) {
     console.error('Error updating worker:', error);
