@@ -1,87 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { DatePicker } from "@/components/ui/date-picker";
-import { supabase } from "@/lib/supabase";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Pencil, Trash2, MoreVertical } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
-import '@/styles/digital-work-arrangement.css';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Worker, getWorkers, createWorker, updateWorker, deleteWorker } from '@/lib/supabase/workers';
+import DigitalWorkArrangementEditor from './DigitalWorkArrangementEditor';
 
-interface Shift {
-  id: string;
-  section_name: string;
-  day_of_week: number;
-  shift_type: string;
-  start_time: string;
-  end_time: string;
-  person_name: string | null;
-  additional_text: string | null;
-  is_custom_time: boolean;
-  is_hidden: boolean;
-  position: number;
-}
-
-interface CustomRow {
-  id: string;
-  section_name: string;
-  contents: Record<number, string>;
-  position: number;
-}
-
-interface WorkArrangement {
-  id: string;
-  week_start: string;
-  notes: string | null;
-  footer_text: string | null;
-  footer_image_url: string | null;
-  comic_prompt: string | null;
-}
-
-const SECTION_NAMES = {
-  DIGITAL_SHIFTS: 'digital_shifts',
-  RADIO_NORTH: 'radio_north',
-  TRANSCRIPTION_SHIFTS: 'transcription_shifts',
-  LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
-};
-
-const SHIFT_TYPES = {
-  MORNING: 'morning',
-  AFTERNOON: 'afternoon',
-  EVENING: 'evening',
-  CUSTOM: 'custom'
-};
-
-const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
-
-const DEFAULT_SHIFT_TIMES = {
-  [SHIFT_TYPES.MORNING]: { start: '09:00', end: '13:00' },
-  [SHIFT_TYPES.AFTERNOON]: { start: '13:00', end: '17:00' },
-  [SHIFT_TYPES.EVENING]: { start: '17:00', end: '21:00' },
-  [SHIFT_TYPES.CUSTOM]: { start: '12:00', end: '15:00' },
-};
-
-const DigitalWorkArrangement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("workers");
+// Worker management component
+const WorkerManagement: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -93,212 +25,204 @@ const DigitalWorkArrangement: React.FC = () => {
     email: '',
     phone: ''
   });
-  
   const { toast } = useToast();
-  
-  const fetchWorkers = async () => {
-    setLoading(true);
+
+  useEffect(() => {
+    loadWorkers();
+  }, []);
+
+  const loadWorkers = async () => {
     try {
-      const data = await getWorkers();
-      setWorkers(data);
+      const workersList = await getWorkers();
+      setWorkers(workersList);
+      setLoading(false);
     } catch (error) {
-      console.error('Error fetching workers:', error);
+      console.error('Error loading workers:', error);
       toast({
-        title: "שגיאה",
-        description: "שגיאה בטעינת רשימת העובדים",
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to load workers",
+        variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
-  
-  useEffect(() => {
-    fetchWorkers();
-  }, []);
-  
-  const handleOpenDialog = (worker?: Worker) => {
-    if (worker) {
-      setEditingWorker(worker);
-      setFormData({
-        name: worker.name,
-        department: worker.department || '',
-        position: worker.position || '',
-        email: worker.email || '',
-        phone: worker.phone || ''
-      });
-    } else {
-      setEditingWorker(null);
-      setFormData({
-        name: '',
-        department: '',
-        position: '',
-        email: '',
-        phone: ''
-      });
-    }
+
+  const handleAddWorker = () => {
+    setEditingWorker(null);
+    setFormData({
+      name: '',
+      department: '',
+      position: '',
+      email: '',
+      phone: ''
+    });
     setDialogOpen(true);
   };
-  
+
+  const handleEditWorker = (worker: Worker) => {
+    setEditingWorker(worker);
+    setFormData({
+      name: worker.name,
+      department: worker.department || '',
+      position: worker.position || '',
+      email: worker.email || '',
+      phone: worker.phone || ''
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDeleteWorker = async (id: string) => {
+    try {
+      const success = await deleteWorker(id);
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Worker deleted successfully",
+        });
+        loadWorkers();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete worker",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting worker:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleSubmit = async () => {
     try {
       if (!formData.name.trim()) {
         toast({
-          title: "שגיאה",
-          description: "יש להזין שם עובד",
-          variant: "destructive",
+          title: "Error",
+          description: "Worker name is required",
+          variant: "destructive"
         });
         return;
       }
-      
+
       if (editingWorker) {
-        await updateWorker(editingWorker.id, formData);
-        toast({
-          title: "עודכן בהצלחה",
-          description: "פרטי העובד עודכנו בהצלחה",
-        });
+        // Update existing worker
+        const updatedWorker = await updateWorker(editingWorker.id, formData);
+        if (updatedWorker) {
+          toast({
+            title: "Success",
+            description: "Worker updated successfully",
+          });
+        }
       } else {
-        await createWorker(formData);
-        toast({
-          title: "נוסף בהצלחה",
-          description: "העובד נוסף בהצלחה",
-        });
+        // Create new worker
+        const newWorker = await createWorker(formData);
+        if (newWorker) {
+          toast({
+            title: "Success",
+            description: "Worker added successfully",
+          });
+        }
       }
       
       setDialogOpen(false);
-      fetchWorkers();
+      loadWorkers();
     } catch (error) {
       console.error('Error saving worker:', error);
       toast({
-        title: "שגיאה",
-        description: "שגיאה בשמירת העובד",
-        variant: "destructive",
+        title: "Error",
+        description: "Failed to save worker data",
+        variant: "destructive"
       });
-    }
-  };
-  
-  const handleDeleteWorker = async (id: string) => {
-    if (confirm('האם אתה בטוח שברצונך למחוק את העובד?')) {
-      try {
-        await deleteWorker(id);
-        toast({
-          title: "נמחק בהצלחה",
-          description: "העובד נמחק בהצלחה",
-        });
-        fetchWorkers();
-      } catch (error) {
-        console.error('Error deleting worker:', error);
-        toast({
-          title: "שגיאה",
-          description: "שגיאה במחיקת העובד",
-          variant: "destructive",
-        });
-      }
     }
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="schedule">סידור עבודה</TabsTrigger>
-          <TabsTrigger value="workers">רשימת עובדים</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="schedule" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>סידור עבודה דיגיטל</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center p-4">
-                <p>עבור לעריכת סידור העבודה בלשונית "סידור עבודה דיגיטל" בתפריט הראשי</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="workers" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>ניהול עובדים</CardTitle>
-              <Button onClick={() => handleOpenDialog()}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                הוספת עובד
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Worker Management</h2>
+        <Button onClick={handleAddWorker}>
+          <Plus className="mr-2 h-4 w-4" /> Add Worker
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          {loading ? (
+            <div className="flex justify-center p-6">Loading workers...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {workers.length === 0 ? (
                   <TableRow>
-                    <TableHead className="text-right">שם</TableHead>
-                    <TableHead className="text-right">מחלקה</TableHead>
-                    <TableHead className="text-right">תפקיד</TableHead>
-                    <TableHead className="text-right">אימייל</TableHead>
-                    <TableHead className="text-right">טלפון</TableHead>
-                    <TableHead className="text-right">פעולות</TableHead>
+                    <TableCell colSpan={6} className="text-center">No workers found</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center">טוען נתונים...</TableCell>
+                ) : (
+                  workers.map(worker => (
+                    <TableRow key={worker.id}>
+                      <TableCell className="font-medium">{worker.name}</TableCell>
+                      <TableCell>{worker.department}</TableCell>
+                      <TableCell>{worker.position}</TableCell>
+                      <TableCell>{worker.email}</TableCell>
+                      <TableCell>{worker.phone}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditWorker(worker)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteWorker(worker.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  ) : workers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center">אין עובדים להצגה</TableCell>
-                    </TableRow>
-                  ) : (
-                    workers.map((worker) => (
-                      <TableRow key={worker.id}>
-                        <TableCell className="font-medium">{worker.name}</TableCell>
-                        <TableCell>{worker.department || '-'}</TableCell>
-                        <TableCell>{worker.position || '-'}</TableCell>
-                        <TableCell>{worker.email || '-'}</TableCell>
-                        <TableCell>{worker.phone || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenDialog(worker)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteWorker(worker.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent dir="rtl">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingWorker ? 'עריכת עובד' : 'הוספת עובד חדש'}</DialogTitle>
+            <DialogTitle>{editingWorker ? 'Edit Worker' : 'Add Worker'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">שם</Label>
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
                 className="col-span-3"
+                required
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="department" className="text-right">מחלקה</Label>
+              <Label htmlFor="department" className="text-right">
+                Department
+              </Label>
               <Input
                 id="department"
                 name="department"
@@ -308,7 +232,9 @@ const DigitalWorkArrangement: React.FC = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="position" className="text-right">תפקיד</Label>
+              <Label htmlFor="position" className="text-right">
+                Position
+              </Label>
               <Input
                 id="position"
                 name="position"
@@ -318,7 +244,9 @@ const DigitalWorkArrangement: React.FC = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">אימייל</Label>
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
               <Input
                 id="email"
                 name="email"
@@ -329,7 +257,9 @@ const DigitalWorkArrangement: React.FC = () => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">טלפון</Label>
+              <Label htmlFor="phone" className="text-right">
+                Phone
+              </Label>
               <Input
                 id="phone"
                 name="phone"
@@ -340,12 +270,38 @@ const DigitalWorkArrangement: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="default" onClick={handleSubmit}>
-              {editingWorker ? 'עדכון' : 'הוספה'}
+            <Button type="submit" onClick={handleSubmit}>
+              {editingWorker ? 'Save Changes' : 'Add Worker'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+};
+
+// Main component
+const DigitalWorkArrangement: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>("schedule");
+
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-6">Digital Work Arrangement</h1>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="schedule">Schedule Editor</TabsTrigger>
+          <TabsTrigger value="workers">Worker Management</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="schedule">
+          <DigitalWorkArrangementEditor />
+        </TabsContent>
+        
+        <TabsContent value="workers">
+          <WorkerManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
