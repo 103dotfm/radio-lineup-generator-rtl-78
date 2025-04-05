@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -68,5 +69,8 @@ const SHIFT_TYPES = {
 };
 
 const DigitalWorkArrangement: React.FC = () => {
-  // ... keep existing code
+  // The fix: Return a placeholder component for now
+  return <div>Digital Work Arrangement</div>;
 };
+
+export default DigitalWorkArrangement;
