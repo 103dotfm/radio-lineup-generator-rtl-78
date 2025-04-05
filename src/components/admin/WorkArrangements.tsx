@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -99,7 +100,7 @@ export default function WorkArrangements() {
   const [filename, setFilename] = useState<string | null>(null);
   const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">("producers");
   const [weekDate, setWeekDate] = useState<Date>(new Date());
-  const toast = useToast();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -111,7 +112,8 @@ export default function WorkArrangements() {
   })
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
+    const file = values.pdf_file[0];
+    handleFileUpload(file);
   }
 
   const handleFileUpload = async (file: File) => {
@@ -127,7 +129,7 @@ export default function WorkArrangements() {
 
       if (error) {
         console.error("Error uploading file: ", error);
-        toast.toast({
+        toast({
           title: "Error",
           description: "Failed to upload file.",
           variant: "destructive",
@@ -141,13 +143,13 @@ export default function WorkArrangements() {
 
       await saveFileToDatabase(url, file.name, weekStartStr);
 
-      toast.toast({
+      toast({
         title: "Success",
         description: "File uploaded successfully.",
       });
     } catch (error) {
       console.error("Error during file upload: ", error);
-      toast.toast({
+      toast({
         title: "Error",
         description: "An unexpected error occurred during file upload.",
         variant: "destructive",
@@ -168,21 +170,21 @@ export default function WorkArrangements() {
 
       if (error) {
         console.error("Error saving file info to database: ", error);
-        toast.toast({
+        toast({
           title: "Error",
           description: "Failed to save file information to the database.",
           variant: "destructive",
         });
       } else {
         console.log("File info saved to database: ", data);
-        toast.toast({
+        toast({
           title: "Success",
           description: "File information saved to the database.",
         });
       }
     } catch (error) {
       console.error("Error saving file info to database: ", error);
-      toast.toast({
+      toast({
         title: "Error",
         description: "An unexpected error occurred while saving file information.",
         variant: "destructive",
@@ -233,7 +235,13 @@ export default function WorkArrangements() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                setFileType(value as "producers" | "engineers" | "digital");
+                              }} 
+                              defaultValue={field.value}
+                            >
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select a type" />
@@ -262,7 +270,7 @@ export default function WorkArrangements() {
                                 onChange={(e) => {
                                   const files = e.target.files;
                                   if (files) {
-                                    form.setValue("pdf_file", files);
+                                    field.onChange(files);
                                   }
                                 }}
                               />

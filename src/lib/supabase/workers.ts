@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
