@@ -34,3 +34,15 @@ export interface DayNote {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface DigitalWorkArrangement {
+  id: string;
+  week_start: string;
+  notes: string | null;
+  footer_text: string | null;
+  footer_image_url: string | null;
+  comic_prompt: string | null;
+  comic_image_url: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
