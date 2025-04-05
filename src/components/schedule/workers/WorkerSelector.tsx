@@ -1,18 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getWorkers } from '@/lib/supabase/workers';
-
-export interface Worker {
-  id: string;
-  name: string;
-  department?: string;
-  position?: string;
-}
+import { Worker, getWorkers } from '@/lib/supabase/workers';
 
 interface WorkerSelectorProps {
   value: string | null;
