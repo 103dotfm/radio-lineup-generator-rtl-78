@@ -6,6 +6,7 @@ import { Wand2, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
+import { DigitalWorkArrangement } from '@/types/schedule';
 
 interface ComicSketchGeneratorProps {
   initialText: string;
@@ -70,16 +71,25 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
-          await supabase
+          const { error } = await supabase
             .from('digital_work_arrangements')
             .update({
               comic_image_url: imageUrl
             })
             .eq('id', arrangementId);
+            
+          if (error) {
+            throw error;
+          }
           
           onImageGenerated(imageUrl);
         } catch (error) {
           console.error("Error saving image URL:", error);
+          toast({
+            title: "שגיאה בשמירת הקישור",
+            description: "אירעה שגיאה בשמירת קישור התמונה",
+            variant: "destructive"
+          });
         }
       }
       
