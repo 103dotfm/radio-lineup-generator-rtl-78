@@ -81,7 +81,7 @@ const DEFAULT_SHIFT_TIMES = {
 };
 
 const DigitalWorkArrangement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("schedule");
+  const [activeTab, setActiveTab] = useState<string>("workers");
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
