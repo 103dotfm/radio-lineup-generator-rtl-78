@@ -70,21 +70,12 @@ const LineupItem = ({
   }, [editor, details]);
 
   // Explicitly check and convert the boolean flags for safety
-  const isDivider = is_divider === true;
-  const isBreak = is_break === true; 
-  const isNote = is_note === true;
-
-  // Log item type for debugging
-  console.log(`LineupItem ${id} (${name}) render:`, { 
-    is_break: isBreak, 
-    is_note: isNote, 
-    is_divider: isDivider,
-    item_type: isDivider ? 'divider' : isBreak ? 'break' : isNote ? 'note' : 'regular'
-  });
+  const isDivider = Boolean(is_divider);
+  const isBreak = Boolean(is_break); 
+  const isNote = Boolean(is_note);
 
   // Dividers are handled separately in LineupTable
   if (isDivider) {
-    console.log(`Item ${id} (${name}) identified as divider, returning null`);
     return null;
   }
 
