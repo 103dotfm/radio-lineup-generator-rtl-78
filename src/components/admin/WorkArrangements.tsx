@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -135,7 +136,8 @@ export default function WorkArrangements() {
         return;
       }
 
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${data.Key}`;
+      // Fix: Access the path from data instead of Key
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
       setFileUrl(url);
       setFilename(file.name);
 
@@ -158,16 +160,15 @@ export default function WorkArrangements() {
 
   const saveFileToDatabase = async (url: string, filename: string, weekStart: string) => {
     try {
+      // Fix: Change the upsert to provide a single object, not an array
       const { data, error } = await supabase
         .from('work_arrangements')
-        .upsert([
-          {
-            filename: filename,
-            url: url,
-            type: fileType,
-            week_start: weekStart,
-          },
-        ], { onConflict: ['type', 'week_start'] });
+        .upsert({
+          filename: filename,
+          url: url,
+          type: fileType,
+          week_start: weekStart,
+        }, { onConflict: 'type, week_start' });
 
       if (error) {
         console.error("Error saving file info to database: ", error);
