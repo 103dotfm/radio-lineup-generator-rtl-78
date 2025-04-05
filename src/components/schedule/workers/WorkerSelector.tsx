@@ -75,7 +75,7 @@ export const WorkerSelector = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent className="w-full p-0 bg-background" align="start">
           <Command dir="rtl">
             <CommandInput placeholder="חיפוש עובדים..." />
             <CommandEmpty>לא נמצאו עובדים</CommandEmpty>
@@ -83,6 +83,7 @@ export const WorkerSelector = ({
               {loading ? (
                 <CommandItem disabled>טוען עובדים...</CommandItem>
               ) : (
+                workers && workers.length > 0 ? 
                 workers.map((worker) => (
                   <CommandItem
                     key={worker.id}
@@ -98,7 +99,9 @@ export const WorkerSelector = ({
                     {worker.name}
                     {worker.department && <span className="text-gray-500 text-sm mr-2">({worker.department})</span>}
                   </CommandItem>
-                ))
+                )) : (
+                  <CommandItem disabled>אין עובדים זמינים</CommandItem>
+                )
               )}
             </CommandGroup>
           </Command>
