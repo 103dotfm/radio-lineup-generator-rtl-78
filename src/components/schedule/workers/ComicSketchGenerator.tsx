@@ -80,8 +80,7 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
-          // Use explicit typing to avoid TypeScript errors
-          const updateData: { comic_image_url: string } = {
+          const updateData = {
             comic_image_url: imageUrl
           };
           
