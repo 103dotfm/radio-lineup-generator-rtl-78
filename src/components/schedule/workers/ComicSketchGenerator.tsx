@@ -15,6 +15,8 @@ interface ComicSketchGeneratorProps {
   arrangementId?: string;
   onTextChange: (text: string) => void;
   onImageGenerated?: (imageUrl: string) => void;
+  existingImageUrl?: string | null;
+  prompt?: string;
 }
 
 const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
@@ -22,12 +24,14 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
   initialImageUrl,
   arrangementId,
   onTextChange,
-  onImageGenerated
+  onImageGenerated,
+  existingImageUrl,
+  prompt: externalPrompt
 }) => {
   const [text, setText] = useState(initialText);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(externalPrompt || "");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [image, setImage] = useState<string | null>(initialImageUrl || null);
+  const [image, setImage] = useState<string | null>(initialImageUrl || existingImageUrl || null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -35,8 +39,14 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
   }, [initialText]);
 
   useEffect(() => {
-    setImage(initialImageUrl || null);
-  }, [initialImageUrl]);
+    setImage(initialImageUrl || existingImageUrl || null);
+  }, [initialImageUrl, existingImageUrl]);
+
+  useEffect(() => {
+    if (externalPrompt) {
+      setPrompt(externalPrompt);
+    }
+  }, [externalPrompt]);
 
   // Cleanup function when component unmounts
   useEffect(() => {
@@ -80,8 +90,7 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
-          // Use explicit typing to avoid TypeScript errors
-          const updateData: { comic_image_url: string } = {
+          const updateData = {
             comic_image_url: imageUrl
           };
           
