@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { format, addWeeks, subWeeks } from 'date-fns';
+import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, Clock } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +52,7 @@ interface WorkArrangement {
   notes: string | null;
   footer_text: string | null;
   footer_image_url: string | null;
+  comic_prompt: string | null;
 }
 
 // Constants for section and shift types
@@ -105,12 +106,14 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
   const [customRowDialogOpen, setCustomRowDialogOpen] = useState(false);
   const [footerTextDialogOpen, setFooterTextDialogOpen] = useState(false);
+  const [comicPromptDialogOpen, setComicPromptDialogOpen] = useState(false);
   
   // Edit mode state
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [editingCustomRow, setEditingCustomRow] = useState<CustomRow | null>(null);
   const [customRowContent, setCustomRowContent] = useState<Record<number, string>>({});
   const [footerText, setFooterText] = useState('');
+  const [comicPrompt, setComicPrompt] = useState('');
   
   // New shift data
   const [newShiftData, setNewShiftData] = useState({
@@ -127,19 +130,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    return () => {
-      // Reset pointer-events style if it was set
-      if (document.body.style.pointerEvents === 'none') {
-        document.body.style.pointerEvents = '';
-      }
-      
-      // Clean up any stray divs with IDs starting with "cbcb"
-      const strayDivs = document.querySelectorAll('div[id^="cbcb"]');
-      strayDivs.forEach(div => div.remove());
-    };
-  }, []);
-
+  // Load workers
   useEffect(() => {
     const loadWorkers = async () => {
       try {
@@ -158,6 +149,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     loadWorkers();
   }, [toast]);
 
+  // Load arrangement data
   useEffect(() => {
     fetchArrangement();
   }, [weekDate]);
@@ -179,6 +171,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       if (arrangementData && arrangementData.length > 0) {
         const firstArrangement = arrangementData[0];
         setArrangement(firstArrangement);
+        setComicPrompt(firstArrangement.comic_prompt || '');
         setFooterText(firstArrangement.footer_text || '');
         
         const { data: shiftsData, error: shiftsError } = await supabase
@@ -203,6 +196,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           throw customRowsError;
         }
         
+        // Process custom rows
         const processedCustomRows = customRowsData?.map(row => {
           let contents: Record<number, string> = {};
           
@@ -212,10 +206,13 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                 try {
                   contents = JSON.parse(row.contents);
                 } catch {
+                  // If it's not parseable JSON, create an empty object
                   contents = {};
                 }
               } else if (typeof row.contents === 'object') {
+                // Safely convert any type to string in the contents object
                 Object.entries(row.contents).forEach(([key, value]) => {
+                  // Ensure we only use values that can be converted to strings
                   if (value !== null && value !== undefined) {
                     contents[Number(key)] = String(value);
                   } else {
@@ -244,7 +241,8 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             week_start: weekStartStr,
             notes: null,
             footer_text: null,
-            footer_image_url: null
+            footer_image_url: null,
+            comic_prompt: null
           }])
           .select()
           .single();
@@ -439,6 +437,32 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
   };
 
+  const handleSaveComicPrompt = async () => {
+    if (!arrangement) return;
+    
+    try {
+      const { error } = await supabase
+        .from('digital_work_arrangements')
+        .update({ comic_prompt: comicPrompt })
+        .eq('id', arrangement.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "בוצע",
+        description: "הפרומפט עודכן בהצלחה"
+      });
+      setComicPromptDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating comic prompt:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לשמור את הפרומפט",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSaveFooterText = async () => {
     if (!arrangement) return;
     
@@ -502,6 +526,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       setCustomRowContent(row.contents);
     } else {
       setEditingCustomRow(null);
+      // Initialize empty contents for each day
       const initialContents: Record<number, string> = {};
       for (let i = 0; i < 6; i++) {
         initialContents[i] = '';
@@ -515,6 +540,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     if (!arrangement) return;
     
     try {
+      // Only update when needed - modified to prevent continuous saving
       if (shift.person_name !== workerId || shift.additional_text !== additionalText) {
         const { error } = await supabase
           .from('digital_shifts')
@@ -526,6 +552,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         
         if (error) throw error;
         
+        // Update local state to avoid refetching
         setShifts(shifts.map(s => 
           s.id === shift.id 
             ? {...s, person_name: workerId, additional_text: additionalText || s.additional_text}
@@ -542,17 +569,20 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
   };
 
+  // Handle updating custom cell content with debounce to prevent excessive updates
   const [pendingCustomCellUpdates, setPendingCustomCellUpdates] = useState<Record<string, any>>({});
   const [cellFocused, setCellFocused] = useState<string | null>(null);
-
+  
   const updateCustomCellContent = (rowId: string, dayIndex: number, content: string) => {
     const key = `${rowId}-${dayIndex}`;
     
+    // Update pending updates
     setPendingCustomCellUpdates(prev => ({
       ...prev,
       [key]: { rowId, dayIndex, content }
     }));
     
+    // Update local state immediately for UI
     setCustomRows(customRows.map(row => {
       if (row.id === rowId) {
         return {
@@ -566,11 +596,13 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       return row;
     }));
   };
-
+  
+  // Save pending updates when focus moves away
   const saveCustomCellContent = async (rowId: string, dayIndex: number) => {
     const key = `${rowId}-${dayIndex}`;
     setCellFocused(null);
     
+    // Check if there's a pending update for this cell
     const pendingUpdate = pendingCustomCellUpdates[key];
     
     if (pendingUpdate) {
@@ -587,6 +619,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         
         if (error) throw error;
         
+        // Clear the pending update
         setPendingCustomCellUpdates(prev => {
           const updated = { ...prev };
           delete updated[key];
@@ -603,6 +636,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
   };
 
+  // Get shifts for a specific section, day, and type
   const getShiftsForCell = (section: string, day: number, shiftType: string) => {
     return shifts.filter(shift => 
       shift.section_name === section && 
@@ -611,13 +645,16 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     );
   };
 
+  // Get custom rows for a section
   const getCustomRowsForSection = (section: string) => {
     return customRows.filter(row => row.section_name === section);
   };
 
+  // Render a table cell for a shift
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     const cellShifts = getShiftsForCell(section, day, shiftType);
     
+    // If no shifts exist, render a cell with an add button
     if (cellShifts.length === 0) {
       return (
         <TableCell className="p-2 border text-center align-top">
@@ -644,6 +681,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       );
     }
     
+    // Render shifts for this cell
     return (
       <TableCell className="p-2 border align-top">
         {cellShifts.map((shift) => (
@@ -689,6 +727,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     );
   };
 
+  // Render custom rows for a section
   const renderCustomRows = (section: string) => {
     const rows = getCustomRowsForSection(section);
     
@@ -751,28 +790,14 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     ));
   };
 
+  // Format the date range for display
   const formatDateRange = () => {
     const startDay = format(weekDate, 'dd', { locale: he });
     const endDate = new Date(weekDate);
-    endDate.setDate(endDate.getDate() + 5);
+    endDate.setDate(endDate.getDate() + 5); // Friday
     const endDay = format(endDate, 'dd', { locale: he });
     const month = format(weekDate, 'MMMM yyyy', { locale: he });
     return `${endDay}-${startDay} ב${month}`;
-  };
-
-  const closeShiftDialog = () => {
-    document.body.style.pointerEvents = '';
-    setShiftDialogOpen(false);
-  };
-
-  const closeCustomRowDialog = () => {
-    document.body.style.pointerEvents = '';
-    setCustomRowDialogOpen(false);
-  };
-
-  const closeFooterTextDialog = () => {
-    document.body.style.pointerEvents = '';
-    setFooterTextDialogOpen(false);
   };
 
   return (
@@ -808,6 +833,9 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap space-x-2 space-x-reverse mb-4">
+            <Button onClick={() => setComicPromptDialogOpen(true)}>
+              {arrangement?.comic_prompt ? 'ערוך פרומפט קומיקס' : 'הוסף פרומפט קומיקס'}
+            </Button>
             <Button onClick={() => setFooterTextDialogOpen(true)}>
               {arrangement?.footer_text ? 'ערוך טקסט תחתון' : 'הוסף טקסט תחתון'}
             </Button>
@@ -838,26 +866,16 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                     </TableRow>
                   ))}
                   
+                  {/* Custom rows */}
                   {renderCustomRows(currentSection)}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
 
-          <Dialog open={shiftDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              document.body.style.pointerEvents = '';
-            }
-            setShiftDialogOpen(open);
-          }}>
-            <DialogContent className="sm:max-w-[425px] bg-background" 
-              onEscapeKeyDown={closeShiftDialog}
-              onPointerDownOutside={closeShiftDialog}
-              onInteractOutside={(e) => {
-                e.preventDefault();
-                closeShiftDialog();
-              }}
-              dir="rtl">
+          {/* Shift Edit Dialog */}
+          <Dialog open={shiftDialogOpen} onOpenChange={setShiftDialogOpen}>
+            <DialogContent className="sm:max-w-[425px] bg-background" dir="rtl">
               <DialogHeader>
                 <DialogTitle>
                   {editingShift ? 'עריכת משמרת' : 'הוספת משמרת חדשה'}
@@ -990,20 +1008,9 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={customRowDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              document.body.style.pointerEvents = '';
-            }
-            setCustomRowDialogOpen(open);
-          }}>
-            <DialogContent className="max-w-4xl bg-background" 
-              onEscapeKeyDown={closeCustomRowDialog}
-              onPointerDownOutside={closeCustomRowDialog}
-              onInteractOutside={(e) => {
-                e.preventDefault();
-                closeCustomRowDialog();
-              }}
-              dir="rtl">
+          {/* Custom Row Dialog */}
+          <Dialog open={customRowDialogOpen} onOpenChange={setCustomRowDialogOpen}>
+            <DialogContent className="max-w-4xl bg-background" dir="rtl">
               <DialogHeader>
                 <DialogTitle>
                   {editingCustomRow ? 'עריכת שורה מותאמת אישית' : 'הוספת שורה מותאמת אישית'}
@@ -1028,20 +1035,29 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          <Dialog open={footerTextDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              document.body.style.pointerEvents = '';
-            }
-            setFooterTextDialogOpen(open);
-          }}>
-            <DialogContent className="bg-background" 
-              onEscapeKeyDown={closeFooterTextDialog}
-              onPointerDownOutside={closeFooterTextDialog}
-              onInteractOutside={(e) => {
-                e.preventDefault();
-                closeFooterTextDialog();
-              }}
-              dir="rtl">
+          {/* Comic Prompt Dialog */}
+          <Dialog open={comicPromptDialogOpen} onOpenChange={setComicPromptDialogOpen}>
+            <DialogContent className="bg-background" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>פרומפט קומיקס</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Textarea
+                  placeholder="הזן פרומפט לקומיקס..."
+                  className="min-h-[200px] bg-background"
+                  value={comicPrompt}
+                  onChange={(e) => setComicPrompt(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={handleSaveComicPrompt}>שמור</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Footer Text Dialog */}
+          <Dialog open={footerTextDialogOpen} onOpenChange={setFooterTextDialogOpen}>
+            <DialogContent className="bg-background" dir="rtl">
               <DialogHeader>
                 <DialogTitle>טקסט תחתון</DialogTitle>
               </DialogHeader>
