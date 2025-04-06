@@ -1,6 +1,6 @@
 
 import { supabase } from "../supabase";
-import { Show, ShowItem } from "@/types/show";
+import { Show, ShowItem, Interviewee } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   try {
@@ -18,7 +18,7 @@ export const getShows = async (): Promise<Show[]> => {
     const shows = data?.map(show => ({
       ...show,
       items: Array.isArray(show.items) ? show.items : []
-    })) || [];
+    })) as Show[] || [];
     
     return shows;
   } catch (error) {
@@ -63,12 +63,12 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     const showsFromItems = itemResults
       .filter(item => item.show) // Filter out items that don't have a show
       .map(item => {
-        const show = item.show as Show;
+        const show = item.show as any;
         if (!show) return null;
         return {
           ...show,
           items: [item]
-        };
+        } as Show;
       })
       .filter(Boolean) as Show[]; // Remove null values
 
@@ -76,7 +76,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     const processedShowResults = (showResults || []).map(show => ({
       ...show,
       items: Array.isArray(show.items) ? show.items : []
-    }));
+    })) as Show[];
     
     // Merge results, avoiding duplicates
     const allShows: Show[] = [...processedShowResults];
@@ -112,7 +112,7 @@ export const getShow = async (id: string): Promise<Show | null> => {
     return data ? {
       ...data,
       items: Array.isArray(data.items) ? data.items : []
-    } : null;
+    } as Show : null;
   } catch (error) {
     console.error(`Error fetching show with ID ${id}:`, error);
     return null;
@@ -146,8 +146,8 @@ export const getShowWithItems = async (id: string): Promise<{show: Show | null; 
     }
     
     return { 
-      show: show,
-      items: items || []
+      show: show as Show,
+      items: items as ShowItem[] || []
     };
   } catch (error) {
     console.error(`Error in getShowWithItems for ID ${id}:`, error);
@@ -172,7 +172,7 @@ export const getShowsByDate = async (dateString: string): Promise<Show[]> => {
     return (data || []).map(show => ({
       ...show,
       items: Array.isArray(show.items) ? show.items : []
-    }));
+    })) as Show[];
   } catch (error) {
     console.error(`Error fetching shows for date ${dateString}:`, error);
     return [];
@@ -188,13 +188,19 @@ export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
     
     const { data, error } = await supabase
       .from('shows')
-      .insert([show])
+      .insert([{
+        name: show.name,
+        date: show.date,
+        time: show.time,
+        notes: show.notes,
+        slot_id: show.slot_id
+      }])
       .select()
       .single();
     
     if (error) throw error;
     
-    return data;
+    return data as Show;
   } catch (error) {
     console.error('Error creating show:', error);
     return null;
@@ -205,14 +211,20 @@ export const updateShow = async (id: string, updates: Partial<Show>): Promise<Sh
   try {
     const { data, error } = await supabase
       .from('shows')
-      .update(updates)
+      .update({
+        name: updates.name,
+        date: updates.date,
+        time: updates.time,
+        notes: updates.notes,
+        slot_id: updates.slot_id
+      })
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
     
-    return data;
+    return data as Show;
   } catch (error) {
     console.error(`Error updating show with ID ${id}:`, error);
     return null;
@@ -253,13 +265,24 @@ export const createShowItem = async (item: Partial<ShowItem>): Promise<ShowItem 
     
     const { data, error } = await supabase
       .from('show_items')
-      .insert([item])
+      .insert([{
+        name: item.name,
+        position: item.position,
+        show_id: item.show_id,
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        is_break: item.is_break,
+        is_note: item.is_note,
+        is_divider: item.is_divider
+      }])
       .select()
       .single();
     
     if (error) throw error;
     
-    return data;
+    return data as ShowItem;
   } catch (error) {
     console.error('Error creating show item:', error);
     return null;
@@ -268,16 +291,30 @@ export const createShowItem = async (item: Partial<ShowItem>): Promise<ShowItem 
 
 export const updateShowItem = async (id: string, updates: Partial<ShowItem>): Promise<ShowItem | null> => {
   try {
+    const updateData: Record<string, any> = {};
+    
+    // Only include fields that are actually being updated
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.position !== undefined) updateData.position = updates.position;
+    if (updates.show_id !== undefined) updateData.show_id = updates.show_id;
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.details !== undefined) updateData.details = updates.details;
+    if (updates.phone !== undefined) updateData.phone = updates.phone;
+    if (updates.duration !== undefined) updateData.duration = updates.duration;
+    if (updates.is_break !== undefined) updateData.is_break = updates.is_break;
+    if (updates.is_note !== undefined) updateData.is_note = updates.is_note;
+    if (updates.is_divider !== undefined) updateData.is_divider = updates.is_divider;
+    
     const { data, error } = await supabase
       .from('show_items')
-      .update(updates)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
     
     if (error) throw error;
     
-    return data;
+    return data as ShowItem;
   } catch (error) {
     console.error(`Error updating show item with ID ${id}:`, error);
     return null;
@@ -312,25 +349,38 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
     
     if (showId) {
       // Update existing show
+      const showData: Record<string, any> = {};
+      if (show.name) showData.name = show.name;
+      if (show.date !== undefined) showData.date = show.date;
+      if (show.time !== undefined) showData.time = show.time;
+      if (show.notes !== undefined) showData.notes = show.notes;
+      if (show.slot_id !== undefined) showData.slot_id = show.slot_id;
+      
       const { data, error } = await supabase
         .from('shows')
-        .update(show)
+        .update(showData)
         .eq('id', showId)
         .select()
         .single();
       
       if (error) throw error;
-      savedShow = data;
-    } else {
+      savedShow = data as Show;
+    } else if (show.name) {
       // Create new show
       const { data, error } = await supabase
         .from('shows')
-        .insert([show])
+        .insert([{
+          name: show.name,
+          date: show.date,
+          time: show.time,
+          notes: show.notes,
+          slot_id: show.slot_id
+        }])
         .select()
         .single();
       
       if (error) throw error;
-      savedShow = data;
+      savedShow = data as Show;
     }
     
     if (!savedShow) throw new Error('Failed to save show');
@@ -348,11 +398,18 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
     // Add show_id to each item and add position index
     // Ensure each item has a name which is required
     const itemsToInsert = items
+      .filter(item => item !== null && item !== undefined)
       .map((item, index) => ({
-        ...item,
         name: item.name || 'Untitled Item', // Provide a default name
+        position: index,
         show_id: savedShow!.id,
-        position: index
+        title: item.title,
+        details: item.details,
+        phone: item.phone,
+        duration: item.duration,
+        is_break: item.is_break,
+        is_note: item.is_note,
+        is_divider: item.is_divider
       }));
     
     // Create new items if any exist
