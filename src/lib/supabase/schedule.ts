@@ -540,66 +540,54 @@ export const addMissingColumns = async () => {
   }
 };
 
-export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, startDate: Date, endDate: Date) => {
+export const createRecurringSlotsFromMaster = async (
+  slotId: string,
+  dateRange: { startDate: string; endDate: string }
+): Promise<{ success: boolean; error?: any }> => {
   try {
-    const startDateStr = format(startDate, 'yyyy-MM-dd');
-    const endDateStr = format(endDate, 'yyyy-MM-dd');
-
-    const { data: existingSlots, error: existingError } = await supabase
+    // First get the master slot to be used as a template
+    const { data: masterSlot, error: masterError } = await supabase
       .from('schedule_slots')
       .select('*')
-      .eq('parent_slot_id', masterSlot.id)
-      .gte('slot_date', startDateStr)
-      .lte('slot_date', endDateStr);
+      .eq('id', slotId)
+      .single();
 
-    if (existingError) {
-      throw existingError;
+    if (masterError) {
+      console.error('Error fetching master slot:', masterError);
+      return { success: false, error: masterError };
     }
 
-    // Convert start date to the actual day of the week
-    let currentDate = startOfWeek(startDate, { weekStartsOn: 0 });
-    currentDate = addDays(currentDate, masterSlot.day_of_week);
+    // Generate dates for the recurring slots
+    const dateList = generateDateList(
+      dateRange.startDate,
+      dateRange.endDate,
+      masterSlot.day_of_week
+    );
 
-    // If the slot day is before the start date, move to next week
-    if (isBefore(currentDate, startDate)) {
-      currentDate = addWeeks(currentDate, 1);
-    }
+    // Create the slot for each date
+    for (const date of dateList) {
+      // Directly define the object properties to avoid complex type instantiation
+      const newSlotData = {
+        show_name: masterSlot.show_name,
+        host_name: masterSlot.host_name,
+        start_time: masterSlot.start_time,
+        end_time: masterSlot.end_time,
+        day_of_week: masterSlot.day_of_week,
+        color: masterSlot.color,
+        is_prerecorded: masterSlot.is_prerecorded,
+        is_collection: masterSlot.is_collection,
+        slot_date: date,
+        parent_slot_id: slotId
+      };
 
-    // Loop through dates in range
-    while ((isAfter(currentDate, startDate) || isEqual(currentDate, startDate)) && isBefore(currentDate, endDate)) {
-      const dateStr = format(currentDate, 'yyyy-MM-dd');
-      
-      // Check if a slot already exists for this date
-      const slotExists = existingSlots?.some(slot => {
-        return slot && typeof slot === 'object' && 'slot_date' in slot && slot.slot_date === dateStr;
-      });
+      const { error: insertError } = await supabase
+        .from('schedule_slots')
+        .insert(newSlotData);
 
-      if (!slotExists) {
-        // Create a new slot directly with explicitly defined properties
-        const { error: insertError } = await supabase
-          .from('schedule_slots')
-          .insert({
-            day_of_week: masterSlot.day_of_week,
-            start_time: masterSlot.start_time,
-            end_time: masterSlot.end_time,
-            show_name: masterSlot.show_name,
-            host_name: masterSlot.host_name || null,
-            color: masterSlot.color || 'green',
-            is_prerecorded: masterSlot.is_prerecorded || false,
-            is_collection: masterSlot.is_collection || false,
-            is_modified: false,
-            slot_date: dateStr,
-            parent_slot_id: masterSlot.id,
-            is_recurring: true,
-            created_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          console.error('Error creating recurring slot:', insertError);
-        }
+      if (insertError) {
+        console.error(`Error creating slot for date ${date}:`, insertError);
+        return { success: false, error: insertError };
       }
-
-      currentDate = addWeeks(currentDate, 1);
     }
 
     return { success: true };
@@ -607,4 +595,25 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
     console.error('Error in createRecurringSlotsFromMaster:', error);
     return { success: false, error };
   }
+};
+
+// Helper function to generate dates
+const generateDateList = (
+  startDate: string,
+  endDate: string,
+  dayOfWeek: number
+): string[] => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const dates: string[] = [];
+
+  let current = new Date(start);
+  while (current <= end) {
+    if (current.getDay() === dayOfWeek) {
+      dates.push(format(current, 'yyyy-MM-dd'));
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
 };

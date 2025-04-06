@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
@@ -34,11 +35,20 @@ export default function ScheduleHeader({
   const navigateDate = (direction: 'prev' | 'next') => {
     const newDate = new Date(selectedDate);
     if (direction === 'prev') {
-      newDate.setDate(newDate.getDate() - (viewMode === 'weekly' ? 7 : 1));
+      if (viewMode === 'weekly') {
+        setSelectedDate(subWeeks(newDate, 1));
+      } else {
+        newDate.setDate(newDate.getDate() - 1);
+        setSelectedDate(newDate);
+      }
     } else {
-      newDate.setDate(newDate.getDate() + (viewMode === 'weekly' ? 7 : 1));
+      if (viewMode === 'weekly') {
+        setSelectedDate(addWeeks(newDate, 1));
+      } else {
+        newDate.setDate(newDate.getDate() + 1);
+        setSelectedDate(newDate);
+      }
     }
-    setSelectedDate(newDate);
   };
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });

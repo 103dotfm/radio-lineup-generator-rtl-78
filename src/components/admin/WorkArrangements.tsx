@@ -61,8 +61,8 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, addWeeks, subWeeks } from "date-fns";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { format, addWeeks, subWeeks, startOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -100,6 +100,7 @@ export default function WorkArrangements() {
   const [filename, setFilename] = useState<string | null>(null);
   const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">("producers");
   const [weekDate, setWeekDate] = useState<Date>(new Date());
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
   const [publicLinks, setPublicLinks] = useState<{
     current: string;
@@ -134,6 +135,39 @@ export default function WorkArrangements() {
       next: `/schedule/${format(nextWeekStart, 'yyyy-MM-dd')}`,
       previous: `/schedule/${format(prevWeekStart, 'yyyy-MM-dd')}`,
     });
+  };
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const newDate = direction === 'prev' 
+      ? subWeeks(weekDate, 1) 
+      : addWeeks(weekDate, 1);
+    
+    setWeekDate(newDate);
+    form.setValue("week_start", newDate);
+  };
+
+  const copyToClipboard = (link: string) => {
+    navigator.clipboard.writeText(window.location.origin + link)
+      .then(() => {
+        setCopiedLink(link);
+        toast({
+          title: "Success",
+          description: "Link copied to clipboard",
+        });
+        
+        // Reset the copied state after 2 seconds
+        setTimeout(() => {
+          setCopiedLink(null);
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy:', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy link",
+          variant: "destructive",
+        });
+      });
   };
 
   const startOfWeek = (date: Date, options: { weekStartsOn: number }) => {
@@ -251,13 +285,31 @@ export default function WorkArrangements() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Select Week</FormLabel>
-                            <DatePicker
-                              onSelect={(date) => {
-                                form.setValue("week_start", date!)
-                                setWeekDate(date!)
-                              }}
-                              date={form.getValues("week_start")}
-                            />
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => navigateWeek('prev')}
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                              <DatePicker
+                                onSelect={(date) => {
+                                  form.setValue("week_start", date!)
+                                  setWeekDate(date!)
+                                }}
+                                date={form.getValues("week_start")}
+                              />
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => navigateWeek('next')}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -323,36 +375,78 @@ export default function WorkArrangements() {
                 <div className="space-y-2 w-full">
                   <div className="flex items-center justify-between">
                     <span>Previous Week:</span>
-                    <a 
-                      href={publicLinks.previous} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      {publicLinks.previous}
-                    </a>
+                    <div className="flex items-center">
+                      <a 
+                        href={publicLinks.previous} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
+                      >
+                        {publicLinks.previous}
+                      </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(publicLinks.previous)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {copiedLink === publicLinks.previous ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Current Week:</span>
-                    <a 
-                      href={publicLinks.current} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      {publicLinks.current}
-                    </a>
+                    <div className="flex items-center">
+                      <a 
+                        href={publicLinks.current} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
+                      >
+                        {publicLinks.current}
+                      </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(publicLinks.current)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {copiedLink === publicLinks.current ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Next Week:</span>
-                    <a 
-                      href={publicLinks.next} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      {publicLinks.next}
-                    </a>
+                    <div className="flex items-center">
+                      <a 
+                        href={publicLinks.next} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
+                      >
+                        {publicLinks.next}
+                      </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(publicLinks.next)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {copiedLink === publicLinks.next ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardFooter>
