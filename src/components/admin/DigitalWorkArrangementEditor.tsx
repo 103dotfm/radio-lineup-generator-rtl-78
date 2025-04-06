@@ -128,7 +128,12 @@ const DigitalWorkArrangementEditor: React.FC = () => {
 
   useEffect(() => {
     return () => {
-      document.body.style.pointerEvents = '';
+      // Reset pointer-events style if it was set
+      if (document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+      
+      // Clean up any stray divs with IDs starting with "cbcb"
       const strayDivs = document.querySelectorAll('div[id^="cbcb"]');
       strayDivs.forEach(div => div.remove());
     };
@@ -754,6 +759,21 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     return `${endDay}-${startDay} ב${month}`;
   };
 
+  const closeShiftDialog = () => {
+    document.body.style.pointerEvents = '';
+    setShiftDialogOpen(false);
+  };
+
+  const closeCustomRowDialog = () => {
+    document.body.style.pointerEvents = '';
+    setCustomRowDialogOpen(false);
+  };
+
+  const closeFooterTextDialog = () => {
+    document.body.style.pointerEvents = '';
+    setFooterTextDialogOpen(false);
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
@@ -824,17 +844,17 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           </Card>
 
           <Dialog open={shiftDialogOpen} onOpenChange={(open) => {
-            setShiftDialogOpen(open);
             if (!open) {
               document.body.style.pointerEvents = '';
             }
+            setShiftDialogOpen(open);
           }}>
             <DialogContent className="sm:max-w-[425px] bg-background" 
-              onEscapeKeyDown={() => setShiftDialogOpen(false)}
-              onPointerDownOutside={() => setShiftDialogOpen(false)}
+              onEscapeKeyDown={closeShiftDialog}
+              onPointerDownOutside={closeShiftDialog}
               onInteractOutside={(e) => {
                 e.preventDefault();
-                setShiftDialogOpen(false);
+                closeShiftDialog();
               }}
               dir="rtl">
               <DialogHeader>
@@ -970,17 +990,17 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           </Dialog>
 
           <Dialog open={customRowDialogOpen} onOpenChange={(open) => {
-            setCustomRowDialogOpen(open);
             if (!open) {
               document.body.style.pointerEvents = '';
             }
+            setCustomRowDialogOpen(open);
           }}>
             <DialogContent className="max-w-4xl bg-background" 
-              onEscapeKeyDown={() => setCustomRowDialogOpen(false)}
-              onPointerDownOutside={() => setCustomRowDialogOpen(false)}
+              onEscapeKeyDown={closeCustomRowDialog}
+              onPointerDownOutside={closeCustomRowDialog}
               onInteractOutside={(e) => {
                 e.preventDefault();
-                setCustomRowDialogOpen(false);
+                closeCustomRowDialog();
               }}
               dir="rtl">
               <DialogHeader>
@@ -1008,17 +1028,17 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           </Dialog>
 
           <Dialog open={footerTextDialogOpen} onOpenChange={(open) => {
-            setFooterTextDialogOpen(open);
             if (!open) {
               document.body.style.pointerEvents = '';
             }
+            setFooterTextDialogOpen(open);
           }}>
             <DialogContent className="bg-background" 
-              onEscapeKeyDown={() => setFooterTextDialogOpen(false)}
-              onPointerDownOutside={() => setFooterTextDialogOpen(false)}
+              onEscapeKeyDown={closeFooterTextDialog}
+              onPointerDownOutside={closeFooterTextDialog}
               onInteractOutside={(e) => {
                 e.preventDefault();
-                setFooterTextDialogOpen(false);
+                closeFooterTextDialog();
               }}
               dir="rtl">
               <DialogHeader>
