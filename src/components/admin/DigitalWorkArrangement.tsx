@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,11 @@ const WorkerManagement: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    loadWorkers();
+    return () => {
+      if (document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+    };
   }, []);
 
   const loadWorkers = async () => {
@@ -114,7 +117,6 @@ const WorkerManagement: React.FC = () => {
       }
 
       if (editingWorker) {
-        // Update existing worker
         const updatedWorker = await updateWorker(editingWorker.id, formData);
         if (updatedWorker) {
           toast({
@@ -123,7 +125,6 @@ const WorkerManagement: React.FC = () => {
           });
         }
       } else {
-        // Create new worker
         const newWorker = await createWorker(formData);
         if (newWorker) {
           toast({
@@ -143,6 +144,11 @@ const WorkerManagement: React.FC = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleCloseDialog = () => {
+    document.body.style.pointerEvents = '';
+    setDialogOpen(false);
   };
 
   return (
@@ -200,8 +206,20 @@ const WorkerManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          document.body.style.pointerEvents = '';
+        }
+        setDialogOpen(open);
+      }}>
+        <DialogContent 
+          className="sm:max-w-[425px]"
+          onEscapeKeyDown={handleCloseDialog}
+          onInteractOutside={(e) => {
+            e.preventDefault();
+            handleCloseDialog();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{editingWorker ? 'Edit Worker' : 'Add Worker'}</DialogTitle>
           </DialogHeader>
@@ -283,6 +301,14 @@ const WorkerManagement: React.FC = () => {
 // Main component
 const DigitalWorkArrangement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("schedule");
+
+  useEffect(() => {
+    return () => {
+      if (document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+    };
+  }, []);
 
   return (
     <div className="container mx-auto py-10">

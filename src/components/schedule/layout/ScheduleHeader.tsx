@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { format, startOfWeek, addDays } from 'date-fns'
+import { format, startOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { he } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Plus, CalendarIcon, CalendarDays } from 'lucide-react'
 import { ViewMode } from '@/types/schedule'
@@ -33,14 +33,22 @@ export default function ScheduleHeader({
 }: ScheduleHeaderProps) {
   
   const navigateDate = (direction: 'prev' | 'next') => {
-    const days = viewMode === 'daily' ? 1 : viewMode === 'weekly' ? 7 : 30;
     const newDate = new Date(selectedDate);
     if (direction === 'prev') {
-      newDate.setDate(newDate.getDate() - days);
+      if (viewMode === 'weekly') {
+        setSelectedDate(subWeeks(newDate, 1));
+      } else {
+        newDate.setDate(newDate.getDate() - 1);
+        setSelectedDate(newDate);
+      }
     } else {
-      newDate.setDate(newDate.getDate() + days);
+      if (viewMode === 'weekly') {
+        setSelectedDate(addWeeks(newDate, 1));
+      } else {
+        newDate.setDate(newDate.getDate() + 1);
+        setSelectedDate(newDate);
+      }
     }
-    setSelectedDate(newDate);
   };
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });

@@ -23,14 +23,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs"
+} from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +38,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Command,
   CommandDialog,
@@ -60,13 +60,13 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "@/components/ui/command"
-import { Calendar } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+} from "@/components/ui/command";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { format, addWeeks, subWeeks, startOfWeek } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Form,
   FormControl,
@@ -75,7 +75,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import { supabase } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
@@ -100,7 +100,17 @@ export default function WorkArrangements() {
   const [filename, setFilename] = useState<string | null>(null);
   const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">("producers");
   const [weekDate, setWeekDate] = useState<Date>(new Date());
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
+  const [publicLinks, setPublicLinks] = useState<{
+    current: string;
+    next: string;
+    previous: string;
+  }>({
+    current: "",
+    next: "",
+    previous: "",
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -109,7 +119,56 @@ export default function WorkArrangements() {
       type: fileType,
       pdf_file: null,
     },
-  })
+  });
+
+  useEffect(() => {
+    generatePublicLinks(weekDate);
+  }, [weekDate]);
+
+  const generatePublicLinks = (date: Date) => {
+    const currentWeekStart = startOfWeek(date, { weekStartsOn: 0 });
+    const nextWeekStart = addWeeks(currentWeekStart, 1);
+    const prevWeekStart = subWeeks(currentWeekStart, 1);
+
+    setPublicLinks({
+      current: `/schedule/${format(currentWeekStart, 'yyyy-MM-dd')}`,
+      next: `/schedule/${format(nextWeekStart, 'yyyy-MM-dd')}`,
+      previous: `/schedule/${format(prevWeekStart, 'yyyy-MM-dd')}`,
+    });
+  };
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const newDate = direction === 'prev' 
+      ? subWeeks(weekDate, 1) 
+      : addWeeks(weekDate, 1);
+    
+    setWeekDate(newDate);
+    form.setValue("week_start", newDate);
+  };
+
+  const copyToClipboard = (link: string) => {
+    navigator.clipboard.writeText(window.location.origin + link)
+      .then(() => {
+        setCopiedLink(link);
+        toast({
+          title: "Success",
+          description: "Link copied to clipboard",
+        });
+        
+        // Reset the copied state after 2 seconds
+        setTimeout(() => {
+          setCopiedLink(null);
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy:', err);
+        toast({
+          title: "Error",
+          description: "Failed to copy link",
+          variant: "destructive",
+        });
+      });
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const file = values.pdf_file[0];
@@ -218,13 +277,31 @@ export default function WorkArrangements() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Select Week</FormLabel>
-                            <DatePicker
-                              onSelect={(date) => {
-                                form.setValue("week_start", date!)
-                                setWeekDate(date!)
-                              }}
-                              date={form.getValues("week_start")}
-                            />
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => navigateWeek('prev')}
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                              <DatePicker
+                                onSelect={(date) => {
+                                  field.onChange(date!)
+                                  setWeekDate(date!)
+                                }}
+                                date={field.value}
+                              />
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => navigateWeek('next')}
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -284,6 +361,87 @@ export default function WorkArrangements() {
                   </Form>
                 </CardContent>
               </CardHeader>
+              
+              <CardFooter className="flex flex-col items-start">
+                <CardTitle className="mb-3 text-lg">Public Schedule Links</CardTitle>
+                <div className="space-y-2 w-full">
+                  <div className="flex items-center justify-between">
+                    <span>Previous Week:</span>
+                    <div className="flex items-center">
+                      <a 
+                        href={publicLinks.previous} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
+                      >
+                        {publicLinks.previous}
+                      </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(publicLinks.previous)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {copiedLink === publicLinks.previous ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Current Week:</span>
+                    <div className="flex items-center">
+                      <a 
+                        href={publicLinks.current} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
+                      >
+                        {publicLinks.current}
+                      </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(publicLinks.current)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {copiedLink === publicLinks.current ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Next Week:</span>
+                    <div className="flex items-center">
+                      <a 
+                        href={publicLinks.next} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline mr-2"
+                      >
+                        {publicLinks.next}
+                      </a>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => copyToClipboard(publicLinks.next)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {copiedLink === publicLinks.next ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardFooter>
             </Card>
           </TabsContent>
           <TabsContent value="digital-editor" className="py-4">
