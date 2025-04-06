@@ -261,7 +261,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
-    if (!arrangement) return <TableCell className="digital-shift-cell p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+    if (!arrangement) return <TableCell key={`empty-${section}-${day}-${shiftType}`} className="digital-shift-cell p-2 border text-center" style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     
     const shifts = arrangement.shifts.filter(shift =>
       shift.section_name === section && 
@@ -271,11 +271,11 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
     
     if (shifts.length === 0) {
-      return <TableCell className={`digital-shift-cell digital-shift-empty digital-shift-empty-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>-</TableCell>;
+      return <TableCell key={`empty-${section}-${day}-${shiftType}`} className={`digital-shift-cell digital-shift-empty digital-shift-empty-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>-</TableCell>;
     }
     
     return (
-      <TableCell className={`digital-shift-cell digital-shift-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>
+      <TableCell key={`${section}-${day}-${shiftType}`} className={`digital-shift-cell digital-shift-${section}-${day}-${shiftType} p-2 border text-center`} style={{ width: COLUMN_WIDTH }}>
         {shifts.map((shift) => (
           <div key={shift.id} className={`digital-shift-entry digital-shift-entry-${section}-${day}-${shiftType}-${shift.id} mb-1`}>
             <div className={`digital-shift-time flex justify-center mb-1 ${shift.is_custom_time ? 'digital-shift-custom-time font-bold' : ''}`}>
@@ -343,7 +343,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     if (rows.length === 0) return null;
     
     return rows.map((row, index) => (
-      <TableRow key={row.id} className={`digital-custom-row digital-custom-row-${sectionName}-${index}`}>
+      <TableRow key={`custom-row-${row.id}`} className={`digital-custom-row digital-custom-row-${sectionName}-${index}`}>
         {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
           <TableCell 
             key={`${row.id}-day-${dayIndex}`} 
@@ -406,7 +406,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               <TableHeader>
                 <TableRow className="digital-main-shifts-header bg-black text-white">
                   {DAYS_OF_WEEK.map((day, index) => (
-                    <TableHead key={day} className={`digital-day-header digital-day-header-${index} text-center text-white border`} style={{ width: COLUMN_WIDTH }}>
+                    <TableHead key={`day-header-${index}`} className={`digital-day-header digital-day-header-${index} text-center text-white border`} style={{ width: COLUMN_WIDTH }}>
                       <div className="digital-day-name">{day}</div>
                       <div className="digital-day-date text-sm">{weekDates[index]}</div>
                     </TableHead>

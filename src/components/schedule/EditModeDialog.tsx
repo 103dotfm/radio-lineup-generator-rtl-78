@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +22,31 @@ const EditModeDialog: React.FC<EditModeDialogProps> = ({
   onEditCurrent,
   onEditAll,
 }) => {
+  // Ensure proper cleanup when the component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup function
+      document.body.style.pointerEvents = '';
+    };
+  }, []);
+
+  // Handle dialog close cleanly
+  const handleCloseDialog = () => {
+    document.body.style.pointerEvents = '';
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent aria-describedby="edit-mode-description">
+    <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
+      <DialogContent 
+        aria-describedby="edit-mode-description"
+        onEscapeKeyDown={handleCloseDialog}
+        onInteractOutside={handleCloseDialog}
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+          handleCloseDialog();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>עריכת משבצת שידור</DialogTitle>
           <DialogDescription id="edit-mode-description">
@@ -32,10 +54,16 @@ const EditModeDialog: React.FC<EditModeDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 pt-4">
-          <Button onClick={onEditCurrent} variant="outline">
+          <Button onClick={() => {
+            handleCloseDialog();
+            onEditCurrent();
+          }} variant="outline">
             ערוך משבצת נוכחית בלבד
           </Button>
-          <Button onClick={onEditAll}>
+          <Button onClick={() => {
+            handleCloseDialog();
+            onEditAll();
+          }}>
             ערוך את כל המשבצות העתידיות
           </Button>
         </div>
