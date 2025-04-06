@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parse, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -39,11 +40,6 @@ interface WorkArrangement {
   custom_rows: CustomRow[];
 }
 
-interface DigitalWorkArrangementViewProps {
-  weekDate?: string; // Format: 'yyyy-MM-dd'
-  arrangement?: WorkArrangement | null;
-}
-
 const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
 
 const SECTION_NAMES = {
@@ -69,12 +65,13 @@ const SHIFT_TYPES = {
 
 const COLUMN_WIDTH = "16.66%"; // 100% / 6 columns
 
-const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({ 
-  weekDate,
-  arrangement: externalArrangement
-}) => {
-  const [arrangement, setArrangement] = useState<WorkArrangement | null>(externalArrangement || null);
-  const [isLoading, setIsLoading] = useState(externalArrangement ? false : true);
+interface DigitalWorkArrangementViewProps {
+  weekDate?: string; // Format: 'yyyy-MM-dd'
+}
+
+const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({ weekDate }) => {
+  const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState<Date>(() => {
     if (weekDate) {
       try {
@@ -98,13 +95,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     setWeekDates(dates);
   }, [currentWeek]);
 
-  useEffect(() => {
-    if (externalArrangement) {
-      setArrangement(externalArrangement);
-      setIsLoading(false);
-    }
-  }, [externalArrangement]);
-
   const formatDateRange = () => {
     const startDay = format(currentWeek, 'dd', { locale: he });
     const endDate = new Date(currentWeek);
@@ -114,29 +104,30 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return `${endDay}-${startDay} ב${month}`;
   };
 
-  const fetchWorkerNames = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('workers')
-        .select('id, name');
-      
-      if (!error && data) {
-        const namesMap: Record<string, string> = {};
-        data.forEach(worker => {
-          namesMap[worker.id] = worker.name;
-        });
-        setWorkerNames(namesMap);
+  useEffect(() => {
+    const fetchWorkerNames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('workers')
+          .select('id, name');
+        
+        if (!error && data) {
+          const namesMap: Record<string, string> = {};
+          data.forEach(worker => {
+            namesMap[worker.id] = worker.name;
+          });
+          setWorkerNames(namesMap);
+        }
+      } catch (error) {
+        console.error('Error fetching worker names:', error);
       }
-    } catch (error) {
-      console.error('Error fetching worker names:', error);
-    }
-  };
+    };
+    
+    fetchWorkerNames();
+    fetchArrangement();
+  }, [currentWeek]);
 
   const fetchArrangement = async () => {
-    if (externalArrangement) {
-      return;
-    }
-    
     setIsLoading(true);
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
 

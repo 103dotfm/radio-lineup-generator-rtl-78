@@ -15,23 +15,19 @@ interface ComicSketchGeneratorProps {
   arrangementId?: string;
   onTextChange: (text: string) => void;
   onImageGenerated?: (imageUrl: string) => void;
-  existingImageUrl?: string | null;
-  prompt?: string;
 }
 
 const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
-  initialText = '',
+  initialText,
   initialImageUrl,
   arrangementId,
-  onTextChange = () => {},
-  onImageGenerated,
-  existingImageUrl,
-  prompt: externalPrompt
+  onTextChange,
+  onImageGenerated
 }) => {
   const [text, setText] = useState(initialText);
-  const [prompt, setPrompt] = useState(externalPrompt || "");
+  const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [image, setImage] = useState<string | null>(initialImageUrl || existingImageUrl || null);
+  const [image, setImage] = useState<string | null>(initialImageUrl || null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,17 +35,13 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
   }, [initialText]);
 
   useEffect(() => {
-    setImage(initialImageUrl || existingImageUrl || null);
-  }, [initialImageUrl, existingImageUrl]);
+    setImage(initialImageUrl || null);
+  }, [initialImageUrl]);
 
-  useEffect(() => {
-    if (externalPrompt) {
-      setPrompt(externalPrompt);
-    }
-  }, [externalPrompt]);
-
+  // Cleanup function when component unmounts
   useEffect(() => {
     return () => {
+      // Ensure all UI interactions are properly cleaned up
       document.body.style.pointerEvents = '';
     };
   }, []);
@@ -88,11 +80,14 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
+          // Use explicit typing to avoid TypeScript errors
+          const updateData: { comic_image_url: string } = {
+            comic_image_url: imageUrl
+          };
+          
           const { error } = await supabase
             .from('digital_work_arrangements')
-            .update({
-              comic_image_url: imageUrl
-            })
+            .update(updateData)
             .eq('id', arrangementId);
             
           if (error) {
