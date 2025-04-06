@@ -16,3 +16,32 @@ export interface ShiftWorker {
   name: string;
   email?: string;
 }
+
+export interface DayNote {
+  id: string;
+  date: string;
+  note: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type ViewMode = 'daily' | 'weekly' | 'monthly';
+
+export interface ScheduleSlot {
+  id: string;
+  show_name: string;
+  host_name?: string | null;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_prerecorded?: boolean;
+  is_collection?: boolean;
+  is_recurring?: boolean;
+  is_modified?: boolean;
+  is_deleted?: boolean;
+  has_lineup?: boolean;
+  color?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  shows?: any[];
+}
