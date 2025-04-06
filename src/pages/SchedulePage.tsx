@@ -172,11 +172,10 @@ const SchedulePage = () => {
       
       <div className="hidden md:block">
         <Tabs defaultValue="schedule" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-8 schedTabs" dir="rtl">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8 schedTabs" dir="rtl">
             <TabsTrigger value="schedule" className="font-extrabold bg-slate-300 hover:bg-slate-200 mx-[15px]">לוח שידורים</TabsTrigger>
             <TabsTrigger value="producers" className="font-extrabold bg-blue-200 hover:bg-blue-100 mx-[15px]">סידור עבודה עורכים ומפיקים</TabsTrigger>
             <TabsTrigger value="engineers" className="bg-slate-300 hover:bg-slate-200 text-sm font-extrabold mx-[15px]">סידור עבודה טכנאים</TabsTrigger>
-            <TabsTrigger value="digital-pdf" className="bg-blue-200 hover:bg-blue-100 font-extrabold mx-[15px]">סידור עבודה דיגיטל (PDF)</TabsTrigger>
             <TabsTrigger value="digital-view" className="bg-green-200 hover:bg-green-100 font-extrabold mx-[15px]">סידור עבודה דיגיטל</TabsTrigger>
           </TabsList>
           
@@ -199,10 +198,6 @@ const SchedulePage = () => {
             {renderPdfViewer(arrangements.engineers?.url || null)}
           </TabsContent>
           
-          <TabsContent value="digital-pdf" className="mt-4">
-            {renderPdfViewer(arrangements.digital?.url || null)}
-          </TabsContent>
-
           <TabsContent value="digital-view" className="mt-4">
             <div className="border rounded-lg overflow-hidden bg-white p-4">
               <DigitalWorkArrangementView weekDate={weekDate} />
@@ -221,7 +216,6 @@ const SchedulePage = () => {
               <SelectItem value="schedule">לוח שידורים</SelectItem>
               <SelectItem value="producers">סידור עבודה עורכים ומפיקים</SelectItem>
               <SelectItem value="engineers">סידור עבודה טכנאים</SelectItem>
-              <SelectItem value="digital-pdf">סידור עבודה דיגיטל (PDF)</SelectItem>
               <SelectItem value="digital-view">סידור עבודה דיגיטל</SelectItem>
             </SelectContent>
           </Select>
@@ -254,8 +248,6 @@ const SchedulePage = () => {
           {selectedTab === "producers" && renderPdfViewer(arrangements.producers?.url || null)}
           
           {selectedTab === "engineers" && renderPdfViewer(arrangements.engineers?.url || null)}
-          
-          {selectedTab === "digital-pdf" && renderPdfViewer(arrangements.digital?.url || null)}
           
           {selectedTab === "digital-view" && (
             <div className="border rounded-lg overflow-hidden bg-white p-2">
