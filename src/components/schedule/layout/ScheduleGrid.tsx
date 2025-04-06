@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
@@ -209,8 +210,8 @@ export default function ScheduleGrid({
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {dates.map((date, dayIndex) => (
-                  renderTimeCell(date.getDay(), time, true, `weekly-cell-${time}-${dayIndex}-${timeIndex}`)
+                {Array.from({length: 7}).map((_, dayIndex) => (
+                  renderTimeCell(dayIndex, time, true, `weekly-cell-${time}-${dayIndex}-${timeIndex}`)
                 ))}
               </React.Fragment>
             ))}

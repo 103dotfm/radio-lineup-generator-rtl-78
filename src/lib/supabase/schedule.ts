@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks, parseISO, isEqual } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -502,13 +502,13 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         start_time: originalSlot.start_time,
         end_time: originalSlot.end_time,
         show_name: originalSlot.show_name,
-        host_name: originalSlot.host_name || null,
-        color: originalSlot.color || 'green',
-        is_prerecorded: originalSlot.is_prerecorded || false,
-        is_collection: originalSlot.is_collection || false,
+        host_name: originalSlot.host_name,
+        is_recurring: false,
         is_modified: true,
         is_deleted: true,
-        is_recurring: false,
+        is_prerecorded: originalSlot.is_prerecorded,
+        is_collection: originalSlot.is_collection,
+        // Store the week start date as part of the created_at timestamp
         created_at: new Date(currentWeekStart).toISOString()
       });
 
@@ -538,82 +538,4 @@ export const addMissingColumns = async () => {
     console.error('Error adding missing columns:', error);
     throw error;
   }
-};
-
-export const createRecurringSlotsFromMaster = async (
-  slotId: string,
-  dateRange: { startDate: string; endDate: string }
-): Promise<{ success: boolean; error?: any }> => {
-  try {
-    // First get the master slot to be used as a template
-    const { data: masterSlot, error: masterError } = await supabase
-      .from('schedule_slots')
-      .select('*')
-      .eq('id', slotId)
-      .single();
-
-    if (masterError) {
-      console.error('Error fetching master slot:', masterError);
-      return { success: false, error: masterError };
-    }
-
-    // Generate dates for the recurring slots
-    const dateList = generateDateList(
-      dateRange.startDate,
-      dateRange.endDate,
-      masterSlot.day_of_week
-    );
-
-    // Create the slot for each date
-    for (const date of dateList) {
-      // Directly define the object properties to avoid complex type instantiation
-      const newSlotData = {
-        show_name: masterSlot.show_name,
-        host_name: masterSlot.host_name,
-        start_time: masterSlot.start_time,
-        end_time: masterSlot.end_time,
-        day_of_week: masterSlot.day_of_week,
-        color: masterSlot.color,
-        is_prerecorded: masterSlot.is_prerecorded,
-        is_collection: masterSlot.is_collection,
-        slot_date: date,
-        parent_slot_id: slotId
-      };
-
-      const { error: insertError } = await supabase
-        .from('schedule_slots')
-        .insert(newSlotData);
-
-      if (insertError) {
-        console.error(`Error creating slot for date ${date}:`, insertError);
-        return { success: false, error: insertError };
-      }
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error in createRecurringSlotsFromMaster:', error);
-    return { success: false, error };
-  }
-};
-
-// Helper function to generate dates
-const generateDateList = (
-  startDate: string,
-  endDate: string,
-  dayOfWeek: number
-): string[] => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const dates: string[] = [];
-
-  let current = new Date(start);
-  while (current <= end) {
-    if (current.getDay() === dayOfWeek) {
-      dates.push(format(current, 'yyyy-MM-dd'));
-    }
-    current.setDate(current.getDate() + 1);
-  }
-
-  return dates;
 };
