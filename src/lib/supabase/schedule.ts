@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks, parseISO, isEqual } from 'date-fns';
@@ -565,28 +566,29 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       currentDate = addWeeks(currentDate, 1);
     }
 
-    while (isAfter(currentDate, startDate) || isEqual(currentDate, startDate) && isBefore(currentDate, endDate)) {
+    // Loop through dates in range
+    while ((isAfter(currentDate, startDate) || isEqual(currentDate, startDate)) && isBefore(currentDate, endDate)) {
       const dateStr = format(currentDate, 'yyyy-MM-dd');
       
-      const existingSlot = existingSlots?.find(slot => {
-        // Make sure slot has slot_date before comparing
-        if ('slot_date' in slot) {
-          return slot.slot_date === dateStr;
-        }
-        return false;
-      });
+      // Check if a slot already exists for this date
+      const slotExists = existingSlots?.some(slot => 
+        typeof slot === 'object' && 
+        slot !== null && 
+        'slot_date' in slot && 
+        slot.slot_date === dateStr
+      );
 
-      if (!existingSlot) {
-        // Create a properly typed new slot object with required fields
-        const newSlot: Partial<ScheduleSlot> = {
+      if (!slotExists) {
+        // Create a new slot with all required properties explicitly specified
+        const newSlot = {
           day_of_week: masterSlot.day_of_week,
           start_time: masterSlot.start_time,
           end_time: masterSlot.end_time,
           show_name: masterSlot.show_name,
-          host_name: masterSlot.host_name,
-          color: masterSlot.color,
-          is_prerecorded: masterSlot.is_prerecorded,
-          is_collection: masterSlot.is_collection,
+          host_name: masterSlot.host_name || null,
+          color: masterSlot.color || 'green',
+          is_prerecorded: masterSlot.is_prerecorded || false,
+          is_collection: masterSlot.is_collection || false,
           is_modified: false,
           slot_date: dateStr,
           parent_slot_id: masterSlot.id,
@@ -594,7 +596,9 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
           created_at: new Date().toISOString()
         };
 
-        const { error: insertError } = await supabase.from('schedule_slots').insert(newSlot);
+        const { error: insertError } = await supabase
+          .from('schedule_slots')
+          .insert(newSlot);
 
         if (insertError) {
           console.error('Error creating recurring slot:', insertError);

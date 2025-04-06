@@ -28,12 +28,12 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
   try {
-    // First, find items matching the search query
+    // First search for matching items
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
       .select(`
         *,
-        show:show_id(
+        shows_backup!show_id (
           id,
           name,
           time,
@@ -57,18 +57,19 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     
     if (matchingItems && matchingItems.length > 0) {
       matchingItems.forEach(item => {
-        if (!item.show) return;
+        if (!item.shows_backup) return;
         
-        const showId = item.show.id;
+        const show = item.shows_backup;
+        const showId = show.id;
         
         if (!showsMap[showId]) {
           showsMap[showId] = {
             id: showId,
-            name: item.show.name,
-            time: item.show.time,
-            date: item.show.date,
-            notes: item.show.notes,
-            created_at: item.show.created_at,
+            name: show.name,
+            time: show.time,
+            date: show.date,
+            notes: show.notes,
+            created_at: show.created_at,
             items: []
           };
         }
