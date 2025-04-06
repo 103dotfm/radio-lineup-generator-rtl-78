@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -6,18 +5,30 @@ export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
   const { data: shows, error } = await supabase
     .from('shows_backup')
-    .select(`
-      *,
-      items:show_items!show_items_show_id_fkey(
-        *,
-        interviewees(*)
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching shows:', error);
     throw error;
+  }
+
+  // Fetch items for each show
+  if (shows && shows.length > 0) {
+    const showIds = shows.map(show => show.id);
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select('*, interviewees(*)')
+      .in('show_id', showIds);
+
+    if (itemsError) {
+      console.error('Error fetching show items:', itemsError);
+    } else if (items) {
+      // Associate items with their respective shows
+      shows.forEach(show => {
+        show.items = items.filter(item => item.show_id === show.id);
+      });
+    }
   }
 
   console.log('Fetched shows count:', shows?.length);
@@ -31,17 +42,7 @@ export const searchShows = async (query: string): Promise<Show[]> => {
     // First search for matching items
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
-      .select(`
-        *,
-        shows_backup!show_id (
-          id,
-          name,
-          time,
-          date,
-          notes,
-          created_at
-        )
-      `)
+      .select('*, show_id')
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
@@ -52,49 +53,37 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    // Transform results to Show objects with their matching items
-    const showsMap: { [key: string]: Show } = {};
-    
+    // If we found matching items, fetch the associated shows
     if (matchingItems && matchingItems.length > 0) {
-      matchingItems.forEach(item => {
-        if (!item.shows_backup) return;
+      const showIds = [...new Set(matchingItems.map(item => item.show_id))];
+      
+      const { data: shows, error: showsError } = await supabase
+        .from('shows_backup')
+        .select('*')
+        .in('id', showIds);
         
-        const show = item.shows_backup;
-        const showId = show.id;
-        
-        if (!showsMap[showId]) {
-          showsMap[showId] = {
-            id: showId,
-            name: show.name,
-            time: show.time,
-            date: show.date,
-            notes: show.notes,
-            created_at: show.created_at,
-            items: []
+      if (showsError) {
+        console.error('Error fetching shows for items:', showsError);
+        throw showsError;
+      }
+      
+      if (shows && shows.length > 0) {
+        // Transform results to Show objects with their matching items
+        const showsWithItems = shows.map(show => {
+          const items = matchingItems.filter(item => item.show_id === show.id);
+          return {
+            ...show,
+            items
           };
-        }
-        
-        // Add the matching item to the show
-        showsMap[showId].items = showsMap[showId].items || [];
-        showsMap[showId].items.push({
-          id: item.id,
-          show_id: item.show_id,
-          position: item.position,
-          name: item.name,
-          title: item.title,
-          phone: item.phone,
-          details: item.details,
-          duration: item.duration,
-          is_break: item.is_break,
-          is_note: item.is_note,
-          created_at: item.created_at
         });
-      });
+        
+        console.log('Search results:', showsWithItems);
+        return showsWithItems;
+      }
     }
-
-    console.log('Search results:', Object.values(showsMap));
-    return Object.values(showsMap);
-
+    
+    // If no items matched or no associated shows found, return empty array
+    return [];
   } catch (error) {
     console.error('Error searching shows:', error);
     throw error;
