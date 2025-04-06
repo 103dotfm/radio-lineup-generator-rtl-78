@@ -3,15 +3,9 @@ import { Show } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
-  const { data: shows, error } = await supabase
+  const { data: showsData, error } = await supabase
     .from('shows_backup')
-    .select(`
-      *,
-      items:show_items!show_items_show_id_fkey(
-        *,
-        interviewees(*)
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -19,20 +13,38 @@ export const getShows = async (): Promise<Show[]> => {
     throw error;
   }
 
+  const shows: Show[] = showsData || [];
+
+  // Fetch items for each show
+  if (shows.length > 0) {
+    const showIds = shows.map(show => show.id);
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select('*, interviewees(*)')
+      .in('show_id', showIds);
+
+    if (itemsError) {
+      console.error('Error fetching show items:', itemsError);
+    } else if (items) {
+      // Associate items with their respective shows
+      shows.forEach(show => {
+        show.items = items.filter(item => item.show_id === show.id);
+      });
+    }
+  }
+
   console.log('Fetched shows count:', shows?.length);
-  return shows as unknown as Show[];
+  return shows;
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
   try {
+    // First search for matching items
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
-      .select(`
-        *,
-        shows_backup!show_id(*)
-      `)
+      .select('*, show_id')
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
       .not('is_note', 'eq', true)
@@ -43,39 +55,37 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
-      const showData = item.shows_backup;
-      if (!showData) return acc;
+    // If we found matching items, fetch the associated shows
+    if (matchingItems && matchingItems.length > 0) {
+      const showIds = [...new Set(matchingItems.map(item => item.show_id))];
       
-      const showId = showData.id;
-      if (!acc[showId]) {
-        acc[showId] = {
-          ...showData,
-          items: []
-        };
+      const { data: shows, error: showsError } = await supabase
+        .from('shows_backup')
+        .select('*')
+        .in('id', showIds);
+        
+      if (showsError) {
+        console.error('Error fetching shows for items:', showsError);
+        throw showsError;
       }
       
-      acc[showId].items = acc[showId].items || [];
-      acc[showId].items.push({
-        id: item.id,
-        show_id: item.show_id,
-        position: item.position,
-        name: item.name,
-        title: item.title,
-        phone: item.phone,
-        details: item.details,
-        duration: item.duration,
-        is_break: item.is_break,
-        is_note: item.is_note,
-        created_at: item.created_at
-      });
-
-      return acc;
-    }, {});
-
-    console.log('Search results:', Object.values(shows));
-    return Object.values(shows || {});
-
+      if (shows && shows.length > 0) {
+        // Transform results to Show objects with their matching items
+        const showsWithItems = shows.map(show => {
+          const items = matchingItems.filter(item => item.show_id === show.id);
+          return {
+            ...show,
+            items
+          };
+        });
+        
+        console.log('Search results:', showsWithItems);
+        return showsWithItems;
+      }
+    }
+    
+    // If no items matched or no associated shows found, return empty array
+    return [];
   } catch (error) {
     console.error('Error searching shows:', error);
     throw error;

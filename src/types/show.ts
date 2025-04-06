@@ -32,5 +32,6 @@ export interface Show {
   date?: string;
   notes?: string;
   created_at?: string;
+  slot_id?: string;
   items?: ShowItem[];
 }

@@ -172,12 +172,11 @@ const SchedulePage = () => {
       
       <div className="hidden md:block">
         <Tabs defaultValue="schedule" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-8 schedTabs" dir="rtl">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8 schedTabs" dir="rtl">
             <TabsTrigger value="schedule" className="font-extrabold bg-slate-300 hover:bg-slate-200 mx-[15px]">לוח שידורים</TabsTrigger>
             <TabsTrigger value="producers" className="font-extrabold bg-blue-200 hover:bg-blue-100 mx-[15px]">סידור עבודה עורכים ומפיקים</TabsTrigger>
             <TabsTrigger value="engineers" className="bg-slate-300 hover:bg-slate-200 text-sm font-extrabold mx-[15px]">סידור עבודה טכנאים</TabsTrigger>
-            <TabsTrigger value="digital-pdf" className="bg-blue-200 hover:bg-blue-100 font-extrabold mx-[15px]">סידור עבודה דיגיטל (PDF)</TabsTrigger>
-            <TabsTrigger value="digital-view" className="bg-green-200 hover:bg-green-100 font-extrabold mx-[15px]">סידור עבודה דיגיטל</TabsTrigger>
+            <TabsTrigger value="digital" className="bg-green-200 hover:bg-green-100 text-sm font-extrabold mx-[15px]">סידור עבודה דיגיטל</TabsTrigger>
           </TabsList>
           
           <TabsContent value="schedule" className="mt-4 schedule-content">
@@ -199,14 +198,8 @@ const SchedulePage = () => {
             {renderPdfViewer(arrangements.engineers?.url || null)}
           </TabsContent>
           
-          <TabsContent value="digital-pdf" className="mt-4">
-            {renderPdfViewer(arrangements.digital?.url || null)}
-          </TabsContent>
-
-          <TabsContent value="digital-view" className="mt-4">
-            <div className="border rounded-lg overflow-hidden bg-white p-4">
-              <DigitalWorkArrangementView weekDate={weekDate} />
-            </div>
+          <TabsContent value="digital" className="mt-4">
+            <DigitalWorkArrangementView weekDate={weekDate} />
           </TabsContent>
         </Tabs>
       </div>
@@ -221,8 +214,7 @@ const SchedulePage = () => {
               <SelectItem value="schedule">לוח שידורים</SelectItem>
               <SelectItem value="producers">סידור עבודה עורכים ומפיקים</SelectItem>
               <SelectItem value="engineers">סידור עבודה טכנאים</SelectItem>
-              <SelectItem value="digital-pdf">סידור עבודה דיגיטל (PDF)</SelectItem>
-              <SelectItem value="digital-view">סידור עבודה דיגיטל</SelectItem>
+              <SelectItem value="digital">סידור עבודה דיגיטל</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -255,13 +247,7 @@ const SchedulePage = () => {
           
           {selectedTab === "engineers" && renderPdfViewer(arrangements.engineers?.url || null)}
           
-          {selectedTab === "digital-pdf" && renderPdfViewer(arrangements.digital?.url || null)}
-          
-          {selectedTab === "digital-view" && (
-            <div className="border rounded-lg overflow-hidden bg-white p-2">
-              <DigitalWorkArrangementView weekDate={weekDate} />
-            </div>
-          )}
+          {selectedTab === "digital" && <DigitalWorkArrangementView weekDate={weekDate} />}
         </div>
       </div>
     </div>;
