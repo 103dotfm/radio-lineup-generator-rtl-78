@@ -7,8 +7,6 @@ export interface DigitalWorkArrangement {
   notes: string | null;
   footer_text: string | null;
   footer_image_url: string | null;
-  comic_prompt: string | null;
-  comic_image_url: string | null;
 }
 
 export interface ShiftWorker {

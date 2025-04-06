@@ -6,10 +6,8 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import ComicSketchGenerator from './workers/ComicSketchGenerator';
 import { DigitalWorkArrangement } from '@/types/schedule';
 
 interface DigitalWorkArrangementViewProps {
@@ -58,13 +56,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         });
       }
 
-      // Ensure the data includes comic_image_url - set to null if not present
       if (data) {
-        const arrangementWithImageUrl: DigitalWorkArrangement = {
-          ...data,
-          comic_image_url: data.comic_image_url || null
-        };
-        setArrangement(arrangementWithImageUrl);
+        setArrangement(data);
       }
     } catch (error) {
       console.error("Error fetching arrangement:", error);
@@ -111,54 +104,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
   };
 
-  const handleComicImageGenerated = async (imageUrl: string) => {
-    if (!arrangement) return;
-
-    try {
-      const { error } = await supabase
-        .from('digital_work_arrangements')
-        .update({
-          comic_image_url: imageUrl
-        })
-        .eq('id', arrangement.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "הצלחה",
-        description: "תמונת הקומיקס נשמרה בהצלחה",
-      });
-      fetchArrangement();
-    } catch (error) {
-      console.error("Error saving comic image URL:", error);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה בשמירת תמונת הקומיקס",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const ComicImageSection = ({ arrangement }: { arrangement: DigitalWorkArrangement | null }) => {
-    return (
-      <div className="comic-image-section">
-        {arrangement?.comic_image_url ? (
-          <img 
-            src={arrangement.comic_image_url} 
-            alt="Comic sketch" 
-            className="w-full h-auto rounded-md comic-sketch-preview"
-          />
-        ) : (
-          <div className="flex items-center justify-center h-32 bg-gray-100 rounded-md">
-            <p className="text-gray-500">אין תמונת קומיקס זמינה</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-4 digital-work-arrangement-view" dir="rtl">
       <h2 className="text-2xl font-bold text-center">סידור עבודה דיגיטל</h2>
@@ -184,27 +129,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               onChange={(e) => setFooterText(e.target.value)}
             />
           </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="space-y-4">
-        <CardContent className="space-y-4">
-          <h3 className="text-lg font-semibold">יצירת קומיקס אוטומטי</h3>
-          <ComicSketchGenerator 
-            initialText={arrangement?.comic_prompt || ""}
-            initialImageUrl={arrangement?.comic_image_url || null}
-            arrangementId={arrangement?.id}
-            onTextChange={(text) => {
-              setArrangement(prev => ({ ...prev, comic_prompt: text } as DigitalWorkArrangement));
-            }}
-            onImageGenerated={handleComicImageGenerated}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent>
-          <ComicImageSection arrangement={arrangement} />
         </CardContent>
       </Card>
       
