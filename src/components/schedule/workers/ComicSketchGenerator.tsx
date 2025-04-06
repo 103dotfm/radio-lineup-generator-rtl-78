@@ -38,6 +38,14 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
     setImage(initialImageUrl || null);
   }, [initialImageUrl]);
 
+  // Cleanup function when component unmounts
+  useEffect(() => {
+    return () => {
+      // Ensure all UI interactions are properly cleaned up
+      document.body.style.pointerEvents = '';
+    };
+  }, []);
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     onTextChange(e.target.value);
@@ -72,11 +80,14 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
+          // Use explicit typing to avoid TypeScript errors
+          const updateData: { comic_image_url: string } = {
+            comic_image_url: imageUrl
+          };
+          
           const { error } = await supabase
             .from('digital_work_arrangements')
-            .update({
-              comic_image_url: imageUrl
-            })
+            .update(updateData)
             .eq('id', arrangementId);
             
           if (error) {
