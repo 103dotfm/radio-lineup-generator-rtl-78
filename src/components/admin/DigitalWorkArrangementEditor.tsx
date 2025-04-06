@@ -286,6 +286,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                     onImageGenerated={handleComicImageGenerated}
                     existingImageUrl={comicImageUrl}
                     prompt={comicPrompt}
+                    arrangementId={arrangement?.id}
                   />
                 )}
               </div>

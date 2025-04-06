@@ -186,7 +186,7 @@ export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
       throw new Error('Show name is required');
     }
     
-    const insertData = {
+    const insertData: any = {
       name: show.name,
       date: show.date,
       time: show.time,
@@ -195,7 +195,7 @@ export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
     
     // Only add slot_id if it exists in the show object
     if ('slot_id' in show) {
-      (insertData as any).slot_id = show.slot_id;
+      insertData.slot_id = show.slot_id;
     }
     
     const { data, error } = await supabase
@@ -215,7 +215,7 @@ export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
 
 export const updateShow = async (id: string, updates: Partial<Show>): Promise<Show | null> => {
   try {
-    const updateData: Record<string, any> = {};
+    const updateData: any = {};
     
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.date !== undefined) updateData.date = updates.date;
@@ -357,7 +357,7 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
     
     if (showId) {
       // Update existing show
-      const showData: Record<string, any> = {};
+      const showData: any = {};
       if (show.name) showData.name = show.name;
       if (show.date !== undefined) showData.date = show.date;
       if (show.time !== undefined) showData.time = show.time;
@@ -375,7 +375,7 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
       savedShow = data as Show;
     } else if (show.name) {
       // Create new show
-      const showData: Record<string, any> = {
+      const showData: any = {
         name: show.name,
         date: show.date,
         time: show.time,
