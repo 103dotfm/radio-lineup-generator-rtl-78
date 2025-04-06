@@ -33,6 +33,7 @@ export interface ScheduleSlot {
   additional_text?: string;
   is_custom_time?: boolean;
   position?: number;
+  slot_date?: string; // Added slot_date as an optional field
   shows?: any[];
 }
 
