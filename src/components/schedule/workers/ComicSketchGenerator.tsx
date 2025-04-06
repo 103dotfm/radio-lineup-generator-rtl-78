@@ -80,7 +80,8 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
-          const updateData = {
+          // Use a properly typed object that matches the DigitalWorkArrangement type
+          const updateData: Partial<DigitalWorkArrangement> = {
             comic_image_url: imageUrl
           };
           
