@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { Show } from "@/types/show";
 
@@ -27,11 +28,19 @@ export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
   try {
+    // First, find items matching the search query
     const { data: matchingItems, error: itemsError } = await supabase
       .from('show_items')
       .select(`
         *,
-        shows_backup!show_id(*)
+        show:show_id(
+          id,
+          name,
+          time,
+          date,
+          notes,
+          created_at
+        )
       `)
       .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
       .not('is_break', 'eq', true)
@@ -43,38 +52,47 @@ export const searchShows = async (query: string): Promise<Show[]> => {
       throw itemsError;
     }
 
-    const shows = matchingItems?.reduce((acc: { [key: string]: Show }, item) => {
-      const showData = item.shows_backup;
-      if (!showData) return acc;
-      
-      const showId = showData.id;
-      if (!acc[showId]) {
-        acc[showId] = {
-          ...showData,
-          items: []
-        };
-      }
-      
-      acc[showId].items = acc[showId].items || [];
-      acc[showId].items.push({
-        id: item.id,
-        show_id: item.show_id,
-        position: item.position,
-        name: item.name,
-        title: item.title,
-        phone: item.phone,
-        details: item.details,
-        duration: item.duration,
-        is_break: item.is_break,
-        is_note: item.is_note,
-        created_at: item.created_at
+    // Transform results to Show objects with their matching items
+    const showsMap: { [key: string]: Show } = {};
+    
+    if (matchingItems && matchingItems.length > 0) {
+      matchingItems.forEach(item => {
+        if (!item.show) return;
+        
+        const showId = item.show.id;
+        
+        if (!showsMap[showId]) {
+          showsMap[showId] = {
+            id: showId,
+            name: item.show.name,
+            time: item.show.time,
+            date: item.show.date,
+            notes: item.show.notes,
+            created_at: item.show.created_at,
+            items: []
+          };
+        }
+        
+        // Add the matching item to the show
+        showsMap[showId].items = showsMap[showId].items || [];
+        showsMap[showId].items.push({
+          id: item.id,
+          show_id: item.show_id,
+          position: item.position,
+          name: item.name,
+          title: item.title,
+          phone: item.phone,
+          details: item.details,
+          duration: item.duration,
+          is_break: item.is_break,
+          is_note: item.is_note,
+          created_at: item.created_at
+        });
       });
+    }
 
-      return acc;
-    }, {});
-
-    console.log('Search results:', Object.values(shows));
-    return Object.values(shows || {});
+    console.log('Search results:', Object.values(showsMap));
+    return Object.values(showsMap);
 
   } catch (error) {
     console.error('Error searching shows:', error);
