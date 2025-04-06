@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -537,5 +537,74 @@ export const addMissingColumns = async () => {
   if (error) {
     console.error('Error adding missing columns:', error);
     throw error;
+  }
+};
+
+export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, startDate: Date, endDate: Date) => {
+  try {
+    const startDateStr = format(startDate, 'yyyy-MM-dd');
+    const endDateStr = format(endDate, 'yyyy-MM-dd');
+
+    const { data: existingSlots, error: existingError } = await supabase
+      .from('schedule_slots')
+      .select('*')
+      .eq('parent_slot_id', masterSlot.id)
+      .gte('slot_date', startDateStr)
+      .lte('slot_date', endDateStr);
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    // Convert start date to the actual day of the week
+    let currentDate = startOfWeek(startDate, { weekStartsOn: 0 });
+    currentDate = addDays(currentDate, masterSlot.day_of_week);
+
+    // If the slot day is before the start date, move to next week
+    if (isBefore(currentDate, startDate)) {
+      currentDate = addWeeks(currentDate, 1);
+    }
+
+    while (isSameOrBefore(currentDate, endDate)) {
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      const existingSlot = existingSlots?.find(slot => slot.slot_date === dateStr);
+
+      if (!existingSlot) {
+        // Create a properly typed new slot object with required fields
+        const newSlot: Partial<ScheduleSlot> & {
+          day_of_week: number;
+          start_time: string;
+          end_time: string;
+          show_name: string;
+        } = {
+          day_of_week: masterSlot.day_of_week,
+          start_time: masterSlot.start_time,
+          end_time: masterSlot.end_time,
+          show_name: masterSlot.show_name,
+          host_name: masterSlot.host_name,
+          color: masterSlot.color,
+          is_prerecorded: masterSlot.is_prerecorded,
+          is_collection: masterSlot.is_collection,
+          is_modified: false,
+          slot_date: dateStr,
+          parent_slot_id: masterSlot.id,
+          is_recurring: true,
+          created_at: new Date().toISOString()
+        };
+
+        const { error: insertError } = await supabase.from('schedule_slots').insert(newSlot);
+
+        if (insertError) {
+          console.error('Error creating recurring slot:', insertError);
+        }
+      }
+
+      currentDate = addWeeks(currentDate, 1);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in createRecurringSlotsFromMaster:', error);
+    return { success: false, error };
   }
 };
