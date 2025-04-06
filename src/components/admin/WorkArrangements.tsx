@@ -170,14 +170,6 @@ export default function WorkArrangements() {
       });
   };
 
-  const startOfWeek = (date: Date, options: { weekStartsOn: number }) => {
-    const result = new Date(date);
-    const day = result.getDay();
-    const diff = (day < options.weekStartsOn ? 7 : 0) + day - options.weekStartsOn;
-    result.setDate(result.getDate() - diff);
-    return result;
-  };
-
   function onSubmit(values: z.infer<typeof formSchema>) {
     const file = values.pdf_file[0];
     handleFileUpload(file);
@@ -296,10 +288,10 @@ export default function WorkArrangements() {
                               </Button>
                               <DatePicker
                                 onSelect={(date) => {
-                                  form.setValue("week_start", date!)
+                                  field.onChange(date!)
                                   setWeekDate(date!)
                                 }}
-                                date={form.getValues("week_start")}
+                                date={field.value}
                               />
                               <Button 
                                 type="button" 
