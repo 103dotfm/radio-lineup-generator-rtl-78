@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, addWeeks, subWeeks } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MoreHorizontal, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
