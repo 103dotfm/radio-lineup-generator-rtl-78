@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, parse } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -11,8 +12,13 @@ import { supabase } from "@/lib/supabase";
 import ComicSketchGenerator from './workers/ComicSketchGenerator';
 import { DigitalWorkArrangement } from '@/types/schedule';
 
-const DigitalWorkArrangementView: React.FC = () => {
-  const { weekDate } = useParams<{ weekDate: string }>();
+interface DigitalWorkArrangementViewProps {
+  weekDate?: string;
+}
+
+const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({ weekDate: propWeekDate }) => {
+  const { weekDate: paramWeekDate } = useParams<{ weekDate: string }>();
+  const weekDate = propWeekDate || paramWeekDate;
   const [arrangement, setArrangement] = useState<DigitalWorkArrangement | null>(null);
   const [notes, setNotes] = useState('');
   const [footerText, setFooterText] = useState('');
@@ -52,7 +58,14 @@ const DigitalWorkArrangementView: React.FC = () => {
         });
       }
 
-      setArrangement(data);
+      // Ensure the data includes comic_image_url - set to null if not present
+      if (data) {
+        const arrangementWithImageUrl: DigitalWorkArrangement = {
+          ...data,
+          comic_image_url: data.comic_image_url || null
+        };
+        setArrangement(arrangementWithImageUrl);
+      }
     } catch (error) {
       console.error("Error fetching arrangement:", error);
       toast({
