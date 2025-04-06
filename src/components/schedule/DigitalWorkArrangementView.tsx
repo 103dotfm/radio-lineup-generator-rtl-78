@@ -7,7 +7,6 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DigitalWorkArrangement } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
-import { CustomRowColumns } from './workers/CustomRowColumns';
 import EditModeDialog from './EditModeDialog';
 import '@/styles/digital-work-arrangement.css';
 
@@ -275,10 +274,27 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                     
                     {getCustomRowsForSection(currentSection).map((row) => (
                       <TableRow key={`custom-row-${row.id}`}>
-                        <CustomRowColumns 
-                          key={`custom-cols-${row.id}`}
-                          rowContents={row.contents} 
-                        />
+                        <TableCell className="font-medium text-center">
+                          {row.contents[0] || ''}
+                        </TableCell>
+                        <TableCell className="p-2 border text-center">
+                          {row.contents[1] || ''}
+                        </TableCell>
+                        <TableCell className="p-2 border text-center">
+                          {row.contents[2] || ''}
+                        </TableCell>
+                        <TableCell className="p-2 border text-center">
+                          {row.contents[3] || ''}
+                        </TableCell>
+                        <TableCell className="p-2 border text-center">
+                          {row.contents[4] || ''}
+                        </TableCell>
+                        <TableCell className="p-2 border text-center">
+                          {row.contents[5] || ''}
+                        </TableCell>
+                        <TableCell className="p-2 border text-center">
+                          {row.contents[6] || ''}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
