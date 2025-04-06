@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +19,10 @@ interface ComicSketchGeneratorProps {
 }
 
 const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
-  initialText,
+  initialText = '',
   initialImageUrl,
   arrangementId,
-  onTextChange,
+  onTextChange = () => {},
   onImageGenerated,
   existingImageUrl,
   prompt: externalPrompt
@@ -90,13 +89,11 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
       
       if (arrangementId && onImageGenerated) {
         try {
-          const updateData = {
-            comic_image_url: imageUrl
-          };
-          
           const { error } = await supabase
             .from('digital_work_arrangements')
-            .update(updateData)
+            .update({
+              comic_image_url: imageUrl
+            })
             .eq('id', arrangementId);
             
           if (error) {

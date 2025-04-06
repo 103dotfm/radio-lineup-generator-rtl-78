@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DigitalWorkArrangement } from '@/types/schedule';
@@ -55,7 +54,7 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
       if (error) throw error;
       
       if (data) {
-        setArrangement(data);
+        setArrangement(data as DigitalWorkArrangement);
         setFooterText(data.footer_text || '');
         setFooterImageUrl(data.footer_image_url || '');
         setComicPrompt(data.comic_prompt || '');
@@ -173,6 +172,13 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
 
   const formattedWeekDate = format(weekStart, 'dd/MM/yyyy');
 
+  // Create a formatted arrangement for the preview
+  const previewArrangement = arrangement ? {
+    ...arrangement,
+    shifts: [],
+    custom_rows: []
+  } : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
@@ -280,9 +286,11 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
                 />
                 {comicPrompt && (
                   <ComicSketchGenerator 
-                    prompt={comicPrompt}
+                    initialText={comicPrompt}
+                    onTextChange={(text) => setComicPrompt(text)}
                     onImageGenerated={handleComicImageGenerated}
                     existingImageUrl={comicImageUrl}
+                    prompt={comicPrompt}
                   />
                 )}
               </div>
@@ -302,7 +310,6 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         <TabsContent value="preview" className="p-4 border rounded-md bg-background">
           <DigitalWorkArrangementView 
             weekDate={format(weekStart, 'yyyy-MM-dd')} 
-            arrangement={arrangement}
           />
         </TabsContent>
       </Tabs>
