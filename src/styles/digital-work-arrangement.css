@@ -32,6 +32,11 @@
 .digital-shift-time,
 .digital-radio-time {
   direction: rtl;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: #4a5568;
 }
 
 /* Custom styling for time ranges */
@@ -43,7 +48,7 @@
 .digital-shift-custom-time,
 .digital-radio-custom-time {
   font-weight: bold;
-  color: #333;
+  color: #2d3748;
 }
 
 /* Style for worker names */
@@ -52,6 +57,8 @@
 .digital-work-arrangement .worker-name,
 .digital-work-arrangement-view .worker-name {
   font-weight: bold;
+  text-align: center;
+  color: #2d3748;
 }
 
 /* Style for additional text */
@@ -60,33 +67,8 @@
 .digital-work-arrangement .additional-text,
 .digital-work-arrangement-view .additional-text {
   font-weight: normal;
-  font-size: 0.9em;
-}
-
-/* Comic prompt styling */
-.digital-comic-prompt {
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-}
-
-.digital-comic-text {
-  font-size: 1.1rem;
-  line-height: 1.6;
-}
-
-/* Comic image styling */
-.digital-comic-image {
-  margin-top: 1rem;
-}
-
-.digital-comic-image-content {
-  max-height: 400px;
-  max-width: 100%;
-  object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 0.85em;
+  color: #4a5568;
 }
 
 /* Footer text styling */
@@ -94,6 +76,7 @@
   white-space: pre-line;
   line-height: 1.6;
   font-size: 1.1rem;
+  color: #2d3748;
 }
 
 /* Print styles */
@@ -109,11 +92,6 @@
   .digital-footer-image {
     max-width: 100%;
     page-break-inside: avoid;
-  }
-
-  .digital-comic-image {
-    page-break-inside: avoid;
-    max-width: 100%;
   }
 }
 
@@ -182,13 +160,6 @@
 .date-picker-content {
   background-color: white !important;
   border: 1px solid #e2e8f0 !important;
-}
-
-/* Comics sketch generator styles */
-.comic-sketch-preview {
-  max-height: 400px;
-  max-width: 100%;
-  object-fit: contain;
 }
 
 /* Textarea for larger footer text */

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from "@/components/ui/use-toast";
-import { format, isSameWeek, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,6 +9,7 @@ import { DigitalWorkArrangement } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
 import EditModeDialog from './EditModeDialog';
 import '@/styles/digital-work-arrangement.css';
+import { Calendar, Clock } from 'lucide-react';
 
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
@@ -71,6 +72,13 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   
   useEffect(() => {
     fetchArrangement();
+    
+    // Ensure pointer-events style is reset when component unmounts
+    return () => {
+      if (document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+    };
   }, [selectedWeekDate]);
 
   const dateDisplay = useMemo(() => {
@@ -189,13 +197,14 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       <TableCell key={`cell-${section}-${day}-${shiftType}`} className="p-2 border">
         {cellShifts.map((shift) => (
           <div key={`shift-${shift.id}`} className="mb-2">
-            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time' : ''}`}>
+            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time' : ''} flex items-center justify-center`}>
+              <Clock className="h-3 w-3 mr-1 opacity-70" />
               {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
             </div>
-            <div className="digital-shift-person">
+            <div className="digital-shift-person mt-1 text-center">
               {shift.person_name || ''}
               {shift.additional_text && (
-                <div className="digital-shift-note">
+                <div className="digital-shift-note text-sm mt-0.5 text-gray-600">
                   {shift.additional_text}
                 </div>
               )}
@@ -208,30 +217,44 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
   return (
     <div className="space-y-6 digital-work-arrangement-view" dir="rtl">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">סידור עבודה דיגיטל</h2>
-        <div className="text-lg font-medium">{dateDisplay}</div>
+      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6">
+        <h2 className="text-2xl font-bold mb-2 md:mb-0 flex items-center">
+          <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+          סידור עבודה דיגיטל
+        </h2>
+        <div className="text-lg font-medium bg-blue-50 px-4 py-1.5 rounded-full text-blue-700 flex items-center">
+          <Calendar className="h-4 w-4 mr-2" />
+          {dateDisplay}
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center my-8">
-          <p>טוען נתונים...</p>
+        <div className="flex justify-center my-8 p-8 bg-white rounded-lg shadow-sm">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700 mb-4"></div>
+            <p className="text-lg">טוען נתונים...</p>
+          </div>
         </div>
       ) : !arrangement ? (
-        <div className="flex justify-center my-8">
-          <p>אין סידור עבודה לשבוע זה</p>
+        <div className="flex justify-center my-8 p-8 bg-white rounded-lg shadow-sm">
+          <div className="flex flex-col items-center">
+            <div className="bg-blue-50 p-4 rounded-full mb-4">
+              <Calendar className="h-10 w-10 text-blue-600" />
+            </div>
+            <p className="text-lg">אין סידור עבודה לשבוע זה</p>
+          </div>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+          <div className="flex flex-wrap gap-2 justify-center md:justify-start bg-white p-4 rounded-lg shadow-sm">
             {Object.entries(SECTION_TITLES).map(([key, title]) => (
               <button
                 key={`section-${key}`}
                 onClick={() => setCurrentSection(key)}
-                className={`px-4 py-2 rounded-md mb-2 ${
+                className={`px-4 py-2 rounded-md mb-2 transition-all duration-200 ${
                   currentSection === key 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-blue-600 text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 {title}
@@ -239,15 +262,15 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             ))}
           </div>
 
-          <Card>
-            <CardContent className="p-0 sm:p-6">
+          <Card className="border-none shadow-md overflow-hidden">
+            <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table className="w-full">
+                <Table className="w-full border-collapse">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-24 text-center bg-black text-white">משמרת</TableHead>
+                      <TableHead className="w-24 text-center bg-black text-white p-3 font-bold">משמרת</TableHead>
                       {DAYS_OF_WEEK.map((day, index) => (
-                        <TableHead key={`day-${index}`} className="text-center bg-black text-white">
+                        <TableHead key={`day-${index}`} className="text-center bg-black text-white p-3 font-bold">
                           {day}
                         </TableHead>
                       ))}
@@ -263,8 +286,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                       if (!hasShifts) return null;
                       
                       return (
-                        <TableRow key={`row-${type}`}>
-                          <TableCell className="font-medium text-center">{label}</TableCell>
+                        <TableRow key={`row-${type}`} className="bg-white hover:bg-gray-50 transition-colors">
+                          <TableCell className="font-medium text-center p-3 bg-gray-100">{label}</TableCell>
                           {[0, 1, 2, 3, 4, 5].map((day) => 
                             renderShiftCell(currentSection, day, type)
                           )}
@@ -273,8 +296,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                     })}
                     
                     {getCustomRowsForSection(currentSection).map((row) => (
-                      <TableRow key={`custom-row-${row.id}`}>
-                        <TableCell className="font-medium text-center">
+                      <TableRow key={`custom-row-${row.id}`} className="bg-white hover:bg-gray-50 transition-colors">
+                        <TableCell className="font-medium text-center p-3 bg-gray-100">
                           {row.contents[0] || ''}
                         </TableCell>
                         <TableCell className="p-2 border text-center">
@@ -303,7 +326,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             </CardContent>
             
             {arrangement.footer_text && (
-              <CardFooter className="flex flex-col items-start p-6 border-t">
+              <CardFooter className="flex flex-col items-start p-6 border-t bg-gray-50">
                 <div className="digital-footer-text whitespace-pre-wrap">
                   {arrangement.footer_text}
                 </div>
@@ -315,14 +338,28 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       
       <EditModeDialog 
         isOpen={editModeOpen} 
-        onClose={() => setEditModeOpen(false)}
+        onClose={() => {
+          setEditModeOpen(false);
+          // Ensure pointer-events is reset
+          if (document.body.style.pointerEvents === 'none') {
+            document.body.style.pointerEvents = '';
+          }
+        }}
         onEditCurrent={() => {
           console.log('Edit current arrangement');
           setEditModeOpen(false);
+          // Ensure pointer-events is reset
+          if (document.body.style.pointerEvents === 'none') {
+            document.body.style.pointerEvents = '';
+          }
         }}
         onEditAll={() => {
           console.log('Edit all future arrangements');
           setEditModeOpen(false);
+          // Ensure pointer-events is reset
+          if (document.body.style.pointerEvents === 'none') {
+            document.body.style.pointerEvents = '';
+          }
         }}
       />
     </div>
