@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { format, isSameWeek, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { DigitalWorkArrangement } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
 import { CustomRowColumns } from './workers/CustomRowColumns';
 import EditModeDialog from './EditModeDialog';
+import '@/styles/digital-work-arrangement.css';
 
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
@@ -188,13 +190,13 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       <TableCell key={`cell-${section}-${day}-${shiftType}`} className="p-2 border">
         {cellShifts.map((shift) => (
           <div key={`shift-${shift.id}`} className="mb-2">
-            <div className={`text-xs mb-1 ${shift.is_custom_time ? 'font-bold' : ''}`}>
+            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time' : ''}`}>
               {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
             </div>
-            <div className="font-medium">
+            <div className="digital-shift-person">
               {shift.person_name || ''}
               {shift.additional_text && (
-                <div className="text-xs text-gray-600 mt-1">
+                <div className="digital-shift-note">
                   {shift.additional_text}
                 </div>
               )}
@@ -206,7 +208,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 arrange-view" dir="rtl">
+    <div className="space-y-6 digital-work-arrangement-view" dir="rtl">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">סידור עבודה דיגיטל</h2>
         <div className="text-lg font-medium">{dateDisplay}</div>
@@ -222,7 +224,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap space-x-2 space-x-reverse">
+          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
             {Object.entries(SECTION_TITLES).map(([key, title]) => (
               <button
                 key={`section-${key}`}
@@ -241,12 +243,12 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           <Card>
             <CardContent className="p-0 sm:p-6">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="w-full">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-24 text-center">משמרת</TableHead>
+                      <TableHead className="w-24 text-center bg-black text-white">משמרת</TableHead>
                       {DAYS_OF_WEEK.map((day, index) => (
-                        <TableHead key={`day-${index}`} className="text-center">
+                        <TableHead key={`day-${index}`} className="text-center bg-black text-white">
                           {day}
                         </TableHead>
                       ))}
@@ -286,7 +288,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             
             {arrangement.footer_text && (
               <CardFooter className="flex flex-col items-start p-6 border-t">
-                <div className="whitespace-pre-wrap">
+                <div className="digital-footer-text whitespace-pre-wrap">
                   {arrangement.footer_text}
                 </div>
               </CardFooter>

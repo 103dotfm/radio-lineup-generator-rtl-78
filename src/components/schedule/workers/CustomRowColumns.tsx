@@ -1,5 +1,5 @@
 
-import React from "react";
+import React from 'react';
 import { TableCell } from "@/components/ui/table";
 
 interface CustomRowColumnsProps {
@@ -7,16 +7,20 @@ interface CustomRowColumnsProps {
 }
 
 export const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({ rowContents }) => {
-  // Create an array of 6 days (0-5)
-  const days = Array.from({ length: 6 }, (_, i) => i);
+  // Create an array of 7 columns (0-6) to ensure proper alignment
+  // Column 0 is for row label, 1-6 are for days of week
+  const columns = [0, 1, 2, 3, 4, 5, 6];
   
   return (
     <>
-      {days.map((day) => (
-        <TableCell key={`day-${day}`} className="p-2 border text-center">
-          {rowContents[day] || ""}
-        </TableCell>
-      ))}
+      {columns.map((colIndex) => {
+        const content = rowContents[colIndex] || '';
+        return (
+          <TableCell key={`col-${colIndex}`} className="p-2 border text-center">
+            {content}
+          </TableCell>
+        );
+      })}
     </>
   );
 };
