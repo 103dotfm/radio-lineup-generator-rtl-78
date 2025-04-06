@@ -578,26 +578,24 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       });
 
       if (!slotExists) {
-        // Create a new slot with all required properties explicitly specified
-        const newSlot = {
-          day_of_week: masterSlot.day_of_week,
-          start_time: masterSlot.start_time,
-          end_time: masterSlot.end_time,
-          show_name: masterSlot.show_name,
-          host_name: masterSlot.host_name || null,
-          color: masterSlot.color || 'green',
-          is_prerecorded: masterSlot.is_prerecorded || false,
-          is_collection: masterSlot.is_collection || false,
-          is_modified: false,
-          slot_date: dateStr,
-          parent_slot_id: masterSlot.id,
-          is_recurring: true,
-          created_at: new Date().toISOString()
-        };
-
+        // Create new slot with explicit properties instead of using Partial<ScheduleSlot>
         const { error: insertError } = await supabase
           .from('schedule_slots')
-          .insert(newSlot);
+          .insert({
+            day_of_week: masterSlot.day_of_week,
+            start_time: masterSlot.start_time,
+            end_time: masterSlot.end_time,
+            show_name: masterSlot.show_name,
+            host_name: masterSlot.host_name || null,
+            color: masterSlot.color || 'green',
+            is_prerecorded: masterSlot.is_prerecorded || false,
+            is_collection: masterSlot.is_collection || false,
+            is_modified: false,
+            slot_date: dateStr,
+            parent_slot_id: masterSlot.id,
+            is_recurring: true,
+            created_at: new Date().toISOString()
+          });
 
         if (insertError) {
           console.error('Error creating recurring slot:', insertError);
