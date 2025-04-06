@@ -63,6 +63,32 @@
   font-size: 0.9em;
 }
 
+/* Comic prompt styling */
+.digital-comic-prompt {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+}
+
+.digital-comic-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+/* Comic image styling */
+.digital-comic-image {
+  margin-top: 1rem;
+}
+
+.digital-comic-image-content {
+  max-height: 400px;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
 /* Footer text styling */
 .digital-footer-text {
   white-space: pre-line;
@@ -83,6 +109,11 @@
   .digital-footer-image {
     max-width: 100%;
     page-break-inside: avoid;
+  }
+
+  .digital-comic-image {
+    page-break-inside: avoid;
+    max-width: 100%;
   }
 }
 
@@ -151,6 +182,13 @@
 .date-picker-content {
   background-color: white !important;
   border: 1px solid #e2e8f0 !important;
+}
+
+/* Comics sketch generator styles */
+.comic-sketch-preview {
+  max-height: 400px;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 /* Textarea for larger footer text */
