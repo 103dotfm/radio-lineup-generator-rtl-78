@@ -33,7 +33,8 @@ export interface ScheduleSlot {
   additional_text?: string;
   is_custom_time?: boolean;
   position?: number;
-  slot_date?: string; // Added slot_date as an optional field
+  slot_date?: string; // Date for specific slot instances
+  parent_slot_id?: string; // Reference to parent/master slot
   shows?: any[];
 }
 

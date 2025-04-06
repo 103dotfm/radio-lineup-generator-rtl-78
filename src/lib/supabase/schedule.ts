@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, isSameOrAfter, startOfDay, format, addWeeks } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -565,7 +565,7 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       currentDate = addWeeks(currentDate, 1);
     }
 
-    while (isSameOrBefore(currentDate, endDate)) {
+    while (isSameOrAfter(currentDate, startDate) && isBefore(currentDate, endDate)) {
       const dateStr = format(currentDate, 'yyyy-MM-dd');
       const existingSlot = existingSlots?.find(slot => slot.slot_date === dateStr);
 
