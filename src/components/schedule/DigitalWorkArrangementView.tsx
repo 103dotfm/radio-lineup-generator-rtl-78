@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { format, isSameWeek, parseISO } from 'date-fns';
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DigitalWorkArrangement } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
 import { CustomRowColumns } from './workers/CustomRowColumns';
-import { EditModeDialog } from './EditModeDialog';
+import EditModeDialog from './EditModeDialog';
 
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
@@ -58,7 +57,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   
   const { toast } = useToast();
 
-  // Parse the week date
   const selectedWeekDate = useMemo(() => {
     if (weekDate) {
       try {
@@ -74,7 +72,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     fetchArrangement();
   }, [selectedWeekDate]);
 
-  // Format the date range for display
   const dateDisplay = useMemo(() => {
     const startDay = format(selectedWeekDate, 'dd', { locale: he });
     const endDate = new Date(selectedWeekDate);
@@ -89,7 +86,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     const weekStartStr = format(selectedWeekDate, 'yyyy-MM-dd');
     
     try {
-      // Check if arrangement exists
       const { data: arrangementData, error: arrangementError } = await supabase
         .from('digital_work_arrangements')
         .select('*')
@@ -103,7 +99,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         const firstArrangement = arrangementData[0];
         setArrangement(firstArrangement);
         
-        // Fetch shifts
         const { data: shiftsData, error: shiftsError } = await supabase
           .from('digital_shifts')
           .select('*')
@@ -117,7 +112,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         
         setShifts(shiftsData || []);
         
-        // Fetch custom rows
         const { data: customRowsData, error: customRowsError } = await supabase
           .from('digital_shift_custom_rows')
           .select('*')
@@ -128,7 +122,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           throw customRowsError;
         }
         
-        // Process custom rows
         const processedCustomRows = customRowsData?.map(row => {
           let contents: Record<number, string> = {};
           
@@ -172,7 +165,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
   };
 
-  // Get shifts for a specific section, day, and type
   const getShiftsForCell = (section: string, day: number, shiftType: string) => {
     return shifts.filter(shift => 
       shift.section_name === section && 
@@ -181,12 +173,10 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
   };
 
-  // Get custom rows for a section
   const getCustomRowsForSection = (section: string) => {
     return customRows.filter(row => row.section_name === section);
   };
 
-  // Render a table cell for a shift
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     const cellShifts = getShiftsForCell(section, day, shiftType);
     
@@ -264,7 +254,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                   </TableHeader>
                   <TableBody>
                     {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
-                      // Check if there are any shifts of this type in the current section
                       const hasShifts = shifts.some(shift => 
                         shift.section_name === currentSection && 
                         shift.shift_type === type
@@ -282,7 +271,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                       );
                     })}
                     
-                    {/* Custom rows */}
                     {getCustomRowsForSection(currentSection).map((row) => (
                       <TableRow key={`custom-row-${row.id}`}>
                         <CustomRowColumns 
@@ -307,7 +295,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         </>
       )}
       
-      {/* Edit Mode Dialog */}
       <EditModeDialog 
         isOpen={editModeOpen} 
         onClose={() => setEditModeOpen(false)}
