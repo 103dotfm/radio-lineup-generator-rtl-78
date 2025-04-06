@@ -22,16 +22,17 @@ const EditModeDialog: React.FC<EditModeDialogProps> = ({
   onEditCurrent,
   onEditAll,
 }) => {
-  // Ensure proper cleanup when the component unmounts
+  // Ensure proper cleanup when the component unmounts or closes
   useEffect(() => {
+    // Cleanup function to reset pointer-events when component unmounts
     return () => {
-      // Cleanup function
       document.body.style.pointerEvents = '';
     };
   }, []);
 
-  // Handle dialog close cleanly
+  // Handle dialog close cleanly and ensure we reset pointer-events
   const handleCloseDialog = () => {
+    // Reset pointer-events to ensure it doesn't remain set to 'none'
     document.body.style.pointerEvents = '';
     onClose();
   };
