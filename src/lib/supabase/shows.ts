@@ -3,7 +3,7 @@ import { Show } from "@/types/show";
 
 export const getShows = async (): Promise<Show[]> => {
   console.log('Fetching shows...');
-  const { data: shows, error } = await supabase
+  const { data: showsData, error } = await supabase
     .from('shows_backup')
     .select('*')
     .order('created_at', { ascending: false });
@@ -13,8 +13,10 @@ export const getShows = async (): Promise<Show[]> => {
     throw error;
   }
 
+  const shows: Show[] = showsData || [];
+
   // Fetch items for each show
-  if (shows && shows.length > 0) {
+  if (shows.length > 0) {
     const showIds = shows.map(show => show.id);
     const { data: items, error: itemsError } = await supabase
       .from('show_items')
@@ -32,7 +34,7 @@ export const getShows = async (): Promise<Show[]> => {
   }
 
   console.log('Fetched shows count:', shows?.length);
-  return shows as unknown as Show[];
+  return shows;
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
