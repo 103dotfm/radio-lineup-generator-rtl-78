@@ -502,13 +502,13 @@ export const deleteScheduleSlot = async (id: string, isMasterSchedule: boolean =
         start_time: originalSlot.start_time,
         end_time: originalSlot.end_time,
         show_name: originalSlot.show_name,
-        host_name: originalSlot.host_name,
-        is_recurring: false,
+        host_name: originalSlot.host_name || null,
+        color: originalSlot.color || 'green',
+        is_prerecorded: originalSlot.is_prerecorded || false,
+        is_collection: originalSlot.is_collection || false,
         is_modified: true,
         is_deleted: true,
-        is_prerecorded: originalSlot.is_prerecorded,
-        is_collection: originalSlot.is_collection,
-        // Store the week start date as part of the created_at timestamp
+        is_recurring: false,
         created_at: new Date(currentWeekStart).toISOString()
       });
 
@@ -571,10 +571,7 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       
       // Check if a slot already exists for this date
       const slotExists = existingSlots?.some(slot => {
-        return typeof slot === 'object' && 
-               slot !== null && 
-               'slot_date' in slot && 
-               slot.slot_date === dateStr;
+        return slot && typeof slot === 'object' && 'slot_date' in slot && slot.slot_date === dateStr;
       });
 
       if (!slotExists) {
