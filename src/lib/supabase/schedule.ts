@@ -200,7 +200,7 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
   }
 
   // Create a properly typed slot object with all required fields
-  const slotData: Partial<ScheduleSlot> = {
+  const slotData = {
     show_name: slot.show_name,
     host_name: slot.host_name,
     day_of_week: slot.day_of_week,
