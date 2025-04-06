@@ -199,19 +199,12 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
     }
   }
 
-  // Create a properly typed slot object with all required fields
   const slotData = {
-    show_name: slot.show_name,
-    host_name: slot.host_name,
-    day_of_week: slot.day_of_week,
-    start_time: slot.start_time,
-    end_time: slot.end_time,
+    ...slot,
     is_recurring: isMasterSchedule,
     is_modified: !isMasterSchedule,
-    is_prerecorded: slot.is_prerecorded,
-    is_collection: slot.is_collection,
-    color: slot.color || null,
-    created_at: new Date(currentWeekStart).toISOString()
+    created_at: new Date(currentWeekStart).toISOString(),
+    color: slot.color || null
   };
 
   console.log('Inserting new slot with data:', slotData);

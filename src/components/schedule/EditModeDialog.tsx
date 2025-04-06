@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,12 +22,17 @@ const EditModeDialog: React.FC<EditModeDialogProps> = ({
   onEditCurrent,
   onEditAll,
 }) => {
+  // Ensure proper cleanup when the component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup function
+      document.body.style.pointerEvents = '';
+    };
+  }, []);
+
   // Handle dialog close cleanly
   const handleCloseDialog = () => {
-    // Ensure pointer-events are reset when dialog closes
-    if (document.body.style.pointerEvents === 'none') {
-      document.body.style.pointerEvents = '';
-    }
+    document.body.style.pointerEvents = '';
     onClose();
   };
 
