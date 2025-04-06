@@ -29,6 +29,7 @@ export interface ScheduleSlot {
   is_collection?: boolean;
   is_modified?: boolean;
   is_deleted?: boolean;
+  is_recurring?: boolean; // Added this field
   has_lineup?: boolean;
   additional_text?: string;
   is_custom_time?: boolean;
@@ -36,6 +37,8 @@ export interface ScheduleSlot {
   slot_date?: string; // Date for specific slot instances
   parent_slot_id?: string; // Reference to parent/master slot
   shows?: any[];
+  created_at?: string; // Added created_at
+  updated_at?: string; // Added updated_at
 }
 
 export interface DayNote {

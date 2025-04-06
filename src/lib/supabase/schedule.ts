@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
-import { addDays, startOfWeek, isSameDay, isAfter, isBefore, isSameOrAfter, startOfDay, format, addWeeks } from 'date-fns';
+import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks, parseISO, isEqual } from 'date-fns';
 
 export const getScheduleSlots = async (selectedDate?: Date, isMasterSchedule: boolean = false): Promise<ScheduleSlot[]> => {
   console.log('Fetching schedule slots...', { selectedDate, isMasterSchedule });
@@ -565,18 +565,20 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       currentDate = addWeeks(currentDate, 1);
     }
 
-    while (isSameOrAfter(currentDate, startDate) && isBefore(currentDate, endDate)) {
+    while (isAfter(currentDate, startDate) || isEqual(currentDate, startDate) && isBefore(currentDate, endDate)) {
       const dateStr = format(currentDate, 'yyyy-MM-dd');
-      const existingSlot = existingSlots?.find(slot => slot.slot_date === dateStr);
+      
+      const existingSlot = existingSlots?.find(slot => {
+        // Make sure slot has slot_date before comparing
+        if ('slot_date' in slot) {
+          return slot.slot_date === dateStr;
+        }
+        return false;
+      });
 
       if (!existingSlot) {
         // Create a properly typed new slot object with required fields
-        const newSlot: Partial<ScheduleSlot> & {
-          day_of_week: number;
-          start_time: string;
-          end_time: string;
-          show_name: string;
-        } = {
+        const newSlot: Partial<ScheduleSlot> = {
           day_of_week: masterSlot.day_of_week,
           start_time: masterSlot.start_time,
           end_time: masterSlot.end_time,
