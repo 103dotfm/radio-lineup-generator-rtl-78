@@ -23,14 +23,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs"
+} from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +38,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Command,
   CommandDialog,
@@ -60,13 +60,13 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "@/components/ui/command"
-import { Calendar } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+} from "@/components/ui/command";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addWeeks, subWeeks } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Form,
   FormControl,
@@ -75,7 +75,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
+} from "@/components/ui/form";
 import { supabase } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
@@ -101,6 +101,15 @@ export default function WorkArrangements() {
   const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">("producers");
   const [weekDate, setWeekDate] = useState<Date>(new Date());
   const { toast } = useToast();
+  const [publicLinks, setPublicLinks] = useState<{
+    current: string;
+    next: string;
+    previous: string;
+  }>({
+    current: "",
+    next: "",
+    previous: "",
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -109,7 +118,31 @@ export default function WorkArrangements() {
       type: fileType,
       pdf_file: null,
     },
-  })
+  });
+
+  useEffect(() => {
+    generatePublicLinks(weekDate);
+  }, [weekDate]);
+
+  const generatePublicLinks = (date: Date) => {
+    const currentWeekStart = startOfWeek(date, { weekStartsOn: 0 });
+    const nextWeekStart = addWeeks(currentWeekStart, 1);
+    const prevWeekStart = subWeeks(currentWeekStart, 1);
+
+    setPublicLinks({
+      current: `/schedule/${format(currentWeekStart, 'yyyy-MM-dd')}`,
+      next: `/schedule/${format(nextWeekStart, 'yyyy-MM-dd')}`,
+      previous: `/schedule/${format(prevWeekStart, 'yyyy-MM-dd')}`,
+    });
+  };
+
+  const startOfWeek = (date: Date, options: { weekStartsOn: number }) => {
+    const result = new Date(date);
+    const day = result.getDay();
+    const diff = (day < options.weekStartsOn ? 7 : 0) + day - options.weekStartsOn;
+    result.setDate(result.getDate() - diff);
+    return result;
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const file = values.pdf_file[0];
@@ -284,6 +317,45 @@ export default function WorkArrangements() {
                   </Form>
                 </CardContent>
               </CardHeader>
+              
+              <CardFooter className="flex flex-col items-start">
+                <CardTitle className="mb-3 text-lg">Public Schedule Links</CardTitle>
+                <div className="space-y-2 w-full">
+                  <div className="flex items-center justify-between">
+                    <span>Previous Week:</span>
+                    <a 
+                      href={publicLinks.previous} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {publicLinks.previous}
+                    </a>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Current Week:</span>
+                    <a 
+                      href={publicLinks.current} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {publicLinks.current}
+                    </a>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Next Week:</span>
+                    <a 
+                      href={publicLinks.next} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {publicLinks.next}
+                    </a>
+                  </div>
+                </div>
+              </CardFooter>
             </Card>
           </TabsContent>
           <TabsContent value="digital-editor" className="py-4">
