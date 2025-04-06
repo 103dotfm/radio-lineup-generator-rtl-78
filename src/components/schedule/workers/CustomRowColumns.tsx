@@ -40,6 +40,9 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
     onValueChange(rowId, dayIndex, value);
   };
   
+  // Render the days in the correct order (Sunday to Friday)
+  const daysOfWeek = [0, 1, 2, 3, 4, 5]; // Sunday to Friday
+  
   return (
     <TableRow className="digital-custom-row">
       <TableCell className="p-2 border digital-custom-cell-delete">
@@ -53,8 +56,7 @@ const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({
         </Button>
       </TableCell>
       
-      {/* Render cells in order from 0 to 5 for Sunday through Friday */}
-      {[0, 1, 2, 3, 4, 5].map((dayIndex) => (
+      {daysOfWeek.map((dayIndex) => (
         <TableCell 
           key={`${rowId}-day-${dayIndex}`} 
           className={`p-2 border digital-custom-cell digital-custom-cell-${dayIndex}`}

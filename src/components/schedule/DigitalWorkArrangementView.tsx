@@ -23,6 +23,16 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
+  // Cleanup function to ensure pointer-events are reset when component unmounts
+  useEffect(() => {
+    return () => {
+      // Ensure pointer-events are reset when component unmounts
+      if (document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+    };
+  }, []);
+
   useEffect(() => {
     fetchArrangement();
   }, [weekDate]);
