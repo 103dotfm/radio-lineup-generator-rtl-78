@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks, parseISO, isEqual } from 'date-fns';
@@ -571,12 +570,12 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       const dateStr = format(currentDate, 'yyyy-MM-dd');
       
       // Check if a slot already exists for this date
-      const slotExists = existingSlots?.some(slot => 
-        typeof slot === 'object' && 
-        slot !== null && 
-        'slot_date' in slot && 
-        slot.slot_date === dateStr
-      );
+      const slotExists = existingSlots?.some(slot => {
+        return typeof slot === 'object' && 
+               slot !== null && 
+               'slot_date' in slot && 
+               slot.slot_date === dateStr;
+      });
 
       if (!slotExists) {
         // Create a new slot with all required properties explicitly specified
