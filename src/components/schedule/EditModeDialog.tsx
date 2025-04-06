@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,26 +22,12 @@ const EditModeDialog: React.FC<EditModeDialogProps> = ({
   onEditCurrent,
   onEditAll,
 }) => {
-  // Ensure proper cleanup when the component unmounts or when dialog closes
-  useEffect(() => {
-    // Only set this property when the dialog is open
-    if (isOpen) {
-      // Store the original value to restore it later
-      const originalPointerEvents = document.body.style.pointerEvents;
-      
-      return () => {
-        // Restore the original value or set it to empty if there was no original value
-        document.body.style.pointerEvents = originalPointerEvents || '';
-      };
-    }
-    
-    return undefined;
-  }, [isOpen]);
-
   // Handle dialog close cleanly
   const handleCloseDialog = () => {
     // Ensure pointer-events are reset when dialog closes
-    document.body.style.pointerEvents = '';
+    if (document.body.style.pointerEvents === 'none') {
+      document.body.style.pointerEvents = '';
+    }
     onClose();
   };
 
