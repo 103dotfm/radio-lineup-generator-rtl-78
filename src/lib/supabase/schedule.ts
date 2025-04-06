@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks, parseISO, isEqual } from 'date-fns';
@@ -579,7 +578,7 @@ export const createRecurringSlotsFromMaster = async (masterSlot: ScheduleSlot, s
       });
 
       if (!slotExists) {
-        // Explicitly define all required fields without using Partial<ScheduleSlot>
+        // Create a new slot directly with explicitly defined properties
         const { error: insertError } = await supabase
           .from('schedule_slots')
           .insert({
