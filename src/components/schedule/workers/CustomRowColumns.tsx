@@ -8,7 +8,7 @@ interface CustomRowColumnsProps {
 
 export const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({ rowContents }) => {
   // Create an array of 7 columns (0-6) to ensure proper alignment
-  // Column 0 is for row label, 1-6 are for days of week (Sunday to Friday)
+  // Column 0 is for row label, 1-7 are for days of week (Sunday to Saturday)
   const columns = [0, 1, 2, 3, 4, 5, 6];
   
   return (
