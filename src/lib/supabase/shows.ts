@@ -186,15 +186,21 @@ export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
       throw new Error('Show name is required');
     }
     
+    const insertData = {
+      name: show.name,
+      date: show.date,
+      time: show.time,
+      notes: show.notes
+    };
+    
+    // Only add slot_id if it exists in the show object
+    if ('slot_id' in show) {
+      (insertData as any).slot_id = show.slot_id;
+    }
+    
     const { data, error } = await supabase
       .from('shows')
-      .insert([{
-        name: show.name,
-        date: show.date,
-        time: show.time,
-        notes: show.notes,
-        slot_id: show.slot_id
-      }])
+      .insert([insertData])
       .select()
       .single();
     
@@ -209,15 +215,17 @@ export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
 
 export const updateShow = async (id: string, updates: Partial<Show>): Promise<Show | null> => {
   try {
+    const updateData: Record<string, any> = {};
+    
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.date !== undefined) updateData.date = updates.date;
+    if (updates.time !== undefined) updateData.time = updates.time;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if ('slot_id' in updates) updateData.slot_id = updates.slot_id;
+    
     const { data, error } = await supabase
       .from('shows')
-      .update({
-        name: updates.name,
-        date: updates.date,
-        time: updates.time,
-        notes: updates.notes,
-        slot_id: updates.slot_id
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -354,7 +362,7 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
       if (show.date !== undefined) showData.date = show.date;
       if (show.time !== undefined) showData.time = show.time;
       if (show.notes !== undefined) showData.notes = show.notes;
-      if (show.slot_id !== undefined) showData.slot_id = show.slot_id;
+      if ('slot_id' in show) showData.slot_id = show.slot_id;
       
       const { data, error } = await supabase
         .from('shows')
@@ -367,15 +375,20 @@ export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], 
       savedShow = data as Show;
     } else if (show.name) {
       // Create new show
+      const showData: Record<string, any> = {
+        name: show.name,
+        date: show.date,
+        time: show.time,
+        notes: show.notes
+      };
+      
+      if ('slot_id' in show) {
+        showData.slot_id = show.slot_id;
+      }
+      
       const { data, error } = await supabase
         .from('shows')
-        .insert([{
-          name: show.name,
-          date: show.date,
-          time: show.time,
-          notes: show.notes,
-          slot_id: show.slot_id
-        }])
+        .insert([showData])
         .select()
         .single();
       

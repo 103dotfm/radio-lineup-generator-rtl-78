@@ -61,7 +61,6 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         setComicImageUrl(data.comic_image_url || null);
         setNotes(data.notes || '');
       } else {
-        // Create a new arrangement if none exists
         setArrangement(null);
         setFooterText('');
         setFooterImageUrl('');
@@ -84,7 +83,6 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
   useEffect(() => {
     fetchArrangement();
     
-    // Notify parent component if provided
     if (onSelectWeek) {
       onSelectWeek(format(weekStart, 'yyyy-MM-dd'));
     }
@@ -96,7 +94,6 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
       const weekStartStr = format(weekStart, 'yyyy-MM-dd');
       
       if (arrangement) {
-        // Update existing arrangement
         const { error } = await supabase
           .from('digital_work_arrangements')
           .update({
@@ -110,7 +107,6 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
         
         if (error) throw error;
       } else {
-        // Create new arrangement
         const { error } = await supabase
           .from('digital_work_arrangements')
           .insert([{
@@ -172,7 +168,6 @@ const DigitalWorkArrangementEditor: React.FC<DigitalWorkArrangementEditorProps> 
 
   const formattedWeekDate = format(weekStart, 'dd/MM/yyyy');
 
-  // Create a formatted arrangement for the preview
   const previewArrangement = arrangement ? {
     ...arrangement,
     shifts: [],

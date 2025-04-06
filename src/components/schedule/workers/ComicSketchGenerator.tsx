@@ -47,10 +47,8 @@ const ComicSketchGenerator: React.FC<ComicSketchGeneratorProps> = ({
     }
   }, [externalPrompt]);
 
-  // Cleanup function when component unmounts
   useEffect(() => {
     return () => {
-      // Ensure all UI interactions are properly cleaned up
       document.body.style.pointerEvents = '';
     };
   }, []);
