@@ -101,6 +101,62 @@ export const getShow = async (id: string): Promise<Show | null> => {
   }
 };
 
+export const getShowWithItems = async (id: string): Promise<{show: Show | null; items: ShowItem[]}> => {
+  try {
+    // Fetch the show
+    const { data: show, error: showError } = await supabase
+      .from('shows')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (showError) {
+      console.error(`Error fetching show with ID ${id}:`, showError);
+      throw showError;
+    }
+    
+    // Fetch the show items
+    const { data: items, error: itemsError } = await supabase
+      .from('show_items')
+      .select('*')
+      .eq('show_id', id)
+      .order('position', { ascending: true });
+    
+    if (itemsError) {
+      console.error(`Error fetching items for show with ID ${id}:`, itemsError);
+      throw itemsError;
+    }
+    
+    return { 
+      show: show,
+      items: items || []
+    };
+  } catch (error) {
+    console.error(`Error in getShowWithItems for ID ${id}:`, error);
+    return { show: null, items: [] };
+  }
+};
+
+export const getShowsByDate = async (dateString: string): Promise<Show[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('shows')
+      .select(`
+        *,
+        items:show_items(*)
+      `)
+      .eq('date', dateString)
+      .order('time', { ascending: true });
+    
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error(`Error fetching shows for date ${dateString}:`, error);
+    return [];
+  }
+};
+
 export const createShow = async (show: Partial<Show>): Promise<Show | null> => {
   try {
     const { data, error } = await supabase
@@ -209,5 +265,68 @@ export const deleteShowItem = async (id: string): Promise<boolean> => {
   } catch (error) {
     console.error(`Error deleting show item with ID ${id}:`, error);
     return false;
+  }
+};
+
+export const saveShow = async (show: Partial<Show>, items: Partial<ShowItem>[], showId?: string): Promise<Show | null> => {
+  try {
+    // Start a transaction to save the show and its items
+    let savedShow: Show | null = null;
+    
+    if (showId) {
+      // Update existing show
+      const { data, error } = await supabase
+        .from('shows')
+        .update(show)
+        .eq('id', showId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      savedShow = data;
+    } else {
+      // Create new show
+      const { data, error } = await supabase
+        .from('shows')
+        .insert([show])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      savedShow = data;
+    }
+    
+    if (!savedShow) throw new Error('Failed to save show');
+    
+    // Delete existing items if updating a show
+    if (showId) {
+      const { error } = await supabase
+        .from('show_items')
+        .delete()
+        .eq('show_id', showId);
+      
+      if (error) throw error;
+    }
+    
+    // Add show_id to each item and add position index
+    const itemsToInsert = items.map((item, index) => ({
+      ...item,
+      show_id: savedShow!.id,
+      position: index
+    }));
+    
+    // Create new items
+    if (itemsToInsert.length > 0) {
+      const { error } = await supabase
+        .from('show_items')
+        .insert(itemsToInsert);
+      
+      if (error) throw error;
+    }
+    
+    return savedShow;
+  } catch (error) {
+    console.error('Error saving show:', error);
+    return null;
   }
 };
