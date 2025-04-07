@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DigitalWorkArrangement } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
 import EditModeDialog from './EditModeDialog';
 import '@/styles/digital-work-arrangement.css';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, Printer, FileDown } from 'lucide-react';
 import { CustomRowColumns } from './workers/CustomRowColumns';
 import { Worker } from '@/lib/supabase/workers';
+import html2pdf from 'html2pdf.js';
 
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
@@ -36,11 +38,15 @@ const SHIFT_TYPE_LABELS = {
 interface DigitalWorkArrangementViewProps {
   weekDate?: string;
   isEditable?: boolean;
+  isPrintPreview?: boolean;
+  showControls?: boolean;
 }
 
 const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   weekDate,
-  isEditable = false
+  isEditable = false,
+  isPrintPreview = false,
+  showControls = false
 }) => {
   const [arrangement, setArrangement] = useState<DigitalWorkArrangement | null>(null);
   const [shifts, setShifts] = useState<any[]>([]);
@@ -48,9 +54,9 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [editModeOpen, setEditModeOpen] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const [isPdfMode, setIsPdfMode] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const selectedWeekDate = useMemo(() => {
     if (weekDate) {
@@ -196,7 +202,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const getWorkerName = (personName: string) => {
     if (!personName) return '';
 
-    // Check if personName is a UUID
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidPattern.test(personName)) {
       const worker = workers.find(w => w.id === personName);
@@ -213,6 +218,47 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return customRows.filter(row => row.section_name === section);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handlePdfExport = async () => {
+    if (!contentRef.current) return;
+    
+    try {
+      setIsPdfMode(true);
+      
+      setTimeout(() => {
+        const element = contentRef.current;
+        if (!element) return;
+        
+        const opt = {
+          margin: [5, 5, 5, 5],
+          filename: `סידור-עבודה-דיגיטל-${format(selectedWeekDate, 'yyyy-MM-dd')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+          setIsPdfMode(false);
+          toast({
+            title: "הצלחה",
+            description: "סידור העבודה יוצא ל-PDF בהצלחה",
+          });
+        });
+      }, 100);
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      setIsPdfMode(false);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בייצוא ל-PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     const cellShifts = getShiftsForCell(section, day, shiftType);
     if (cellShifts.length === 0) {
@@ -220,8 +266,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
     return <TableCell key={`cell-${section}-${day}-${shiftType}`} className={`p-2 border digital-cell digital-cell-${section}`}>
         {cellShifts.map(shift => <div key={`shift-${shift.id}`} className={`mb-2 digital-shift digital-shift-${section}`}>
-            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time digital-shift-irregular-hours' : ''} flex items-center justify-center`}>
-              <Clock className="h-3 w-3 mr-1 opacity-70 px-px py-0 mx-[4px]" />
+            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time digital-shift-irregular-hours' : ''} flex items-center justify-center fix-time-display`}>
+              {!isPdfMode && <Clock className="h-3 w-3 mr-1 opacity-70 px-px py-0 mx-[4px]" />}
               {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
             </div>
             <div className="digital-shift-person mt-1 text-center">
@@ -237,6 +283,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const renderWorkArrangementTable = () => {
     const hasAnyContent = shifts.length > 0 || customRows.length > 0;
     if (!hasAnyContent) return null;
+    
     return <div className="digital-work-arrangement-table">
         <Table className="w-full border-collapse">
           <TableHeader>
@@ -253,11 +300,9 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             {/* Digital Shifts Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.DIGITAL_SHIFTS) && <>
                 <TableRow className="digital-section-title-row">
-            {/*
                   <TableCell colSpan={6} className="p-2 font-bold text-lg bg-gray-100 digital-section-title">
                     משמרות דיגיטל
                   </TableCell>
-            */}
                 </TableRow>
                 {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
               const hasShifts = shifts.some(shift => shift.section_name === SECTION_NAMES.DIGITAL_SHIFTS && shift.shift_type === type);
@@ -330,7 +375,13 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </div>;
   };
 
-  return <div className="space-y-6 digital-work-arrangement-view" dir="rtl">
+  return (
+    <div 
+      className={`space-y-6 digital-work-arrangement-view ${isPrintPreview ? 'print-preview-mode' : ''} ${isPdfMode ? 'pdf-export-mode fix-time-display-icons' : ''}`} 
+      dir="rtl"
+      ref={contentRef}
+      id="digital-work-arrangement-preview"
+    >
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6 digital-work-header">
         <h2 className="text-2xl font-bold mb-2 md:mb-0 flex items-center digital-work-title">
           <Calendar className="h-5 w-5 mr-2 text-blue-600 mx-[17px]" />
@@ -341,6 +392,27 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           {dateDisplay}
         </div>
       </div>
+
+      {showControls && (
+        <div className="flex justify-end gap-2 pb-4 digital-work-arrangement-preview-controls">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={handlePrint}
+          >
+            <Printer className="h-4 w-4" />
+            הדפסה
+          </Button>
+          <Button
+            variant="default"
+            className="flex items-center gap-2"
+            onClick={handlePdfExport}
+          >
+            <FileDown className="h-4 w-4" />
+            ייצוא ל-PDF
+          </Button>
+        </div>
+      )}
 
       {loading ? <div className="flex justify-center my-8 p-8 bg-white rounded-lg shadow-sm digital-loading">
           <div className="flex flex-col items-center">
@@ -365,27 +437,25 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         </Card>}
       
       <EditModeDialog isOpen={editModeOpen} onClose={() => {
-      setEditModeOpen(false);
-      // Ensure pointer-events is reset
-      if (document.body.style.pointerEvents === 'none') {
-        document.body.style.pointerEvents = '';
-      }
-    }} onEditCurrent={() => {
-      console.log('Edit current arrangement');
-      setEditModeOpen(false);
-      // Ensure pointer-events is reset
-      if (document.body.style.pointerEvents === 'none') {
-        document.body.style.pointerEvents = '';
-      }
-    }} onEditAll={() => {
-      console.log('Edit all future arrangements');
-      setEditModeOpen(false);
-      // Ensure pointer-events is reset
-      if (document.body.style.pointerEvents === 'none') {
-        document.body.style.pointerEvents = '';
-      }
-    }} />
-    </div>;
+        setEditModeOpen(false);
+        if (document.body.style.pointerEvents === 'none') {
+          document.body.style.pointerEvents = '';
+        }
+      }} onEditCurrent={() => {
+        console.log('Edit current arrangement');
+        setEditModeOpen(false);
+        if (document.body.style.pointerEvents === 'none') {
+          document.body.style.pointerEvents = '';
+        }
+      }} onEditAll={() => {
+        console.log('Edit all future arrangements');
+        setEditModeOpen(false);
+        if (document.body.style.pointerEvents === 'none') {
+          document.body.style.pointerEvents = '';
+        }
+      }} />
+    </div>
+  );
 };
 
 export default DigitalWorkArrangementView;
