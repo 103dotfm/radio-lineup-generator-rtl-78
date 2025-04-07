@@ -4,35 +4,26 @@ import { TableCell } from "@/components/ui/table";
 
 interface CustomRowColumnsProps {
   rowContents: Record<number, string>;
+  section?: string;
 }
 
-export const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({ rowContents }) => {
-  // Create an array of 7 columns (0-6) to ensure proper alignment
-  // Column 0 is for row label, 1-6 are for days of week (Sunday to Friday)
+export const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({ 
+  rowContents,
+  section = "default" 
+}) => {
+  // Create columns 1-6 for days of week (Sunday to Friday)
+  // No longer need column 0 for row label
   
   return (
     <>
-      <TableCell className="p-2 border text-center bg-gray-100 font-medium">
-        {rowContents[0] || ''}
-      </TableCell>
-      <TableCell className="p-2 border text-center">
-        {rowContents[1] || ''}
-      </TableCell>
-      <TableCell className="p-2 border text-center">
-        {rowContents[2] || ''}
-      </TableCell>
-      <TableCell className="p-2 border text-center">
-        {rowContents[3] || ''}
-      </TableCell>
-      <TableCell className="p-2 border text-center">
-        {rowContents[4] || ''}
-      </TableCell>
-      <TableCell className="p-2 border text-center">
-        {rowContents[5] || ''}
-      </TableCell>
-      <TableCell className="p-2 border text-center">
-        {rowContents[6] || ''}
-      </TableCell>
+      {[1, 2, 3, 4, 5, 6].map((day) => (
+        <TableCell 
+          key={`day-${day}`} 
+          className={`p-2 border text-center digital-cell digital-cell-${section}`}
+        >
+          {rowContents[day] || ''}
+        </TableCell>
+      ))}
     </>
   );
 };
