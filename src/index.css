@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -153,25 +152,10 @@ body {
 
 /* Digital Work Arrangement PDF export styles */
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  
   #digital-work-arrangement-preview {
     width: 100%;
     margin: 0;
     padding: 0;
-  }
-  
-  #digital-work-arrangement-preview,
-  #digital-work-arrangement-preview * {
-    visibility: visible;
-  }
-  
-  #digital-work-arrangement-preview {
-    position: absolute;
-    left: 0;
-    top: 0;
   }
   
   #digital-work-arrangement-preview h1,
@@ -181,12 +165,7 @@ body {
   }
   
   #digital-work-arrangement-preview button,
-  #digital-work-arrangement-preview .actions,
-  #digital-work-arrangement-preview svg {
-    display: none !important;
-  }
-  
-  .digital-work-arrangement-preview-controls {
+  #digital-work-arrangement-preview .actions {
     display: none !important;
   }
 }
@@ -206,19 +185,23 @@ body {
     min-width: 600px;
   }
   
+  /* Improved mobile form controls */
   input, select, textarea {
     @apply text-base; /* Prevents zoom on iOS */
     max-height: 44px; /* Better touch targets */
   }
   
+  /* Better spacing for mobile forms */
   .form-group, .form-item, [data-sidebar="group"] {
     @apply mb-4;
   }
   
+  /* Improved button sizing for touch */
   button, [role="button"], .button {
     @apply min-h-[44px] px-4;
   }
   
+  /* Adjust tabs for mobile */
   [role="tablist"] {
     @apply flex overflow-x-auto py-2 gap-2;
     scrollbar-width: none; /* Hide scrollbar in Firefox */
@@ -229,6 +212,7 @@ body {
     display: none; /* Hide scrollbar in Chrome/Safari */
   }
   
+  /* Mobile admin tabs */
   .admin-tabs [role="tablist"] {
     @apply grid-cols-3 sm:grid-cols-6;
     @apply text-xs;
@@ -238,6 +222,7 @@ body {
     @apply py-2 px-3;
   }
   
+  /* Mobile lineup table */
   .lineup-table-wrapper {
     @apply overflow-x-auto -mx-4 px-4 pb-2;
     width: calc(100% + 2rem);
@@ -364,7 +349,26 @@ body {
     padding: 0 !important;
   }
 
-   /* Special class for divider cell with no left/right borders */
+  /* Public Digital work arrangement */
+  .digital-footer-text {
+    text-align: center;
+    font-size: 1.5em;
+  }
+  .px-px svg {
+    padding-left: 1px;
+    padding-right: 0px;
+  }
+  .digital-shift-irregular-hours {
+    margin: auto;
+    background-color: #000;
+    color: #e4ff6c !important;
+    width: 60%;
+  }
+  .digital-shift-person, .digital-radio-person, .digital-work-arrangement .worker-name, .digital-work-arrangement-view .worker-name {
+    font-size: 16px;
+  }
+
+  /* Special class for divider cell with no left/right borders */
   .print-divider-cell {
     border-left: 0 !important;
     border-right: 0 !important;
@@ -513,26 +517,7 @@ body {
     min-width: 48px !important;
     max-width: 48px !important;
   }
-}
-
-/* Public Digital work arrangement */
-.digital-footer-text {
-  text-align: center;
-  font-size: 1.5em;
-}
-.px-px svg {
-  padding-left: 1px;
-  padding-right: 0px;
-}
-.digital-shift-irregular-hours {
-  margin: auto;
-  background-color: #000;
-  color: #e4ff6c !important;
-  width: fit-content;
-}
-.digital-shift-person, .digital-radio-person, .digital-work-arrangement .worker-name, .digital-work-arrangement-view .worker-name {
-  font-size: 16px;
-}
+} /* Added missing closing brace for @media print */
 
 /* UI Components */
 #radix-\:r1\: {
@@ -721,30 +706,4 @@ tbody {vertical-align: top;}
   .height-sensitive {
     @apply max-h-[60vh] overflow-y-auto;
   }
-}
-
-/* Public Digital work arrangement */
-.digital-footer-text {
-  text-align: center;
-  font-size: 1.5em;
-}
-.px-px svg {
-  padding-left: 1px;
-  padding-right: 0px;
-}
-.digital-shift-irregular-hours {
-  margin: auto;
-  background-color: #000;
-  color: #e4ff6c !important;
-  width: fit-content;
-}
-.digital-shift-person, .digital-radio-person, .digital-work-arrangement .worker-name, .digital-work-arrangement-view .worker-name {
-  font-size: 16px;
-}
-.digital-work-arrangement-view svg {display: none;}
-.digital-work-arrangement-view .fix-time-display:before {display: none;}
-.digital-work-arrangement-view .fix-time-display:before {display: none;}
-.digital-work-arrangement-view .digital-shift-time, .digital-work-arrangement-view .digital-radio-time {
-    margin-bottom: -5px;
-    text-decoration: underline;
 }

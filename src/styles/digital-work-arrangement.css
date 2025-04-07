@@ -103,44 +103,12 @@
 
 /* Print styles */
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  
-  .digital-work-arrangement-view, 
-  .digital-work-arrangement-view * {
-    visibility: visible;
-  }
-  
   .digital-work-arrangement-view {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0 !important;
-    margin: 0 !important;
     page-break-inside: avoid;
   }
   
-  /* Hide all buttons when printing */
-  .digital-work-arrangement-view button,
-  .digital-work-arrangement-preview-controls {
-    display: none !important;
-  }
-  
-  /* Hide all SVG elements in PDF export mode */
-  .pdf-export-mode svg,
-  .digital-work-arrangement-view svg,
-  .fix-time-display svg,
-  .digital-shift-time svg,
-  .digital-radio-time svg {
-    display: none !important;
-  }
-  
-  /* Special fix for time display in PDF mode */
-  .pdf-export-mode .digital-shift-time,
-  .pdf-export-mode .digital-radio-time {
-    padding: 0 !important;
+  .digital-work-arrangement-view table {
+    page-break-inside: avoid;
   }
   
   .digital-section-title-row {
@@ -159,35 +127,6 @@
   .digital-footer-image {
     max-width: 100%;
     page-break-inside: avoid;
-  }
-
-  /* Fix for time display with icon issue */
-  .digital-shift-time .mx-\[4px\],
-  .digital-radio-time .mx-\[4px\] {
-    display: none !important;
-  }
-  
-  /* Adjust cell padding for better fit on one page */
-  .digital-work-arrangement-view table td,
-  .digital-work-arrangement-view table th {
-    padding: 4px !important;
-    font-size: 10px !important;
-  }
-  
-  /* Scale down person font size for PDF */
-  .pdf-export-mode .digital-shift-person, 
-  .pdf-export-mode .digital-radio-person {
-    font-size: 10px !important;
-  }
-  
-  /* Compact layout fixes for PDF */
-  .pdf-export-mode .digital-work-header {
-    margin-bottom: 5px !important;
-  }
-  
-  .pdf-export-mode .digital-work-title,
-  .pdf-export-mode .digital-work-date {
-    font-size: 14px !important;
   }
 }
 
@@ -343,30 +282,4 @@
 /* Empty cell styling */
 .digital-cell-empty {
   background-color: #f9fafb;
-}
-
-/* PDF Export specific styles */
-.digital-work-arrangement-pdf-container {
-  max-width: 100%;
-  padding: 10px;
-  margin: 0 auto;
-  direction: rtl;
-}
-
-/* Time display fix for the problematic SVG icons */
-.fix-time-display-icons .mx-\[4px\],
-.fix-time-display-icons svg {
-  display: none !important;
-}
-
-.fix-time-display {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-}
-
-.fix-time-display:before {
-  content: "🕒";
-  display: inline-block;
 }
