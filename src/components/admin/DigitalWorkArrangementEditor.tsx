@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 import { Worker, getWorkers } from '@/lib/supabase/workers';
+import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns';
 
 interface Shift {
   id: string;
@@ -95,7 +96,9 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const [customRows, setCustomRows] = useState<CustomRow[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [weekDate, setWeekDate] = useState<Date>(new Date());
+  const [weekDate, setWeekDate] = useState<Date>(() => {
+    return startOfWeek(new Date(), { weekStartsOn: 0 });
+  });
   const [currentSection, setCurrentSection] = useState(SECTION_NAMES.DIGITAL_SHIFTS);
   
   const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
@@ -122,7 +125,10 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const { toast } = useToast();
 
   const navigateWeek = (direction: 'prev' | 'next') => {
-    setWeekDate(prev => direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1));
+    setWeekDate(prev => {
+      const newDate = direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1);
+      return startOfWeek(newDate, { weekStartsOn: 0 });
+    });
   };
 
   useEffect(() => {
@@ -648,7 +654,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             className={`mb-2 p-2 rounded ${shift.is_hidden ? 'opacity-50' : ''}`}
           >
             <div className="flex justify-between items-center mb-1">
-              <div className={`text-xs ${shift.is_custom_time ? 'font-bold' : ''}`}>
+              <div className={`text-xs ${shift.is_custom_time ? 'font-bold digital-shift-irregular-hours' : ''}`}>
                 {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
               </div>
               <DropdownMenu>
@@ -708,41 +714,18 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
     
     return rows.map((row) => (
-      <TableRow key={row.id}>
-        {[0, 1, 2, 3, 4, 5].map((day) => (
-          <TableCell key={`${row.id}-${day}`} className="p-2 border text-center">
-            <div className="relative min-h-[60px]">
-              <textarea
-                value={row.contents[day] || ''}
-                onChange={(e) => updateCustomCellContent(row.id, day, e.target.value)}
-                onFocus={() => setCellFocused(`${row.id}-${day}`)}
-                onBlur={() => saveCustomCellContent(row.id, day)}
-                className="w-full h-full min-h-[60px] p-2 resize-none border rounded bg-background"
-                placeholder="הזן טקסט..."
-              />
-              
-              <div className="absolute top-1 right-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background border border-border">
-                    <DropdownMenuItem onClick={() => openCustomRowDialog(row)}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      ערוך
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDeleteCustomRow(row.id)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      מחק
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </TableCell>
-        ))}
+      <TableRow key={row.id} className="custom-row-editor">
+        <CustomRowColumns
+          rowContents={row.contents}
+          section={section}
+          onContentChange={(dayIndex, content) => updateCustomCellContent(row.id, dayIndex, content)}
+          onBlur={(dayIndex) => saveCustomCellContent(row.id, dayIndex)}
+          onFocus={(dayIndex) => setCellFocused(`${row.id}-${dayIndex}`)}
+          editable={true}
+          showActions={true}
+          onEdit={() => openCustomRowDialog(row)}
+          onDelete={() => handleDeleteCustomRow(row.id)}
+        />
       </TableRow>
     ));
   };
