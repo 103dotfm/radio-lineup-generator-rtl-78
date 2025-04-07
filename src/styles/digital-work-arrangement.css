@@ -25,7 +25,7 @@
 /* Fixed column width for better alignment */
 .digital-work-arrangement-view td,
 .digital-work-arrangement-view th {
-  width: 14.28% !important; /* Equal width for all 7 columns (label + 6 days) */
+  width: 16.666% !important; /* Equal width for all 6 columns */
   table-layout: fixed;
 }
 
@@ -80,6 +80,21 @@
   color: #2d3748;
 }
 
+/* Section title styling */
+.digital-section-title {
+  background-color: #f7fafc !important;
+  color: #2d3748;
+  font-weight: 600;
+  text-align: right;
+  padding-right: 1rem !important;
+  border-right: 3px solid #3b82f6;
+}
+
+/* Custom row styles */
+.digital-custom-row {
+  background-color: #f9fafb;
+}
+
 /* Print styles */
 @media print {
   .digital-work-arrangement-view {
@@ -88,6 +103,19 @@
   
   .digital-work-arrangement-view table {
     page-break-inside: avoid;
+  }
+  
+  .digital-section-title-row {
+    background-color: #f7fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .digital-header-cell {
+    background-color: #000 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .digital-footer-image {
@@ -226,4 +254,26 @@
 .digital-work-arrangement-view .date-number {
   font-size: 0.85em;
   opacity: 0.9;
+}
+
+/* Section specific styles */
+.digital-cell-digital_shifts {
+  background-color: rgba(235, 245, 255, 0.3);
+}
+
+.digital-cell-radio_north {
+  background-color: rgba(255, 245, 235, 0.3);
+}
+
+.digital-cell-transcription_shifts {
+  background-color: rgba(235, 255, 245, 0.3);
+}
+
+.digital-cell-live_social_shifts {
+  background-color: rgba(245, 235, 255, 0.3);
+}
+
+/* Empty cell styling */
+.digital-cell-empty {
+  background-color: #f9fafb;
 }
