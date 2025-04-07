@@ -99,7 +99,7 @@ export default function WorkArrangements() {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [filename, setFilename] = useState<string | null>(null);
   const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">("producers");
-  const [weekDate, setWeekDate] = useState<Date>(new Date());
+  const [weekDate, setWeekDate] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const { toast } = useToast();
   const [publicLinks, setPublicLinks] = useState<{
@@ -286,13 +286,13 @@ export default function WorkArrangements() {
                               >
                                 <ChevronRight className="h-4 w-4" />
                               </Button>
-                              <DatePicker
-                                onSelect={(date) => {
-                                  field.onChange(date!)
-                                  setWeekDate(date!)
-                                }}
-                                date={field.value}
-                              />
+                              <Button
+                                variant={"outline"}
+                                className="w-[240px] justify-start text-left font-normal bg-white border"
+                              >
+                                <CalendarIcon className="ml-2 h-4 w-4" />
+                                {format(weekDate, "dd/MM/yyyy") + " - " + format(addWeeks(weekDate, 1), "dd/MM/yyyy")}
+                              </Button>
                               <Button 
                                 type="button" 
                                 variant="outline" 
