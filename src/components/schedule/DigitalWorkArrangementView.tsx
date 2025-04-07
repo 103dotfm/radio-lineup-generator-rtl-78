@@ -11,28 +11,33 @@ import '@/styles/digital-work-arrangement.css';
 import { Calendar, Clock } from 'lucide-react';
 import { CustomRowColumns } from './workers/CustomRowColumns';
 import { Worker } from '@/lib/supabase/workers';
+
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
   RADIO_NORTH: 'radio_north',
   TRANSCRIPTION_SHIFTS: 'transcription_shifts',
   LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
 };
+
 const SHIFT_TYPES = {
   MORNING: 'morning',
   AFTERNOON: 'afternoon',
   EVENING: 'evening',
   CUSTOM: 'custom'
 };
+
 const SHIFT_TYPE_LABELS = {
   [SHIFT_TYPES.MORNING]: 'בוקר',
   [SHIFT_TYPES.AFTERNOON]: 'צהריים',
   [SHIFT_TYPES.EVENING]: 'ערב',
   [SHIFT_TYPES.CUSTOM]: 'מותאם אישית'
 };
+
 interface DigitalWorkArrangementViewProps {
   weekDate?: string;
   isEditable?: boolean;
 }
+
 const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   weekDate,
   isEditable = false
@@ -46,6 +51,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const {
     toast
   } = useToast();
+
   const selectedWeekDate = useMemo(() => {
     if (weekDate) {
       try {
@@ -56,6 +62,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
     return new Date();
   }, [weekDate]);
+
   useEffect(() => {
     fetchArrangement();
     fetchWorkers();
@@ -68,7 +75,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     };
   }, [selectedWeekDate]);
 
-  // Generate formatted dates for the week
   const weekDates = useMemo(() => {
     const dates = [];
     for (let i = 0; i < 6; i++) {
@@ -83,6 +89,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
     return dates;
   }, [selectedWeekDate]);
+
   const dateDisplay = useMemo(() => {
     const startDay = format(selectedWeekDate, 'dd', {
       locale: he
@@ -97,6 +104,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     });
     return `${endDay}-${startDay} ב${month}`;
   }, [selectedWeekDate]);
+
   const fetchWorkers = async () => {
     try {
       const {
@@ -111,6 +119,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       console.error('Error fetching workers:', error);
     }
   };
+
   const fetchArrangement = async () => {
     setLoading(true);
     const weekStartStr = format(selectedWeekDate, 'yyyy-MM-dd');
@@ -183,6 +192,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       setLoading(false);
     }
   };
+
   const getWorkerName = (personName: string) => {
     if (!personName) return '';
 
@@ -194,12 +204,15 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
     return personName;
   };
+
   const getShiftsForCell = (section: string, day: number, shiftType: string) => {
     return shifts.filter(shift => shift.section_name === section && shift.day_of_week === day && shift.shift_type === shiftType);
   };
+
   const getCustomRowsForSection = (section: string) => {
     return customRows.filter(row => row.section_name === section);
   };
+
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     const cellShifts = getShiftsForCell(section, day, shiftType);
     if (cellShifts.length === 0) {
@@ -207,7 +220,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }
     return <TableCell key={`cell-${section}-${day}-${shiftType}`} className={`p-2 border digital-cell digital-cell-${section}`}>
         {cellShifts.map(shift => <div key={`shift-${shift.id}`} className={`mb-2 digital-shift digital-shift-${section}`}>
-            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time' : ''} flex items-center justify-center`}>
+            <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time digital-shift-irregular-hours' : ''} flex items-center justify-center`}>
               <Clock className="h-3 w-3 mr-1 opacity-70 px-px py-0 mx-[4px]" />
               {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
             </div>
@@ -221,7 +234,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       </TableCell>;
   };
 
-  // Render all section tables together in a single table
   const renderWorkArrangementTable = () => {
     const hasAnyContent = shifts.length > 0 || customRows.length > 0;
     if (!hasAnyContent) return null;
@@ -277,21 +289,23 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
               </>}
 
             {/* Transcription Shifts Section */}
-            {shifts.some(shift => shift.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS) && <>
+            {shifts.some(shift => shift.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS) || customRows.some(row => row.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS) ? (
+                <>
                 <TableRow className="digital-section-title-row">
                   <TableCell colSpan={6} className="p-2 font-bold text-lg bg-gray-100 digital-section-title">משמרות תמלולים וכו'</TableCell>
                 </TableRow>
                 {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
-              const hasShifts = shifts.some(shift => shift.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS && shift.shift_type === type);
-              if (!hasShifts) return null;
-              return <TableRow key={`row-trans-${type}`} className="bg-white hover:bg-gray-50 transition-colors digital-shift-row digital-transcription-shift-row">
-                      {[0, 1, 2, 3, 4, 5].map(day => renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, type))}
-                    </TableRow>;
-            })}
+                  const hasShifts = shifts.some(shift => shift.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS && shift.shift_type === type);
+                  if (!hasShifts) return null;
+                  return <TableRow key={`row-trans-${type}`} className="bg-white hover:bg-gray-50 transition-colors digital-shift-row digital-transcription-shift-row">
+                          {[0, 1, 2, 3, 4, 5].map(day => renderShiftCell(SECTION_NAMES.TRANSCRIPTION_SHIFTS, day, type))}
+                        </TableRow>;
+                })}
                 {getCustomRowsForSection(SECTION_NAMES.TRANSCRIPTION_SHIFTS).map(row => <TableRow key={`custom-row-trans-${row.id}`} className="bg-white hover:bg-gray-50 transition-colors digital-custom-row">
                     <CustomRowColumns rowContents={row.contents} section={SECTION_NAMES.TRANSCRIPTION_SHIFTS} />
                   </TableRow>)}
-              </>}
+                </>
+            ) : null}
 
             {/* Live Social Shifts Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.LIVE_SOCIAL_SHIFTS) && <>
@@ -313,6 +327,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         </Table>
       </div>;
   };
+
   return <div className="space-y-6 digital-work-arrangement-view" dir="rtl">
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6 digital-work-header">
         <h2 className="text-2xl font-bold mb-2 md:mb-0 flex items-center digital-work-title">
@@ -370,4 +385,5 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     }} />
     </div>;
 };
+
 export default DigitalWorkArrangementView;

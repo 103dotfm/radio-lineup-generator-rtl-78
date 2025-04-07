@@ -72,6 +72,12 @@
   color: #4a5568;
 }
 
+/* Style for irregular hours */
+.digital-shift-irregular-hours {
+  font-weight: 700 !important;
+  color: #2c5282 !important;
+}
+
 /* Footer text styling */
 .digital-footer-text {
   white-space: pre-line;
