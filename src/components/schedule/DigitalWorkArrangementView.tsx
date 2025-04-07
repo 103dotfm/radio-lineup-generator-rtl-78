@@ -9,7 +9,7 @@ import { DigitalWorkArrangement } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
 import EditModeDialog from './EditModeDialog';
 import '@/styles/digital-work-arrangement.css';
-import { Calendar, Clock, Printer, FileDown } from 'lucide-react';
+import { Calendar, Clock, FileDown } from 'lucide-react';
 import { CustomRowColumns } from './workers/CustomRowColumns';
 import { Worker } from '@/lib/supabase/workers';
 import html2pdf from 'html2pdf.js';
@@ -395,14 +395,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
       {showControls && (
         <div className="flex justify-end gap-2 pb-4 digital-work-arrangement-preview-controls">
-          <Button
-            variant="outline"
-            className="flex items-center gap-2"
-            onClick={handlePrint}
-          >
-            <Printer className="h-4 w-4" />
-            הדפסה
-          </Button>
           <Button
             variant="default"
             className="flex items-center gap-2"

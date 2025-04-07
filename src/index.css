@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
 
 @tailwind base;
@@ -166,11 +167,6 @@ body {
   
   #digital-work-arrangement-preview button,
   #digital-work-arrangement-preview .actions {
-    display: none !important;
-  }
-  
-  #digital-work-arrangement-preview .digital-shift-time svg,
-  #digital-work-arrangement-preview .digital-radio-time svg {
     display: none !important;
   }
   
