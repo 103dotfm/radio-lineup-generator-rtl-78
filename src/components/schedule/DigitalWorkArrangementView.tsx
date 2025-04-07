@@ -208,7 +208,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return <TableCell key={`cell-${section}-${day}-${shiftType}`} className={`p-2 border digital-cell digital-cell-${section}`}>
         {cellShifts.map(shift => <div key={`shift-${shift.id}`} className={`mb-2 digital-shift digital-shift-${section}`}>
             <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time' : ''} flex items-center justify-center`}>
-              <Clock className="h-3 w-3 mr-1 opacity-70" />
+              <Clock className="h-3 w-3 mr-1 opacity-70 px-px py-0 mx-[4px]" />
               {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
             </div>
             <div className="digital-shift-person mt-1 text-center">
@@ -316,7 +316,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   return <div className="space-y-6 digital-work-arrangement-view" dir="rtl">
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6 digital-work-header">
         <h2 className="text-2xl font-bold mb-2 md:mb-0 flex items-center digital-work-title">
-          <Calendar className="h-5 w-5 mr-2 text-blue-600" />
+          <Calendar className="h-5 w-5 mr-2 text-blue-600 mx-[17px]" />
           סידור עבודה דיגיטל
         </h2>
         <div className="text-lg font-medium bg-blue-50 px-4 py-1.5 rounded-full text-blue-700 flex items-center digital-work-date">
