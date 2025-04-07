@@ -253,9 +253,11 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             {/* Digital Shifts Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.DIGITAL_SHIFTS) && <>
                 <TableRow className="digital-section-title-row">
+            {/*
                   <TableCell colSpan={6} className="p-2 font-bold text-lg bg-gray-100 digital-section-title">
                     משמרות דיגיטל
                   </TableCell>
+            */}
                 </TableRow>
                 {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
               const hasShifts = shifts.some(shift => shift.section_name === SECTION_NAMES.DIGITAL_SHIFTS && shift.shift_type === type);
