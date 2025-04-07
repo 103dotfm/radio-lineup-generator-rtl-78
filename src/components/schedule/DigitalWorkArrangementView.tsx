@@ -319,8 +319,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           <Calendar className="h-5 w-5 mr-2 text-blue-600 mx-[17px]" />
           סידור עבודה דיגיטל
         </h2>
-        <div className="text-lg font-medium bg-blue-50 px-4 py-1.5 rounded-full text-blue-700 flex items-center digital-work-date">
-          <Calendar className="h-4 w-4 mr-2" />
+        <div className="text-lg font-medium bg-blue-50 py-1.5 rounded-full text-blue-700 flex items-center digital-work-date px-[33px]">
+          <Calendar className="h-4 w-4 mr-2 mx-[9px]" />
           {dateDisplay}
         </div>
       </div>
