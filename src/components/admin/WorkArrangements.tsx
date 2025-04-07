@@ -254,8 +254,7 @@ export default function WorkArrangements() {
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-center">Admin: Work Arrangements</h1>
-        <p className="text-muted-foreground text-center">Manage work schedules and upload related files.</p>
+        <h1 className="text-3xl font-bold text-center">סידורי עבודה</h1>
       </div>
 
       <div className="py-6">
@@ -325,9 +324,9 @@ export default function WorkArrangements() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="producers">Producers</SelectItem>
-                                <SelectItem value="engineers">Engineers</SelectItem>
-                                <SelectItem value="digital">Digital</SelectItem>
+                                <SelectItem value="producers">עורכים ומפיקים</SelectItem>
+                                <SelectItem value="engineers">טכנאים</SelectItem>
+                                <SelectItem value="digital">דיגיטל (לא בשימוש)</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -356,17 +355,17 @@ export default function WorkArrangements() {
                           </FormItem>
                         )}
                       />
-                      <Button type="submit">Submit</Button>
+                      <Button type="submit">העלאה</Button>
                     </form>
                   </Form>
                 </CardContent>
               </CardHeader>
               
               <CardFooter className="flex flex-col items-start">
-                <CardTitle className="mb-3 text-lg">Public Schedule Links</CardTitle>
+                <CardTitle className="mb-3 text-lg">קישורים לעמודי לוח שידורים</CardTitle>
                 <div className="space-y-2 w-full">
                   <div className="flex items-center justify-between">
-                    <span>Previous Week:</span>
+                    <span>השבוע הקודם:</span>
                     <div className="flex items-center">
                       <a 
                         href={publicLinks.previous} 
@@ -391,7 +390,7 @@ export default function WorkArrangements() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Current Week:</span>
+                    <span>השבוע הנוכחי:</span>
                     <div className="flex items-center">
                       <a 
                         href={publicLinks.current} 
@@ -416,7 +415,7 @@ export default function WorkArrangements() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>Next Week:</span>
+                    <span>השבוע הבא:</span>
                     <div className="flex items-center">
                       <a 
                         href={publicLinks.next} 
