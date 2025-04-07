@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight, Calendar, Eye, Printer, Download } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,8 @@ import {
 import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns';
+import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
+import html2pdf from 'html2pdf.js';
 
 interface Shift {
   id: string;
@@ -121,6 +123,8 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     is_custom_time: false,
     is_hidden: false
   });
+
+  const [previewMode, setPreviewMode] = useState(false);
 
   const { toast } = useToast();
 
@@ -754,6 +758,28 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     setFooterTextDialogOpen(false);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportPdf = () => {
+    const element = document.getElementById('digital-work-arrangement-preview');
+    if (!element) return;
+
+    const options = {
+      filename: `סידור_עבודה_דיגיטל_${format(weekDate, 'yyyy-MM-dd')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(options).from(element).save();
+  };
+
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
@@ -773,12 +799,40 @@ const DigitalWorkArrangementEditor: React.FC = () => {
               <ChevronLeft className="h-4 w-4 mr-1" />
             </Button>
           </div>
+          <Button 
+            variant={previewMode ? "default" : "outline"} 
+            size="sm" 
+            onClick={togglePreviewMode}
+          >
+            <Eye className="h-4 w-4 ml-1" />
+            {previewMode ? "חזרה לעריכה" : "תצוגה מקדימה"}
+          </Button>
         </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center my-8">
           <p>טוען נתונים...</p>
+        </div>
+      ) : previewMode ? (
+        <div className="space-y-4">
+          <div className="flex justify-end space-x-2 space-x-reverse">
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="h-4 w-4 ml-1" />
+              הדפסה
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportPdf}>
+              <Download className="h-4 w-4 ml-1" />
+              ייצוא PDF
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <div id="digital-work-arrangement-preview">
+                <DigitalWorkArrangementView weekDate={format(weekDate, 'yyyy-MM-dd')} />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       ) : (
         <>
