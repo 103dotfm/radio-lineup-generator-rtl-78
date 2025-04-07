@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { format, addWeeks, subWeeks } from 'date-fns';
+import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +23,6 @@ import {
 import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 
-// Types for our data structures
 interface Shift {
   id: string;
   section_name: string;
@@ -42,7 +40,7 @@ interface Shift {
 interface CustomRow {
   id: string;
   section_name: string;
-  contents: Record<number, string>; // Day index -> content mapping
+  contents: Record<number, string>;
   position: number;
 }
 
@@ -54,7 +52,6 @@ interface WorkArrangement {
   footer_image_url: string | null;
 }
 
-// Constants for section and shift types
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
   RADIO_NORTH: 'radio_north',
@@ -101,18 +98,15 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const [weekDate, setWeekDate] = useState<Date>(new Date());
   const [currentSection, setCurrentSection] = useState(SECTION_NAMES.DIGITAL_SHIFTS);
   
-  // Dialogs state
   const [shiftDialogOpen, setShiftDialogOpen] = useState(false);
   const [customRowDialogOpen, setCustomRowDialogOpen] = useState(false);
   const [footerTextDialogOpen, setFooterTextDialogOpen] = useState(false);
   
-  // Edit mode state
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [editingCustomRow, setEditingCustomRow] = useState<CustomRow | null>(null);
   const [customRowContent, setCustomRowContent] = useState<Record<number, string>>({});
   const [footerText, setFooterText] = useState('');
   
-  // New shift data
   const [newShiftData, setNewShiftData] = useState({
     section_name: SECTION_NAMES.DIGITAL_SHIFTS,
     day_of_week: 0,
@@ -127,14 +121,16 @@ const DigitalWorkArrangementEditor: React.FC = () => {
 
   const { toast } = useToast();
 
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    setWeekDate(prev => direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1));
+  };
+
   useEffect(() => {
     return () => {
-      // Reset pointer-events style if it was set
       if (document.body.style.pointerEvents === 'none') {
         document.body.style.pointerEvents = '';
       }
       
-      // Clean up any stray divs with IDs starting with "cbcb"
       const strayDivs = document.querySelectorAll('div[id^="cbcb"]');
       strayDivs.forEach(div => div.remove());
     };
@@ -780,11 +776,20 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">עורך סידור עבודה דיגיטל</h2>
         <div className="flex items-center gap-2">
-          <DatePicker 
-            date={weekDate}
-            onSelect={(date) => date && setWeekDate(date)}
-          />
-          <div className="text-sm font-medium">{formatDateRange()}</div>
+          <div className="flex items-center">
+            <Button variant="outline" size="sm" onClick={() => navigateWeek('prev')}>
+              <ChevronRight className="h-4 w-4 ml-1" />
+              שבוע קודם
+            </Button>
+            <div className="text-sm font-medium mx-2 bg-blue-50 py-1.5 px-3 rounded-full text-blue-700 flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              {formatDateRange()}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => navigateWeek('next')}>
+              שבוע הבא
+              <ChevronLeft className="h-4 w-4 mr-1" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -818,7 +823,6 @@ const DigitalWorkArrangementEditor: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-24">משמרת</TableHead>
                     {DAYS_OF_WEEK.map((day, index) => (
                       <TableHead key={day} className="text-center">
                         {day}
@@ -829,7 +833,6 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                 <TableBody>
                   {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => (
                     <TableRow key={type}>
-                      <TableCell className="font-medium">{label}</TableCell>
                       {[0, 1, 2, 3, 4, 5].map((day) => (
                         <React.Fragment key={`${type}-${day}`}>
                           {renderShiftCell(currentSection, day, type)}
