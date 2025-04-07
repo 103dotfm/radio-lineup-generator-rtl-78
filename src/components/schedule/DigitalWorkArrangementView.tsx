@@ -358,7 +358,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           <CardContent className="p-6">
             {renderWorkArrangementTable()}
             
-            {arrangement.footer_text && <div className="digital-footer-text whitespace-pre-wrap mt-8 p-4 bg-gray-50 rounded-lg">
+            {arrangement.footer_text && <div className="digital-footer-text whitespace-pre-wrap mt-8 p-4 rounded-lg">
                 {arrangement.footer_text}
               </div>}
           </CardContent>
