@@ -744,7 +744,9 @@ tbody {vertical-align: top;}
 .digital-shift-person, .digital-radio-person, .digital-work-arrangement .worker-name, .digital-work-arrangement-view .worker-name {
   font-size: 16px;
 }
-.digital-work-arrangement-view svg, .digital-work-arrangement-view .fix-time-display:before, .digital-work-arrangement-view .fix-time-display:before {display: none;}
+.digital-work-arrangement-view svg {display: none;}
+.digital-work-arrangement-view .fix-time-display:before {display: none;}
+.digital-work-arrangement-view .fix-time-display:before {display: none;}
 .digital-work-arrangement-view .digital-shift-time, .digital-work-arrangement-view .digital-radio-time {
     margin-bottom: -5px;
     text-decoration: underline;
