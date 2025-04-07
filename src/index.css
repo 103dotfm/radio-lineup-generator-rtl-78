@@ -744,3 +744,4 @@ tbody {vertical-align: top;}
 .digital-shift-person, .digital-radio-person, .digital-work-arrangement .worker-name, .digital-work-arrangement-view .worker-name {
   font-size: 16px;
 }
+.digital-work-arrangement-view svg {display: none;}
