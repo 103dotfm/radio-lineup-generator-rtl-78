@@ -25,7 +25,8 @@
 /* Fixed column width for better alignment */
 .digital-work-arrangement-view td,
 .digital-work-arrangement-view th {
-  width: 16.66% !important;
+  width: 14.28% !important; /* Equal width for all 7 columns (label + 6 days) */
+  table-layout: fixed;
 }
 
 /* RTL direction for time display */
@@ -194,4 +195,35 @@
 .worker-selector-dropdown {
   z-index: 99999 !important;
   background-color: white !important;
+}
+
+/* One-pager styles */
+.digital-work-arrangement-view .section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.75rem;
+  padding-right: 0.5rem;
+  border-right: 3px solid #3b82f6;
+}
+
+/* Make sure tables have proper spacing between sections */
+.digital-work-arrangement-view .section-container:not(:last-child) {
+  margin-bottom: 2rem;
+}
+
+/* Style for date headers */
+.digital-work-arrangement-view .date-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.digital-work-arrangement-view .date-day {
+  font-weight: bold;
+}
+
+.digital-work-arrangement-view .date-number {
+  font-size: 0.85em;
+  opacity: 0.9;
 }
