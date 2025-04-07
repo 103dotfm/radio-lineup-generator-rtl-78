@@ -312,12 +312,12 @@ const DigitalWorkArrangement: React.FC = () => {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Digital Work Arrangement</h1>
+      <h1 className="text-3xl font-bold mb-6">ניהול סידורי עבודה דיגיטל</h1>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
-          <TabsTrigger value="schedule">Schedule Editor</TabsTrigger>
-          <TabsTrigger value="workers">Worker Management</TabsTrigger>
+          <TabsTrigger value="schedule">עריכת סידור עבודה</TabsTrigger>
+          <TabsTrigger value="workers">צוות עובדים</TabsTrigger>
         </TabsList>
         
         <TabsContent value="schedule">
