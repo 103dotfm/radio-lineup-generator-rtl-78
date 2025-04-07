@@ -702,13 +702,8 @@ tbody {vertical-align: top;}
     margin: auto;
     background-color: #000;
     color: #e4ff6c !important;
-    width: 60%;
+    width: fit-content;
   }
   .digital-shift-person, .digital-radio-person, .digital-work-arrangement .worker-name, .digital-work-arrangement-view .worker-name {
     font-size: 16px;
   }
-@media (max-width: 1000px) {
-    .digital-shift-irregular-hours {
-    width: 80%;
-  }
-}
