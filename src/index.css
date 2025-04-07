@@ -153,25 +153,14 @@ body {
 
 /* Digital Work Arrangement PDF export styles */
 @media print {
+  body * {
+    visibility: hidden;
+  }
+  
   #digital-work-arrangement-preview {
     width: 100%;
     margin: 0;
     padding: 0;
-  }
-  
-  #digital-work-arrangement-preview h1,
-  #digital-work-arrangement-preview h2 {
-    text-align: center;
-    margin-bottom: 1rem;
-  }
-  
-  #digital-work-arrangement-preview button,
-  #digital-work-arrangement-preview .actions {
-    display: none !important;
-  }
-  
-  body * {
-    visibility: hidden;
   }
   
   #digital-work-arrangement-preview,
@@ -183,6 +172,18 @@ body {
     position: absolute;
     left: 0;
     top: 0;
+  }
+  
+  #digital-work-arrangement-preview h1,
+  #digital-work-arrangement-preview h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  #digital-work-arrangement-preview button,
+  #digital-work-arrangement-preview .actions,
+  #digital-work-arrangement-preview svg {
+    display: none !important;
   }
   
   .digital-work-arrangement-preview-controls {

@@ -1,3 +1,4 @@
+
 /* Digital Work Arrangement Styles */
 .digital-work-arrangement table,
 .digital-work-arrangement-view table {
@@ -128,7 +129,11 @@
   }
   
   /* Hide all SVG elements in PDF export mode */
-  .pdf-export-mode svg {
+  .pdf-export-mode svg,
+  .digital-work-arrangement-view svg,
+  .fix-time-display svg,
+  .digital-shift-time svg,
+  .digital-radio-time svg {
     display: none !important;
   }
   
