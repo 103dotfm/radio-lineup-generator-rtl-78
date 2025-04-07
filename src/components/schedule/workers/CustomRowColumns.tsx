@@ -8,22 +8,31 @@ interface CustomRowColumnsProps {
 
 export const CustomRowColumns: React.FC<CustomRowColumnsProps> = ({ rowContents }) => {
   // Create an array of 7 columns (0-6) to ensure proper alignment
-  // Column 0 is for row label, 1-7 are for days of week (Sunday to Saturday)
-  const columns = [0, 1, 2, 3, 4, 5, 6];
+  // Column 0 is for row label, 1-6 are for days of week (Sunday to Friday)
   
   return (
     <>
-      {columns.map((colIndex) => {
-        // For each column, render the cell with the corresponding content
-        // If no content exists for this column, render an empty string
-        const content = rowContents[colIndex] || '';
-        
-        return (
-          <TableCell key={`col-${colIndex}`} className="p-2 border text-center">
-            {content}
-          </TableCell>
-        );
-      })}
+      <TableCell className="p-2 border text-center bg-gray-100 font-medium">
+        {rowContents[0] || ''}
+      </TableCell>
+      <TableCell className="p-2 border text-center">
+        {rowContents[1] || ''}
+      </TableCell>
+      <TableCell className="p-2 border text-center">
+        {rowContents[2] || ''}
+      </TableCell>
+      <TableCell className="p-2 border text-center">
+        {rowContents[3] || ''}
+      </TableCell>
+      <TableCell className="p-2 border text-center">
+        {rowContents[4] || ''}
+      </TableCell>
+      <TableCell className="p-2 border text-center">
+        {rowContents[5] || ''}
+      </TableCell>
+      <TableCell className="p-2 border text-center">
+        {rowContents[6] || ''}
+      </TableCell>
     </>
   );
 };

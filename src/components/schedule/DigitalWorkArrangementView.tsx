@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from "@/components/ui/use-toast";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,19 +10,13 @@ import { supabase } from "@/lib/supabase";
 import EditModeDialog from './EditModeDialog';
 import '@/styles/digital-work-arrangement.css';
 import { Calendar, Clock } from 'lucide-react';
+import { CustomRowColumns } from './workers/CustomRowColumns';
 
 const SECTION_NAMES = {
   DIGITAL_SHIFTS: 'digital_shifts',
   RADIO_NORTH: 'radio_north',
   TRANSCRIPTION_SHIFTS: 'transcription_shifts',
   LIVE_SOCIAL_SHIFTS: 'live_social_shifts'
-};
-
-const SECTION_TITLES = {
-  [SECTION_NAMES.DIGITAL_SHIFTS]: 'משמרות דיגיטל',
-  [SECTION_NAMES.RADIO_NORTH]: 'רדיו צפון',
-  [SECTION_NAMES.TRANSCRIPTION_SHIFTS]: 'משמרות תמלולים',
-  [SECTION_NAMES.LIVE_SOCIAL_SHIFTS]: 'משמרות לייבים'
 };
 
 const SHIFT_TYPES = {
@@ -39,8 +33,6 @@ const SHIFT_TYPE_LABELS = {
   [SHIFT_TYPES.CUSTOM]: 'מותאם אישית'
 };
 
-const DAYS_OF_WEEK = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
-
 interface DigitalWorkArrangementViewProps {
   weekDate?: string;
   isEditable?: boolean;
@@ -54,7 +46,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const [shifts, setShifts] = useState<any[]>([]);
   const [customRows, setCustomRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentSection, setCurrentSection] = useState(SECTION_NAMES.DIGITAL_SHIFTS);
   const [editModeOpen, setEditModeOpen] = useState(false);
   
   const { toast } = useToast();
@@ -79,6 +70,20 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         document.body.style.pointerEvents = '';
       }
     };
+  }, [selectedWeekDate]);
+
+  // Generate formatted dates for the week
+  const weekDates = useMemo(() => {
+    const dates = [];
+    for (let i = 0; i < 6; i++) {
+      const date = addDays(selectedWeekDate, i);
+      dates.push({
+        day: format(date, 'EEEE', { locale: he }),
+        date: format(date, 'dd/MM'),
+        fullDate: date
+      });
+    }
+    return dates;
   }, [selectedWeekDate]);
 
   const dateDisplay = useMemo(() => {
@@ -215,6 +220,58 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     );
   };
 
+  // Render a single section's table
+  const renderSectionTable = (sectionName: string, sectionTitle: string) => {
+    const hasAnyShiftsForSection = shifts.some(shift => shift.section_name === sectionName);
+    const hasCustomRowsForSection = customRows.some(row => row.section_name === sectionName);
+    
+    if (!hasAnyShiftsForSection && !hasCustomRowsForSection) return null;
+    
+    return (
+      <div className="mb-8" key={`section-${sectionName}`}>
+        <h3 className="text-lg font-bold mb-3 pr-2">{sectionTitle}</h3>
+        <Table className="w-full border-collapse">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-1/7 text-center bg-black text-white p-2 font-bold">משמרת</TableHead>
+              {weekDates.map((date, index) => (
+                <TableHead key={`day-header-${index}`} className="w-1/7 text-center bg-black text-white p-2 font-bold">
+                  <div>{date.day}</div>
+                  <div className="text-sm opacity-80">{date.date}</div>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
+              const hasShifts = shifts.some(shift => 
+                shift.section_name === sectionName && 
+                shift.shift_type === type
+              );
+              
+              if (!hasShifts) return null;
+              
+              return (
+                <TableRow key={`row-${type}`} className="bg-white hover:bg-gray-50 transition-colors">
+                  <TableCell className="font-medium text-center p-3 bg-gray-100">{label}</TableCell>
+                  {[0, 1, 2, 3, 4, 5].map((day) => 
+                    renderShiftCell(sectionName, day, type)
+                  )}
+                </TableRow>
+              );
+            })}
+            
+            {getCustomRowsForSection(sectionName).map((row) => (
+              <TableRow key={`custom-row-${row.id}`} className="bg-white hover:bg-gray-50 transition-colors">
+                <CustomRowColumns rowContents={row.contents} />
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 digital-work-arrangement-view" dir="rtl">
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6">
@@ -245,95 +302,20 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
           </div>
         </div>
       ) : (
-        <>
-          <div className="flex flex-wrap gap-2 justify-center md:justify-start bg-white p-4 rounded-lg shadow-sm">
-            {Object.entries(SECTION_TITLES).map(([key, title]) => (
-              <button
-                key={`section-${key}`}
-                onClick={() => setCurrentSection(key)}
-                className={`px-4 py-2 rounded-md mb-2 transition-all duration-200 ${
-                  currentSection === key 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {title}
-              </button>
-            ))}
-          </div>
-
-          <Card className="border-none shadow-md overflow-hidden">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table className="w-full border-collapse">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-24 text-center bg-black text-white p-3 font-bold">משמרת</TableHead>
-                      {DAYS_OF_WEEK.map((day, index) => (
-                        <TableHead key={`day-${index}`} className="text-center bg-black text-white p-3 font-bold">
-                          {day}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
-                      const hasShifts = shifts.some(shift => 
-                        shift.section_name === currentSection && 
-                        shift.shift_type === type
-                      );
-                      
-                      if (!hasShifts) return null;
-                      
-                      return (
-                        <TableRow key={`row-${type}`} className="bg-white hover:bg-gray-50 transition-colors">
-                          <TableCell className="font-medium text-center p-3 bg-gray-100">{label}</TableCell>
-                          {[0, 1, 2, 3, 4, 5].map((day) => 
-                            renderShiftCell(currentSection, day, type)
-                          )}
-                        </TableRow>
-                      );
-                    })}
-                    
-                    {getCustomRowsForSection(currentSection).map((row) => (
-                      <TableRow key={`custom-row-${row.id}`} className="bg-white hover:bg-gray-50 transition-colors">
-                        <TableCell className="font-medium text-center p-3 bg-gray-100">
-                          {row.contents[0] || ''}
-                        </TableCell>
-                        <TableCell className="p-2 border text-center">
-                          {row.contents[1] || ''}
-                        </TableCell>
-                        <TableCell className="p-2 border text-center">
-                          {row.contents[2] || ''}
-                        </TableCell>
-                        <TableCell className="p-2 border text-center">
-                          {row.contents[3] || ''}
-                        </TableCell>
-                        <TableCell className="p-2 border text-center">
-                          {row.contents[4] || ''}
-                        </TableCell>
-                        <TableCell className="p-2 border text-center">
-                          {row.contents[5] || ''}
-                        </TableCell>
-                        <TableCell className="p-2 border text-center">
-                          {row.contents[6] || ''}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
+        <Card className="border-none shadow-md overflow-hidden">
+          <CardContent className="p-6">
+            {renderSectionTable(SECTION_NAMES.DIGITAL_SHIFTS, 'משמרות דיגיטל')}
+            {renderSectionTable(SECTION_NAMES.RADIO_NORTH, 'רדיו צפון')}
+            {renderSectionTable(SECTION_NAMES.TRANSCRIPTION_SHIFTS, 'משמרות תמלולים')}
+            {renderSectionTable(SECTION_NAMES.LIVE_SOCIAL_SHIFTS, 'משמרות לייבים')}
             
             {arrangement.footer_text && (
-              <CardFooter className="flex flex-col items-start p-6 border-t bg-gray-50">
-                <div className="digital-footer-text whitespace-pre-wrap">
-                  {arrangement.footer_text}
-                </div>
-              </CardFooter>
+              <div className="digital-footer-text whitespace-pre-wrap mt-8 p-4 bg-gray-50 rounded-lg">
+                {arrangement.footer_text}
+              </div>
             )}
-          </Card>
-        </>
+          </CardContent>
+        </Card>
       )}
       
       <EditModeDialog 
