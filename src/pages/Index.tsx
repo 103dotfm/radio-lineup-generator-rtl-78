@@ -48,7 +48,6 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
-  // Fetch next show information based on current show date and time
   const fetchNextShowInfo = useCallback(async () => {
     if (showDate && showTime) {
       try {
@@ -138,7 +137,6 @@ const Index = () => {
     }
   }, [state, isNewLineup]);
 
-  // Fetch next show info when show date or time changes
   useEffect(() => {
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
@@ -252,7 +250,6 @@ const Index = () => {
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
       
-      // Refresh next show info after saving
       fetchNextShowInfo();
     } catch (error) {
       console.error('Error saving show:', error);
@@ -343,14 +340,12 @@ const Index = () => {
   const handleTimeChange = useCallback((time: string) => {
     setShowTime(time);
     setHasUnsavedChanges(true);
-    // Refresh next show when time changes
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setShowDate(date || new Date());
     setHasUnsavedChanges(true);
-    // Refresh next show when date changes
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
@@ -425,7 +420,6 @@ const Index = () => {
   }, [items]);
 
   const handleRemoveNextShowLine = useCallback(() => {
-    // Refresh next show info when line is removed
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
@@ -481,7 +475,7 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
             <AlertDialogDescription>
-              יש ��ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
+              יש לך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
