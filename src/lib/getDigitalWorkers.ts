@@ -52,12 +52,17 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       .eq('day_of_week', dayOfWeek)
       .is('is_hidden', false);
 
-    if (shiftsError || !shifts) {
+    if (shiftsError) {
       console.error('Error fetching shifts:', shiftsError);
       return null;
     }
 
-    console.log(`Found ${shifts.length} shifts for day ${dayOfWeek}`);
+    console.log(`Found ${shifts?.length || 0} shifts for day ${dayOfWeek}`);
+
+    if (!shifts || shifts.length === 0) {
+      console.log('No shifts found for this day');
+      return null;
+    }
 
     // Filter shifts to those that contain the show time
     const matchingShifts = shifts.filter(shift => {
@@ -70,6 +75,9 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       const startMinute = startTime.getMinutes();
       const endHour = endTime.getHours();
       const endMinute = endTime.getMinutes();
+      
+      // For debugging
+      console.log(`Checking shift: ${shift.person_name}, ${shift.section_name}, ${startHour}:${startMinute}-${endHour}:${endMinute} against show time ${showHour}:${showMinutes}`);
       
       // Check if show time is within shift time
       if (
@@ -93,6 +101,8 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
     const transcriptionShifts = matchingShifts.filter(shift => shift.section_name === 'משמרות תמלולים');
     const liveShifts = matchingShifts.filter(shift => shift.section_name === 'משמרות לייבים');
 
+    console.log(`Matching shifts by category - Digital: ${digitalShifts.length}, Transcription: ${transcriptionShifts.length}, Live: ${liveShifts.length}`);
+
     // Remove duplicates from each group
     const uniqueDigitalNames = [...new Set(digitalShifts.map(shift => shift.person_name))];
     const uniqueTranscriptionNames = [...new Set(transcriptionShifts.map(shift => shift.person_name))];
@@ -104,20 +114,27 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
     // Remove any empty names
     const filteredNames = allUniqueNames.filter(name => name && name.trim() !== '');
     
+    console.log('Filtered names for credits:', filteredNames);
+    
     if (filteredNames.length === 0) {
+      console.log('No valid names found after filtering');
       return null;
     }
 
     // Format the credit line based on number of workers
+    let creditLine;
     if (filteredNames.length === 1) {
-      return `בדיגיטל: ${filteredNames[0]}.`;
+      creditLine = `בדיגיטל: ${filteredNames[0]}.`;
     } else if (filteredNames.length === 2) {
-      return `בדיגיטל: ${filteredNames[0]} ו${filteredNames[1]}.`;
+      creditLine = `בדיגיטל: ${filteredNames[0]} ו${filteredNames[1]}.`;
     } else {
       const allButLast = filteredNames.slice(0, -1).join(', ');
       const lastPerson = filteredNames[filteredNames.length - 1];
-      return `בדיגיטל: ${allButLast} ו${lastPerson}.`;
+      creditLine = `בדיגיטל: ${allButLast} ו${lastPerson}.`;
     }
+    
+    console.log('Generated credit line:', creditLine);
+    return creditLine;
     
   } catch (error) {
     console.error('Error in getDigitalWorkersForShow:', error);

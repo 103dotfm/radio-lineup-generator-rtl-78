@@ -28,7 +28,10 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
       try {
         setIsLoading(true);
         setError('');
+        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} at ${showTime}`);
         const result = await getDigitalWorkersForShow(showDate, showTime);
+        
+        console.log("Digital workers suggestion result:", result);
         
         if (result) {
           setSuggestion(result);
