@@ -72,15 +72,22 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       
       // If no shifts found for the specific day, try to get all shifts for this arrangement
       // to see if there's any data at all (for debugging purposes)
-      const { data: allShifts } = await supabase
+      const { data: allShifts, error: allShiftsError } = await supabase
         .from('digital_shifts')
-        .select('day_of_week, count(*)')
+        .select('day_of_week')
         .eq('arrangement_id', arrangementId)
-        .is('is_hidden', false)
-        .group('day_of_week');
+        .is('is_hidden', false);
         
-      if (allShifts && allShifts.length > 0) {
-        console.log('Available shifts by day:', allShifts);
+      if (allShiftsError) {
+        console.error('Error checking for any shifts:', allShiftsError);
+      } else if (allShifts && allShifts.length > 0) {
+        // Count shifts per day manually
+        const shiftsByDay = {};
+        allShifts.forEach(shift => {
+          const day = shift.day_of_week;
+          shiftsByDay[day] = (shiftsByDay[day] || 0) + 1;
+        });
+        console.log('Available shifts by day:', shiftsByDay);
       } else {
         console.log('No shifts found in this arrangement at all');
       }
