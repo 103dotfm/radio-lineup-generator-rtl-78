@@ -89,6 +89,8 @@ const MainContent = memo(({
           nextShowName={nextShowName}
           nextShowHost={nextShowHost}
           onRemoveNextShowLine={onRemoveNextShowLine}
+          showDate={showDate}
+          showTime={showTime}
         />
 
         <LineupForm 
