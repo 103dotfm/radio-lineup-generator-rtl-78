@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { format, parse, startOfWeek } from 'date-fns';
 
 interface DigitalShift {
+  id: string;
   person_name: string;
   section_name: string;
   shift_type: string;
@@ -68,7 +69,7 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
     // Fetch digital shifts for the arrangement
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
-      .select('person_name, section_name, shift_type, start_time, end_time, day_of_week')
+      .select('id, person_name, section_name, shift_type, start_time, end_time, day_of_week')
       .eq('arrangement_id', arrangementId)
       .eq('day_of_week', dayOfWeek)
       .is('is_hidden', false)
@@ -83,30 +84,6 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
 
     if (!shifts || shifts.length === 0) {
       console.log('No shifts found for this day');
-      
-      // If no shifts found for the specific day, try to get all shifts for this arrangement
-      // to see if there's any data at all (for debugging purposes)
-      const { data: allShifts, error: allShiftsError } = await supabase
-        .from('digital_shifts')
-        .select('day_of_week')
-        .eq('arrangement_id', arrangementId)
-        .is('is_hidden', false)
-        .not('section_name', 'eq', 'radio_north'); // Exclude radio_north
-        
-      if (allShiftsError) {
-        console.error('Error checking for any shifts:', allShiftsError);
-      } else if (allShifts && allShifts.length > 0) {
-        // Count shifts per day manually
-        const shiftsByDay = {};
-        allShifts.forEach(shift => {
-          const day = shift.day_of_week;
-          shiftsByDay[day] = (shiftsByDay[day] || 0) + 1;
-        });
-        console.log('Available shifts by day:', shiftsByDay);
-      } else {
-        console.log('No shifts found in this arrangement at all');
-      }
-      
       return null;
     }
 
@@ -124,7 +101,7 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       const endMinute = parseInt(endTimeParts[1], 10);
       
       // For debugging
-      console.log(`Checking shift: ${shift.person_name}, ${shift.section_name}, ${startHour}:${startMinute}-${endHour}:${endMinute} against show time ${showHour}:${showMinutes}`);
+      console.log(`Checking shift: ${shift.id}, ${shift.section_name}, ${startHour}:${startMinute}-${endHour}:${endMinute} against show time ${showHour}:${showMinutes}, person_name: ${shift.person_name}`);
       
       // Check if show time is within shift time
       if (
@@ -150,7 +127,7 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
 
     console.log(`Matching shifts by category - Digital: ${digitalShifts.length}, Transcription: ${transcriptionShifts.length}, Live: ${liveShifts.length}`);
 
-    // Remove duplicates from each group
+    // Remove duplicates from each group and get person names
     const uniqueDigitalNames = [...new Set(digitalShifts.map(shift => shift.person_name))];
     const uniqueTranscriptionNames = [...new Set(transcriptionShifts.map(shift => shift.person_name))];
     const uniqueLiveNames = [...new Set(liveShifts.map(shift => shift.person_name))];
