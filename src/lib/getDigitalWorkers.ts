@@ -127,21 +127,53 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
 
     console.log(`Matching shifts by category - Digital: ${digitalShifts.length}, Transcription: ${transcriptionShifts.length}, Live: ${liveShifts.length}`);
 
-    // Remove duplicates from each group and get person names
-    const uniqueDigitalNames = [...new Set(digitalShifts.map(shift => shift.person_name))];
-    const uniqueTranscriptionNames = [...new Set(transcriptionShifts.map(shift => shift.person_name))];
-    const uniqueLiveNames = [...new Set(liveShifts.map(shift => shift.person_name))];
+    // Get unique worker IDs from each group
+    const uniqueDigitalWorkerIds = [...new Set(digitalShifts.map(shift => shift.person_name))];
+    const uniqueTranscriptionWorkerIds = [...new Set(transcriptionShifts.map(shift => shift.person_name))];
+    const uniqueLiveWorkerIds = [...new Set(liveShifts.map(shift => shift.person_name))];
 
-    // Combine all unique names
-    const allUniqueNames = [...uniqueDigitalNames, ...uniqueTranscriptionNames, ...uniqueLiveNames];
+    // Combine all unique worker IDs
+    const allUniqueWorkerIds = [...uniqueDigitalWorkerIds, ...uniqueTranscriptionWorkerIds, ...uniqueLiveWorkerIds];
     
-    // Remove any empty names
-    const filteredNames = allUniqueNames.filter(name => name && name.trim() !== '');
+    // Remove any empty IDs
+    const filteredWorkerIds = allUniqueWorkerIds.filter(id => id && id.trim() !== '');
+    
+    console.log('Filtered worker IDs for lookup:', filteredWorkerIds);
+    
+    if (filteredWorkerIds.length === 0) {
+      console.log('No valid worker IDs found after filtering');
+      return null;
+    }
+
+    // Fetch real worker names from the workers table
+    const { data: workers, error: workersError } = await supabase
+      .from('workers')
+      .select('id, name')
+      .in('id', filteredWorkerIds);
+
+    if (workersError) {
+      console.error('Error fetching worker names:', workersError);
+      return null;
+    }
+
+    console.log('Fetched workers:', workers);
+
+    // Create a mapping of worker IDs to names
+    const workerNames: Record<string, string> = {};
+    workers?.forEach(worker => {
+      workerNames[worker.id] = worker.name;
+    });
+
+    // Get the actual names using the ID mapping
+    const actualNames = filteredWorkerIds.map(id => workerNames[id] || id);
+    
+    // Remove any still-empty names (those not found in workers table)
+    const filteredNames = actualNames.filter(name => name && name.trim() !== '');
     
     console.log('Filtered names for credits:', filteredNames);
     
     if (filteredNames.length === 0) {
-      console.log('No valid names found after filtering');
+      console.log('No valid names found after worker name lookup');
       return null;
     }
 
