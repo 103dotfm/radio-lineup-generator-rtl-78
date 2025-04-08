@@ -1,6 +1,6 @@
 
 import { supabase } from "@/lib/supabase";
-import { format, parse } from 'date-fns';
+import { format, parse, startOfWeek } from 'date-fns';
 
 interface DigitalShift {
   person_name: string;
@@ -28,21 +28,29 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
     
     console.log(`Fetching digital workers for date: ${format(showDate, 'yyyy-MM-dd')}, day of week: ${dayOfWeek}, time: ${showTime}`);
 
-    // Get the most recent work arrangement for the week
+    // Calculate the start of the week (Sunday) for the show date
+    const weekStart = startOfWeek(showDate, { weekStartsOn: 0 });
+    const formattedWeekStart = format(weekStart, 'yyyy-MM-dd');
+    
+    console.log(`Week starting on: ${formattedWeekStart}`);
+
+    // Find the work arrangement for this week or the closest previous one
     const { data: arrangements, error: arrangementError } = await supabase
       .from('digital_work_arrangements')
       .select('id, week_start')
+      .lte('week_start', formattedWeekStart) // Get arrangements on or before this week's start
       .order('week_start', { ascending: false })
       .limit(1);
 
     if (arrangementError || !arrangements || arrangements.length === 0) {
-      console.error('Error fetching work arrangement:', arrangementError);
+      console.error('Error fetching work arrangement:', arrangementError || 'No arrangement found');
       return null;
     }
 
     const arrangementId = arrangements[0].id;
+    const arrangementWeekStart = arrangements[0].week_start;
     
-    console.log(`Found work arrangement: ${arrangementId}`);
+    console.log(`Found work arrangement: ${arrangementId} for week starting ${arrangementWeekStart}`);
 
     // Fetch digital shifts for the arrangement
     const { data: shifts, error: shiftsError } = await supabase
@@ -61,6 +69,22 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
 
     if (!shifts || shifts.length === 0) {
       console.log('No shifts found for this day');
+      
+      // If no shifts found for the specific day, try to get all shifts for this arrangement
+      // to see if there's any data at all (for debugging purposes)
+      const { data: allShifts } = await supabase
+        .from('digital_shifts')
+        .select('day_of_week, count(*)')
+        .eq('arrangement_id', arrangementId)
+        .is('is_hidden', false)
+        .group('day_of_week');
+        
+      if (allShifts && allShifts.length > 0) {
+        console.log('Available shifts by day:', allShifts);
+      } else {
+        console.log('No shifts found in this arrangement at all');
+      }
+      
       return null;
     }
 
