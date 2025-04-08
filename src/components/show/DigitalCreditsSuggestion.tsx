@@ -28,8 +28,19 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
       try {
         setIsLoading(true);
         setError('');
-        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} at ${showTime}`);
-        const result = await getDigitalWorkersForShow(showDate, showTime);
+        
+        // Ensure showTime is in the correct format (HH:mm)
+        let formattedShowTime = showTime;
+        if (showTime.includes(':')) {
+          // If it has a colon, take the first 5 characters (HH:mm)
+          formattedShowTime = showTime.substring(0, 5);
+        } else if (showTime.length === 4) {
+          // If it's 4 digits without colon (e.g. "0900"), format it
+          formattedShowTime = `${showTime.substring(0, 2)}:${showTime.substring(2, 4)}`;
+        }
+        
+        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} at ${formattedShowTime}`);
+        const result = await getDigitalWorkersForShow(showDate, formattedShowTime);
         
         console.log("Digital workers suggestion result:", result);
         
