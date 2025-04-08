@@ -18,15 +18,28 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       return null;
     }
 
-    // Convert show time to Date object for comparison
-    const parsedShowTime = parse(showTime, 'HH:mm', new Date());
-    const showHour = parsedShowTime.getHours();
-    const showMinutes = parsedShowTime.getMinutes();
+    // Ensure showTime is in the correct format (HH:mm)
+    let formattedShowTime = showTime;
+    if (showTime.length === 5) { // Format is already HH:mm
+      formattedShowTime = showTime;
+    } else if (showTime.length === 8) { // Format is HH:mm:ss
+      formattedShowTime = showTime.substring(0, 5);
+    }
+    
+    // Parse show time properly
+    const showTimeParts = formattedShowTime.split(':');
+    const showHour = parseInt(showTimeParts[0], 10);
+    const showMinutes = parseInt(showTimeParts[1], 10);
+    
+    if (isNaN(showHour) || isNaN(showMinutes)) {
+      console.error(`Invalid show time format: ${showTime}, parsed as ${showHour}:${showMinutes}`);
+      return null;
+    }
     
     // Get day of week (0-6, where 0 is Sunday)
     const dayOfWeek = showDate.getDay();
     
-    console.log(`Fetching digital workers for date: ${format(showDate, 'yyyy-MM-dd')}, day of week: ${dayOfWeek}, time: ${showTime}`);
+    console.log(`Fetching digital workers for date: ${format(showDate, 'yyyy-MM-dd')}, day of week: ${dayOfWeek}, time: ${formattedShowTime} (${showHour}:${showMinutes})`);
 
     // Calculate the start of the week (Sunday) for the show date
     const weekStart = startOfWeek(showDate, { weekStartsOn: 0 });
@@ -58,7 +71,8 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       .select('person_name, section_name, shift_type, start_time, end_time, day_of_week')
       .eq('arrangement_id', arrangementId)
       .eq('day_of_week', dayOfWeek)
-      .is('is_hidden', false);
+      .is('is_hidden', false)
+      .not('section_name', 'eq', 'radio_north'); // Exclude radio_north
 
     if (shiftsError) {
       console.error('Error fetching shifts:', shiftsError);
@@ -76,7 +90,8 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
         .from('digital_shifts')
         .select('day_of_week')
         .eq('arrangement_id', arrangementId)
-        .is('is_hidden', false);
+        .is('is_hidden', false)
+        .not('section_name', 'eq', 'radio_north'); // Exclude radio_north
         
       if (allShiftsError) {
         console.error('Error checking for any shifts:', allShiftsError);
@@ -99,13 +114,14 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
     const matchingShifts = shifts.filter(shift => {
       if (!shift.start_time || !shift.end_time) return false;
       
-      const startTime = parse(shift.start_time, 'HH:mm:ss', new Date());
-      const endTime = parse(shift.end_time, 'HH:mm:ss', new Date());
+      // Parse start and end time directly without using date-fns
+      const startTimeParts = shift.start_time.split(':');
+      const endTimeParts = shift.end_time.split(':');
       
-      const startHour = startTime.getHours();
-      const startMinute = startTime.getMinutes();
-      const endHour = endTime.getHours();
-      const endMinute = endTime.getMinutes();
+      const startHour = parseInt(startTimeParts[0], 10);
+      const startMinute = parseInt(startTimeParts[1], 10);
+      const endHour = parseInt(endTimeParts[0], 10);
+      const endMinute = parseInt(endTimeParts[1], 10);
       
       // For debugging
       console.log(`Checking shift: ${shift.person_name}, ${shift.section_name}, ${startHour}:${startMinute}-${endHour}:${endMinute} against show time ${showHour}:${showMinutes}`);
@@ -121,16 +137,16 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       return false;
     });
 
-    console.log(`Found ${matchingShifts.length} matching shifts for time ${showTime}`);
+    console.log(`Found ${matchingShifts.length} matching shifts for time ${formattedShowTime}`);
 
     if (matchingShifts.length === 0) {
       return null;
     }
 
     // Group shifts by section
-    const digitalShifts = matchingShifts.filter(shift => shift.section_name === 'משמרות דיגיטל');
-    const transcriptionShifts = matchingShifts.filter(shift => shift.section_name === 'משמרות תמלולים');
-    const liveShifts = matchingShifts.filter(shift => shift.section_name === 'משמרות לייבים');
+    const digitalShifts = matchingShifts.filter(shift => shift.section_name === 'digital_shifts');
+    const transcriptionShifts = matchingShifts.filter(shift => shift.section_name === 'transcription_shifts');
+    const liveShifts = matchingShifts.filter(shift => shift.section_name === 'live_social_shifts');
 
     console.log(`Matching shifts by category - Digital: ${digitalShifts.length}, Transcription: ${transcriptionShifts.length}, Live: ${liveShifts.length}`);
 
