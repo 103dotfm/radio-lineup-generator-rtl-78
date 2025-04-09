@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -21,7 +20,7 @@ export const getWorkers = async (): Promise<Worker[]> => {
     
     if (error) {
       console.error('Error in getWorkers query:', error);
-      return [];
+      throw new Error(`Failed to fetch workers: ${error.message}`);
     }
     
     if (!data || !Array.isArray(data)) {
@@ -29,7 +28,7 @@ export const getWorkers = async (): Promise<Worker[]> => {
       return [];
     }
     
-    console.log('Workers data fetched successfully:', data);
+    console.log(`Workers data fetched successfully: ${data.length} workers`);
     
     // Ensure we're returning an array of workers with valid properties
     return data.map(worker => ({
@@ -42,7 +41,7 @@ export const getWorkers = async (): Promise<Worker[]> => {
     }));
   } catch (error) {
     console.error('Error fetching workers:', error);
-    return [];
+    throw error; // Re-throw to allow components to handle the error
   }
 };
 

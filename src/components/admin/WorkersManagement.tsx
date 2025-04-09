@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 const WorkersManagement = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   const [formData, setFormData] = useState({
@@ -30,13 +32,15 @@ const WorkersManagement = () => {
 
   const loadWorkers = async () => {
     setLoading(true);
+    setError(null);
     try {
       console.log('WorkersManagement: Fetching workers...');
       const data = await getWorkers();
-      console.log('WorkersManagement: Fetched workers:', data);
+      console.log(`WorkersManagement: Fetched ${data.length} workers`);
       setWorkers(data);
     } catch (error) {
       console.error('Error fetching workers:', error);
+      setError('שגיאה בטעינת רשימת העובדים');
       toast({
         title: "שגיאה",
         description: "שגיאה בטעינת רשימת העובדים",
@@ -143,6 +147,11 @@ const WorkersManagement = () => {
           </Button>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -157,7 +166,12 @@ const WorkersManagement = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">טוען נתונים...</TableCell>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex flex-col items-center">
+                      <div className="w-8 h-8 border-4 border-t-blue-500 border-b-blue-500 border-l-transparent border-r-transparent rounded-full animate-spin mb-2"></div>
+                      <div>טוען נתונים...</div>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : workers.length === 0 ? (
                 <TableRow>

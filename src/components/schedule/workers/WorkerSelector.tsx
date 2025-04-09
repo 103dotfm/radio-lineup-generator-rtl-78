@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { Input } from '@/components/ui/input';
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkerSelectorProps {
   value: string | null;
@@ -26,7 +26,9 @@ export const WorkerSelector = ({
   const [inputValue, setInputValue] = useState(additionalText || "");
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
   
   // Find the selected worker name
   const selectedWorker = workers.find(worker => worker.id === value);
@@ -36,13 +38,20 @@ export const WorkerSelector = ({
   useEffect(() => {
     const fetchWorkers = async () => {
       setLoading(true);
+      setError(null);
       try {
         console.log('WorkerSelector: Fetching workers');
         const data = await getWorkers();
-        console.log('WorkerSelector: Fetched workers:', data);
+        console.log(`WorkerSelector: Fetched ${data.length} workers`);
         setWorkers(data || []);
       } catch (error) {
         console.error('Error fetching workers:', error);
+        setError('שגיאה בטעינת רשימת העובדים');
+        toast({
+          title: "שגיאה",
+          description: "שגיאה בטעינת רשימת העובדים",
+          variant: "destructive",
+        });
         // Ensure workers is always an array even on error
         setWorkers([]);
       } finally {
@@ -51,7 +60,7 @@ export const WorkerSelector = ({
     };
     
     fetchWorkers();
-  }, []);
+  }, [toast]);
   
   const handleSelect = (workerId: string) => {
     // Toggle selection if clicking the same item
@@ -86,8 +95,16 @@ export const WorkerSelector = ({
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between"
+            disabled={loading}
           >
-            {value && displayValue ? displayValue : placeholder}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                טוען עובדים...
+              </>
+            ) : (
+              value && displayValue ? displayValue : placeholder
+            )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -99,9 +116,17 @@ export const WorkerSelector = ({
               onChange={handleSearchChange}
               className="mb-2"
             />
+            {error && (
+              <div className="p-2 text-sm text-red-500 border border-red-200 rounded mb-2">
+                {error}
+              </div>
+            )}
             <div className="max-h-64 overflow-y-auto">
               {loading ? (
-                <div className="p-2 text-center text-muted-foreground">טוען עובדים...</div>
+                <div className="p-4 text-center">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                  <div className="text-muted-foreground">טוען עובדים...</div>
+                </div>
               ) : filteredWorkers.length === 0 ? (
                 <div className="p-2 text-center text-muted-foreground">
                   {searchQuery ? "לא נמצאו עובדים" : "אין עובדים זמינים"}
