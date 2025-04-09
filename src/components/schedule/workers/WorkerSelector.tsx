@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ export const WorkerSelector = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
   
   // Find the selected worker name
@@ -44,14 +46,27 @@ export const WorkerSelector = ({
         const data = await getWorkers();
         console.log(`WorkerSelector: Fetched ${data.length} workers`);
         setWorkers(data || []);
+        // Reset retry count on success
+        setRetryCount(0);
       } catch (error) {
         console.error('Error fetching workers:', error);
         setError('שגיאה בטעינת רשימת העובדים');
-        toast({
-          title: "שגיאה",
-          description: "שגיאה בטעינת רשימת העובדים",
-          variant: "destructive",
-        });
+        
+        // If we haven't retried too many times, try again
+        if (retryCount < 3) {
+          console.log(`Retrying worker fetch (attempt ${retryCount + 1})...`);
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => {
+            fetchWorkers();
+          }, 2000); // Wait 2 seconds before retrying
+        } else {
+          toast({
+            title: "שגיאה",
+            description: "שגיאה בטעינת רשימת העובדים לאחר מספר ניסיונות",
+            variant: "destructive",
+          });
+        }
+        
         // Ensure workers is always an array even on error
         setWorkers([]);
       } finally {
@@ -76,6 +91,33 @@ export const WorkerSelector = ({
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  const handleRetry = () => {
+    setRetryCount(0);
+    setWorkers([]);
+    setLoading(true);
+    const fetchWorkers = async () => {
+      try {
+        console.log('WorkerSelector: Retrying fetch workers');
+        const data = await getWorkers();
+        console.log(`WorkerSelector: Retried fetch ${data.length} workers`);
+        setWorkers(data || []);
+        setError(null);
+      } catch (error) {
+        console.error('Error in retry fetching workers:', error);
+        setError('שגיאה בטעינת רשימת העובדים');
+        toast({
+          title: "שגיאה",
+          description: "שגיאה בטעינת רשימת העובדים",
+          variant: "destructive",
+        });
+        setWorkers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWorkers();
   };
   
   // Filter workers based on search query
@@ -117,8 +159,16 @@ export const WorkerSelector = ({
               className="mb-2"
             />
             {error && (
-              <div className="p-2 text-sm text-red-500 border border-red-200 rounded mb-2">
-                {error}
+              <div className="p-2 text-sm text-red-500 border border-red-200 rounded mb-2 flex items-center justify-between">
+                <span>{error}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRetry}
+                  className="ml-2 text-xs"
+                >
+                  ניסיון מחדש
+                </Button>
               </div>
             )}
             <div className="max-h-64 overflow-y-auto">

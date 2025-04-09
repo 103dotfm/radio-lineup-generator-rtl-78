@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -13,10 +14,25 @@ export interface Worker {
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
     console.log('workers.ts: Fetching workers from Supabase...');
-    const { data, error } = await supabase
+    
+    // Add a timeout to detect if the request is hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Request timeout: Supabase query took too long'));
+      }, 10000); // 10 second timeout
+    });
+    
+    // The actual data fetch
+    const fetchPromise = supabase
       .from('workers')
       .select('id, name, department, position, email, phone')
       .order('name');
+    
+    // Race the fetch against the timeout
+    const { data, error } = await Promise.race([
+      fetchPromise,
+      timeoutPromise.then(() => { throw new Error('Timeout'); })
+    ]);
     
     if (error) {
       console.error('Error in getWorkers query:', error);
