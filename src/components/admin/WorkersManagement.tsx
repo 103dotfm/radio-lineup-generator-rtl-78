@@ -18,17 +18,24 @@ const WorkersManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     department: '',
-    position: ''
+    position: '',
+    email: '',
+    phone: ''
   });
   
   const { toast } = useToast();
   
-  const fetchWorkers = async () => {
+  // This useEffect was missing the call to loadWorkers
+  useEffect(() => {
+    loadWorkers();
+  }, []);
+
+  const loadWorkers = async () => {
     setLoading(true);
     try {
-      console.log('Fetching workers...');
+      console.log('WorkersManagement: Fetching workers...');
       const data = await getWorkers();
-      console.log('Workers fetched:', data);
+      console.log('WorkersManagement: Fetched workers:', data);
       setWorkers(data);
     } catch (error) {
       console.error('Error fetching workers:', error);
@@ -42,24 +49,24 @@ const WorkersManagement = () => {
     }
   };
   
-  useEffect(() => {
-    fetchWorkers();
-  }, []);
-  
   const handleOpenDialog = (worker?: Worker) => {
     if (worker) {
       setEditingWorker(worker);
       setFormData({
         name: worker.name,
         department: worker.department || '',
-        position: worker.position || ''
+        position: worker.position || '',
+        email: worker.email || '',
+        phone: worker.phone || ''
       });
     } else {
       setEditingWorker(null);
       setFormData({
         name: '',
         department: '',
-        position: ''
+        position: '',
+        email: '',
+        phone: ''
       });
     }
     setDialogOpen(true);
@@ -96,7 +103,7 @@ const WorkersManagement = () => {
       }
       
       setDialogOpen(false);
-      fetchWorkers();
+      loadWorkers();
     } catch (error) {
       console.error('Error saving worker:', error);
       toast({
@@ -115,7 +122,7 @@ const WorkersManagement = () => {
           title: "נמחק בהצלחה",
           description: "העובד נמחק בהצלחה",
         });
-        fetchWorkers();
+        loadWorkers();
       } catch (error) {
         console.error('Error deleting worker:', error);
         toast({
@@ -144,17 +151,19 @@ const WorkersManagement = () => {
                 <TableHead className="text-right">שם</TableHead>
                 <TableHead className="text-right">מחלקה</TableHead>
                 <TableHead className="text-right">תפקיד</TableHead>
+                <TableHead className="text-right">אימייל</TableHead>
+                <TableHead className="text-right">טלפון</TableHead>
                 <TableHead className="text-right">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">טוען נתונים...</TableCell>
+                  <TableCell colSpan={6} className="text-center">טוען נתונים...</TableCell>
                 </TableRow>
               ) : workers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">אין עובדים להצגה</TableCell>
+                  <TableCell colSpan={6} className="text-center">אין עובדים להצגה</TableCell>
                 </TableRow>
               ) : (
                 workers.map((worker) => (
@@ -162,6 +171,8 @@ const WorkersManagement = () => {
                     <TableCell className="font-medium">{worker.name}</TableCell>
                     <TableCell>{worker.department || '-'}</TableCell>
                     <TableCell>{worker.position || '-'}</TableCell>
+                    <TableCell>{worker.email || '-'}</TableCell>
+                    <TableCell>{worker.phone || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleOpenDialog(worker)}>
@@ -212,6 +223,26 @@ const WorkersManagement = () => {
                 id="position"
                 name="position"
                 value={formData.position}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">אימייל</Label>
+              <Input
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="phone" className="text-right">טלפון</Label>
+              <Input
+                id="phone"
+                name="phone"
+                value={formData.phone}
                 onChange={handleInputChange}
                 className="col-span-3"
               />

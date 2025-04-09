@@ -1,216 +1,155 @@
 
 import { supabase } from "@/lib/supabase";
-import { format, parse, startOfWeek } from 'date-fns';
+import { getWorkersByIds } from "@/lib/supabase/workers";
 
-interface DigitalShift {
+const formatTime = (timeString: string): string => {
+  try {
+    // Extract hours and minutes from the time string (e.g., "07:00:00")
+    const [hours, minutes] = timeString.split(':');
+    return `${hours}:${minutes}`;
+  } catch (e) {
+    console.error('Error formatting time:', e);
+    return timeString; 
+  }
+};
+
+export interface DigitalShift {
   id: string;
-  person_name: string;
-  section_name: string;
-  shift_type: string;
+  day_of_week: number;
   start_time: string;
   end_time: string;
-  day_of_week: number;
+  person_name: string;
+  shift_type: string;
+  section_name: string;
 }
 
-export async function getDigitalWorkersForShow(showDate: Date | undefined, showTime: string): Promise<string | null> {
+export const getDigitalWorkersForShow = async (day: number, timeString: string) => {
   try {
-    if (!showDate || !showTime) {
-      console.log('Missing date or time for digital workers fetch');
-      return null;
-    }
-
-    // Ensure showTime is in the correct format (HH:mm)
-    let formattedShowTime = showTime;
-    if (showTime.length === 5) { // Format is already HH:mm
-      formattedShowTime = showTime;
-    } else if (showTime.length === 8) { // Format is HH:mm:ss
-      formattedShowTime = showTime.substring(0, 5);
-    }
+    console.log(`Finding digital workers for day ${day} at time ${timeString}`);
     
-    // Parse show time properly
-    const showTimeParts = formattedShowTime.split(':');
-    const showHour = parseInt(showTimeParts[0], 10);
-    const showMinutes = parseInt(showTimeParts[1], 10);
+    // Format time for comparison (remove seconds)
+    const formattedTime = formatTime(timeString);
+    console.log(`Formatted time: ${formattedTime}`);
     
-    if (isNaN(showHour) || isNaN(showMinutes)) {
-      console.error(`Invalid show time format: ${showTime}, parsed as ${showHour}:${showMinutes}`);
-      return null;
-    }
-    
-    // Get day of week (0-6, where 0 is Sunday)
-    const dayOfWeek = showDate.getDay();
-    
-    console.log(`Fetching digital workers for date: ${format(showDate, 'yyyy-MM-dd')}, day of week: ${dayOfWeek}, time: ${formattedShowTime} (${showHour}:${showMinutes})`);
-
-    // Calculate the start of the week (Sunday) for the show date
-    const weekStart = startOfWeek(showDate, { weekStartsOn: 0 });
-    const formattedWeekStart = format(weekStart, 'yyyy-MM-dd');
-    
-    console.log(`Week starting on: ${formattedWeekStart}`);
-
-    // Find the work arrangement for this week or the closest previous one
     const { data: arrangements, error: arrangementError } = await supabase
       .from('digital_work_arrangements')
-      .select('id, week_start')
-      .lte('week_start', formattedWeekStart) // Get arrangements on or before this week's start
+      .select('id')
       .order('week_start', { ascending: false })
       .limit(1);
-
-    if (arrangementError || !arrangements || arrangements.length === 0) {
-      console.error('Error fetching work arrangement:', arrangementError || 'No arrangement found');
+    
+    if (arrangementError) {
+      console.error('Error fetching digital work arrangement:', arrangementError);
       return null;
     }
-
-    const arrangementId = arrangements[0].id;
-    const arrangementWeekStart = arrangements[0].week_start;
     
-    console.log(`Found work arrangement: ${arrangementId} for week starting ${arrangementWeekStart}`);
-
-    // Fetch digital shifts for the arrangement
+    if (!arrangements || arrangements.length === 0) {
+      console.log('No digital work arrangements found');
+      return null;
+    }
+    
+    const arrangementId = arrangements[0].id;
+    console.log(`Using arrangement ID: ${arrangementId}`);
+    
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
-      .select('id, person_name, section_name, shift_type, start_time, end_time, day_of_week')
+      .select('*')
       .eq('arrangement_id', arrangementId)
-      .eq('day_of_week', dayOfWeek)
-      .is('is_hidden', false)
-      .not('section_name', 'eq', 'radio_north'); // Exclude radio_north
-
+      .eq('day_of_week', day)
+      .not('person_name', 'is', null)
+      .not('is_hidden', 'eq', true);
+    
     if (shiftsError) {
-      console.error('Error fetching shifts:', shiftsError);
+      console.error('Error fetching digital shifts:', shiftsError);
       return null;
     }
-
-    console.log(`Found ${shifts?.length || 0} shifts for day ${dayOfWeek}`);
-
+    
     if (!shifts || shifts.length === 0) {
-      console.log('No shifts found for this day');
+      console.log(`No shifts found for day ${day}`);
       return null;
     }
-
-    // Filter shifts to those that contain the show time
+    
+    console.log(`Found ${shifts.length} shifts for day ${day}`);
+    
+    // Find shifts that match the time
     const matchingShifts = shifts.filter(shift => {
-      if (!shift.start_time || !shift.end_time) return false;
-      
-      // Parse start and end time directly without using date-fns
-      const startTimeParts = shift.start_time.split(':');
-      const endTimeParts = shift.end_time.split(':');
-      
-      const startHour = parseInt(startTimeParts[0], 10);
-      const startMinute = parseInt(startTimeParts[1], 10);
-      const endHour = parseInt(endTimeParts[0], 10);
-      const endMinute = parseInt(endTimeParts[1], 10);
-      
-      // For debugging
-      console.log(`Checking shift: ${shift.id}, ${shift.section_name}, ${startHour}:${startMinute}-${endHour}:${endMinute} against show time ${showHour}:${showMinutes}, person_name: ${shift.person_name}`);
-      
-      // Check if show time is within shift time
-      if (
-        (showHour > startHour || (showHour === startHour && showMinutes >= startMinute)) &&
-        (showHour < endHour || (showHour === endHour && showMinutes <= endMinute))
-      ) {
-        return true;
-      }
-      
-      return false;
+      const shiftStartTime = formatTime(shift.start_time);
+      return shiftStartTime === formattedTime;
     });
-
-    console.log(`Found ${matchingShifts.length} matching shifts for time ${formattedShowTime}`);
-
+    
+    console.log(`Found ${matchingShifts.length} matching shifts for time ${formattedTime}`);
+    
     if (matchingShifts.length === 0) {
       return null;
     }
-
-    // Group shifts by section
-    const digitalShifts = matchingShifts.filter(shift => shift.section_name === 'digital_shifts');
-    const transcriptionShifts = matchingShifts.filter(shift => shift.section_name === 'transcription_shifts');
-    const liveShifts = matchingShifts.filter(shift => shift.section_name === 'live_social_shifts');
-
-    console.log(`Matching shifts by category - Digital: ${digitalShifts.length}, Transcription: ${transcriptionShifts.length}, Live: ${liveShifts.length}`);
-
-    // Get unique worker IDs from each group
-    const uniqueDigitalWorkerIds = [...new Set(digitalShifts.map(shift => shift.person_name))];
-    const uniqueTranscriptionWorkerIds = [...new Set(transcriptionShifts.map(shift => shift.person_name))];
-    const uniqueLiveWorkerIds = [...new Set(liveShifts.map(shift => shift.person_name))];
-
-    // Combine all unique worker IDs
-    const allUniqueWorkerIds = [...uniqueDigitalWorkerIds, ...uniqueTranscriptionWorkerIds, ...uniqueLiveWorkerIds];
     
-    // Remove any empty IDs
-    const filteredWorkerIds = allUniqueWorkerIds.filter(id => id && id.trim() !== '');
+    // Group by shift type
+    const groupedByType: Record<string, string[]> = {};
     
-    console.log('Filtered worker IDs for lookup:', filteredWorkerIds);
+    matchingShifts.forEach(shift => {
+      if (!groupedByType[shift.shift_type]) {
+        groupedByType[shift.shift_type] = [];
+      }
+      groupedByType[shift.shift_type].push(shift.person_name);
+    });
     
-    if (filteredWorkerIds.length === 0) {
-      console.log('No valid worker IDs found after filtering');
-      return null;
+    // Count shifts by category
+    const categories = {
+      "Digital": Object.keys(groupedByType).filter(type => type.includes("דיגיטל")).length,
+      "Transcription": Object.keys(groupedByType).filter(type => type.includes("תמלול")).length,
+      "Live": Object.keys(groupedByType).filter(type => !type.includes("דיגיטל") && !type.includes("תמלול")).length
+    };
+    
+    console.log(`Matching shifts by category - Digital: ${categories.Digital}, Transcription: ${categories.Transcription}, Live: ${categories.Live}`);
+    
+    // Get all names for digital workers
+    const digitalWorkerIds = matchingShifts
+      .filter(shift => shift.shift_type.includes("דיגיטל"))
+      .map(shift => shift.person_name);
+    
+    console.log(`Filtered names for credits:`, digitalWorkerIds);
+    
+    // Fetch actual worker names from the workers table
+    let digitalWorkerNames: string[] = digitalWorkerIds;
+    
+    if (digitalWorkerIds.length > 0) {
+      // Check if these are UUIDs or already names
+      const isUUID = digitalWorkerIds[0].match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      
+      if (isUUID) {
+        console.log("IDs appear to be UUIDs, fetching worker names...");
+        const workers = await getWorkersByIds(digitalWorkerIds);
+        
+        if (workers && workers.length > 0) {
+          digitalWorkerNames = workers.map(worker => worker.name);
+          console.log("Converted worker IDs to names:", digitalWorkerNames);
+        } else {
+          console.warn("Failed to fetch worker names, falling back to IDs");
+        }
+      } else {
+        console.log("IDs appear to already be names, using directly");
+      }
     }
-
-    try {
-      // Fetch real worker names from the workers table
-      const { data: workers, error: workersError } = await supabase
-        .from('workers')
-        .select('id, name')
-        .in('id', filteredWorkerIds);
-
-      if (workersError) {
-        console.error('Error fetching worker names:', workersError);
-        return null;
+    
+    // Format the credit line for digital workers
+    let creditLine = "";
+    
+    if (digitalWorkerNames.length > 0) {
+      if (digitalWorkerNames.length === 1) {
+        creditLine = `בדיגיטל: ${digitalWorkerNames[0]}.`;
+      } else if (digitalWorkerNames.length === 2) {
+        creditLine = `בדיגיטל: ${digitalWorkerNames[0]} ו${digitalWorkerNames[1]}.`;
+      } else {
+        const allButLast = digitalWorkerNames.slice(0, -1).join(', ');
+        const last = digitalWorkerNames[digitalWorkerNames.length - 1];
+        creditLine = `בדיגיטל: ${allButLast} ו${last}.`;
       }
-
-      console.log('Fetched workers:', workers);
-
-      if (!workers || workers.length === 0) {
-        console.log('No workers found for the given IDs');
-        // Fall back to using the IDs as names
-        const creditLine = formatCreditLine(filteredWorkerIds);
-        return creditLine;
-      }
-
-      // Create a mapping of worker IDs to names
-      const workerNames: Record<string, string> = {};
-      workers.forEach(worker => {
-        workerNames[worker.id] = worker.name;
-      });
-
-      // Get the actual names using the ID mapping
-      const actualNames = filteredWorkerIds.map(id => workerNames[id] || id);
-      
-      // Remove any still-empty names (those not found in workers table)
-      const filteredNames = actualNames.filter(name => name && name.trim() !== '');
-      
-      console.log('Filtered names for credits:', filteredNames);
-      
-      if (filteredNames.length === 0) {
-        console.log('No valid names found after worker name lookup');
-        return null;
-      }
-
-      // Format the credit line
-      const creditLine = formatCreditLine(filteredNames);
-      return creditLine;
-    } catch (error) {
-      console.error('Error processing worker names:', error);
-      // Fallback to IDs if worker name lookup fails
-      const creditLine = formatCreditLine(filteredWorkerIds);
-      return creditLine;
     }
+    
+    console.log(`Generated credit line: ${creditLine}`);
+    return creditLine;
+    
   } catch (error) {
-    console.error('Error in getDigitalWorkersForShow:', error);
+    console.error('Error fetching digital workers:', error);
     return null;
   }
-}
-
-// Helper function to format the credit line
-function formatCreditLine(names: string[]): string {
-  if (names.length === 0) return null;
-  
-  if (names.length === 1) {
-    return `בדיגיטל: ${names[0]}.`;
-  } else if (names.length === 2) {
-    return `בדיגיטל: ${names[0]} ו${names[1]}.`;
-  } else {
-    const allButLast = names.slice(0, -1).join(', ');
-    const lastPerson = names[names.length - 1];
-    return `בדיגיטל: ${allButLast} ו${lastPerson}.`;
-  }
-}
+};
