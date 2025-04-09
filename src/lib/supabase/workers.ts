@@ -28,6 +28,8 @@ export const getWorkers = async (): Promise<Worker[]> => {
       return [];
     }
     
+    console.log('Workers data fetched successfully:', data);
+    
     // Ensure we're returning an array of workers with valid properties
     return data.map(worker => ({
       id: worker.id || '',

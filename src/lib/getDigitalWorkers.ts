@@ -145,55 +145,72 @@ export async function getDigitalWorkersForShow(showDate: Date | undefined, showT
       return null;
     }
 
-    // Fetch real worker names from the workers table
-    const { data: workers, error: workersError } = await supabase
-      .from('workers')
-      .select('id, name')
-      .in('id', filteredWorkerIds);
+    try {
+      // Fetch real worker names from the workers table
+      const { data: workers, error: workersError } = await supabase
+        .from('workers')
+        .select('id, name')
+        .in('id', filteredWorkerIds);
 
-    if (workersError) {
-      console.error('Error fetching worker names:', workersError);
-      return null;
+      if (workersError) {
+        console.error('Error fetching worker names:', workersError);
+        return null;
+      }
+
+      console.log('Fetched workers:', workers);
+
+      if (!workers || workers.length === 0) {
+        console.log('No workers found for the given IDs');
+        // Fall back to using the IDs as names
+        const creditLine = formatCreditLine(filteredWorkerIds);
+        return creditLine;
+      }
+
+      // Create a mapping of worker IDs to names
+      const workerNames: Record<string, string> = {};
+      workers.forEach(worker => {
+        workerNames[worker.id] = worker.name;
+      });
+
+      // Get the actual names using the ID mapping
+      const actualNames = filteredWorkerIds.map(id => workerNames[id] || id);
+      
+      // Remove any still-empty names (those not found in workers table)
+      const filteredNames = actualNames.filter(name => name && name.trim() !== '');
+      
+      console.log('Filtered names for credits:', filteredNames);
+      
+      if (filteredNames.length === 0) {
+        console.log('No valid names found after worker name lookup');
+        return null;
+      }
+
+      // Format the credit line
+      const creditLine = formatCreditLine(filteredNames);
+      return creditLine;
+    } catch (error) {
+      console.error('Error processing worker names:', error);
+      // Fallback to IDs if worker name lookup fails
+      const creditLine = formatCreditLine(filteredWorkerIds);
+      return creditLine;
     }
-
-    console.log('Fetched workers:', workers);
-
-    // Create a mapping of worker IDs to names
-    const workerNames: Record<string, string> = {};
-    workers?.forEach(worker => {
-      workerNames[worker.id] = worker.name;
-    });
-
-    // Get the actual names using the ID mapping
-    const actualNames = filteredWorkerIds.map(id => workerNames[id] || id);
-    
-    // Remove any still-empty names (those not found in workers table)
-    const filteredNames = actualNames.filter(name => name && name.trim() !== '');
-    
-    console.log('Filtered names for credits:', filteredNames);
-    
-    if (filteredNames.length === 0) {
-      console.log('No valid names found after worker name lookup');
-      return null;
-    }
-
-    // Format the credit line based on number of workers
-    let creditLine;
-    if (filteredNames.length === 1) {
-      creditLine = `בדיגיטל: ${filteredNames[0]}.`;
-    } else if (filteredNames.length === 2) {
-      creditLine = `בדיגיטל: ${filteredNames[0]} ו${filteredNames[1]}.`;
-    } else {
-      const allButLast = filteredNames.slice(0, -1).join(', ');
-      const lastPerson = filteredNames[filteredNames.length - 1];
-      creditLine = `בדיגיטל: ${allButLast} ו${lastPerson}.`;
-    }
-    
-    console.log('Generated credit line:', creditLine);
-    return creditLine;
-    
   } catch (error) {
     console.error('Error in getDigitalWorkersForShow:', error);
     return null;
+  }
+}
+
+// Helper function to format the credit line
+function formatCreditLine(names: string[]): string {
+  if (names.length === 0) return null;
+  
+  if (names.length === 1) {
+    return `בדיגיטל: ${names[0]}.`;
+  } else if (names.length === 2) {
+    return `בדיגיטל: ${names[0]} ו${names[1]}.`;
+  } else {
+    const allButLast = names.slice(0, -1).join(', ');
+    const lastPerson = names[names.length - 1];
+    return `בדיגיטל: ${allButLast} ו${lastPerson}.`;
   }
 }

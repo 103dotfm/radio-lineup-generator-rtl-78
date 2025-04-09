@@ -37,7 +37,9 @@ export const WorkerSelector = ({
     const fetchWorkers = async () => {
       setLoading(true);
       try {
+        console.log('WorkerSelector: Fetching workers');
         const data = await getWorkers();
+        console.log('WorkerSelector: Fetched workers:', data);
         setWorkers(data || []);
       } catch (error) {
         console.error('Error fetching workers:', error);

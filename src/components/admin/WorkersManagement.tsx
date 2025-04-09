@@ -26,7 +26,9 @@ const WorkersManagement = () => {
   const fetchWorkers = async () => {
     setLoading(true);
     try {
+      console.log('Fetching workers...');
       const data = await getWorkers();
+      console.log('Workers fetched:', data);
       setWorkers(data);
     } catch (error) {
       console.error('Error fetching workers:', error);
