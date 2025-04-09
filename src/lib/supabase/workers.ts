@@ -13,6 +13,7 @@ export interface Worker {
 
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
+    console.log('workers.ts: Fetching workers from Supabase...');
     const { data, error } = await supabase
       .from('workers')
       .select('id, name, department, position, email, phone')
@@ -101,6 +102,8 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
       throw new Error('No fields to update');
     }
     
+    console.log(`Updating worker ${id} with data:`, updateData);
+    
     const { data, error } = await supabase
       .from('workers')
       .update(updateData)
@@ -134,6 +137,7 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
 
 export const deleteWorker = async (id: string): Promise<boolean> => {
   try {
+    console.log(`Deleting worker with ID: ${id}`);
     const { error } = await supabase
       .from('workers')
       .delete()
@@ -144,9 +148,87 @@ export const deleteWorker = async (id: string): Promise<boolean> => {
       return false;
     }
     
+    console.log(`Worker ${id} deleted successfully`);
     return true;
   } catch (error) {
     console.error('Error deleting worker:', error);
     return false;
+  }
+};
+
+export const getWorkerById = async (id: string): Promise<Worker | null> => {
+  try {
+    if (!id) {
+      console.warn('getWorkerById called with empty id');
+      return null;
+    }
+    
+    console.log(`Fetching worker with ID: ${id}`);
+    const { data, error } = await supabase
+      .from('workers')
+      .select('id, name, department, position, email, phone')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`Error fetching worker with ID ${id}:`, error);
+      return null;
+    }
+    
+    if (!data) {
+      console.warn(`No worker found with ID ${id}`);
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      name: data.name,
+      department: data.department || '',
+      position: data.position || '',
+      email: data.email || '',
+      phone: data.phone || ''
+    };
+  } catch (error) {
+    console.error(`Error fetching worker with ID ${id}:`, error);
+    return null;
+  }
+};
+
+export const getWorkersByIds = async (ids: string[]): Promise<Worker[]> => {
+  try {
+    if (!ids || ids.length === 0) {
+      console.warn('getWorkersByIds called with empty ids array');
+      return [];
+    }
+    
+    console.log(`Fetching workers with IDs: ${ids.join(', ')}`);
+    const { data, error } = await supabase
+      .from('workers')
+      .select('id, name, department, position, email, phone')
+      .in('id', ids);
+    
+    if (error) {
+      console.error('Error fetching workers by IDs:', error);
+      return [];
+    }
+    
+    if (!data || !Array.isArray(data)) {
+      console.warn('No workers found for the provided IDs');
+      return [];
+    }
+    
+    console.log(`Found ${data.length} workers for ${ids.length} requested IDs`);
+    
+    return data.map(worker => ({
+      id: worker.id,
+      name: worker.name,
+      department: worker.department || '',
+      position: worker.position || '',
+      email: worker.email || '',
+      phone: worker.phone || ''
+    }));
+  } catch (error) {
+    console.error('Error fetching workers by IDs:', error);
+    return [];
   }
 };
