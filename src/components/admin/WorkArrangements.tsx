@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -213,17 +214,17 @@ export default function WorkArrangements() {
         console.error("Error uploading file: ", error);
         
         // Check for specific error types and provide better user feedback
-        if (error.statusCode === '403') {
+        if (error.message && error.message.includes('403')) {
           toast({
             title: "Permission Denied",
             description: "You don't have permission to upload files. Please contact an administrator.",
             variant: "destructive",
           });
-        } else if (error.statusCode === '409') {
+        } else if (error.message && error.message.includes('409')) {
           toast({
             title: "Duplicate File",
             description: "This file already exists. We'll try to use the existing file.",
-            variant: "warning",
+            variant: "destructive",
           });
           
           // Try to get the existing file URL
