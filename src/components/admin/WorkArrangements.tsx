@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -76,7 +75,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase, getStorageUrl, ensureStorageBucket } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -122,6 +121,16 @@ export default function WorkArrangements() {
   });
 
   useEffect(() => {
+    ensureStorageBucket().then(success => {
+      if (!success) {
+        toast({
+          title: "Warning",
+          description: "Could not verify storage bucket. Uploads may not work.",
+          variant: "destructive",
+        });
+      }
+    });
+    
     generatePublicLinks(weekDate);
   }, [weekDate]);
 
@@ -177,30 +186,72 @@ export default function WorkArrangements() {
 
   const handleFileUpload = async (file: File) => {
     try {
+      const bucketReady = await ensureStorageBucket();
+      if (!bucketReady) {
+        toast({
+          title: "Error",
+          description: "Storage is not available. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
       const fileName = `${fileType}_${weekStartStr}_${Date.now()}.pdf`;
       const filePath = `work-arrangements/${fileType}/${weekStartStr}/${fileName}`;
+      
+      console.log("Attempting to upload file to:", filePath);
       
       const { data, error } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true // Using upsert instead of checking for duplicates
+          upsert: true // Using upsert to avoid duplicate errors
         });
 
       if (error) {
         console.error("Error uploading file: ", error);
-        toast({
-          title: "Error",
-          description: "Failed to upload file.",
-          variant: "destructive",
-        });
+        
+        // Check for specific error types and provide better user feedback
+        if (error.statusCode === '403') {
+          toast({
+            title: "Permission Denied",
+            description: "You don't have permission to upload files. Please contact an administrator.",
+            variant: "destructive",
+          });
+        } else if (error.statusCode === '409') {
+          toast({
+            title: "Duplicate File",
+            description: "This file already exists. We'll try to use the existing file.",
+            variant: "warning",
+          });
+          
+          // Try to get the existing file URL
+          const { data: publicUrlData } = await supabase.storage
+            .from('lovable')
+            .getPublicUrl(filePath);
+            
+          if (publicUrlData?.publicUrl) {
+            setFileUrl(publicUrlData.publicUrl);
+            setFilename(fileName);
+            await saveFileToDatabase(publicUrlData.publicUrl, fileName, weekStartStr);
+            return;
+          }
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to upload file. Please try again.",
+            variant: "destructive",
+          });
+        }
         return;
       }
 
       // Generate the URL using the getStorageUrl helper
       const storageBaseUrl = getStorageUrl();
       const url = `${storageBaseUrl}/${data.path}`;
+      
+      console.log("File uploaded successfully, URL:", url);
       
       setFileUrl(url);
       setFilename(fileName);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
@@ -8,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar, Printer } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScheduleView } from '@/components/schedule/ScheduleView';
-import { supabase } from "@/lib/supabase";
+import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
 
 type ArrangementType = 'producers' | 'engineers' | 'digital';
@@ -112,11 +111,14 @@ const SchedulePage = () => {
           <p className="text-gray-500">אין קובץ זמין לשבוע זה</p>
         </div>;
     }
+    
+    const validatedUrl = url.startsWith('http') ? url : `${getStorageUrl()}/${url.replace(/^\/+/, '')}`;
+    
     return <div className="w-full h-screen md:h-[800px]">
-        <object data={url} type="application/pdf" className="w-full h-full">
+        <object data={validatedUrl} type="application/pdf" className="w-full h-full">
           <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
             <p className="text-gray-500 mb-4">לא ניתן להציג את הקובץ במכשירך</p>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90">
+            <a href={validatedUrl} target="_blank" rel="noopener noreferrer" className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90">
               הורד את הקובץ
             </a>
           </div>
