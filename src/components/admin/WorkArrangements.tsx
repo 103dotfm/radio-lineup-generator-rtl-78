@@ -75,7 +75,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase } from "@/lib/supabase";
+import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -184,23 +184,24 @@ export default function WorkArrangements() {
       
       console.log("Uploading file to path:", filePath);
       
-      const res = await fetch(`https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/lovable/${filePath}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
-          'Content-Type': file.type,
-          'x-upsert': 'true'
-        },
-        body: file
-      });
+      const { data, error } = await supabase.storage
+        .from('lovable')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(JSON.stringify(errorData));
+      if (error) {
+        console.error("Error uploading file: ", error);
+        toast({
+          title: "Error",
+          description: `Failed to upload file: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
       }
 
-      const data = await res.json();
-      const url = `https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/public/lovable/${filePath}`;
+      const url = getStorageUrl(filePath);
       
       setFileUrl(url);
       setFilename(safeFileName);
