@@ -116,7 +116,7 @@ const SchedulePage = () => {
         </div>;
     }
     
-    // Make sure we have a proper URL to the file
+    // Make sure we have a proper URL to the file - simplified path handling
     const storageUrl = getStorageUrl();
     const validatedUrl = url.startsWith('http') 
       ? url 

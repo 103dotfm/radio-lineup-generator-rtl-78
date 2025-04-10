@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -177,12 +176,28 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const fileName = `${fileType}_${weekStartStr}_${Date.now()}.pdf`;
-      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${fileName}`;
+      const fileName = `${fileType}_${weekStartStr}.pdf`;
+      const filePath = `work-arrangements/${fileName}`;
       
       console.log("Attempting to upload file to:", filePath);
       
-      // Direct insertion to database without file upload first
+      const { error: uploadError } = await supabase.storage
+        .from('lovable')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error("Error uploading file:", uploadError);
+        toast({
+          title: "Error",
+          description: `Failed to upload file: ${uploadError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const { error: dbError } = await supabase
         .from('work_arrangements')
         .insert({
@@ -202,36 +217,6 @@ export default function WorkArrangements() {
         return;
       }
       
-      // Now upload the file
-      const { error: uploadError } = await supabase.storage
-        .from('lovable')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (uploadError) {
-        console.error("Error uploading file:", uploadError);
-        
-        // If upload failed but DB entry succeeded, remove the DB entry
-        const { error: deleteError } = await supabase
-          .from('work_arrangements')
-          .delete()
-          .eq('filename', fileName);
-          
-        if (deleteError) {
-          console.error("Error cleaning up database entry:", deleteError);
-        }
-        
-        toast({
-          title: "Error",
-          description: `Failed to upload file: ${uploadError.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Everything succeeded
       const fileUrl = `${getStorageUrl()}/${filePath}`;
       console.log("File uploaded successfully, URL:", fileUrl);
       
@@ -328,7 +313,7 @@ export default function WorkArrangements() {
                               <SelectContent>
                                 <SelectItem value="producers">עורכים ומפיקים</SelectItem>
                                 <SelectItem value="engineers">טכנאים</SelectItem>
-                                <SelectItem value="digital">דיגיטל (לא בשימוש)</SelectItem>
+                                <SelectItem value="digital">דיגיטל (��א בשימוש)</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
