@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -176,14 +177,15 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
+      // Use a simple filename with no subdirectories - just like your manual test
       const fileName = `${fileType}_${weekStartStr}.pdf`;
-      const filePath = `work-arrangements/${fileName}`;
       
-      console.log("Attempting to upload file to:", filePath);
+      console.log("Attempting to upload file to:", fileName);
       
-      const { error: uploadError } = await supabase.storage
+      // First upload the file to the root of the bucket
+      const { data, error: uploadError } = await supabase.storage
         .from('lovable')
-        .upload(filePath, file, {
+        .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true
         });
@@ -198,11 +200,18 @@ export default function WorkArrangements() {
         return;
       }
       
+      // Construct the direct URL to the file - exactly as in your manual example
+      const storageUrl = getStorageUrl();
+      const fileUrl = `${storageUrl}/${fileName}`;
+      
+      console.log("File uploaded successfully, URL:", fileUrl);
+      
+      // Now insert the database record with the full direct URL
       const { error: dbError } = await supabase
         .from('work_arrangements')
         .insert({
           filename: fileName,
-          url: filePath,
+          url: fileUrl,  // Store the full URL, not just the path
           type: fileType,
           week_start: weekStartStr,
         });
@@ -216,9 +225,6 @@ export default function WorkArrangements() {
         });
         return;
       }
-      
-      const fileUrl = `${getStorageUrl()}/${filePath}`;
-      console.log("File uploaded successfully, URL:", fileUrl);
       
       setFileUrl(fileUrl);
       setFilename(fileName);
