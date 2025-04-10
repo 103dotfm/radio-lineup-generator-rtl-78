@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase, getStorageUrl, generateWorkArrangementPath } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -180,27 +181,33 @@ export default function WorkArrangements() {
       const fileExtension = file.name.split('.').pop() || 'pdf';
       const safeFileName = `${fileType}_${weekStartStr}_${timestamp}.${fileExtension}`;
       
-      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${safeFileName}`;
+      const filePath = generateWorkArrangementPath(fileType, weekStartStr, safeFileName);
       
       console.log("Uploading file to path:", filePath);
       
-      const { data, error } = await supabase.storage
-        .from('lovable')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-
-      if (error) {
-        console.error("Error uploading file: ", error);
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('path', filePath);
+      
+      // Upload to local server endpoint
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error uploading file: ", errorData);
         toast({
           title: "Error",
-          description: `Failed to upload file: ${error.message}`,
+          description: `Failed to upload file: ${errorData.message || 'Unknown error'}`,
           variant: "destructive",
         });
         return;
       }
-
+      
+      const data = await response.json();
       const url = getStorageUrl(filePath);
       
       setFileUrl(url);
