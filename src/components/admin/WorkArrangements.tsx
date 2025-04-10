@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -86,7 +85,7 @@ const formSchema = z.object({
     .any()
     .refine((files) => files?.length > 0, "PDF File is required.")
     .refine(
-      (files) => files?.[0]?.size <= 5000000, // Increased max file size to 5MB
+      (files) => files?.[0]?.size <= 5000000,
       `Max file size is 5MB.`
     )
     .refine(
@@ -155,7 +154,6 @@ export default function WorkArrangements() {
           description: "Link copied to clipboard",
         });
         
-        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedLink(null);
         }, 2000);
@@ -182,36 +180,15 @@ export default function WorkArrangements() {
       const fileExtension = file.name.split('.').pop() || 'pdf';
       const safeFileName = `${fileType}_${weekStartStr}_${timestamp}.${fileExtension}`;
       
-      // Use a consistent path structure based on type and week
       const filePath = `work-arrangements/${fileType}/${weekStartStr}/${safeFileName}`;
       
       console.log("Uploading file to path:", filePath);
-      
-      // First, check if the bucket exists
-      const { data: bucketData, error: bucketError } = await supabase.storage
-        .getBucket('lovable');
-      
-      if (bucketError && bucketError.message.includes('not found')) {
-        console.log("Bucket 'lovable' not found, creating it...");
-        const { error: createBucketError } = await supabase.storage
-          .createBucket('lovable', { public: true });
-          
-        if (createBucketError) {
-          console.error("Error creating bucket: ", createBucketError);
-          toast({
-            title: "Error",
-            description: "Failed to create storage bucket",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
       
       const { data, error } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true // Changed to true to overwrite existing files
+          upsert: true
         });
 
       if (error) {
@@ -224,7 +201,6 @@ export default function WorkArrangements() {
         return;
       }
 
-      // If successfully uploaded, get the public URL
       const { data: publicUrlData } = supabase.storage
         .from('lovable')
         .getPublicUrl(data.path);
@@ -233,7 +209,6 @@ export default function WorkArrangements() {
       setFileUrl(url);
       setFilename(safeFileName);
 
-      // Save the record to the database
       await saveFileToDatabase(url, safeFileName, weekStartStr);
 
       toast({
