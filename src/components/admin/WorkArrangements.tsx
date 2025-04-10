@@ -76,7 +76,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase } from "@/lib/supabase";
+import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -178,12 +178,14 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${file.name}`;
+      const fileName = `${fileType}_${weekStartStr}_${Date.now()}.pdf`;
+      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${fileName}`;
+      
       const { data, error } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // Using upsert instead of checking for duplicates
         });
 
       if (error) {
@@ -196,11 +198,14 @@ export default function WorkArrangements() {
         return;
       }
 
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
+      // Generate the URL using the getStorageUrl helper
+      const storageBaseUrl = getStorageUrl();
+      const url = `${storageBaseUrl}/${data.path}`;
+      
       setFileUrl(url);
-      setFilename(file.name);
+      setFilename(fileName);
 
-      await saveFileToDatabase(url, file.name, weekStartStr);
+      await saveFileToDatabase(url, fileName, weekStartStr);
 
       toast({
         title: "Success",
