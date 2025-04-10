@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -76,7 +75,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl, ensureStorageBucket } from "@/lib/supabase";
+import { supabase, getStorageUrl, checkStoragePath } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -122,15 +121,8 @@ export default function WorkArrangements() {
   });
 
   useEffect(() => {
-    ensureStorageBucket().then(success => {
-      if (!success) {
-        toast({
-          title: "Warning",
-          description: "Could not verify storage bucket. Uploads may not work.",
-          variant: "destructive",
-        });
-      }
-    });
+    // Just check if the storage path exists, don't try to create it
+    checkStoragePath('work-arrangements');
     
     generatePublicLinks(weekDate);
   }, [weekDate]);
@@ -187,16 +179,6 @@ export default function WorkArrangements() {
 
   const handleFileUpload = async (file: File) => {
     try {
-      const bucketReady = await ensureStorageBucket();
-      if (!bucketReady) {
-        toast({
-          title: "Error",
-          description: "Storage is not available. Please try again later.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
       const fileName = `${fileType}_${weekStartStr}_${Date.now()}.pdf`;
       const filePath = `work-arrangements/${fileType}/${weekStartStr}/${fileName}`;
@@ -212,97 +194,50 @@ export default function WorkArrangements() {
 
       if (error) {
         console.error("Error uploading file: ", error);
-        
-        // Check for specific error types and provide better user feedback
-        if (error.message && error.message.includes('403')) {
-          toast({
-            title: "Permission Denied",
-            description: "You don't have permission to upload files. Please contact an administrator.",
-            variant: "destructive",
-          });
-        } else if (error.message && error.message.includes('409')) {
-          toast({
-            title: "Duplicate File",
-            description: "This file already exists. We'll try to use the existing file.",
-            variant: "destructive",
-          });
-          
-          // Try to get the existing file URL
-          const { data: publicUrlData } = await supabase.storage
-            .from('lovable')
-            .getPublicUrl(filePath);
-            
-          if (publicUrlData?.publicUrl) {
-            setFileUrl(publicUrlData.publicUrl);
-            setFilename(fileName);
-            await saveFileToDatabase(publicUrlData.publicUrl, fileName, weekStartStr);
-            return;
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to upload file. Please try again.",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Error",
+          description: "Failed to upload file. Please check console for details.",
+          variant: "destructive",
+        });
         return;
       }
 
       // Generate the URL using the getStorageUrl helper
-      const storageBaseUrl = getStorageUrl();
-      const url = `${storageBaseUrl}/${data.path}`;
+      const fileUrl = `${getStorageUrl()}/${filePath}`;
       
-      console.log("File uploaded successfully, URL:", url);
+      console.log("File uploaded successfully, URL:", fileUrl);
       
-      setFileUrl(url);
+      setFileUrl(fileUrl);
       setFilename(fileName);
 
-      await saveFileToDatabase(url, fileName, weekStartStr);
+      // Save file info to database
+      const { error: dbError } = await supabase
+        .from('work_arrangements')
+        .insert({
+          filename: fileName,
+          url: fileUrl,
+          type: fileType,
+          week_start: weekStartStr,
+        });
 
-      toast({
-        title: "Success",
-        description: "File uploaded successfully.",
-      });
+      if (dbError) {
+        console.error("Error saving file info to database: ", dbError);
+        toast({
+          title: "Warning",
+          description: "File uploaded, but failed to save information to database.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "File uploaded and saved successfully.",
+        });
+      }
     } catch (error) {
       console.error("Error during file upload: ", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred during file upload.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const saveFileToDatabase = async (url: string, filename: string, weekStart: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('work_arrangements')
-        .upsert({
-          filename: filename,
-          url: url,
-          type: fileType,
-          week_start: weekStart,
-        }, { onConflict: 'type, week_start' });
-
-      if (error) {
-        console.error("Error saving file info to database: ", error);
-        toast({
-          title: "Error",
-          description: "Failed to save file information to the database.",
-          variant: "destructive",
-        });
-      } else {
-        console.log("File info saved to database: ", data);
-        toast({
-          title: "Success",
-          description: "File information saved to the database.",
-        });
-      }
-    } catch (error) {
-      console.error("Error saving file info to database: ", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while saving file information.",
         variant: "destructive",
       });
     }

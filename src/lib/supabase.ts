@@ -10,37 +10,21 @@ export const getStorageUrl = () => {
   return `${supabaseUrl}/storage/v1/object/public/lovable`;
 };
 
-// Helper function to check if storage bucket exists and create it if it doesn't
-export const ensureStorageBucket = async () => {
+// Instead of trying to create a bucket, we'll just check if a path exists
+export const checkStoragePath = async (path: string) => {
   try {
-    // Check if lovable bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    const { data, error } = await supabase.storage
+      .from('lovable')
+      .list(path);
     
-    if (listError) {
-      console.error("Error listing buckets:", listError);
+    if (error) {
+      console.error("Error checking storage path:", error);
       return false;
-    }
-    
-    const bucketExists = buckets.some(bucket => bucket.name === 'lovable');
-    
-    if (!bucketExists) {
-      // Create the bucket if it doesn't exist
-      const { error: createError } = await supabase.storage.createBucket('lovable', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB limit
-      });
-      
-      if (createError) {
-        console.error("Error creating bucket:", createError);
-        return false;
-      }
-      
-      console.log("Created lovable storage bucket");
     }
     
     return true;
   } catch (error) {
-    console.error("Error in ensureStorageBucket:", error);
+    console.error("Error in checkStoragePath:", error);
     return false;
   }
 };
