@@ -7,21 +7,13 @@ BEGIN
   ) THEN
     INSERT INTO storage.buckets (id, name, public)
     VALUES ('lovable', 'lovable', true);
+    
+    -- Add universal policies for all operations
+    INSERT INTO storage.policies (name, definition, bucket_id, operation)
+    VALUES 
+      ('Universal Insert', 'TRUE', 'lovable', 'INSERT'),
+      ('Universal Select', 'TRUE', 'lovable', 'SELECT'),
+      ('Universal Update', 'TRUE', 'lovable', 'UPDATE'),
+      ('Universal Delete', 'TRUE', 'lovable', 'DELETE');
   END IF;
 END $$;
-
--- Create or update storage policy for public read access
-DO $$
-BEGIN
-  INSERT INTO storage.policies (name, definition, bucket_id)
-  VALUES (
-    'Public Read Access', 
-    '(bucket_id = ''lovable''::text)', 
-    'lovable'
-  )
-  ON CONFLICT (name, bucket_id) 
-  DO UPDATE SET definition = '(bucket_id = ''lovable''::text)';
-EXCEPTION WHEN duplicate_object THEN
-  -- Policy already exists, do nothing
-END $$;
-

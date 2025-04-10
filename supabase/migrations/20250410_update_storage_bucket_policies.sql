@@ -5,7 +5,7 @@ BEGIN
   -- Try to delete existing policies for cleaner setup
   BEGIN
     DELETE FROM storage.policies 
-    WHERE bucket_id = 'lovable' AND name = 'Universal Upload';
+    WHERE bucket_id = 'lovable';
   EXCEPTION WHEN OTHERS THEN
     -- If it fails, just proceed
     RAISE NOTICE 'Policy did not exist or could not be deleted: %', SQLERRM;
@@ -14,8 +14,8 @@ BEGIN
   -- Insert the policy with universal access
   INSERT INTO storage.policies (name, definition, bucket_id, operation)
   VALUES 
-    ('Universal Upload', 'TRUE', 'lovable', 'INSERT'),
-    ('Universal Read', 'TRUE', 'lovable', 'SELECT'),
+    ('Universal Insert', 'TRUE', 'lovable', 'INSERT'),
+    ('Universal Select', 'TRUE', 'lovable', 'SELECT'),
     ('Universal Update', 'TRUE', 'lovable', 'UPDATE'),
     ('Universal Delete', 'TRUE', 'lovable', 'DELETE');
 
