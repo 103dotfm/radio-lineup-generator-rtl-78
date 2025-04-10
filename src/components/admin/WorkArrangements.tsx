@@ -76,7 +76,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl, saveWorkArrangement } from "@/lib/supabase";
+import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -182,55 +182,67 @@ export default function WorkArrangements() {
       
       console.log("Attempting to upload file to:", filePath);
       
-      // First, try to upload the file
-      const { data, error } = await supabase.storage
+      // Direct insertion to database without file upload first
+      const { error: dbError } = await supabase
+        .from('work_arrangements')
+        .insert({
+          filename: fileName,
+          url: filePath,
+          type: fileType,
+          week_start: weekStartStr,
+        });
+        
+      if (dbError) {
+        console.error("Error saving to database:", dbError);
+        toast({
+          title: "Error",
+          description: `Failed to save file information: ${dbError.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Now upload the file
+      const { error: uploadError } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: true
         });
 
-      if (error) {
-        console.error("Error uploading file:", error);
+      if (uploadError) {
+        console.error("Error uploading file:", uploadError);
         
-        // If there's an upload error, notify the user
+        // If upload failed but DB entry succeeded, remove the DB entry
+        const { error: deleteError } = await supabase
+          .from('work_arrangements')
+          .delete()
+          .eq('filename', fileName);
+          
+        if (deleteError) {
+          console.error("Error cleaning up database entry:", deleteError);
+        }
+        
         toast({
           title: "Error",
-          description: `Failed to upload file: ${error.message}`,
+          description: `Failed to upload file: ${uploadError.message}`,
           variant: "destructive",
         });
         return;
       }
       
-      // File was uploaded successfully
+      // Everything succeeded
       const fileUrl = `${getStorageUrl()}/${filePath}`;
       console.log("File uploaded successfully, URL:", fileUrl);
       
-      // Update UI state
       setFileUrl(fileUrl);
       setFilename(fileName);
-
-      // Try to save the record to the database using our new helper function
-      const result = await saveWorkArrangement(
-        fileName,
-        filePath,
-        fileType,
-        weekStartStr
-      );
       
-      if (!result.success) {
-        console.error("Error saving to database:", result.error);
-        toast({
-          title: "Warning",
-          description: `File uploaded, but failed to save information to database: ${result.error?.message || "Unknown error"}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "File uploaded and saved successfully.",
-        });
-      }
+      toast({
+        title: "Success",
+        description: "File uploaded and saved successfully.",
+      });
+      
     } catch (error: any) {
       console.error("Error during file upload:", error);
       toast({
