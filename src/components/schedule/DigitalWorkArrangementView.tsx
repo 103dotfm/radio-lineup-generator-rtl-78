@@ -48,9 +48,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [editModeOpen, setEditModeOpen] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   const selectedWeekDate = useMemo(() => {
     if (weekDate) {
@@ -67,7 +65,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     fetchArrangement();
     fetchWorkers();
 
-    // Ensure pointer-events style is reset when component unmounts
     return () => {
       if (document.body.style.pointerEvents === 'none') {
         document.body.style.pointerEvents = '';
@@ -107,13 +104,11 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
   const fetchWorkers = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('workers').select('*').order('name');
+      const { data, error } = await supabase.from('workers').select('*').order('name');
       if (error) {
         throw error;
       }
+      console.log('Fetched workers:', data);
       setWorkers(data || []);
     } catch (error) {
       console.error('Error fetching workers:', error);
@@ -124,32 +119,29 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     setLoading(true);
     const weekStartStr = format(selectedWeekDate, 'yyyy-MM-dd');
     try {
-      const {
-        data: arrangementData,
-        error: arrangementError
-      } = await supabase.from('digital_work_arrangements').select('*').eq('week_start', weekStartStr);
+      const { data: arrangementData, error: arrangementError } = await supabase.from('digital_work_arrangements').select('*').eq('week_start', weekStartStr);
       if (arrangementError) {
         throw arrangementError;
       }
       if (arrangementData && arrangementData.length > 0) {
         const firstArrangement = arrangementData[0];
         setArrangement(firstArrangement);
-        const {
-          data: shiftsData,
-          error: shiftsError
-        } = await supabase.from('digital_shifts').select('*').eq('arrangement_id', firstArrangement.id).not('is_hidden', 'eq', true).order('position', {
-          ascending: true
-        });
+        console.log('Fetched arrangement data:', firstArrangement);
+
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('digital_shifts')
+          .select('*')
+          .eq('arrangement_id', firstArrangement.id)
+          .not('is_hidden', 'eq', true)
+          .order('position', { ascending: true });
+        
         if (shiftsError) {
           throw shiftsError;
         }
+        console.log('Fetched shifts data:', shiftsData);
         setShifts(shiftsData || []);
-        const {
-          data: customRowsData,
-          error: customRowsError
-        } = await supabase.from('digital_shift_custom_rows').select('*').eq('arrangement_id', firstArrangement.id).order('position', {
-          ascending: true
-        });
+
+        const { data: customRowsData, error: customRowsError } = await supabase.from('digital_shift_custom_rows').select('*').eq('arrangement_id', firstArrangement.id).order('position', { ascending: true });
         if (customRowsError) {
           throw customRowsError;
         }
@@ -196,11 +188,17 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
   const getWorkerName = (personName: string) => {
     if (!personName) return '';
 
-    // Check if personName is a UUID
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidPattern.test(personName)) {
+      console.log(`Looking up worker name for ID: ${personName} in ${workers.length} workers`);
       const worker = workers.find(w => w.id === personName);
-      return worker ? worker.name : personName;
+      if (worker) {
+        console.log(`Found worker: ${worker.name}`);
+        return worker.name;
+      } else {
+        console.log(`No worker found with ID: ${personName}`);
+        return personName; // Fallback to showing the ID if worker not found
+      }
     }
     return personName;
   };
@@ -250,14 +248,13 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {/* Digital Shifts Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.DIGITAL_SHIFTS) && <>
                 <TableRow className="digital-section-title-row">
-            {/*
+                {/*
                   <TableCell colSpan={6} className="p-2 font-bold text-lg bg-gray-100 digital-section-title">
                     משמרות דיגיטל
                   </TableCell>
-            */}
+                */}
                 </TableRow>
                 {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => {
               const hasShifts = shifts.some(shift => shift.section_name === SECTION_NAMES.DIGITAL_SHIFTS && shift.shift_type === type);
@@ -271,7 +268,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                   </TableRow>)}
               </>}
 
-            {/* Radio North Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.RADIO_NORTH) && <>
                 <TableRow className="digital-section-title-row">
                   <TableCell colSpan={6} className="p-2 font-bold text-lg bg-gray-100 digital-section-title">
@@ -290,7 +286,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                   </TableRow>)}
               </>}
 
-            {/* Transcription Shifts Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS) || customRows.some(row => row.section_name === SECTION_NAMES.TRANSCRIPTION_SHIFTS) ? (
                 <>
                 <TableRow className="digital-section-title-row">
@@ -309,7 +304,6 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
                 </>
             ) : null}
 
-            {/* Live Social Shifts Section */}
             {shifts.some(shift => shift.section_name === SECTION_NAMES.LIVE_SOCIAL_SHIFTS) && <>
                 <TableRow className="digital-section-title-row">
                   <TableCell colSpan={6} className="p-2 font-bold text-lg bg-gray-100 digital-section-title">משמרות לייבים, סושיאל ועוד</TableCell>
@@ -366,21 +360,18 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
       
       <EditModeDialog isOpen={editModeOpen} onClose={() => {
       setEditModeOpen(false);
-      // Ensure pointer-events is reset
       if (document.body.style.pointerEvents === 'none') {
         document.body.style.pointerEvents = '';
       }
     }} onEditCurrent={() => {
       console.log('Edit current arrangement');
       setEditModeOpen(false);
-      // Ensure pointer-events is reset
       if (document.body.style.pointerEvents === 'none') {
         document.body.style.pointerEvents = '';
       }
     }} onEditAll={() => {
       console.log('Edit all future arrangements');
       setEditModeOpen(false);
-      // Ensure pointer-events is reset
       if (document.body.style.pointerEvents === 'none') {
         document.body.style.pointerEvents = '';
       }

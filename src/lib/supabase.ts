@@ -3,11 +3,10 @@ import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 export const supabase = supabaseClient;
 
-// Get the Supabase URL from environment variables or client
+// Get the Supabase URL for storage
 export const getStorageUrl = () => {
-  // Using the Supabase URL from the client
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yyrmodgbnzqbmatlypuc.supabase.co';
-  return `${supabaseUrl}/storage/v1/object/public/lovable`;
+  // Use the exact URL format that worked in the manual test
+  return 'https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/public/lovable';
 };
 
 // Check if a file exists in the specified path
