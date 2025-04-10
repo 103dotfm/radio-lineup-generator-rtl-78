@@ -176,13 +176,13 @@ export default function WorkArrangements() {
 
   const handleFileUpload = async (file: File) => {
     try {
+      // Use the exact structure you used in your manual test
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      // Simple filename exactly like your manual test
       const fileName = `${fileType}_${weekStartStr}.pdf`;
       
-      console.log("Attempting to upload file to:", fileName);
+      console.log("Attempting to upload file directly to root of lovable bucket:", fileName);
       
-      // Step 1: Upload the file to the root of the lovable bucket, exactly as you did manually
+      // First, upload the file directly to the root of the lovable bucket
       const { data, error: uploadError } = await supabase.storage
         .from('lovable')
         .upload(fileName, file, {
@@ -200,18 +200,18 @@ export default function WorkArrangements() {
         return;
       }
       
-      // Step 2: Construct the full URL to the file as it was in your manual example
-      const storageUrl = getStorageUrl();
-      const fileUrl = `${storageUrl}/${fileName}`;
+      // Construct the full URL exactly as you did manually
+      const storageBaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/public/lovable';
+      const fileUrl = `${storageBaseUrl}/${fileName}`;
       
-      console.log("File uploaded successfully, URL:", fileUrl);
+      console.log("File uploaded successfully, using exact URL format:", fileUrl);
       
-      // Step 3: Now insert into the database with the FULL URL, as you did manually
+      // Insert into database with the same structure as your manual test
       const { error: dbError } = await supabase
         .from('work_arrangements')
         .insert({
           filename: fileName,
-          url: fileUrl,  // Store the FULL URL, not just the path
+          url: fileUrl,
           type: fileType,
           week_start: weekStartStr,
         });
