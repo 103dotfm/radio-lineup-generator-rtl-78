@@ -112,7 +112,13 @@ const SchedulePage = () => {
         </div>;
     }
     
-    const validatedUrl = url.startsWith('http') ? url : `${getStorageUrl()}/${url.replace(/^\/+/, '')}`;
+    // Make sure we have a proper URL to the file
+    const storageUrl = getStorageUrl();
+    const validatedUrl = url.startsWith('http') 
+      ? url 
+      : `${storageUrl}/${url.replace(/^\/+/, '')}`;
+    
+    console.log("Rendering PDF with URL:", validatedUrl);
     
     return <div className="w-full h-screen md:h-[800px]">
         <object data={validatedUrl} type="application/pdf" className="w-full h-full">
