@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
@@ -70,11 +71,13 @@ const SchedulePage = () => {
         console.error('Error fetching arrangements:', error);
         return;
       }
+      
       const arrangementsRecord: Record<ArrangementType, ArrangementFile | null> = {
         producers: null,
         engineers: null,
         digital: null
       };
+      
       if (data && data.length > 0) {
         data.forEach(item => {
           const arrangementItem = item as unknown as ArrangementFile;
@@ -83,6 +86,7 @@ const SchedulePage = () => {
           }
         });
       }
+      
       console.log('Fetched arrangements:', arrangementsRecord);
       setArrangements(arrangementsRecord);
     } catch (error) {

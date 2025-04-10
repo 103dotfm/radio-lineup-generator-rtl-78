@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase, getStorageUrl, saveWorkArrangement } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -181,6 +182,7 @@ export default function WorkArrangements() {
       
       console.log("Attempting to upload file to:", filePath);
       
+      // First, try to upload the file
       const { data, error } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
@@ -191,6 +193,7 @@ export default function WorkArrangements() {
       if (error) {
         console.error("Error uploading file:", error);
         
+        // If there's an upload error, notify the user
         toast({
           title: "Error",
           description: `Failed to upload file: ${error.message}`,
@@ -198,28 +201,28 @@ export default function WorkArrangements() {
         });
         return;
       }
-
-      const fileUrl = `${getStorageUrl()}/${filePath}`;
       
+      // File was uploaded successfully
+      const fileUrl = `${getStorageUrl()}/${filePath}`;
       console.log("File uploaded successfully, URL:", fileUrl);
       
+      // Update UI state
       setFileUrl(fileUrl);
       setFilename(fileName);
 
-      const { error: dbError } = await supabase
-        .from('work_arrangements')
-        .insert({
-          filename: fileName,
-          url: filePath,
-          type: fileType,
-          week_start: weekStartStr,
-        });
-
-      if (dbError) {
-        console.error("Error saving file info to database:", dbError);
+      // Try to save the record to the database using our new helper function
+      const result = await saveWorkArrangement(
+        fileName,
+        filePath,
+        fileType,
+        weekStartStr
+      );
+      
+      if (!result.success) {
+        console.error("Error saving to database:", result.error);
         toast({
           title: "Warning",
-          description: `File uploaded, but failed to save information to database: ${dbError.message}`,
+          description: `File uploaded, but failed to save information to database: ${result.error?.message || "Unknown error"}`,
           variant: "destructive",
         });
       } else {
