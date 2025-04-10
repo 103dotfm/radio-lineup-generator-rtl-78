@@ -24,3 +24,4 @@ BEGIN
 EXCEPTION WHEN duplicate_object THEN
   -- Policy already exists, do nothing
 END $$;
+
