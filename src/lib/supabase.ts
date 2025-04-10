@@ -29,34 +29,3 @@ export const checkFileExists = async (path: string) => {
     return false;
   }
 };
-
-// Directly insert work arrangement record without file upload
-export const saveWorkArrangement = async (
-  filename: string, 
-  url: string, 
-  type: string, 
-  weekStart: string
-) => {
-  try {
-    const { data, error } = await supabase
-      .from('work_arrangements')
-      .insert({
-        filename: filename,
-        url: url,
-        type: type,
-        week_start: weekStart,
-      })
-      .select();
-      
-    if (error) {
-      console.error("Error saving work arrangement:", error);
-      return { success: false, error };
-    }
-    
-    return { success: true, data };
-  } catch (error) {
-    console.error("Exception saving work arrangement:", error);
-    return { success: false, error };
-  }
-};
-
