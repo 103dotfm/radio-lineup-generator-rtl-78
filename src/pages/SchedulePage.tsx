@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar, Printer } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScheduleView } from '@/components/schedule/ScheduleView';
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
 
 type ArrangementType = 'producers' | 'engineers' | 'digital';

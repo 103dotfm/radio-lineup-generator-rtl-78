@@ -76,7 +76,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl, generateWorkArrangementPath } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -86,8 +86,8 @@ const formSchema = z.object({
     .any()
     .refine((files) => files?.length > 0, "PDF File is required.")
     .refine(
-      (files) => files?.[0]?.size <= 5000000,
-      `Max file size is 5MB.`
+      (files) => files?.[0]?.size <= 2000000,
+      `Max file size is 2MB.`
     )
     .refine(
       (files) => files?.[0]?.type === "application/pdf",
@@ -155,6 +155,7 @@ export default function WorkArrangements() {
           description: "Link copied to clipboard",
         });
         
+        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedLink(null);
         }, 2000);
@@ -177,43 +178,29 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const timestamp = Date.now();
-      const fileExtension = file.name.split('.').pop() || 'pdf';
-      const safeFileName = `${fileType}_${weekStartStr}_${timestamp}.${fileExtension}`;
-      
-      const filePath = generateWorkArrangementPath(fileType, weekStartStr, safeFileName);
-      
-      console.log("Uploading file to path:", filePath);
-      
-      // Create a FormData object to send the file
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('path', filePath);
-      
-      // Upload to local server endpoint
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error uploading file: ", errorData);
+      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${file.name}`;
+      const { data, error } = await supabase.storage
+        .from('lovable')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error("Error uploading file: ", error);
         toast({
           title: "Error",
-          description: `Failed to upload file: ${errorData.message || 'Unknown error'}`,
+          description: "Failed to upload file.",
           variant: "destructive",
         });
         return;
       }
-      
-      const data = await response.json();
-      const url = getStorageUrl(filePath);
-      
-      setFileUrl(url);
-      setFilename(safeFileName);
 
-      await saveFileToDatabase(url, safeFileName, weekStartStr);
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
+      setFileUrl(url);
+      setFilename(file.name);
+
+      await saveFileToDatabase(url, file.name, weekStartStr);
 
       toast({
         title: "Success",
