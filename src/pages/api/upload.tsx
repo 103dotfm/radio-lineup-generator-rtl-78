@@ -23,7 +23,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-export default function handler(req: Request, res: Response) {
+// Extend the Request type to include the file property
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
+
+export default function handler(req: MulterRequest, res: Response) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
