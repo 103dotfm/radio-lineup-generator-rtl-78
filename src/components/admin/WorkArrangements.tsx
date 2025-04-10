@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -185,38 +184,12 @@ export default function WorkArrangements() {
       
       console.log("Uploading file to path:", filePath);
       
-      // Upload the file with retries
-      let attempts = 0;
-      const maxAttempts = 3;
-      let uploadSuccess = false;
-      let data;
-      let error;
-      
-      while (attempts < maxAttempts && !uploadSuccess) {
-        attempts++;
-        
-        // Add a small delay between retries
-        if (attempts > 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
-        const result = await supabase.storage
-          .from('lovable')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
-          
-        data = result.data;
-        error = result.error;
-        
-        if (!error) {
-          uploadSuccess = true;
-          break;
-        }
-        
-        console.log(`Upload attempt ${attempts} failed:`, error);
-      }
+      const { data, error } = await supabase.storage
+        .from('lovable')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (error) {
         console.error("Error uploading file: ", error);
