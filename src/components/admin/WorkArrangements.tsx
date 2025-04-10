@@ -184,28 +184,24 @@ export default function WorkArrangements() {
       
       console.log("Uploading file to path:", filePath);
       
-      const { data, error } = await supabase.storage
-        .from('lovable')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+      const res = await fetch(`https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/lovable/${filePath}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
+          'Content-Type': file.type,
+          'x-upsert': 'true'
+        },
+        body: file
+      });
 
-      if (error) {
-        console.error("Error uploading file: ", error);
-        toast({
-          title: "Error",
-          description: `Failed to upload file: ${error.message}`,
-          variant: "destructive",
-        });
-        return;
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(JSON.stringify(errorData));
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from('lovable')
-        .getPublicUrl(data.path);
-        
-      const url = publicUrlData.publicUrl;
+      const data = await res.json();
+      const url = `https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/public/lovable/${filePath}`;
+      
       setFileUrl(url);
       setFilename(safeFileName);
 
