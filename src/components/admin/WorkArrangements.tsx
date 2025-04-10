@@ -86,8 +86,8 @@ const formSchema = z.object({
     .any()
     .refine((files) => files?.length > 0, "PDF File is required.")
     .refine(
-      (files) => files?.[0]?.size <= 2000000,
-      `Max file size is 2MB.`
+      (files) => files?.[0]?.size <= 5000000, // Increased max file size to 5MB
+      `Max file size is 5MB.`
     )
     .refine(
       (files) => files?.[0]?.type === "application/pdf",
@@ -178,29 +178,63 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${file.name}`;
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop() || 'pdf';
+      const safeFileName = `${fileType}_${weekStartStr}_${timestamp}.${fileExtension}`;
+      
+      // Use a consistent path structure based on type and week
+      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${safeFileName}`;
+      
+      console.log("Uploading file to path:", filePath);
+      
+      // First, check if the bucket exists
+      const { data: bucketData, error: bucketError } = await supabase.storage
+        .getBucket('lovable');
+      
+      if (bucketError && bucketError.message.includes('not found')) {
+        console.log("Bucket 'lovable' not found, creating it...");
+        const { error: createBucketError } = await supabase.storage
+          .createBucket('lovable', { public: true });
+          
+        if (createBucketError) {
+          console.error("Error creating bucket: ", createBucketError);
+          toast({
+            title: "Error",
+            description: "Failed to create storage bucket",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
       const { data, error } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // Changed to true to overwrite existing files
         });
 
       if (error) {
         console.error("Error uploading file: ", error);
         toast({
           title: "Error",
-          description: "Failed to upload file.",
+          description: `Failed to upload file: ${error.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
+      // If successfully uploaded, get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('lovable')
+        .getPublicUrl(data.path);
+        
+      const url = publicUrlData.publicUrl;
       setFileUrl(url);
-      setFilename(file.name);
+      setFilename(safeFileName);
 
-      await saveFileToDatabase(url, file.name, weekStartStr);
+      // Save the record to the database
+      await saveFileToDatabase(url, safeFileName, weekStartStr);
 
       toast({
         title: "Success",
