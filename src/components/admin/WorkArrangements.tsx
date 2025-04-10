@@ -185,29 +185,20 @@ export default function WorkArrangements() {
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true // Using upsert to avoid duplicate errors
+          upsert: true
         });
 
       if (error) {
         console.error("Error uploading file:", error);
         
-        if (error.message.includes("duplicate")) {
-          toast({
-            title: "Error",
-            description: "A file with this name already exists. Please try again.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: `Failed to upload file: ${error.message}`,
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Error",
+          description: `Failed to upload file: ${error.message}`,
+          variant: "destructive",
+        });
         return;
       }
 
-      // Generate the URL using the getStorageUrl helper
       const fileUrl = `${getStorageUrl()}/${filePath}`;
       
       console.log("File uploaded successfully, URL:", fileUrl);
@@ -215,12 +206,11 @@ export default function WorkArrangements() {
       setFileUrl(fileUrl);
       setFilename(fileName);
 
-      // Save file info to database
       const { error: dbError } = await supabase
         .from('work_arrangements')
         .insert({
           filename: fileName,
-          url: fileUrl,
+          url: filePath,
           type: fileType,
           week_start: weekStartStr,
         });
@@ -238,11 +228,11 @@ export default function WorkArrangements() {
           description: "File uploaded and saved successfully.",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during file upload:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred during file upload.",
+        description: error.message || "An unexpected error occurred during file upload.",
         variant: "destructive",
       });
     }
