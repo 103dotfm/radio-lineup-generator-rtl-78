@@ -75,7 +75,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl, checkStoragePath } from "@/lib/supabase";
+import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -121,9 +121,6 @@ export default function WorkArrangements() {
   });
 
   useEffect(() => {
-    // Just check if the storage path exists, don't try to create it
-    checkStoragePath('work-arrangements');
-    
     generatePublicLinks(weekDate);
   }, [weekDate]);
 
@@ -157,7 +154,6 @@ export default function WorkArrangements() {
           description: "Link copied to clipboard",
         });
         
-        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedLink(null);
         }, 2000);
@@ -193,12 +189,21 @@ export default function WorkArrangements() {
         });
 
       if (error) {
-        console.error("Error uploading file: ", error);
-        toast({
-          title: "Error",
-          description: "Failed to upload file. Please check console for details.",
-          variant: "destructive",
-        });
+        console.error("Error uploading file:", error);
+        
+        if (error.message.includes("duplicate")) {
+          toast({
+            title: "Error",
+            description: "A file with this name already exists. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: `Failed to upload file: ${error.message}`,
+            variant: "destructive",
+          });
+        }
         return;
       }
 
@@ -221,10 +226,10 @@ export default function WorkArrangements() {
         });
 
       if (dbError) {
-        console.error("Error saving file info to database: ", dbError);
+        console.error("Error saving file info to database:", dbError);
         toast({
           title: "Warning",
-          description: "File uploaded, but failed to save information to database.",
+          description: `File uploaded, but failed to save information to database: ${dbError.message}`,
           variant: "destructive",
         });
       } else {
@@ -234,7 +239,7 @@ export default function WorkArrangements() {
         });
       }
     } catch (error) {
-      console.error("Error during file upload: ", error);
+      console.error("Error during file upload:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred during file upload.",
