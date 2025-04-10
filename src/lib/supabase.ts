@@ -10,21 +10,22 @@ export const getStorageUrl = () => {
   return `${supabaseUrl}/storage/v1/object/public/lovable`;
 };
 
-// Instead of trying to create a bucket, we'll just check if a path exists
-export const checkStoragePath = async (path: string) => {
+// Check if a file exists in the specified path
+export const checkFileExists = async (path: string) => {
   try {
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabase
+      .storage
       .from('lovable')
-      .list(path);
+      .download(path);
     
     if (error) {
-      console.error("Error checking storage path:", error);
+      console.log("File doesn't exist:", path);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error("Error in checkStoragePath:", error);
+    console.error("Error checking file existence:", error);
     return false;
   }
 };
