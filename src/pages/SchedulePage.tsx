@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
@@ -117,6 +118,7 @@ const SchedulePage = () => {
     
     console.log("Rendering PDF with URL:", url);
     
+    // Use the full URL directly from the database field
     return <div className="w-full h-screen md:h-[800px]">
         <object data={url} type="application/pdf" className="w-full h-full">
           <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
