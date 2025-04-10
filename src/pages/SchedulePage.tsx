@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar, Printer } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScheduleView } from '@/components/schedule/ScheduleView';
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
 
 type ArrangementType = 'producers' | 'engineers' | 'digital';
@@ -71,13 +71,11 @@ const SchedulePage = () => {
         console.error('Error fetching arrangements:', error);
         return;
       }
-      
       const arrangementsRecord: Record<ArrangementType, ArrangementFile | null> = {
         producers: null,
         engineers: null,
         digital: null
       };
-      
       if (data && data.length > 0) {
         data.forEach(item => {
           const arrangementItem = item as unknown as ArrangementFile;
@@ -86,7 +84,6 @@ const SchedulePage = () => {
           }
         });
       }
-      
       console.log('Fetched arrangements:', arrangementsRecord);
       setArrangements(arrangementsRecord);
     } catch (error) {
@@ -115,10 +112,6 @@ const SchedulePage = () => {
           <p className="text-gray-500">אין קובץ זמין לשבוע זה</p>
         </div>;
     }
-    
-    console.log("Rendering PDF with URL:", url);
-    
-    // Use the full URL directly from the database field
     return <div className="w-full h-screen md:h-[800px]">
         <object data={url} type="application/pdf" className="w-full h-full">
           <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">

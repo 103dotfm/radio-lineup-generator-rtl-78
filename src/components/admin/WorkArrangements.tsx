@@ -76,7 +76,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -155,6 +155,7 @@ export default function WorkArrangements() {
           description: "Link copied to clipboard",
         });
         
+        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedLink(null);
         }, 2000);
@@ -176,69 +177,75 @@ export default function WorkArrangements() {
 
   const handleFileUpload = async (file: File) => {
     try {
-      // Use the exact structure you used in your manual test
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const fileName = `${fileType}_${weekStartStr}.pdf`;
-      
-      console.log("Attempting to upload file directly to root of lovable bucket:", fileName);
-      
-      // First, upload the file directly to the root of the lovable bucket
-      const { data, error: uploadError } = await supabase.storage
+      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${file.name}`;
+      const { data, error } = await supabase.storage
         .from('lovable')
-        .upload(fileName, file, {
+        .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: false
         });
 
-      if (uploadError) {
-        console.error("Error uploading file:", uploadError);
+      if (error) {
+        console.error("Error uploading file: ", error);
         toast({
           title: "Error",
-          description: `Failed to upload file: ${uploadError.message}`,
+          description: "Failed to upload file.",
           variant: "destructive",
         });
         return;
       }
-      
-      // Construct the full URL exactly as you did manually
-      const storageBaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co/storage/v1/object/public/lovable';
-      const fileUrl = `${storageBaseUrl}/${fileName}`;
-      
-      console.log("File uploaded successfully, using exact URL format:", fileUrl);
-      
-      // Insert into database with the same structure as your manual test
-      const { error: dbError } = await supabase
-        .from('work_arrangements')
-        .insert({
-          filename: fileName,
-          url: fileUrl,
-          type: fileType,
-          week_start: weekStartStr,
-        });
-        
-      if (dbError) {
-        console.error("Error saving to database:", dbError);
-        toast({
-          title: "Error",
-          description: `Failed to save file information: ${dbError.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      setFileUrl(fileUrl);
-      setFilename(fileName);
-      
+
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
+      setFileUrl(url);
+      setFilename(file.name);
+
+      await saveFileToDatabase(url, file.name, weekStartStr);
+
       toast({
         title: "Success",
-        description: "File uploaded and saved successfully.",
+        description: "File uploaded successfully.",
       });
-      
-    } catch (error: any) {
-      console.error("Error during file upload:", error);
+    } catch (error) {
+      console.error("Error during file upload: ", error);
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred during file upload.",
+        description: "An unexpected error occurred during file upload.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const saveFileToDatabase = async (url: string, filename: string, weekStart: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_arrangements')
+        .upsert({
+          filename: filename,
+          url: url,
+          type: fileType,
+          week_start: weekStart,
+        }, { onConflict: 'type, week_start' });
+
+      if (error) {
+        console.error("Error saving file info to database: ", error);
+        toast({
+          title: "Error",
+          description: "Failed to save file information to the database.",
+          variant: "destructive",
+        });
+      } else {
+        console.log("File info saved to database: ", data);
+        toast({
+          title: "Success",
+          description: "File information saved to the database.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving file info to database: ", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while saving file information.",
         variant: "destructive",
       });
     }
@@ -319,7 +326,7 @@ export default function WorkArrangements() {
                               <SelectContent>
                                 <SelectItem value="producers">עורכים ומפיקים</SelectItem>
                                 <SelectItem value="engineers">טכנאים</SelectItem>
-                                <SelectItem value="digital">דיגיטל (��א בשימוש)</SelectItem>
+                                <SelectItem value="digital">דיגיטל (לא בשימוש)</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
