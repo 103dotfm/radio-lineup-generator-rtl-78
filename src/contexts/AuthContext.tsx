@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getAppDomain } from '../integrations/supabase/client';
@@ -26,7 +25,6 @@ interface AuthContextType {
   disconnectGoogle: () => Promise<{ error: any }>;
 }
 
-// Create the context with a default value that matches the shape
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isAdmin: false,
@@ -160,7 +158,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // New function for connecting existing account with Google
   const connectWithGoogle = async () => {
     try {
       const domain = await getAppDomain();
@@ -259,9 +256,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   
   const disconnectGoogle = async () => {
     try {
-      const { data, error } = await supabase.auth.unlinkIdentity({
-        provider: 'google'
-      });
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData?.user?.identities) {
+        return { error: new Error('No identities found') };
+      }
+      
+      const googleIdentity = userData.user.identities.find(
+        identity => identity.provider === 'google'
+      );
+      
+      if (!googleIdentity) {
+        return { error: new Error('No Google identity found to disconnect') };
+      }
+      
+      const { data, error } = await supabase.auth.unlinkIdentity(googleIdentity);
       
       if (error) {
         console.error('Error disconnecting Google account:', error);
