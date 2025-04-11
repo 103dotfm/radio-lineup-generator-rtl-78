@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getAppDomain } from '../integrations/supabase/client';
@@ -21,6 +22,7 @@ interface AuthContextType {
   updateUserProfile: (data: Partial<User>) => Promise<{ error: any }>;
   updateUserEmail: (email: string) => Promise<{ error: any }>;
   updateUserPassword: (password: string) => Promise<{ error: any }>;
+  connectWithGoogle: () => Promise<{ error: any }>;
   disconnectGoogle: () => Promise<{ error: any }>;
 }
 
@@ -35,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   updateUserProfile: async () => ({ error: null }),
   updateUserEmail: async () => ({ error: null }),
   updateUserPassword: async () => ({ error: null }),
+  connectWithGoogle: async () => ({ error: null }),
   disconnectGoogle: async () => ({ error: null }),
 });
 
@@ -138,12 +141,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        console.error('Google login error:', error);
         toast({
           variant: "destructive",
           title: "שגיאה בהתחברות",
           description: error.message || "אירעה שגיאה בהתחברות באמצעות Google",
         });
-        console.error('Google login error:', error);
       } else if (data) {
         console.log('Google OAuth initiated successfully', data);
       }
@@ -154,6 +157,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "שגיאה בהתחברות",
         description: "אירעה שגיאה לא צפויה בהתחברות באמצעות Google",
       });
+    }
+  };
+
+  // New function for connecting existing account with Google
+  const connectWithGoogle = async () => {
+    try {
+      const domain = await getAppDomain();
+      const { data, error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          redirectTo: `${domain}/google-auth-redirect?action=link`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        }
+      });
+
+      if (error) {
+        console.error('Error connecting with Google:', error);
+        toast({
+          variant: "destructive",
+          title: "שגיאה בחיבור חשבון Google",
+          description: error.message || "אירעה שגיאה בחיבור חשבון Google",
+        });
+        return { error };
+      }
+      
+      console.log('Google connection initiated successfully', data);
+      return { error: null };
+    } catch (error) {
+      console.error('Unexpected error connecting with Google:', error);
+      toast({
+        variant: "destructive",
+        title: "שגיאה בחיבור חשבון",
+        description: "אירעה שגיאה לא צפויה בחיבור חשבון Google",
+      });
+      return { error };
     }
   };
 
@@ -217,12 +258,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   
   const disconnectGoogle = async () => {
-    toast({
-      title: "הסרת חיבור ל-Google",
-      description: "להסרת הרשאות גישה, אנא בקר בהגדרות החשבון של Google שלך ובטל את ההרשאה",
-    });
-    
-    return { error: null };
+    try {
+      const { data, error } = await supabase.auth.unlinkIdentity({
+        provider: 'google'
+      });
+      
+      if (error) {
+        console.error('Error disconnecting Google account:', error);
+        toast({
+          variant: "destructive",
+          title: "שגיאה בניתוק חשבון Google",
+          description: error.message || "אירעה שגיאה בניתוק חשבון Google",
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "חשבון Google נותק בהצלחה",
+        description: "חשבון Google נותק מחשבונך בהצלחה",
+      });
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Unexpected error disconnecting Google:', error);
+      toast({
+        variant: "destructive",
+        title: "שגיאה בניתוק חשבון",
+        description: "אירעה שגיאה לא צפויה בניתוק חשבון Google",
+      });
+      return { error };
+    }
   };
 
   const logout = async () => {
@@ -247,6 +312,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     updateUserProfile,
     updateUserEmail,
     updateUserPassword,
+    connectWithGoogle,
     disconnectGoogle
   };
 

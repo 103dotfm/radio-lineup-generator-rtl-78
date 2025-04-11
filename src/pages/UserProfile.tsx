@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, User, Mail, Lock, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/lib/supabase';
 
 const UserProfile = () => {
-  const { user, updateUserProfile, updateUserEmail, updateUserPassword, disconnectGoogle, logout } = useAuth();
+  const { user, updateUserProfile, updateUserEmail, updateUserPassword, connectWithGoogle, disconnectGoogle, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -21,10 +21,32 @@ const UserProfile = () => {
   const [newEmail, setNewEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [hasGoogleLinked, setHasGoogleLinked] = useState(false);
   
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [isDisconnectingGoogle, setIsDisconnectingGoogle] = useState(false);
+  
+  useEffect(() => {
+    const checkGoogleIdentity = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          const identities = data.user.identities || [];
+          const googleIdentity = identities.find(identity => identity.provider === 'google');
+          setHasGoogleLinked(!!googleIdentity);
+        }
+      } catch (error) {
+        console.error('Error checking Google identity:', error);
+      }
+    };
+    
+    if (user) {
+      checkGoogleIdentity();
+    }
+  }, [user]);
   
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +168,31 @@ const UserProfile = () => {
     }
   };
   
+  const handleGoogleConnect = async () => {
+    setIsConnectingGoogle(true);
+    try {
+      const { error } = await connectWithGoogle();
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "שגיאה בחיבור חשבון",
+          description: error.message || "אירעה שגיאה בחיבור חשבון Google",
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "שגיאה בחיבור חשבון",
+        description: "אירעה שגיאה לא צפויה",
+      });
+    } finally {
+      setIsConnectingGoogle(false);
+    }
+  };
+  
   const handleGoogleDisconnect = async () => {
+    setIsDisconnectingGoogle(true);
     try {
       const { error } = await disconnectGoogle();
       
@@ -156,6 +202,8 @@ const UserProfile = () => {
           title: "שגיאה בניתוק החשבון",
           description: error.message || "אירעה שגיאה בניתוק החשבון מ-Google",
         });
+      } else {
+        setHasGoogleLinked(false);
       }
     } catch (error) {
       toast({
@@ -163,6 +211,8 @@ const UserProfile = () => {
         title: "שגיאה בניתוק החשבון",
         description: "אירעה שגיאה לא צפויה",
       });
+    } finally {
+      setIsDisconnectingGoogle(false);
     }
   };
   
@@ -290,18 +340,36 @@ const UserProfile = () => {
                     </svg>
                     <div>
                       <h3 className="text-sm font-medium">Google</h3>
-                      <p className="text-xs text-gray-500">חשבון Google מחובר לחשבונך</p>
+                      <p className="text-xs text-gray-500">
+                        {hasGoogleLinked 
+                          ? 'חשבון Google מחובר לחשבונך'
+                          : 'חבר את חשבון Google שלך לחשבונך'}
+                      </p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleGoogleDisconnect}
-                    className="flex items-center"
-                  >
-                    נתק חשבון
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                  </Button>
+                  {hasGoogleLinked ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleGoogleDisconnect}
+                      disabled={isDisconnectingGoogle}
+                      className="flex items-center"
+                    >
+                      {isDisconnectingGoogle ? 'מנתק...' : 'נתק חשבון'}
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleGoogleConnect}
+                      disabled={isConnectingGoogle}
+                      className="flex items-center"
+                    >
+                      {isConnectingGoogle ? 'מחבר...' : 'חבר חשבון'}
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
