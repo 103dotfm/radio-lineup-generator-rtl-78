@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase, getAppDomain } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { getAppDomain } from '../integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
