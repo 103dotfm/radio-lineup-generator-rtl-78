@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getAppDomain } from '../lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -15,7 +16,12 @@ interface AuthContextType {
   isAdmin: boolean;
   user: User | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  updateUserProfile: (data: Partial<User>) => Promise<{ error: any }>;
+  updateUserEmail: (email: string) => Promise<{ error: any }>;
+  updateUserPassword: (password: string) => Promise<{ error: any }>;
+  disconnectGoogle: () => Promise<{ error: any }>;
 }
 
 // Create the context with a default value that matches the shape
@@ -24,7 +30,12 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   user: null,
   login: async () => ({ error: null }),
+  loginWithGoogle: async () => {},
   logout: async () => {},
+  updateUserProfile: async () => ({ error: null }),
+  updateUserEmail: async () => ({ error: null }),
+  updateUserPassword: async () => ({ error: null }),
+  disconnectGoogle: async () => ({ error: null }),
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -33,6 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const lastUserCheckRef = useRef<number>(0);
   const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  const { toast } = useToast();
 
   const checkUserRole = async (userId: string, force: boolean = false) => {
     const now = Date.now();
@@ -113,6 +125,105 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      const domain = await getAppDomain();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${domain}/google-auth-redirect`,
+        },
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "שגיאה בהתחברות",
+          description: error.message || "אירעה שגיאה בהתחברות באמצעות Google",
+        });
+        console.error('Google login error:', error);
+      }
+    } catch (error) {
+      console.error('Unexpected Google login error:', error);
+      toast({
+        variant: "destructive",
+        title: "שגיאה בהתחברות",
+        description: "אירעה שגיאה לא צפויה בהתחברות באמצעות Google",
+      });
+    }
+  };
+
+  const updateUserProfile = async (data: Partial<User>) => {
+    try {
+      if (!user) {
+        return { error: new Error('No user logged in') };
+      }
+      
+      const { error } = await supabase
+        .from('users')
+        .update(data)
+        .eq('id', user.id);
+        
+      if (error) {
+        return { error };
+      }
+      
+      // Update local user state with new data
+      setUser(prev => prev ? { ...prev, ...data } : null);
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return { error };
+    }
+  };
+  
+  const updateUserEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ email });
+      
+      if (error) {
+        return { error };
+      }
+      
+      toast({
+        title: "אימות אימייל נשלח",
+        description: "בדוק את תיבת הדואר הנכנס שלך להשלמת עדכון האימייל",
+      });
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating email:', error);
+      return { error };
+    }
+  };
+  
+  const updateUserPassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) {
+        return { error };
+      }
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating password:', error);
+      return { error };
+    }
+  };
+  
+  const disconnectGoogle = async () => {
+    // There's no direct method to disconnect OAuth providers in Supabase
+    // The best approach is to notify the user to remove access from Google's side
+    toast({
+      title: "הסרת חיבור ל-Google",
+      description: "להסרת הרשאות גישה, אנא בקר בהגדרות החשבון של Google שלך ובטל את ההרשאה",
+    });
+    
+    return { error: null };
+  };
+
   const logout = async () => {
     try {
       await supabase.auth.signOut();
@@ -131,7 +242,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAdmin, 
     user, 
     login, 
-    logout
+    loginWithGoogle,
+    logout,
+    updateUserProfile,
+    updateUserEmail,
+    updateUserPassword,
+    disconnectGoogle
   };
 
   return (

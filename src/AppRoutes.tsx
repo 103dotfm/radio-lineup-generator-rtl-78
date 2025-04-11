@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import SchedulePage from "./pages/SchedulePage";
 import GoogleAuthRedirect from "./pages/GoogleAuthRedirect";
+import UserProfile from "./pages/UserProfile";
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -52,6 +53,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute adminOnly>
             <Navigate to="/admin?tab=database" replace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <UserProfile />
           </ProtectedRoute>
         }
       />
