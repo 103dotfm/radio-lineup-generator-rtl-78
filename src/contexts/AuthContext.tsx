@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getAppDomain } from '../integrations/supabase/client';
@@ -77,7 +76,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
@@ -85,7 +83,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setIsAuthenticated(true);
@@ -129,10 +126,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loginWithGoogle = async () => {
     try {
       const domain = await getAppDomain();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${domain}/google-auth-redirect`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
@@ -143,6 +144,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: error.message || "אירעה שגיאה בהתחברות באמצעות Google",
         });
         console.error('Google login error:', error);
+      } else if (data) {
+        console.log('Google OAuth initiated successfully', data);
       }
     } catch (error) {
       console.error('Unexpected Google login error:', error);
@@ -169,7 +172,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
       
-      // Update local user state with new data
       setUser(prev => prev ? { ...prev, ...data } : null);
       
       return { error: null };
@@ -215,8 +217,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
   
   const disconnectGoogle = async () => {
-    // There's no direct method to disconnect OAuth providers in Supabase
-    // The best approach is to notify the user to remove access from Google's side
     toast({
       title: "הסרת חיבור ל-Google",
       description: "להסרת הרשאות גישה, אנא בקר בהגדרות החשבון של Google שלך ובטל את ההרשאה",
@@ -237,7 +237,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Provide the actual values to the context
   const contextValue: AuthContextType = {
     isAuthenticated, 
     isAdmin, 
