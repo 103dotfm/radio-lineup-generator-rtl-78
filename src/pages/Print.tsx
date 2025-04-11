@@ -78,6 +78,20 @@ const Print = () => {
           border-left: 0 !important;
           border-right: 0 !important;
         }
+        /* Ensure backgrounds are printed */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        /* Prevent text cut between pages */
+        p, h1, h2, h3, h4, h5, h6, span, li {
+          page-break-inside: avoid !important;
+        }
+        /* Add extra margin at bottom of page to prevent cut-off */
+        @page {
+          margin-bottom: 20mm !important;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -86,6 +100,21 @@ const Print = () => {
       document.head.removeChild(style);
     };
   }, []);
+
+  // Initialize print setup once content is loaded
+  useEffect(() => {
+    if (!loading && show) {
+      // This triggers after the content is loaded and ready
+      const setupPrintStyles = () => {
+        // Force a small delay to ensure DOM is fully rendered
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 300);
+      };
+      
+      setupPrintStyles();
+    }
+  }, [loading, show]);
 
   if (loading) return <div className="container mx-auto py-8 px-2 text-center">טוען...</div>;
   if (error) return <div className="container mx-auto py-8 px-2 text-center">{error}</div>;

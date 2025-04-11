@@ -234,13 +234,17 @@ body {
 @media print {
   @page {
     size: portrait;
-    margin: 5mm 5mm 13mm 10mm;
+    margin: 5mm 5mm 20mm 10mm; /* Increased bottom margin from 13mm to 20mm */
     padding: 0;
   }
   
   body {
     background-color: white;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
+  
   .showNamePrint {margin-top: -10px;}
   .showTimePrint {margin-top: -10px;}
 
@@ -272,7 +276,6 @@ body {
   }
 
   .schedule-page {
-    /* Fixed: Added proper page rule with brace */
     page: landscape;
   }
   
@@ -289,7 +292,7 @@ body {
   
   .schedule-page .schedule-cell .actions,
   .schedule-page .day-note .actions,
-  .schedule-page button {
+  .schedule-page .schedule-page button {
     display: none !important;
   }
   
@@ -340,6 +343,14 @@ body {
     font-size: 1rem !important;
     border: 1px solid #e2e8f0;
     vertical-align: top !important;
+    page-break-inside: auto; /* Allow page breaks within cells */
+  }
+
+  /* Prevent text from breaking in the middle */
+  .print-content table p,
+  .print-content table span,
+  .print-content table li {
+    page-break-inside: avoid !important; /* Keep paragraphs together */
   }
 
   /* Divider row styling for print */
@@ -365,8 +376,9 @@ body {
     padding: 0.75rem !important;
     border-radius: 0.375rem;
     background-color: #f3f4f6 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   .print-content td.whitespace-nowrap {
@@ -376,8 +388,9 @@ body {
   .print-content tr.bg-black\/10 td {
     color: black !important;
     background-color: #f1f1f1 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
   .print-content .prose {
@@ -388,6 +401,7 @@ body {
 
   .print-content .prose * {
     font-size: 1rem !important;
+    page-break-inside: avoid !important; /* Prevent text from breaking in middle */
   }
 
   .print-content .details-column {
@@ -395,7 +409,10 @@ body {
     line-height: 1.3 !important;
   }
 
-  .print-content .details-column p {margin-bottom: 10px !important;}
+  .print-content .details-column p {
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important; /* Keep paragraphs together */
+  }
 
   .print-content .credits {
     margin-top: 4rem;
@@ -420,8 +437,8 @@ body {
     color: black !important;
     padding: 10px;
     border-radius: 4px;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .divider-heading {
@@ -433,8 +450,8 @@ body {
     background-color: #f3f4f6 !important;
     padding: 0.75rem;
     border-radius: 0.375rem;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .mb-6 {
