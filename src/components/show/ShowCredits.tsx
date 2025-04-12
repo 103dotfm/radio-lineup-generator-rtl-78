@@ -23,6 +23,8 @@ const ShowCredits = ({
 }: ShowCreditsProps) => {
   if (!editor) return null;
 
+  console.log('ShowCredits rendering with date:', showDate, 'and time:', showTime);
+
   return (
     <div className="col-span-2 space-y-4">
       <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />

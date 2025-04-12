@@ -1,10 +1,10 @@
 
-import React, { memo } from 'react';
+import React from 'react';
 import { Editor } from '@tiptap/react';
-import ShowHeader from '../../show/ShowHeader';
-import ShowCredits from '../../show/ShowCredits';
-import LineupForm from '../../LineupForm';
+import { Card, CardContent } from "@/components/ui/card";
 import LineupTable from '../LineupTable';
+import LineupForm from '@/components/LineupForm';
+import ShowCredits from '@/components/show/ShowCredits';
 
 interface MainContentProps {
   showName: string;
@@ -37,8 +37,7 @@ interface MainContentProps {
   onRemoveNextShowLine?: () => void;
 }
 
-// Using React.memo to prevent unnecessary re-renders
-const MainContent = memo(({
+const MainContent = ({
   showName,
   showTime,
   showDate,
@@ -48,10 +47,6 @@ const MainContent = memo(({
   onNameChange,
   onTimeChange,
   onDateChange,
-  onSave,
-  onShare,
-  onPrint,
-  onExportPDF,
   onAdd,
   onDelete,
   onDurationChange,
@@ -59,7 +54,6 @@ const MainContent = memo(({
   onBreakTextChange,
   onDragEnd,
   handleNameLookup,
-  onBackToDashboard,
   onDetailsChange,
   showMinutes,
   onToggleMinutes,
@@ -68,56 +62,55 @@ const MainContent = memo(({
   nextShowHost,
   onRemoveNextShowLine
 }: MainContentProps) => {
+  console.log('MainContent rendering with date:', showDate, 'and time:', showTime);
+  
   return (
-    <main className="space-y-8 text-right" dir="rtl">
-      <ShowHeader
-        showName={showName}
-        showTime={showTime}
-        showDate={showDate}
-        onNameChange={onNameChange}
-        onTimeChange={onTimeChange}
-        onDateChange={onDateChange}
-        onSave={onSave}
-        onShare={onShare}
-        onPrint={onPrint}
-        onExportPDF={onExportPDF}
-      />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+      <div className="lg:col-span-2 space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <LineupTable 
+              items={items}
+              showMinutes={showMinutes}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onDurationChange={onDurationChange}
+              onBreakTextChange={onBreakTextChange}
+              onDragEnd={onDragEnd}
+              onDetailsChange={onDetailsChange}
+              onToggleMinutes={onToggleMinutes}
+              onDividerAdd={onDividerAdd}
+            />
+          </CardContent>
+        </Card>
 
-      <div className="space-y-8">
-        <ShowCredits 
-          editor={editor} 
-          nextShowName={nextShowName}
-          nextShowHost={nextShowHost}
-          onRemoveNextShowLine={onRemoveNextShowLine}
-          showDate={showDate}
-          showTime={showTime}
-        />
-
-        <LineupForm 
-          onAdd={onAdd}
-          onNameChange={handleNameLookup}
-          onBackToDashboard={onBackToDashboard}
-          editingItem={editingItem}
-          onDividerAdd={onDividerAdd}
-        />
-
-        <LineupTable
-          items={items}
-          onDelete={onDelete}
-          onDurationChange={onDurationChange}
-          onEdit={onEdit}
-          onBreakTextChange={onBreakTextChange}
-          onDetailsChange={onDetailsChange}
-          onDragEnd={onDragEnd}
-          showMinutes={showMinutes}
-          onToggleMinutes={onToggleMinutes}
-        />
+        <Card>
+          <CardContent className="p-6">
+            <LineupForm
+              onAdd={onAdd}
+              onNameChange={handleNameLookup}
+              editingItem={editingItem}
+              onBackToDashboard={() => {}}
+              onDividerAdd={onDividerAdd}
+            />
+          </CardContent>
+        </Card>
       </div>
-    </main>
-  );
-});
 
-// Add display name for debugging
-MainContent.displayName = 'MainContent';
+      <Card>
+        <CardContent className="p-6">
+          <ShowCredits 
+            editor={editor} 
+            nextShowName={nextShowName}
+            nextShowHost={nextShowHost}
+            onRemoveNextShowLine={onRemoveNextShowLine}
+            showDate={showDate}
+            showTime={showTime}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 export default MainContent;
