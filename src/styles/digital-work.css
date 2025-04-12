@@ -1,0 +1,25 @@
+
+/* Public Digital work arrangement */
+.digital-footer-text {
+  text-align: center;
+  font-size: 1.5em;
+}
+
+.px-px svg {
+  padding-left: 1px;
+  padding-right: 0px;
+}
+
+.digital-shift-irregular-hours {
+  margin: auto;
+  background-color: #000;
+  color: #e4ff6c !important;
+  width: fit-content;
+}
+
+.digital-shift-person, 
+.digital-radio-person, 
+.digital-work-arrangement .worker-name, 
+.digital-work-arrangement-view .worker-name {
+  font-size: 16px;
+}

@@ -1,0 +1,84 @@
+
+/* Theme colors */
+.bg-indigo-600 {
+  background-color: rgb(103 22 31);
+}
+
+.bg-indigo-700:hover {
+  background-color: rgb(68 14 20);
+}
+
+.bg-yellow-50 {
+  background-color: rgb(78 220 244 / 51%);
+}
+
+.bg-gray-50 {
+  background-color: rgb(191 191 191 / 34%);
+}
+
+.bg-primary {
+  background-color: rgb(94 14 28);
+}
+
+/* Dashboard styles */
+.dashboardTitle {
+  margin: -2em 0 0 0;
+  background: #3fc9c5;
+  padding: 2em 1em 1em 1em;
+}
+
+/* Toast styles */
+.toaster {
+  background: #FFF;
+}
+
+/* Dialog styles */
+[role="alertdialog"] h2,
+[role="alertdialog"] p {
+  text-align: right;
+}
+
+.bg-white .bg-popover {
+  background-color: white !important;
+}
+
+.admin-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: right;
+}
+
+.border-r-4 {
+  border-right-width: 4px;
+}
+
+@media (max-height: 700px) {
+  .height-sensitive {
+    @apply max-h-[60vh] overflow-y-auto;
+  }
+}
+
+.loginLogo {
+  margin: 0px auto -10px;
+  position: relative;
+  left: 16px;
+}
+
+.credit {
+  margin-top: -3em;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.credit a {
+  color: crimson;
+}
+
+.footer-logo {
+  margin: 0px -21px 0px 0px;
+}
+
+.z-50 .right-4 {
+  display: none;
+}

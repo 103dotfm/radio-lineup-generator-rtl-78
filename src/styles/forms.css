@@ -1,0 +1,40 @@
+
+/* Form and input styles */
+/* Improved mobile form controls */
+@media (max-width: 768px) {
+  input, select, textarea {
+    @apply text-base; /* Prevents zoom on iOS */
+    max-height: 44px; /* Better touch targets */
+  }
+  
+  /* Better spacing for mobile forms */
+  .form-group, .form-item, [data-sidebar="group"] {
+    @apply mb-4;
+  }
+  
+  /* Improved button sizing for touch */
+  button, [role="button"], .button {
+    @apply min-h-[44px] px-4;
+  }
+  
+  /* Adjust tabs for mobile */
+  [role="tablist"] {
+    @apply flex overflow-x-auto py-2 gap-2;
+    scrollbar-width: none; /* Hide scrollbar in Firefox */
+    -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+  }
+  
+  [role="tablist"]::-webkit-scrollbar {
+    display: none; /* Hide scrollbar in Chrome/Safari */
+  }
+  
+  /* Mobile admin tabs */
+  .admin-tabs [role="tablist"] {
+    @apply grid-cols-3 sm:grid-cols-6;
+    @apply text-xs;
+  }
+  
+  .admin-tabs [role="tab"] {
+    @apply py-2 px-3;
+  }
+}
