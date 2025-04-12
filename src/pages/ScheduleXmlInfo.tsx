@@ -3,9 +3,31 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/use-toast";
 
 const ScheduleXmlInfo = () => {
-  const xmlEndpoint = "https://yyrmodgbnzqbmatlypuc.supabase.co/functions/v1/schedule-xml";
+  const { toast } = useToast();
+  const xmlBaseEndpoint = "https://yyrmodgbnzqbmatlypuc.supabase.co/functions/v1/schedule-xml";
+  
+  // Function to get the current week's date in YYYY-MM-DD format
+  const getCurrentWeekDate = () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const diff = now.getDate() - dayOfWeek; // adjust to get to Sunday
+    const sunday = new Date(now.setDate(diff));
+    return sunday.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+  
+  const xmlEndpoint = `${xmlBaseEndpoint}?date=${getCurrentWeekDate()}`;
+  
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "URL copied",
+      description: "The URL has been copied to your clipboard.",
+      duration: 3000
+    });
+  };
   
   return (
     <div className="container mx-auto py-8 px-4">
@@ -22,6 +44,16 @@ const ScheduleXmlInfo = () => {
           <div className="p-4 bg-gray-100 rounded-md overflow-x-auto">
             <code className="text-sm break-all">{xmlEndpoint}</code>
           </div>
+          <div className="mt-4">
+            <h3 className="text-lg font-medium mb-2">Query Parameters</h3>
+            <p className="text-sm text-gray-600 mb-2">You can specify a different week by adding a date parameter:</p>
+            <div className="p-3 bg-gray-100 rounded-md overflow-x-auto">
+              <code className="text-sm">{xmlBaseEndpoint}?date=YYYY-MM-DD</code>
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              The date should be any day in the week you want to view. The schedule will show the full week containing that date.
+            </p>
+          </div>
         </CardContent>
         <CardFooter>
           <Button 
@@ -32,10 +64,7 @@ const ScheduleXmlInfo = () => {
           </Button>
           <Button 
             variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(xmlEndpoint);
-              alert("URL copied to clipboard!");
-            }}
+            onClick={() => copyToClipboard(xmlEndpoint)}
           >
             Copy URL
           </Button>
