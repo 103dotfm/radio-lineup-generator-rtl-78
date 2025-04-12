@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Editor } from '@tiptap/react';
 import { Check, X } from 'lucide-react';
 import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
+import { useToast } from "@/hooks/use-toast";
 
 interface DigitalCreditsSuggestionProps {
   showDate: Date | undefined;
@@ -17,6 +18,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
   const [isLoading, setIsLoading] = useState(true);
   const [editedSuggestion, setEditedSuggestion] = useState('');
   const [error, setError] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchSuggestion = async () => {
@@ -50,19 +52,30 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         if (result) {
           setSuggestion(result);
           setEditedSuggestion(result);
+          // Show success toast when suggestions are found
+          toast({
+            title: "קרדיטים לדיגיטל",
+            description: "נמצאו קרדיטים לדיגיטל",
+          });
         } else {
           setSuggestion(null);
+          console.log("No digital workers found for this time slot");
         }
       } catch (err) {
         console.error('Error fetching digital workers suggestion:', err);
         setError('שגיאה בטעינת הצעה לקרדיטים לדיגיטל');
+        toast({
+          title: "שגיאה",
+          description: "שגיאה בטעינת הצעה לקרדיטים לדיגיטל",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchSuggestion();
-  }, [showDate, showTime]);
+  }, [showDate, showTime, toast]);
 
   const handleApply = () => {
     if (!editor || !editedSuggestion) return;
@@ -78,6 +91,12 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
     
     // Clear the suggestion to hide the component
     setSuggestion(null);
+    
+    // Show success toast
+    toast({
+      title: "קרדיטים לדיגיטל",
+      description: "הקרדיטים נוספו בהצלחה",
+    });
   };
 
   const handleCancel = () => {
