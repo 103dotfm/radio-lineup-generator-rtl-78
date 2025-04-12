@@ -87,7 +87,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
   // Don't render anything if there's no suggestion or if we're still loading
   if (isLoading) {
     return (
-      <div className="bg-gray-50 border rounded-md p-4 my-2 text-center">
+      <div className="bg-gray-50 border rounded-md p-4 my-2 text-center digital-credits-suggestion">
         <p className="text-sm text-gray-500">טוען הצעה לקרדיטים לדיגיטל...</p>
       </div>
     );
@@ -95,7 +95,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4 my-2 text-center">
+      <div className="bg-red-50 border border-red-200 rounded-md p-4 my-2 text-center digital-credits-suggestion">
         <p className="text-sm text-red-500">{error}</p>
       </div>
     );
@@ -106,9 +106,9 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
   }
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 my-2">
+    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 my-2 digital-credits-suggestion">
       <div className="mb-2">
-        <h3 className="text-sm font-medium text-blue-800">הצעה לקרדיטים לדיגיטל:</h3>
+        <h3 className="text-sm font-medium text-blue-800 title">הצעה לקרדיטים לדיגיטל:</h3>
       </div>
       
       <Textarea 
@@ -117,7 +117,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         className="min-h-[60px] mb-2 bg-white text-right"
       />
       
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 actions">
         <Button
           type="button"
           variant="outline"
