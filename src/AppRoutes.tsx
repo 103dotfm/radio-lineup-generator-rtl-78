@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { format, startOfWeek } from 'date-fns';
@@ -10,6 +9,7 @@ import Admin from "./pages/Admin";
 import SchedulePage from "./pages/SchedulePage";
 import GoogleAuthRedirect from "./pages/GoogleAuthRedirect";
 import UserProfile from "./pages/UserProfile";
+import ScheduleXmlInfo from './pages/ScheduleXmlInfo';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -88,6 +88,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/xml-feed" element={<ScheduleXmlInfo />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
