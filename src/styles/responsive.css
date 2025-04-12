@@ -1,0 +1,30 @@
+
+/* Responsive styles */
+@media (max-width: 1024px) {
+  .lineup-table-wrapper {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .container {
+    @apply px-4;
+  }
+  
+  .mobile-menu {
+    @apply fixed inset-0 z-50 bg-white;
+  }
+  
+  .card {
+    @apply rounded-md sm:rounded-lg mx-0 w-full;
+  }
+  
+  [role="dialog"] {
+    @apply p-4 sm:p-6;
+  }
+  
+  .form-row {
+    @apply flex-col sm:flex-row gap-2 sm:gap-4;
+  }
+}
