@@ -24,8 +24,9 @@ function escapeXml(unsafe) {
 // Function to generate the weekly schedule XML
 async function generateWeeklyScheduleXML(supabaseClient, date = new Date()) {
   try {
-    // Calculate the start date of the week
-    const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+    // Calculate the start date of the week - Be explicit about using the current date
+    const today = new Date(date);
+    const weekStart = startOfWeek(today, { weekStartsOn: 0 });
     console.log(`Generating schedule for week starting: ${format(weekStart, 'yyyy-MM-dd')}`);
     
     // Process schedule slots using same logic as dashboard
@@ -181,13 +182,16 @@ serve(async (req) => {
       try {
         // Parse the date parameter if provided
         selectedDate = parse(weekDateParam, 'yyyy-MM-dd', new Date());
+        console.log(`Using provided date parameter: ${format(selectedDate, 'yyyy-MM-dd')}`);
       } catch (error) {
         console.error('Invalid date parameter:', error);
         selectedDate = new Date();
+        console.log(`Falling back to current date: ${format(selectedDate, 'yyyy-MM-dd')}`);
       }
     } else {
       // Use current date if no parameter provided
       selectedDate = new Date();
+      console.log(`No date parameter provided, using current date: ${format(selectedDate, 'yyyy-MM-dd')}`);
     }
     
     // Create Supabase client

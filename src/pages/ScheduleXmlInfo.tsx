@@ -12,10 +12,8 @@ const ScheduleXmlInfo = () => {
   // Function to get the current week's date in YYYY-MM-DD format
   const getCurrentWeekDate = () => {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const diff = now.getDate() - dayOfWeek; // adjust to get to Sunday
-    const sunday = new Date(now.setDate(diff));
-    return sunday.toISOString().split('T')[0]; // YYYY-MM-DD format
+    // Don't adjust the date - we want today's date to get the current week
+    return now.toISOString().split('T')[0]; // YYYY-MM-DD format
   };
   
   const xmlEndpoint = `${xmlBaseEndpoint}?date=${getCurrentWeekDate()}`;
