@@ -24,8 +24,7 @@ const ScheduleXmlInfo = () => {
     navigator.clipboard.writeText(text);
     toast({
       title: "URL copied",
-      description: "The URL has been copied to your clipboard.",
-      duration: 3000
+      description: "The URL has been copied to your clipboard."
     });
   };
   
