@@ -15,12 +15,20 @@ const XmlFeedManager = () => {
       setRefreshing(true);
       const xmlEndpoint = 'https://yyrmodgbnzqbmatlypuc.supabase.co/functions/v1/schedule-xml';
 
+      // Get the current session token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('No access token available. Please log in again.');
+      }
+
       // Call the XML endpoint to refresh the XML
       const response = await fetch(xmlEndpoint, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.getSession().then(res => res.data.session?.access_token)}`
+          'Authorization': `Bearer ${accessToken}`
         },
       });
 
@@ -30,7 +38,8 @@ const XmlFeedManager = () => {
           description: "The schedule XML feed has been refreshed."
         });
       } else {
-        throw new Error(`Error refreshing XML: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Error refreshing XML: ${response.status} ${response.statusText} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error refreshing XML:', error);
@@ -64,8 +73,8 @@ const XmlFeedManager = () => {
                 disabled={refreshing}
                 className="w-full sm:w-auto"
               >
-                <RefreshCw className={`ml-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 {refreshing ? 'Refreshing...' : 'Refresh XML Feed Now'}
+                <RefreshCw className={`ml-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
