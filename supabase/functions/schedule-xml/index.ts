@@ -37,7 +37,7 @@ async function generateWeeklyScheduleXML(supabaseClient, date = new Date()) {
     
     // Add each day to XML
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      // Calculate the date for this day of the week
+      // Calculate the date for this day of the week - using weekStart to ensure correct dates
       const dayDate = addDays(weekStart, dayIndex);
       const formattedDate = format(dayDate, 'yyyy-MM-dd');
       
@@ -46,13 +46,27 @@ async function generateWeeklyScheduleXML(supabaseClient, date = new Date()) {
       // Get slots for this day
       const daySlots = processedSchedule.filter(slot => slot.day_of_week === dayIndex);
       
+      // Create a map to track processed time slots to avoid duplicates
+      const processedTimeSlots = new Map();
+      
       // Sort slots by start time
       const sortedSlots = daySlots.sort((a, b) => {
         return a.start_time.localeCompare(b.start_time);
       });
       
-      // Add shows for this day
+      // Add shows for this day, avoiding duplicates
       sortedSlots.forEach(slot => {
+        // Create a unique key for this slot based on start_time and end_time
+        const slotKey = `${slot.start_time}-${slot.end_time}-${slot.show_name}`;
+        
+        // Skip if we've already processed this exact time slot with the same show
+        if (processedTimeSlots.has(slotKey)) {
+          return;
+        }
+        
+        // Mark this time slot as processed
+        processedTimeSlots.set(slotKey, true);
+        
         xml += '    <show>\n';
         xml += `      <title>${escapeXml(slot.show_name || '')}</title>\n`;
         xml += `      <host>${escapeXml(slot.host_name || '')}</host>\n`;
