@@ -20,7 +20,7 @@ const ScheduleXmlInfo = () => {
   
   const xmlEndpoint = `${xmlBaseEndpoint}?date=${getCurrentWeekDate()}`;
   
-  const copyToClipboard = (text) => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
       title: "URL copied",
