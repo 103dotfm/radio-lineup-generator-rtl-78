@@ -1,8 +1,8 @@
 
-import { Request, Response } from 'express';
+import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '@/lib/supabase';
 
-export default async function handler(req: Request, res: Response) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Get XML content from system_settings
     const { data, error } = await supabase

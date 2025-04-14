@@ -20,7 +20,7 @@ function formatTime(timeString: string): string {
 }
 
 // Get schedule slots for the next two weeks
-async function getScheduleSlots(supabase: any, startDate: Date): {
+async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
     // Calculate the end date (2 weeks from start)
     const endDate = new Date(startDate);
