@@ -1,33 +1,11 @@
 
 project_id = "yyrmodgbnzqbmatlypuc"
 
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
+[functions.send-lineup-email]
+verify_jwt = false
 
-[db]
-port = 54322
-shadow_port = 54320
-major_version = 15
+[functions.schedule-lineup-emails]
+verify_jwt = false
 
-[realtime]
-enabled = true
-
-[studio]
-enabled = true
-port = 54323
-api_url = "http://localhost"
-
-[storage]
-enabled = true
-
-[auth]
-enabled = true
-site_url = "http://localhost:3000"
-
-[analytics]
-enabled = false
-
-[functions.schedule-xml]
+[functions.gmail-auth]
 verify_jwt = false

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -76,7 +75,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { supabase } from "@/lib/supabase";
+import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 
 const formSchema = z.object({
@@ -155,7 +154,6 @@ export default function WorkArrangements() {
           description: "Link copied to clipboard",
         });
         
-        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedLink(null);
         }, 2000);
@@ -178,74 +176,63 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${file.name}`;
+      const fileName = `${fileType}_${weekStartStr}_${Date.now()}.pdf`;
+      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${fileName}`;
+      
+      console.log("Attempting to upload file to:", filePath);
+      
       const { data, error } = await supabase.storage
         .from('lovable')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true
         });
 
       if (error) {
-        console.error("Error uploading file: ", error);
+        console.error("Error uploading file:", error);
+        
         toast({
           title: "Error",
-          description: "Failed to upload file.",
+          description: `Failed to upload file: ${error.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lovable/${data.path}`;
-      setFileUrl(url);
-      setFilename(file.name);
+      const fileUrl = `${getStorageUrl()}/${filePath}`;
+      
+      console.log("File uploaded successfully, URL:", fileUrl);
+      
+      setFileUrl(fileUrl);
+      setFilename(fileName);
 
-      await saveFileToDatabase(url, file.name, weekStartStr);
-
-      toast({
-        title: "Success",
-        description: "File uploaded successfully.",
-      });
-    } catch (error) {
-      console.error("Error during file upload: ", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred during file upload.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const saveFileToDatabase = async (url: string, filename: string, weekStart: string) => {
-    try {
-      const { data, error } = await supabase
+      const { error: dbError } = await supabase
         .from('work_arrangements')
-        .upsert({
-          filename: filename,
-          url: url,
+        .insert({
+          filename: fileName,
+          url: filePath,
           type: fileType,
-          week_start: weekStart,
-        }, { onConflict: 'type, week_start' });
+          week_start: weekStartStr,
+        });
 
-      if (error) {
-        console.error("Error saving file info to database: ", error);
+      if (dbError) {
+        console.error("Error saving file info to database:", dbError);
         toast({
-          title: "Error",
-          description: "Failed to save file information to the database.",
+          title: "Warning",
+          description: `File uploaded, but failed to save information to database: ${dbError.message}`,
           variant: "destructive",
         });
       } else {
-        console.log("File info saved to database: ", data);
         toast({
           title: "Success",
-          description: "File information saved to the database.",
+          description: "File uploaded and saved successfully.",
         });
       }
-    } catch (error) {
-      console.error("Error saving file info to database: ", error);
+    } catch (error: any) {
+      console.error("Error during file upload:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred while saving file information.",
+        description: error.message || "An unexpected error occurred during file upload.",
         variant: "destructive",
       });
     }
