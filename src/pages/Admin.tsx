@@ -31,6 +31,8 @@ const Admin = () => {
     const tab = searchParams.get('tab');
     if (tab === 'database') {
       setDefaultTab("database");
+    } else if (tab === 'xml') {
+      setDefaultTab("xml");
     }
   }, [searchParams, redirectProcessed]);
 
