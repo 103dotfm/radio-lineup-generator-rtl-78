@@ -1,13 +1,15 @@
 
 import React, { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const ScheduleXML = () => {
   useEffect(() => {
-    const fetchXmlContent = async () => {
+    const refreshXml = async () => {
       try {
-        console.log("Fetching XML content from system_settings");
-        // Get XML content from system_settings
+        console.log("ScheduleXML component: Checking XML status");
+        
+        // First check if XML exists in the database
         const { data, error } = await supabase
           .from('system_settings')
           .select('value, updated_at')
@@ -15,24 +17,34 @@ const ScheduleXML = () => {
           .maybeSingle();
         
         if (error) {
-          console.error("Error fetching XML content:", error);
+          console.error("Error checking XML existence:", error);
           return;
         }
         
-        if (data && data.value) {
-          console.log("XML content found, length:", data.value.length);
-          // We could store the XML in state if needed, but we're handling it via API routes
+        // If XML doesn't exist or is older than 1 hour, regenerate it
+        const shouldRefresh = !data || !data.value || 
+          (data.updated_at && new Date(data.updated_at).getTime() < Date.now() - 3600000);
+        
+        if (shouldRefresh) {
+          console.log("ScheduleXML component: Regenerating XML");
+          const { data: xmlData, error: xmlError } = await supabase.functions.invoke('generate-schedule-xml');
+          
+          if (xmlError) {
+            console.error("Error generating XML:", xmlError);
+            toast.error("שגיאה בהכנת קובץ ה-XML");
+          } else {
+            console.log("XML regenerated successfully, length:", xmlData?.length || 0);
+            toast.success("קובץ ה-XML עודכן בהצלחה");
+          }
         } else {
-          console.log("No XML content found, triggering generation");
-          // Try to generate it if it doesn't exist
-          await supabase.functions.invoke('generate-schedule-xml');
+          console.log("XML is up to date, length:", data.value.length);
         }
-      } catch (error) {
-        console.error("Unexpected error:", error);
+      } catch (e) {
+        console.error("Unexpected error in ScheduleXML component:", e);
       }
     };
     
-    fetchXmlContent();
+    refreshXml();
   }, []);
   
   return null; // This component doesn't render anything

@@ -99,12 +99,14 @@ serve(async (req) => {
       }
     }
     
-    // Return success response
+    // Return success response with detailed information
     return new Response(
       JSON.stringify({
         success: true,
         message: `Schedule XML refresh job updated to run every ${refreshIntervalMinutes} minutes`,
-        nextRun: new Date(Date.now() + refreshIntervalMinutes * 60 * 1000).toISOString()
+        nextRun: new Date(Date.now() + refreshIntervalMinutes * 60 * 1000).toISOString(),
+        xmlStatus: refreshError ? 'error' : 'success',
+        xmlLength: refreshData ? refreshData.length : 0
       }),
       {
         headers: {
