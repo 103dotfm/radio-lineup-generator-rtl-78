@@ -29,19 +29,23 @@ export default async function handler(req: Request, res: Response) {
       }
       
       console.log('API Route: XML generated successfully, length:', functionData ? functionData.length : 0);
-      // Set content type and return the XML
+      
+      // Set content type headers
       res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Cache-Control', 'no-cache');
       return res.send(functionData);
     }
     
     console.log('API Route: XML found, serving:', data.value.substring(0, 100) + '...');
-    // Set content type and return the XML
+    
+    // Set content type headers
     res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'no-cache');
     return res.send(data.value);
   } catch (error) {
     console.error('API Route: Error serving XML:', error);
     res.status(500)
-      .set('Content-Type', 'application/xml')
+      .setHeader('Content-Type', 'application/xml')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
 }
