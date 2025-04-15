@@ -20,27 +20,51 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Get the refresh interval from system_settings
-    const { data: intervalData, error: intervalError } = await supabase
+    console.log("Getting refresh interval from system_settings");
+    
+    // Try to get the refresh interval from system_settings
+    let { data: intervalData, error: intervalError } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml_refresh_interval')
-      .single();
+      .eq('key', 'schedule_xml_refresh_interval');
       
     if (intervalError) {
       console.error("Error fetching refresh interval:", intervalError);
-      throw new Error(`Failed to fetch refresh interval: ${intervalError.message}`);
+      // Instead of throwing, we'll use a default value
+      console.log("Using default interval of 10 minutes");
+      intervalData = [{ value: "10" }];
     }
     
-    // Default to 10 minutes if not set
-    const refreshIntervalMinutes = intervalData ? parseInt(intervalData.value) : 10;
+    // If no data was found, create the setting with a default value
+    if (!intervalData || intervalData.length === 0) {
+      console.log("No refresh interval found, creating with default of 10 minutes");
+      
+      const { error: insertError } = await supabase
+        .from('system_settings')
+        .upsert({ 
+          key: 'schedule_xml_refresh_interval', 
+          value: '10' 
+        }, { onConflict: 'key' });
+        
+      if (insertError) {
+        console.error("Error creating refresh interval setting:", insertError);
+      }
+      
+      intervalData = [{ value: "10" }];
+    }
+    
+    // Use the first item if multiple were returned
+    const refreshIntervalMinutes = parseInt(intervalData[0]?.value || "10");
+    console.log(`Using refresh interval: ${refreshIntervalMinutes} minutes`);
     
     // Set up the cron job using Postgres
     // First, we'll delete any existing job for this function
+    console.log("Removing any existing cron job");
     await supabase.rpc('delete_cron_job', { job_name: 'schedule_xml_refresh' });
     
     // Then create a new one with the current interval
     const cronExpression = `*/${refreshIntervalMinutes} * * * *`;  // Run every X minutes
+    console.log(`Setting up cron job with expression: ${cronExpression}`);
     
     await supabase.rpc('create_cron_job', {
       job_name: 'schedule_xml_refresh',
@@ -49,10 +73,13 @@ serve(async (req) => {
     });
     
     // Also, trigger an immediate refresh
+    console.log("Triggering immediate refresh of XML");
     const { data: refreshData, error: refreshError } = await supabase.functions.invoke('generate-schedule-xml');
     
     if (refreshError) {
       console.error("Error refreshing XML:", refreshError);
+    } else {
+      console.log("XML refreshed successfully");
     }
     
     // Return success response

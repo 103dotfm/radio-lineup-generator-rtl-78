@@ -10,8 +10,7 @@ export default async function handler(req: Request, res: Response) {
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml')
-      .single();
+      .eq('key', 'schedule_xml');
       
     if (error) {
       console.error('API Route: Error fetching XML:', error);
