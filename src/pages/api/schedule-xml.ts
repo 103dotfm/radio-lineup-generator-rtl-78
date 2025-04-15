@@ -10,14 +10,15 @@ export default async function handler(req: Request, res: Response) {
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml');
+      .eq('key', 'schedule_xml')
+      .maybeSingle();
       
     if (error) {
       console.error('API Route: Error fetching XML:', error);
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0]?.value) {
+    if (!data || !data.value) {
       console.log('API Route: No XML found, generating now');
       // If no XML is available, generate it by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
@@ -27,16 +28,16 @@ export default async function handler(req: Request, res: Response) {
         throw functionError;
       }
       
-      console.log('API Route: XML generated successfully');
+      console.log('API Route: XML generated successfully, length:', functionData ? functionData.length : 0);
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
       return res.send(functionData);
     }
     
-    console.log('API Route: XML found, serving:', data[0].value.substring(0, 100) + '...');
+    console.log('API Route: XML found, serving:', data.value.substring(0, 100) + '...');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
-    return res.send(data[0].value);
+    return res.send(data.value);
   } catch (error) {
     console.error('API Route: Error serving XML:', error);
     res.status(500)
