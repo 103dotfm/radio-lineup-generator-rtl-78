@@ -19,6 +19,8 @@ app.use(express.static(path.join(__dirname, '../dist')));
 // Handle schedule.xml requests
 app.get('/schedule.xml', async (req, res) => {
   try {
+    console.log('Serving XML file from /schedule.xml route');
+    
     // Get XML content from system_settings
     const { data, error } = await supabase
       .from('system_settings')
@@ -27,28 +29,34 @@ app.get('/schedule.xml', async (req, res) => {
       .single();
       
     if (error) {
+      console.error('Error fetching XML:', error);
       throw error;
     }
     
     if (!data || !data.value) {
+      console.log('No XML found, generating now');
       // If no XML is available, generate it by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
       
       if (functionError) {
+        console.error('Error generating XML:', functionError);
         throw functionError;
       }
       
+      console.log('XML generated successfully');
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
       return res.send(functionData);
     }
     
+    console.log('XML found, serving');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     return res.send(data.value);
   } catch (error) {
     console.error('Error serving XML:', error);
-    res.status(500).set('Content-Type', 'application/xml')
+    res.status(500)
+      .set('Content-Type', 'application/xml')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
 });
