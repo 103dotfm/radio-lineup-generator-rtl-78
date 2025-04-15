@@ -33,7 +33,7 @@ export default async function handler(req: Request, res: Response) {
       return res.send(functionData);
     }
     
-    console.log('API Route: XML found, serving');
+    console.log('API Route: XML found, serving:', data[0].value.substring(0, 100) + '...');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     return res.send(data[0].value);

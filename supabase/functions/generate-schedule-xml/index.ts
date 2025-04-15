@@ -54,6 +54,8 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       throw new Error(`Failed to fetch schedule slots: ${error.message}`);
     }
     
+    console.log(`Retrieved ${slots ? slots.length : 0} raw slots from database`);
+    
     // Process slots to match the dashboard display logic
     const startOfWeek = new Date(startDate);
     startOfWeek.setDate(startDate.getDate() - startDate.getDay()); // Get Sunday of current week
@@ -113,6 +115,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       return a.start_time.localeCompare(b.start_time);
     });
     
+    console.log(`Processed ${processedSlots.length} slots for XML output`);
     return processedSlots;
   } catch (error) {
     console.error("Error in getScheduleSlots:", error);
@@ -128,6 +131,7 @@ function generateScheduleXML(scheduleSlots: any[]): string {
     
     // Track seen shows to avoid duplicating 2-hour shows
     const seenShows = new Set();
+    let showCount = 0;
     
     for (const slot of scheduleSlots) {
       // Create a unique identifier for this show instance
@@ -141,12 +145,14 @@ function generateScheduleXML(scheduleSlots: any[]): string {
       xml += `    <date>${slot.date}</date>\n`;
       xml += `    <start_time>${formatTime(slot.start_time)}</start_time>\n`;
       xml += `    <end_time>${formatTime(slot.end_time)}</end_time>\n`;
-      xml += `    <name>${escapeXml(slot.show_name)}</name>\n`;
+      xml += `    <name>${escapeXml(slot.show_name || '')}</name>\n`;
       xml += `    <host>${escapeXml(slot.host_name || '')}</host>\n`;
       xml += '  </show>\n';
+      showCount++;
     }
     
     xml += '</schedule>';
+    console.log(`Generated XML with ${showCount} shows, length: ${xml.length} bytes`);
     return xml;
   } catch (error) {
     console.error("Error generating XML:", error);
@@ -172,6 +178,7 @@ serve(async (req) => {
   }
   
   try {
+    console.log("Starting XML generation process");
     // Create Supabase client
     const supabaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co';
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
@@ -182,12 +189,15 @@ serve(async (req) => {
     today.setHours(0, 0, 0, 0);
     
     // Get schedule slots for the next two weeks
+    console.log("Fetching schedule slots");
     const scheduleSlots = await getScheduleSlots(supabase, today);
     
     // Generate XML
+    console.log("Generating XML from schedule slots");
     const xml = generateScheduleXML(scheduleSlots);
     
     // Store the generated XML in Supabase
+    console.log("Storing XML in system_settings");
     const { error: storageError } = await supabase
       .from('system_settings')
       .upsert({ 
@@ -198,6 +208,9 @@ serve(async (req) => {
     
     if (storageError) {
       console.error("Error storing XML:", storageError);
+      throw new Error(`Failed to store XML: ${storageError.message}`);
+    } else {
+      console.log("XML stored successfully");
     }
     
     // Return XML response
