@@ -71,9 +71,6 @@ const ScheduleXMLSettings = () => {
         throw error;
       }
       
-      // Update the scheduler
-      updateScheduler();
-      
       toast({
         title: 'הגדרות נשמרו בהצלחה',
         description: `מרווח רענון עודכן ל-${refreshInterval} דקות`,
@@ -91,12 +88,19 @@ const ScheduleXMLSettings = () => {
   const updateScheduler = async () => {
     setIsUpdatingSchedule(true);
     try {
+      console.log('Updating scheduler...');
       // Call the Edge Function to update the scheduler
-      const { data, error } = await supabase.functions.invoke('schedule-xml-refresh');
+      const { data, error } = await supabase.functions.invoke('schedule-xml-refresh', {
+        method: 'POST',
+        body: {}
+      });
       
       if (error) {
+        console.error('Error from edge function:', error);
         throw error;
       }
+      
+      console.log('Scheduler update response:', data);
       
       toast({
         title: 'מתזמן העדכונים הופעל',
@@ -117,12 +121,19 @@ const ScheduleXMLSettings = () => {
   const refreshXML = async () => {
     setIsRefreshing(true);
     try {
+      console.log('Refreshing XML...');
       // Call the Supabase Edge Function to generate the XML
-      const { data, error } = await supabase.functions.invoke('generate-schedule-xml');
+      const { data, error } = await supabase.functions.invoke('generate-schedule-xml', {
+        method: 'POST',
+        body: {}
+      });
       
       if (error) {
+        console.error('Error from generate function:', error);
         throw error;
       }
+      
+      console.log('XML refresh response:', data);
       
       // Update last refreshed time
       const now = new Date();
