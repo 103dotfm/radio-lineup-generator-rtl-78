@@ -2,7 +2,6 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -29,29 +28,11 @@ app.get('/schedule.xml', async (req, res) => {
       
     if (error) {
       console.error('Error fetching XML:', error);
-      
-      // If the error is that the record doesn't exist, generate the XML
-      if (error.code === 'PGRST116') {
-        console.log('No XML record found, generating now');
-        // Generate initial XML content
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
-        
-        if (functionError) {
-          console.error('Error generating XML:', functionError);
-          throw functionError;
-        }
-        
-        console.log('XML generated successfully');
-        // Set content type and return the XML
-        res.setHeader('Content-Type', 'application/xml');
-        return res.send(functionData);
-      } else {
-        throw error;
-      }
+      throw error;
     }
     
     if (!data || data.length === 0 || !data[0]?.value) {
-      console.log('XML record exists but is empty, generating now');
+      console.log('No XML found, generating now');
       // If no XML is available, generate it by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
       
@@ -66,7 +47,7 @@ app.get('/schedule.xml', async (req, res) => {
       return res.send(functionData);
     }
     
-    console.log('XML found, serving');
+    console.log('XML found, serving from database:', data[0].value.substring(0, 100) + '...');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     return res.send(data[0].value);

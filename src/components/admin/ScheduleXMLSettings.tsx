@@ -13,12 +13,14 @@ const ScheduleXMLSettings = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
+  const [xmlPreview, setXmlPreview] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch the current refresh interval setting
+    // Fetch the current refresh interval setting and XML data
     const fetchSettings = async () => {
       try {
+        // Fetch refresh interval
         const { data: intervalData, error: intervalError } = await supabase
           .from('system_settings')
           .select('value')
@@ -29,15 +31,23 @@ const ScheduleXMLSettings = () => {
           setRefreshInterval(intervalData.value);
         }
         
+        // Fetch XML data and last updated timestamp
         const { data: xmlData, error: xmlError } = await supabase
           .from('system_settings')
-          .select('updated_at')
+          .select('value, updated_at')
           .eq('key', 'schedule_xml')
           .maybeSingle();
           
-        if (!xmlError && xmlData && xmlData.updated_at) {
-          const updateDate = new Date(xmlData.updated_at);
-          setLastUpdated(updateDate.toLocaleString());
+        if (!xmlError && xmlData) {
+          if (xmlData.updated_at) {
+            const updateDate = new Date(xmlData.updated_at);
+            setLastUpdated(updateDate.toLocaleString());
+          }
+          
+          if (xmlData.value) {
+            // Set a preview of the XML (first 100 characters)
+            setXmlPreview(xmlData.value.substring(0, 100) + '...');
+          }
         }
       } catch (error) {
         console.error('Error fetching XML settings:', error);
@@ -119,6 +129,10 @@ const ScheduleXMLSettings = () => {
         title: 'מתזמן העדכונים הופעל',
         description: `קובץ ה-XML יתעדכן כל ${refreshInterval} דקות`,
       });
+      
+      // Refresh the XML data immediately after updating the scheduler
+      await refreshXML();
+      
     } catch (error) {
       console.error('Error updating scheduler:', error);
       toast({
@@ -143,15 +157,33 @@ const ScheduleXMLSettings = () => {
         throw error;
       }
       
-      console.log('XML refresh response:', data);
+      console.log('XML refresh response length:', data ? data.length : 0);
       
-      // Update last refreshed time
-      const now = new Date();
-      setLastUpdated(now.toLocaleString());
+      // Get the updated XML and timestamp
+      const { data: updatedData, error: getError } = await supabase
+        .from('system_settings')
+        .select('value, updated_at')
+        .eq('key', 'schedule_xml')
+        .maybeSingle();
+      
+      if (getError) {
+        console.error('Error fetching updated XML:', getError);
+      } else if (updatedData) {
+        // Update last refreshed time
+        if (updatedData.updated_at) {
+          const now = new Date(updatedData.updated_at);
+          setLastUpdated(now.toLocaleString());
+        }
+        
+        // Set XML preview
+        if (updatedData.value) {
+          setXmlPreview(updatedData.value.substring(0, 100) + '...');
+        }
+      }
       
       toast({
         title: 'XML עודכן בהצלחה',
-        description: `עודכן בתאריך ${now.toLocaleString()}`,
+        description: `עודכן בתאריך ${new Date().toLocaleString()}`,
       });
     } catch (error) {
       console.error('Error refreshing XML:', error);
@@ -213,6 +245,12 @@ const ScheduleXMLSettings = () => {
           <p className="text-sm text-muted-foreground">
             עודכן לאחרונה: {lastUpdated}
           </p>
+        )}
+        
+        {xmlPreview && (
+          <div className="p-2 bg-muted rounded text-xs font-mono mt-2 overflow-x-auto">
+            <p className="whitespace-pre-wrap">{xmlPreview}</p>
+          </div>
         )}
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
