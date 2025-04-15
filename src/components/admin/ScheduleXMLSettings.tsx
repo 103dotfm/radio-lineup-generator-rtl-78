@@ -23,9 +23,9 @@ const ScheduleXMLSettings = () => {
           .from('system_settings')
           .select('value')
           .eq('key', 'schedule_xml_refresh_interval')
-          .single();
+          .maybeSingle();
           
-        if (!intervalError && intervalData) {
+        if (!intervalError && intervalData && intervalData.value) {
           setRefreshInterval(intervalData.value);
         }
         
@@ -33,7 +33,7 @@ const ScheduleXMLSettings = () => {
           .from('system_settings')
           .select('updated_at')
           .eq('key', 'schedule_xml')
-          .single();
+          .maybeSingle();
           
         if (!xmlError && xmlData && xmlData.updated_at) {
           const updateDate = new Date(xmlData.updated_at);
@@ -60,6 +60,8 @@ const ScheduleXMLSettings = () => {
         return;
       }
       
+      console.log('Saving refresh interval:', refreshInterval);
+      
       const { error } = await supabase
         .from('system_settings')
         .upsert({ 
@@ -68,6 +70,7 @@ const ScheduleXMLSettings = () => {
         }, { onConflict: 'key' });
         
       if (error) {
+        console.error('Error saving refresh interval:', error);
         throw error;
       }
       
@@ -89,10 +92,20 @@ const ScheduleXMLSettings = () => {
     setIsUpdatingSchedule(true);
     try {
       console.log('Updating scheduler...');
+      // Save the refresh interval first to ensure it's up to date
+      const intervalNum = parseInt(refreshInterval);
+      if (!isNaN(intervalNum) && intervalNum >= 1) {
+        await supabase
+          .from('system_settings')
+          .upsert({ 
+            key: 'schedule_xml_refresh_interval', 
+            value: refreshInterval 
+          }, { onConflict: 'key' });
+      }
+      
       // Call the Edge Function to update the scheduler
       const { data, error } = await supabase.functions.invoke('schedule-xml-refresh', {
-        method: 'POST',
-        body: {}
+        body: { refreshInterval }
       });
       
       if (error) {
@@ -123,10 +136,7 @@ const ScheduleXMLSettings = () => {
     try {
       console.log('Refreshing XML...');
       // Call the Supabase Edge Function to generate the XML
-      const { data, error } = await supabase.functions.invoke('generate-schedule-xml', {
-        method: 'POST',
-        body: {}
-      });
+      const { data, error } = await supabase.functions.invoke('generate-schedule-xml');
       
       if (error) {
         console.error('Error from generate function:', error);

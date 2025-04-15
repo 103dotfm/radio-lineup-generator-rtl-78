@@ -30,11 +30,29 @@ app.get('/schedule.xml', async (req, res) => {
       
     if (error) {
       console.error('Error fetching XML:', error);
-      throw error;
+      
+      // If the error is that the record doesn't exist, generate the XML
+      if (error.code === 'PGRST116') {
+        console.log('No XML record found, generating now');
+        // Generate initial XML content
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
+        
+        if (functionError) {
+          console.error('Error generating XML:', functionError);
+          throw functionError;
+        }
+        
+        console.log('XML generated successfully');
+        // Set content type and return the XML
+        res.setHeader('Content-Type', 'application/xml');
+        return res.send(functionData);
+      } else {
+        throw error;
+      }
     }
     
     if (!data || !data.value) {
-      console.log('No XML found, generating now');
+      console.log('XML record exists but is empty, generating now');
       // If no XML is available, generate it by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
       
