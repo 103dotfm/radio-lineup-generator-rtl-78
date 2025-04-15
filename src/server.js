@@ -24,14 +24,15 @@ app.get('/schedule.xml', async (req, res) => {
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml');
+      .eq('key', 'schedule_xml')
+      .maybeSingle();
       
     if (error) {
       console.error('Error fetching XML:', error);
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0]?.value) {
+    if (!data || !data.value) {
       console.log('No XML found, generating now');
       // If no XML is available, generate it by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
@@ -41,16 +42,16 @@ app.get('/schedule.xml', async (req, res) => {
         throw functionError;
       }
       
-      console.log('XML generated successfully');
+      console.log('XML generated successfully, length:', functionData ? functionData.length : 0);
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
       return res.send(functionData);
     }
     
-    console.log('XML found, serving from database:', data[0].value.substring(0, 100) + '...');
+    console.log('XML found, serving from database, length:', data.value.length);
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
-    return res.send(data[0].value);
+    return res.send(data.value);
   } catch (error) {
     console.error('Error serving XML:', error);
     res.status(500)
