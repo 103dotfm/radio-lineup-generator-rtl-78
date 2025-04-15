@@ -25,8 +25,7 @@ app.get('/schedule.xml', async (req, res) => {
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml')
-      .single();
+      .eq('key', 'schedule_xml');
       
     if (error) {
       console.error('Error fetching XML:', error);
@@ -51,7 +50,7 @@ app.get('/schedule.xml', async (req, res) => {
       }
     }
     
-    if (!data || !data.value) {
+    if (!data || data.length === 0 || !data[0]?.value) {
       console.log('XML record exists but is empty, generating now');
       // If no XML is available, generate it by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
@@ -70,7 +69,7 @@ app.get('/schedule.xml', async (req, res) => {
     console.log('XML found, serving');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
-    return res.send(data.value);
+    return res.send(data[0].value);
   } catch (error) {
     console.error('Error serving XML:', error);
     res.status(500)
