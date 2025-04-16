@@ -15,10 +15,9 @@ serve(async (req) => {
   }
   
   try {
-    console.log("Starting XML refresh scheduler setup");
     // Create Supabase client
     const supabaseUrl = 'https://yyrmodgbnzqbmatlypuc.supabase.co';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     console.log("Getting refresh interval from system_settings");
@@ -27,18 +26,17 @@ serve(async (req) => {
     let { data: intervalData, error: intervalError } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml_refresh_interval')
-      .maybeSingle();
+      .eq('key', 'schedule_xml_refresh_interval');
       
     if (intervalError) {
       console.error("Error fetching refresh interval:", intervalError);
       // Instead of throwing, we'll use a default value
       console.log("Using default interval of 10 minutes");
-      intervalData = { value: "10" };
+      intervalData = [{ value: "10" }];
     }
     
     // If no data was found, create the setting with a default value
-    if (!intervalData) {
+    if (!intervalData || intervalData.length === 0) {
       console.log("No refresh interval found, creating with default of 10 minutes");
       
       const { error: insertError } = await supabase
@@ -52,11 +50,11 @@ serve(async (req) => {
         console.error("Error creating refresh interval setting:", insertError);
       }
       
-      intervalData = { value: "10" };
+      intervalData = [{ value: "10" }];
     }
     
-    // Use the interval data
-    const refreshIntervalMinutes = parseInt(intervalData.value || "10");
+    // Use the first item if multiple were returned
+    const refreshIntervalMinutes = parseInt(intervalData[0]?.value || "10");
     console.log(`Using refresh interval: ${refreshIntervalMinutes} minutes`);
     
     // Set up the cron job using Postgres
@@ -81,22 +79,7 @@ serve(async (req) => {
     if (refreshError) {
       console.error("Error refreshing XML:", refreshError);
     } else {
-      console.log("XML refreshed successfully, length:", refreshData ? refreshData.length : 0);
-      
-      // Verify the XML was stored in the database
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'schedule_xml')
-        .maybeSingle();
-        
-      if (verifyError) {
-        console.error("Error verifying XML storage:", verifyError);
-      } else if (verifyData && verifyData.value) {
-        console.log("Verified XML is stored in database, length:", verifyData.value.length);
-      } else {
-        console.warn("XML does not appear to be stored in database correctly");
-      }
+      console.log("XML refreshed successfully");
     }
     
     // Return success response
