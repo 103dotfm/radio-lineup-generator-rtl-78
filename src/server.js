@@ -12,13 +12,24 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0'
 );
 
+// CORS middleware for all routes
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+    return res.status(200).json({});
+  }
+  next();
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Handle schedule.xml requests
-app.get('/schedule.xml', async (req, res) => {
+// Handle schedule.xml requests - make this work with any path that ends with schedule.xml
+app.get('*/schedule.xml', async (req, res) => {
   try {
-    console.log('Serving XML file from /schedule.xml route');
+    console.log('Serving XML file from schedule.xml route');
     
     // Get XML content from system_settings
     const { data, error } = await supabase
@@ -45,6 +56,7 @@ app.get('/schedule.xml', async (req, res) => {
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
       res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(functionData);
     }
     
@@ -52,17 +64,18 @@ app.get('/schedule.xml', async (req, res) => {
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Add CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.send(data[0].value);
   } catch (error) {
     console.error('Error serving XML:', error);
     res.status(500)
       .set('Content-Type', 'application/xml')
+      .set('Access-Control-Allow-Origin', '*')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
 });
 
-// Add an additional endpoint for health check
+// Add a dedicated route for health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -6,6 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Content-Type': 'application/xml',
+  'Cache-Control': 'no-store, max-age=0'
 };
 
 // Format date as YYYY-MM-DD
@@ -214,11 +216,7 @@ serve(async (req) => {
     
     // Return XML response with explicit headers
     return new Response(xml, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/xml',
-        'Cache-Control': 'no-store, max-age=0'
-      },
+      headers: corsHeaders,
     });
   } catch (error) {
     console.error("Error generating schedule XML:", error);
@@ -226,11 +224,7 @@ serve(async (req) => {
       `<?xml version="1.0" encoding="UTF-8"?><error>${error.message}</error>`,
       {
         status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/xml',
-          'Cache-Control': 'no-store, max-age=0'
-        },
+        headers: corsHeaders,
       }
     );
   }
