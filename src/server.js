@@ -15,12 +15,6 @@ const supabase = createClient(
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Add logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
 // Handle schedule.xml requests
 app.get('/schedule.xml', async (req, res) => {
   try {
@@ -49,24 +43,19 @@ app.get('/schedule.xml', async (req, res) => {
       }
       
       console.log('XML generated successfully, length:', functionData ? functionData.length : 0);
-      
-      // Set content type and cache control headers
+      // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
-      res.setHeader('Cache-Control', 'no-cache');
       return res.send(functionData);
     }
     
     console.log('XML found, serving from database, length:', data.value.length);
-    
-    // Set content type and cache control headers
+    // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
-    res.setHeader('Cache-Control', 'no-cache');
     return res.send(data.value);
   } catch (error) {
     console.error('Error serving XML:', error);
-    // Return a proper XML error response
     res.status(500)
-      .setHeader('Content-Type', 'application/xml')
+      .set('Content-Type', 'application/xml')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
 });
