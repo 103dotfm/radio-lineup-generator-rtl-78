@@ -44,6 +44,7 @@ app.get('/schedule.xml', async (req, res) => {
       console.log('XML generated successfully');
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
       return res.send(functionData);
     }
     
@@ -51,6 +52,7 @@ app.get('/schedule.xml', async (req, res) => {
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Add CORS headers
     return res.send(data[0].value);
   } catch (error) {
     console.error('Error serving XML:', error);
@@ -58,6 +60,11 @@ app.get('/schedule.xml', async (req, res) => {
       .set('Content-Type', 'application/xml')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
+});
+
+// Add an additional endpoint for health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // The "catchall" handler: for any request that doesn't
