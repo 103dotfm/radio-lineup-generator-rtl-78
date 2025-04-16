@@ -1,8 +1,11 @@
 
 import React, { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 const ScheduleXML = () => {
+  const { toast } = useToast();
+
   useEffect(() => {
     const fetchXmlContent = async () => {
       try {
@@ -25,7 +28,21 @@ const ScheduleXML = () => {
         } else {
           console.log("No XML content found, triggering generation");
           // Try to generate it if it doesn't exist
-          await supabase.functions.invoke('generate-schedule-xml');
+          const { error: genError } = await supabase.functions.invoke('generate-schedule-xml');
+          
+          if (genError) {
+            console.error("Error generating XML:", genError);
+            toast({
+              title: "Error generating XML",
+              description: "There was a problem generating the schedule XML file.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "XML Generated",
+              description: "Schedule XML file has been generated successfully."
+            });
+          }
         }
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -33,7 +50,7 @@ const ScheduleXML = () => {
     };
     
     fetchXmlContent();
-  }, []);
+  }, [toast]);
   
   return null; // This component doesn't render anything
 };

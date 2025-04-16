@@ -50,6 +50,7 @@ app.get('/schedule.xml', async (req, res) => {
     console.log('XML found, serving from database:', data[0].value.substring(0, 100) + '...');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
     return res.send(data[0].value);
   } catch (error) {
     console.error('Error serving XML:', error);
