@@ -6,6 +6,10 @@ import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from 'sonner';
 import AppRoutes from './AppRoutes';
 import ScheduleXML from './pages/ScheduleXML';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a client
+const queryClient = new QueryClient();
 
 function App() {
   return (
@@ -13,12 +17,14 @@ function App() {
       {/* Add the ScheduleXML component that will trigger XML refresh when the app loads */}
       <ScheduleXML />
       
-      <Router>
-        <AuthProvider>
-          <Toaster richColors position="bottom-center" />
-          <AppRoutes />
-        </AuthProvider>
-      </Router>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AuthProvider>
+            <Toaster richColors position="bottom-center" />
+            <AppRoutes />
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
     </div>
   );
 }
