@@ -31,6 +31,7 @@ export default async function handler(req: Request, res: Response) {
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
       res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.setHeader('Access-Control-Allow-Origin', '*'); 
       return res.send(functionData);
     }
     
@@ -38,11 +39,13 @@ export default async function handler(req: Request, res: Response) {
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.send(data[0].value);
   } catch (error) {
     console.error('API Route: Error serving XML:', error);
     res.status(500)
       .set('Content-Type', 'application/xml')
+      .set('Access-Control-Allow-Origin', '*')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
 }

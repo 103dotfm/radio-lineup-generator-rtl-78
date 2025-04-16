@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -213,11 +212,12 @@ serve(async (req) => {
       console.log("XML stored successfully");
     }
     
-    // Return XML response
+    // Return XML response with explicit headers
     return new Response(xml, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/xml',
+        'Cache-Control': 'no-store, max-age=0'
       },
     });
   } catch (error) {
@@ -229,6 +229,7 @@ serve(async (req) => {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/xml',
+          'Cache-Control': 'no-store, max-age=0'
         },
       }
     );
