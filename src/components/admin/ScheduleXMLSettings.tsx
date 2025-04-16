@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RefreshCw, Clock, Play, ArrowUpRight, Copy } from 'lucide-react';
+import { RefreshCw, Clock, Play } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,14 +14,12 @@ const ScheduleXMLSettings = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
   const [xmlPreview, setXmlPreview] = useState<string | null>(null);
-  const [xmlLength, setXmlLength] = useState<number>(0);
   const { toast } = useToast();
 
   useEffect(() => {
     // Fetch the current refresh interval setting and XML data
     const fetchSettings = async () => {
       try {
-        console.log('Fetching XML settings...');
         // Fetch refresh interval
         const { data: intervalData, error: intervalError } = await supabase
           .from('system_settings')
@@ -31,7 +29,6 @@ const ScheduleXMLSettings = () => {
           
         if (!intervalError && intervalData && intervalData.value) {
           setRefreshInterval(intervalData.value);
-          console.log('Retrieved refresh interval:', intervalData.value);
         }
         
         // Fetch XML data and last updated timestamp
@@ -45,16 +42,11 @@ const ScheduleXMLSettings = () => {
           if (xmlData.updated_at) {
             const updateDate = new Date(xmlData.updated_at);
             setLastUpdated(updateDate.toLocaleString());
-            console.log('XML last updated:', updateDate.toLocaleString());
           }
           
           if (xmlData.value) {
             // Set a preview of the XML (first 100 characters)
             setXmlPreview(xmlData.value.substring(0, 100) + '...');
-            setXmlLength(xmlData.value.length);
-            console.log('Found XML with length:', xmlData.value.length);
-          } else {
-            console.log('No XML content found in database');
           }
         }
       } catch (error) {
@@ -167,9 +159,6 @@ const ScheduleXMLSettings = () => {
       
       console.log('XML refresh response length:', data ? data.length : 0);
       
-      // Intentional delay to ensure database update is complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       // Get the updated XML and timestamp
       const { data: updatedData, error: getError } = await supabase
         .from('system_settings')
@@ -189,10 +178,6 @@ const ScheduleXMLSettings = () => {
         // Set XML preview
         if (updatedData.value) {
           setXmlPreview(updatedData.value.substring(0, 100) + '...');
-          setXmlLength(updatedData.value.length);
-          console.log('XML updated in database, new length:', updatedData.value.length);
-        } else {
-          console.warn('XML refresh completed but no content found in database');
         }
       }
       
@@ -210,11 +195,6 @@ const ScheduleXMLSettings = () => {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  const openXmlInNewTab = () => {
-    const xmlUrl = `${window.location.origin}/schedule.xml`;
-    window.open(xmlUrl, '_blank');
   };
 
   return (
@@ -240,22 +220,6 @@ const ScheduleXMLSettings = () => {
               }}
               className="font-mono text-sm"
             />
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => navigator.clipboard.writeText(`${window.location.origin}/schedule.xml`)}
-              title="העתק כתובת"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={openXmlInNewTab}
-              title="פתח בחלון חדש"
-            >
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
           </div>
         </div>
         
@@ -278,10 +242,9 @@ const ScheduleXMLSettings = () => {
         </div>
         
         {lastUpdated && (
-          <div className="flex flex-col space-y-1 text-sm text-muted-foreground">
-            <p>עודכן לאחרונה: {lastUpdated}</p>
-            {xmlLength > 0 && <p>גודל הקובץ: {xmlLength} תווים</p>}
-          </div>
+          <p className="text-sm text-muted-foreground">
+            עודכן לאחרונה: {lastUpdated}
+          </p>
         )}
         
         {xmlPreview && (
@@ -308,15 +271,6 @@ const ScheduleXMLSettings = () => {
         >
           <Play className="h-4 w-4 mr-2" />
           {isUpdatingSchedule ? 'מפעיל מתזמן...' : 'הפעל מתזמן'}
-        </Button>
-        
-        <Button
-          onClick={openXmlInNewTab}
-          variant="secondary"
-          className="w-full sm:w-auto"
-        >
-          <ArrowUpRight className="h-4 w-4 mr-2" />
-          פתח XML
         </Button>
       </CardFooter>
     </Card>
