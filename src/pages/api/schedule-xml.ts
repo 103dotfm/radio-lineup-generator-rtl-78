@@ -30,12 +30,14 @@ export default async function handler(req: Request, res: Response) {
       console.log('API Route: XML generated successfully');
       // Set content type and return the XML
       res.setHeader('Content-Type', 'application/xml');
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
       return res.send(functionData);
     }
     
     console.log('API Route: XML found, serving:', data[0].value.substring(0, 100) + '...');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
     return res.send(data[0].value);
   } catch (error) {
     console.error('API Route: Error serving XML:', error);
