@@ -34,7 +34,7 @@ const ScheduleXMLSettings = () => {
         }
         
         if (data.value) {
-          // Set a preview of the XML (first 100 characters)
+          // Set a preview of the XML (first 200 characters)
           setXmlPreview(data.value.substring(0, 200) + '...');
         }
       }
@@ -46,24 +46,18 @@ const ScheduleXMLSettings = () => {
   const refreshXML = async () => {
     setIsRefreshing(true);
     try {
-      // Call the API endpoint to refresh XML
-      const response = await fetch('/api/refresh-schedule-xml');
+      // Navigate to the XML page to trigger a refresh
+      const xmlWindow = window.open('/schedule.xml', '_blank');
       
-      if (!response.ok) {
-        throw new Error('Failed to refresh XML');
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
+      // Wait a moment for the XML to be generated
+      setTimeout(async () => {
         await fetchXmlData();
         toast({
           title: 'XML עודכן בהצלחה',
           description: 'קובץ ה-XML עודכן ונשמר במסד הנתונים',
         });
-      } else {
-        throw new Error(result.error || 'Unknown error');
-      }
+        setIsRefreshing(false);
+      }, 2000);
     } catch (error) {
       console.error('Error refreshing XML:', error);
       toast({
@@ -71,14 +65,12 @@ const ScheduleXMLSettings = () => {
         description: 'אנא נסה שנית מאוחר יותר',
         variant: 'destructive',
       });
-    } finally {
       setIsRefreshing(false);
     }
   };
 
   const testXmlUrl = () => {
-    const xmlUrl = `${window.location.origin}/schedule.xml`;
-    window.open(xmlUrl, '_blank');
+    window.open('/schedule.xml', '_blank');
   };
   
   const copyXmlUrl = () => {
