@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RefreshCw, ExternalLink } from 'lucide-react';
+import { RefreshCw, ExternalLink, Clipboard, CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,6 +12,7 @@ const ScheduleXMLSettings = () => {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [xmlPreview, setXmlPreview] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,7 +35,7 @@ const ScheduleXMLSettings = () => {
         
         if (data.value) {
           // Set a preview of the XML (first 100 characters)
-          setXmlPreview(data.value.substring(0, 100) + '...');
+          setXmlPreview(data.value.substring(0, 200) + '...');
         }
       }
     } catch (error) {
@@ -45,18 +46,24 @@ const ScheduleXMLSettings = () => {
   const refreshXML = async () => {
     setIsRefreshing(true);
     try {
-      // Open the ScheduleXML page in a new tab which will regenerate the XML
-      window.open('/schedule-xml', '_blank');
+      // Call the API endpoint to refresh XML
+      const response = await fetch('/api/refresh-schedule-xml');
       
-      // Wait a moment for the XML to be generated
-      setTimeout(async () => {
+      if (!response.ok) {
+        throw new Error('Failed to refresh XML');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
         await fetchXmlData();
         toast({
-          title: 'XML עודכן',
-          description: 'נא לבדוק את התוצאה בכתובת ה-XML',
+          title: 'XML עודכן בהצלחה',
+          description: 'קובץ ה-XML עודכן ונשמר במסד הנתונים',
         });
-        setIsRefreshing(false);
-      }, 2000);
+      } else {
+        throw new Error(result.error || 'Unknown error');
+      }
     } catch (error) {
       console.error('Error refreshing XML:', error);
       toast({
@@ -64,6 +71,7 @@ const ScheduleXMLSettings = () => {
         description: 'אנא נסה שנית מאוחר יותר',
         variant: 'destructive',
       });
+    } finally {
       setIsRefreshing(false);
     }
   };
@@ -71,6 +79,19 @@ const ScheduleXMLSettings = () => {
   const testXmlUrl = () => {
     const xmlUrl = `${window.location.origin}/schedule.xml`;
     window.open(xmlUrl, '_blank');
+  };
+  
+  const copyXmlUrl = () => {
+    const xmlUrl = `${window.location.origin}/schedule.xml`;
+    navigator.clipboard.writeText(xmlUrl);
+    setCopied(true);
+    toast({
+      title: 'הכתובת הועתקה ללוח',
+    });
+    
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
   };
 
   return (
@@ -84,18 +105,21 @@ const ScheduleXMLSettings = () => {
       <CardContent className="space-y-4">
         <div className="space-y-1">
           <Label htmlFor="xml-url">כתובת הקובץ</Label>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <Input 
               id="xml-url" 
               value={`${window.location.origin}/schedule.xml`}
               readOnly 
-              onClick={(e) => {
-                (e.target as HTMLInputElement).select();
-                navigator.clipboard.writeText((e.target as HTMLInputElement).value);
-                toast({ title: 'הכתובת הועתקה ללוח' });
-              }}
-              className="font-mono text-sm"
+              className="font-mono text-sm flex-grow"
             />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={copyXmlUrl}
+              className="min-w-[40px]"
+            >
+              {copied ? <CheckCircle className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
         
@@ -106,8 +130,8 @@ const ScheduleXMLSettings = () => {
         )}
         
         {xmlPreview && (
-          <div className="p-2 bg-muted rounded text-xs font-mono mt-2 overflow-x-auto">
-            <p className="whitespace-pre-wrap">{xmlPreview}</p>
+          <div className="p-3 bg-muted rounded text-xs font-mono mt-2 overflow-x-auto max-h-[200px] overflow-y-auto">
+            <pre className="whitespace-pre-wrap">{xmlPreview}</pre>
           </div>
         )}
       </CardContent>
@@ -127,7 +151,7 @@ const ScheduleXMLSettings = () => {
           className="w-full sm:w-auto"
         >
           <ExternalLink className="h-4 w-4 mr-2" />
-          בדוק את קובץ ה-XML
+          בדיקת קובץ ה-XML
         </Button>
       </CardFooter>
     </Card>
