@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import SchedulePage from "./pages/SchedulePage";
+import ScheduleXML from "./pages/ScheduleXML";
 import GoogleAuthRedirect from "./pages/GoogleAuthRedirect";
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -39,6 +40,9 @@ const AppRoutes = () => {
       <Route path="/schedule/:weekDate" element={<SchedulePage />} />
       <Route path="/schedule" element={<Navigate to={`/schedule/${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd')}`} replace />} />
       <Route path="/google-auth-redirect" element={<GoogleAuthRedirect />} />
+      
+      {/* XML Route that anyone can access */}
+      <Route path="/schedule.xml" element={<ScheduleXML />} />
       
       <Route
         path="/admin"

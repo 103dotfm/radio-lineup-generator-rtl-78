@@ -1,120 +1,95 @@
 
-import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MasterSchedule from '@/components/schedule/MasterSchedule';
+import React, { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import UserManagement from '@/components/admin/user-management/UserManagement';
 import WorkArrangements from '@/components/admin/WorkArrangements';
-import EmailSettings from '@/components/admin/EmailSettings';
 import DataManagement from '@/components/admin/data-management/DataManagement';
 import DatabaseSettings from '@/components/admin/database-settings/DatabaseSettings';
+import EmailSettings from '@/components/admin/EmailSettings';
+import WorkersManagement from '@/components/admin/WorkersManagement';
+import DigitalWorkArrangement from '@/components/admin/DigitalWorkArrangement';
 import ScheduleXMLSettings from '@/components/admin/ScheduleXMLSettings';
-import { Calendar, Briefcase, Users, Mail, Database, HardDrive, FileCode } from "lucide-react";
+
+type TabType = 'schedule' | 'users' | 'database' | 'data' | 'email' | 'workers' | 'digital' | 'xml';
 
 interface AdminTabsProps {
-  defaultTab: string;
+  defaultTab?: string;
 }
 
-const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
+const AdminTabs = ({ defaultTab = 'schedule' }: AdminTabsProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>((defaultTab as TabType) || 'schedule');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const tabFromParams = searchParams.get('tab');
+    if (tabFromParams && isValidTab(tabFromParams)) {
+      setActiveTab(tabFromParams as TabType);
+    } else if (defaultTab && isValidTab(defaultTab)) {
+      setActiveTab(defaultTab as TabType);
+    }
+  }, [searchParams, defaultTab]);
+
+  const isValidTab = (tab: string): tab is TabType => {
+    return ['schedule', 'users', 'database', 'data', 'email', 'workers', 'digital', 'xml'].includes(tab);
+  };
+
+  const handleTabChange = (value: string) => {
+    if (isValidTab(value)) {
+      setActiveTab(value);
+      setSearchParams({ tab: value });
+    }
+  };
+
   return (
-    <Tabs defaultValue={defaultTab} className="w-full admin-tabs">
-      <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 mb-4 md:mb-8 overflow-x-auto">
-        <TabsTrigger 
-          value="schedule" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">לוח שידורים</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="arrangements" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">סידורי עבודה</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="users" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <Users className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">ניהול משתמשים</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="email" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <Mail className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">דואר אלקטרוני</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="data" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <Database className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">ניהול נתונים</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="database" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <HardDrive className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">הגדרות בסיס נתונים</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="xml" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <FileCode className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">XML לוח שידורים</span>
-        </TabsTrigger>
+    <Tabs 
+      value={activeTab} 
+      onValueChange={handleTabChange}
+      className="mt-6"
+      dir="rtl"
+    >
+      <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 w-full">
+        <TabsTrigger value="schedule">לוח שידורים</TabsTrigger>
+        <TabsTrigger value="users">משתמשים</TabsTrigger>
+        <TabsTrigger value="data">ניהול נתונים</TabsTrigger>
+        <TabsTrigger value="database">מסד נתונים</TabsTrigger>
+        <TabsTrigger value="email">אימייל</TabsTrigger>
+        <TabsTrigger value="workers">עובדים</TabsTrigger>
+        <TabsTrigger value="digital">שיבוץ דיגיטל</TabsTrigger>
+        <TabsTrigger value="xml">Schedule XML</TabsTrigger>
       </TabsList>
       
-      <TabsContent value="schedule" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <MasterSchedule />
-        </div>
+      <TabsContent value="schedule" className="pt-6">
+        <WorkArrangements />
       </TabsContent>
       
-      <TabsContent value="arrangements" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <WorkArrangements />
-        </div>
+      <TabsContent value="users" className="pt-6">
+        <UserManagement />
       </TabsContent>
       
-      <TabsContent value="users" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <UserManagement />
-        </div>
+      <TabsContent value="data" className="pt-6">
+        <DataManagement />
       </TabsContent>
       
-      <TabsContent value="email" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <EmailSettings />
-        </div>
+      <TabsContent value="database" className="pt-6">
+        <DatabaseSettings />
       </TabsContent>
       
-      <TabsContent value="data" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <DataManagement />
-        </div>
+      <TabsContent value="email" className="pt-6">
+        <EmailSettings />
       </TabsContent>
       
-      <TabsContent value="database" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <DatabaseSettings />
-        </div>
+      <TabsContent value="workers" className="pt-6">
+        <WorkersManagement />
       </TabsContent>
       
-      <TabsContent value="xml" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <ScheduleXMLSettings />
-        </div>
+      <TabsContent value="digital" className="pt-6">
+        <DigitalWorkArrangement />
+      </TabsContent>
+      
+      <TabsContent value="xml" className="pt-6">
+        <ScheduleXMLSettings />
       </TabsContent>
     </Tabs>
   );
