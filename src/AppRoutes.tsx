@@ -41,7 +41,7 @@ const AppRoutes = () => {
       <Route path="/schedule" element={<Navigate to={`/schedule/${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd')}`} replace />} />
       <Route path="/google-auth-redirect" element={<GoogleAuthRedirect />} />
       
-      {/* Special route for XML - This is just a placeholder, actual XML is served by Express */}
+      {/* XML Routes */}
       <Route path="/schedule-xml" element={<ScheduleXML />} />
       
       <Route

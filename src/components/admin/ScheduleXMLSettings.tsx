@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RefreshCw, Clock, ExternalLink } from 'lucide-react';
+import { RefreshCw, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,74 +15,48 @@ const ScheduleXMLSettings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch the XML data and last updated timestamp
-    const fetchXmlData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('value, updated_at')
-          .eq('key', 'schedule_xml')
-          .maybeSingle();
-          
-        if (!error && data) {
-          if (data.updated_at) {
-            const updateDate = new Date(data.updated_at);
-            setLastUpdated(updateDate.toLocaleString());
-          }
-          
-          if (data.value) {
-            // Set a preview of the XML (first 100 characters)
-            setXmlPreview(data.value.substring(0, 100) + '...');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching XML data:', error);
-      }
-    };
-    
     fetchXmlData();
   }, []);
+
+  const fetchXmlData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value, updated_at')
+        .eq('key', 'schedule_xml')
+        .maybeSingle();
+        
+      if (!error && data) {
+        if (data.updated_at) {
+          const updateDate = new Date(data.updated_at);
+          setLastUpdated(updateDate.toLocaleString());
+        }
+        
+        if (data.value) {
+          // Set a preview of the XML (first 100 characters)
+          setXmlPreview(data.value.substring(0, 100) + '...');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching XML data:', error);
+    }
+  };
 
   const refreshXML = async () => {
     setIsRefreshing(true);
     try {
-      // Call the server API to refresh the XML
-      const response = await fetch('/api/refresh-schedule-xml');
+      // Open the ScheduleXML page in a new tab which will regenerate the XML
+      window.open('/schedule-xml', '_blank');
       
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Get the updated XML data
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('value, updated_at')
-          .eq('key', 'schedule_xml')
-          .maybeSingle();
-        
-        if (!error && data) {
-          // Update last updated time
-          if (data.updated_at) {
-            const now = new Date(data.updated_at);
-            setLastUpdated(now.toLocaleString());
-          }
-          
-          // Set XML preview
-          if (data.value) {
-            setXmlPreview(data.value.substring(0, 100) + '...');
-          }
-        }
-        
+      // Wait a moment for the XML to be generated
+      setTimeout(async () => {
+        await fetchXmlData();
         toast({
-          title: 'XML עודכן בהצלחה',
-          description: `עודכן בתאריך ${new Date().toLocaleString()}`,
+          title: 'XML עודכן',
+          description: 'נא לבדוק את התוצאה בכתובת ה-XML',
         });
-      } else {
-        throw new Error('Failed to refresh XML');
-      }
+        setIsRefreshing(false);
+      }, 2000);
     } catch (error) {
       console.error('Error refreshing XML:', error);
       toast({
@@ -90,7 +64,6 @@ const ScheduleXMLSettings = () => {
         description: 'אנא נסה שנית מאוחר יותר',
         variant: 'destructive',
       });
-    } finally {
       setIsRefreshing(false);
     }
   };
