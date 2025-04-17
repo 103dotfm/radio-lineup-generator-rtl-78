@@ -26,51 +26,40 @@ app.use((req, res, next) => {
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Handle schedule.xml requests - make this work with any path that ends with schedule.xml
-app.get('*/schedule.xml', async (req, res) => {
+// Handle schedule.xml requests - explicitly set Content-Type for XML
+app.get('/schedule.xml', async (req, res) => {
   try {
-    console.log('Serving XML file from schedule.xml route');
+    console.log('Serving XML file from /schedule.xml route');
     
     // Get XML content from system_settings
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml');
+      .eq('key', 'schedule_xml')
+      .maybeSingle();
       
     if (error) {
       console.error('Error fetching XML:', error);
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0]?.value) {
-      console.log('No XML found, generating now');
-      // If no XML is available, generate it by calling the Edge Function
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
-      
-      if (functionError) {
-        console.error('Error generating XML:', functionError);
-        throw functionError;
-      }
-      
-      console.log('XML generated successfully');
-      // Set content type and return the XML
-      res.setHeader('Content-Type', 'application/xml');
-      res.setHeader('Cache-Control', 'no-store, max-age=0');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.send(functionData);
-    }
-    
-    console.log('XML found, serving from database:', data[0].value.substring(0, 100) + '...');
-    // Set content type and return the XML
-    res.setHeader('Content-Type', 'application/xml');
+    // Set correct content type for XML
+    res.setHeader('Content-Type', 'application/xml; charset=UTF-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.send(data[0].value);
+    
+    if (!data || !data.value) {
+      console.log('No XML found in database, redirecting to generate');
+      // Redirect to the ScheduleXML component to generate XML
+      return res.redirect('/schedule-xml.xml');
+    }
+    
+    console.log('XML found, serving from database');
+    return res.send(data.value);
   } catch (error) {
     console.error('Error serving XML:', error);
     res.status(500)
-      .set('Content-Type', 'application/xml')
-      .set('Access-Control-Allow-Origin', '*')
+      .setHeader('Content-Type', 'application/xml; charset=UTF-8')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
 });
