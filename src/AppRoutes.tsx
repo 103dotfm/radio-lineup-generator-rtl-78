@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import SchedulePage from "./pages/SchedulePage";
 import GoogleAuthRedirect from "./pages/GoogleAuthRedirect";
+import ScheduleXML from "./pages/ScheduleXML";
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -40,7 +41,8 @@ const AppRoutes = () => {
       <Route path="/schedule" element={<Navigate to={`/schedule/${format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd')}`} replace />} />
       <Route path="/google-auth-redirect" element={<GoogleAuthRedirect />} />
       
-      {/* XML is now handled by Express server, not React routing */}
+      {/* Special route for XML - This is just a placeholder, actual XML is served by Express */}
+      <Route path="/schedule-xml" element={<ScheduleXML />} />
       
       <Route
         path="/admin"
