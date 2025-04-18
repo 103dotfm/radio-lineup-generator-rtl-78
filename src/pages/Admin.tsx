@@ -27,14 +27,12 @@ const Admin = () => {
       // Don't modify the URL here, let EmailSettings handle it
     }
 
-    // Check if we're being directed to the database tab
+    // Check if we're being directed to specific tabs
     const tab = searchParams.get('tab');
     if (tab === 'database') {
       setDefaultTab("database");
-    } else if (tab === 'xml') {
-      setDefaultTab("xml");
-    } else if (tab === 'ftp') {
-      setDefaultTab("ftp");
+    } else if (tab === 'exports') {
+      setDefaultTab("exports");
     }
   }, [searchParams, redirectProcessed]);
 

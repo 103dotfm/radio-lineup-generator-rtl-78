@@ -7,9 +7,8 @@ import WorkArrangements from '@/components/admin/WorkArrangements';
 import EmailSettings from '@/components/admin/EmailSettings';
 import DataManagement from '@/components/admin/data-management/DataManagement';
 import DatabaseSettings from '@/components/admin/database-settings/DatabaseSettings';
-import ScheduleXMLSettings from '@/components/admin/ScheduleXMLSettings';
-import FTPXMLSettings from '@/components/admin/FTPXMLSettings';
-import { Calendar, Briefcase, Users, Mail, Database, HardDrive, FileCode, Upload } from "lucide-react";
+import ScheduleExportSettings from '@/components/admin/ScheduleExportSettings';
+import { Calendar, Briefcase, Users, Mail, Database, HardDrive, FileCode } from "lucide-react";
 
 interface AdminTabsProps {
   defaultTab: string;
@@ -18,7 +17,7 @@ interface AdminTabsProps {
 const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
   return (
     <Tabs defaultValue={defaultTab} className="w-full admin-tabs">
-      <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-4 md:mb-8 overflow-x-auto">
+      <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-4 md:mb-8 overflow-x-auto">
         <TabsTrigger 
           value="schedule" 
           className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
@@ -68,19 +67,11 @@ const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
         </TabsTrigger>
         
         <TabsTrigger 
-          value="xml" 
+          value="exports" 
           className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
         >
           <FileCode className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">XML לוח שידורים</span>
-        </TabsTrigger>
-        
-        <TabsTrigger 
-          value="ftp" 
-          className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm"
-        >
-          <Upload className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <span className="font-medium truncate">העלאה FTP</span>
+          <span className="font-medium truncate">ייצוא לוח שידורים</span>
         </TabsTrigger>
       </TabsList>
       
@@ -120,15 +111,9 @@ const AdminTabs = ({ defaultTab }: AdminTabsProps) => {
         </div>
       </TabsContent>
       
-      <TabsContent value="xml" className="mt-2 md:mt-4">
+      <TabsContent value="exports" className="mt-2 md:mt-4">
         <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <ScheduleXMLSettings />
-        </div>
-      </TabsContent>
-      
-      <TabsContent value="ftp" className="mt-2 md:mt-4">
-        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
-          <FTPXMLSettings />
+          <ScheduleExportSettings />
         </div>
       </TabsContent>
     </Tabs>
