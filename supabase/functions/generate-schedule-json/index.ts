@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Content-Type': 'application/xml',
+  'Content-Type': 'application/json',
 };
 
 // Format date as YYYY-MM-DD
@@ -115,7 +115,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       return a.start_time.localeCompare(b.start_time);
     });
     
-    console.log(`Processed ${processedSlots.length} slots for XML output`);
+    console.log(`Processed ${processedSlots.length} slots for JSON output`);
     return processedSlots;
   } catch (error) {
     console.error("Error in getScheduleSlots:", error);
@@ -123,87 +123,88 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
   }
 }
 
-// Escape XML special characters
-function escapeXml(unsafe: string): string {
-  if (!unsafe) return '';
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
 // Process a template string with schedule data
 function processTemplate(template: string, show: any): string {
   return template
-    .replace(/%showname/g, escapeXml(show.show_name || ''))
-    .replace(/%showhosts/g, escapeXml(show.host_name || ''))
+    .replace(/%showname/g, show.show_name || '')
+    .replace(/%showhosts/g, show.host_name || '')
     .replace(/%starttime/g, formatTime(show.start_time))
     .replace(/%endtime/g, formatTime(show.end_time))
     .replace(/%scheduledate/g, show.date || '');
 }
 
-// Generate XML from schedule data and template
-function generateScheduleXML(scheduleSlots: any[], template: string = ''): string {
+// Generate JSON from schedule data and template
+function generateScheduleJSON(scheduleSlots: any[], template: string = ''): string {
   try {
     // If no template is provided, use a default one
     if (!template) {
-      template = `<?xml version="1.0" encoding="UTF-8"?>
-<schedule>
-  <!-- For each show in the schedule -->
-  <show>
-    <date>%scheduledate</date>
-    <start_time>%starttime</start_time>
-    <end_time>%endtime</end_time>
-    <name>%showname</name>
-    <host>%showhosts</host>
-  </show>
-</schedule>`;
+      template = `{
+  "schedule": [
+    {
+      "date": "%scheduledate",
+      "startTime": "%starttime",
+      "endTime": "%endtime",
+      "showName": "%showname",
+      "hosts": "%showhosts"
+    }
+  ]
+}`;
     }
 
-    // Extract the parts before and after the show template
-    const showStartTag = "<show>";
-    const showEndTag = "</show>";
+    // Determine if the template is an object with a schedule array
+    let isArrayTemplate = false;
+    let templateObj = null;
     
-    const showStartIndex = template.indexOf(showStartTag);
-    const showEndIndex = template.indexOf(showEndTag) + showEndTag.length;
-    
-    if (showStartIndex === -1 || showEndIndex === -1) {
-      throw new Error("Template must contain at least one <show> element");
+    try {
+      templateObj = JSON.parse(template);
+      isArrayTemplate = Array.isArray(templateObj.schedule);
+    } catch (e) {
+      console.warn("Template is not a valid JSON object, treating as a single-show template");
     }
-    
-    const headerPart = template.substring(0, showStartIndex);
-    const showTemplate = template.substring(showStartIndex, showEndIndex);
-    const footerPart = template.substring(showEndIndex);
-    
-    // Now build the XML with each show
-    let xml = headerPart;
-    
-    // Track seen shows to avoid duplicating 2-hour shows
-    const seenShows = new Set();
-    let showCount = 0;
-    
-    for (const slot of scheduleSlots) {
-      // Create a unique identifier for this show instance
-      const showKey = `${slot.date}_${slot.start_time}_${slot.show_name}_${slot.host_name}`;
+
+    if (isArrayTemplate && templateObj) {
+      // The template has a schedule array, we'll replace it with actual shows
+      const showsArray = scheduleSlots.map(slot => {
+        // Process the template for each show
+        const showTemplate = JSON.stringify(templateObj.schedule[0]);
+        const processedShow = processTemplate(showTemplate, slot);
+        return JSON.parse(processedShow);
+      });
+
+      // Replace the schedule array in the template
+      templateObj.schedule = showsArray;
+      return JSON.stringify(templateObj, null, 2);
+    } else {
+      // Treat as a single-item template and build array manually
+      const result = {
+        schedule: scheduleSlots.map(slot => {
+          // Process the template for each show
+          const showJson = processTemplate(template, slot);
+          try {
+            return JSON.parse(showJson);
+          } catch (e) {
+            console.error("Failed to parse processed template:", e);
+            // Fallback to a simple object if parsing fails
+            return {
+              date: slot.date,
+              startTime: formatTime(slot.start_time),
+              endTime: formatTime(slot.end_time),
+              showName: slot.show_name,
+              hosts: slot.host_name
+            };
+          }
+        })
+      };
       
-      // Skip if we've already included this show
-      if (seenShows.has(showKey)) continue;
-      seenShows.add(showKey);
-      
-      // Process the show template for this slot
-      const processedShow = processTemplate(showTemplate, slot);
-      xml += processedShow;
-      showCount++;
+      return JSON.stringify(result, null, 2);
     }
-    
-    xml += footerPart;
-    console.log(`Generated XML with ${showCount} shows, length: ${xml.length} bytes`);
-    return xml;
   } catch (error) {
-    console.error("Error generating XML:", error);
-    return `<?xml version="1.0" encoding="UTF-8"?><error>${error instanceof Error ? error.message : "Unknown error"}</error>`;
+    console.error("Error generating JSON:", error);
+    // Return a valid JSON in case of error
+    return JSON.stringify({ 
+      error: "Failed to generate schedule JSON",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 }
 
@@ -214,7 +215,7 @@ serve(async (req) => {
   }
   
   try {
-    console.log("Starting XML generation process");
+    console.log("Starting JSON generation process");
     
     // Get template from request if available
     let template = '';
@@ -237,7 +238,7 @@ serve(async (req) => {
       const { data: templateData, error: templateError } = await supabase
         .from('system_settings')
         .select('value')
-        .eq('key', 'schedule_xml_template')
+        .eq('key', 'schedule_json_template')
         .maybeSingle();
         
       if (!templateError && templateData && templateData.value) {
@@ -254,43 +255,46 @@ serve(async (req) => {
     console.log("Fetching schedule slots");
     const scheduleSlots = await getScheduleSlots(supabase, today);
     
-    // Generate XML
-    console.log("Generating XML from schedule slots");
-    const xml = generateScheduleXML(scheduleSlots, template);
+    // Generate JSON
+    console.log("Generating JSON from schedule slots");
+    const json = generateScheduleJSON(scheduleSlots, template);
     
-    // Store the generated XML in Supabase
-    console.log("Storing XML in system_settings");
+    // Store the generated JSON in Supabase
+    console.log("Storing JSON in system_settings");
     const { error: storageError } = await supabase
       .from('system_settings')
       .upsert({ 
-        key: 'schedule_xml', 
-        value: xml,
+        key: 'schedule_json', 
+        value: json,
         updated_at: new Date().toISOString()
       }, { onConflict: 'key' });
     
     if (storageError) {
-      console.error("Error storing XML:", storageError);
-      throw new Error(`Failed to store XML: ${storageError.message}`);
+      console.error("Error storing JSON:", storageError);
+      throw new Error(`Failed to store JSON: ${storageError.message}`);
     } else {
-      console.log("XML stored successfully");
+      console.log("JSON stored successfully");
     }
     
-    // Return XML response
-    return new Response(xml, {
+    // Return JSON response
+    return new Response(json, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'application/xml',
+        'Content-Type': 'application/json',
       },
     });
   } catch (error) {
-    console.error("Error generating schedule XML:", error);
+    console.error("Error generating schedule JSON:", error);
     return new Response(
-      `<?xml version="1.0" encoding="UTF-8"?><error>${error.message}</error>`,
+      JSON.stringify({
+        error: "Failed to generate schedule JSON",
+        message: error instanceof Error ? error.message : "Unknown error"
+      }),
       {
         status: 500,
         headers: {
           ...corsHeaders,
-          'Content-Type': 'application/xml',
+          'Content-Type': 'application/json',
         },
       }
     );
