@@ -46,18 +46,19 @@ const ScheduleXMLSettings = () => {
   const refreshXML = async () => {
     setIsRefreshing(true);
     try {
-      // Navigate to the XML page to trigger a refresh
-      const xmlWindow = window.open('/schedule.xml', '_blank');
+      // Make a direct API call to the server endpoint for refreshing XML
+      const response = await fetch('/api/refresh-schedule-xml');
+      const data = await response.json();
       
-      // Wait a moment for the XML to be generated
-      setTimeout(async () => {
-        await fetchXmlData();
+      if (data.success) {
+        await fetchXmlData(); // Refresh the displayed data
         toast({
           title: 'XML עודכן בהצלחה',
           description: 'קובץ ה-XML עודכן ונשמר במסד הנתונים',
         });
-        setIsRefreshing(false);
-      }, 2000);
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
     } catch (error) {
       console.error('Error refreshing XML:', error);
       toast({
@@ -65,6 +66,7 @@ const ScheduleXMLSettings = () => {
         description: 'אנא נסה שנית מאוחר יותר',
         variant: 'destructive',
       });
+    } finally {
       setIsRefreshing(false);
     }
   };

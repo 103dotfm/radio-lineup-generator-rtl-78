@@ -26,6 +26,31 @@ app.use((req, res, next) => {
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
 
+// Helper function to escape XML special characters
+const escapeXml = (unsafe) => {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+};
+
+// Helper function to calculate end time
+const calculateEndTime = (startTime, durationMinutes) => {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  let totalMinutes = hours * 60 + minutes + durationMinutes;
+  
+  // Handle overflow to next day
+  totalMinutes = totalMinutes % (24 * 60);
+  
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  
+  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+};
+
 // Generate XML from schedule slots
 const generateScheduleXml = async () => {
   try {
@@ -134,7 +159,7 @@ const generateScheduleXml = async () => {
     xml += `  </week>\n`;
     xml += '</schedule>';
     
-    // Save XML to database
+    // Save XML to database for faster future access
     await supabase
       .from('system_settings')
       .upsert({
@@ -153,36 +178,15 @@ const generateScheduleXml = async () => {
   }
 };
 
-// Helper function to calculate end time
-const calculateEndTime = (startTime, durationMinutes) => {
-  const [hours, minutes] = startTime.split(':').map(Number);
-  let totalMinutes = hours * 60 + minutes + durationMinutes;
-  
-  // Handle overflow to next day
-  totalMinutes = totalMinutes % (24 * 60);
-  
-  const endHours = Math.floor(totalMinutes / 60);
-  const endMinutes = totalMinutes % 60;
-  
-  return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-};
-
-// Helper function to escape XML special characters
-const escapeXml = (unsafe) => {
-  if (!unsafe) return '';
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-};
-
-// Handle direct requests for schedule.xml
+// Direct XML endpoint - this should be before the catchall route
 app.get('/schedule.xml', async (req, res) => {
   console.log('Direct request for /schedule.xml');
   
   try {
+    // Set XML content type headers
+    res.setHeader('Content-Type', 'application/xml; charset=UTF-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    
     // Check for cached XML in database
     const { data, error } = await supabase
       .from('system_settings')
@@ -194,10 +198,6 @@ app.get('/schedule.xml', async (req, res) => {
       console.error('Error fetching cached XML:', error);
       throw error;
     }
-    
-    // Set XML content type headers
-    res.setHeader('Content-Type', 'application/xml; charset=UTF-8');
-    res.setHeader('Cache-Control', 'no-cache');
     
     // If cached XML exists and is relatively fresh (less than 1 hour old)
     if (data && data.value && data.updated_at) {
