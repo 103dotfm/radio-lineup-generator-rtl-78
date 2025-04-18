@@ -33,6 +33,8 @@ const Admin = () => {
       setDefaultTab("database");
     } else if (tab === 'xml') {
       setDefaultTab("xml");
+    } else if (tab === 'ftp') {
+      setDefaultTab("ftp");
     }
   }, [searchParams, redirectProcessed]);
 
