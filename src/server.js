@@ -160,7 +160,7 @@ const generateScheduleXml = async () => {
     xml += '</schedule>';
     
     // Save XML to database for faster future access
-    await supabase
+    const { error: saveError } = await supabase
       .from('system_settings')
       .upsert({
         key: 'schedule_xml',
@@ -170,7 +170,13 @@ const generateScheduleXml = async () => {
         onConflict: 'key'
       });
       
-    console.log('XML generated and saved to database');
+    if (saveError) {
+      console.error('Failed to save XML to database:', saveError);
+      // Continue anyway since we have the XML
+    } else {
+      console.log('XML generated and saved to database');
+    }
+    
     return xml;
   } catch (error) {
     console.error('Failed to generate XML:', error);
@@ -178,10 +184,9 @@ const generateScheduleXml = async () => {
   }
 };
 
-// Direct XML endpoint - this should be before the catchall route
+// Primary XML endpoint that should work in all environments
 app.get('/schedule.xml', async (req, res) => {
-  console.log('Direct request for /schedule.xml');
-  
+  console.log('Request received for /schedule.xml');
   try {
     // Set XML content type headers
     res.setHeader('Content-Type', 'application/xml; charset=UTF-8');
@@ -224,6 +229,11 @@ app.get('/schedule.xml', async (req, res) => {
   }
 });
 
+// Alternate route for testing within the app
+app.get('/api/schedule.xml', async (req, res) => {
+  return await app.get('/schedule.xml')(req, res);
+});
+
 // API route to force refresh XML
 app.get('/api/refresh-schedule-xml', async (req, res) => {
   try {
@@ -253,4 +263,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  console.log(`XML endpoint available at: http://localhost:${PORT}/schedule.xml`);
 });
