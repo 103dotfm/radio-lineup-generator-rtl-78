@@ -4,85 +4,187 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { RefreshCw, Clock, ExternalLink } from 'lucide-react';
+import { RefreshCw, Clock, Play } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 const ScheduleXMLSettings = () => {
+  const [refreshInterval, setRefreshInterval] = useState<string>('10');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
   const [xmlPreview, setXmlPreview] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch the XML data and last updated timestamp
-    const fetchXmlData = async () => {
+    // Fetch the current refresh interval setting and XML data
+    const fetchSettings = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch refresh interval
+        const { data: intervalData, error: intervalError } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'schedule_xml_refresh_interval')
+          .maybeSingle();
+          
+        if (!intervalError && intervalData && intervalData.value) {
+          setRefreshInterval(intervalData.value);
+        }
+        
+        // Fetch XML data and last updated timestamp
+        const { data: xmlData, error: xmlError } = await supabase
           .from('system_settings')
           .select('value, updated_at')
           .eq('key', 'schedule_xml')
           .maybeSingle();
           
-        if (!error && data) {
-          if (data.updated_at) {
-            const updateDate = new Date(data.updated_at);
+        if (!xmlError && xmlData) {
+          if (xmlData.updated_at) {
+            const updateDate = new Date(xmlData.updated_at);
             setLastUpdated(updateDate.toLocaleString());
           }
           
-          if (data.value) {
+          if (xmlData.value) {
             // Set a preview of the XML (first 100 characters)
-            setXmlPreview(data.value.substring(0, 100) + '...');
+            setXmlPreview(xmlData.value.substring(0, 100) + '...');
           }
         }
       } catch (error) {
-        console.error('Error fetching XML data:', error);
+        console.error('Error fetching XML settings:', error);
       }
     };
     
-    fetchXmlData();
+    fetchSettings();
   }, []);
+
+  const saveRefreshInterval = async () => {
+    try {
+      // Validate input
+      const intervalNum = parseInt(refreshInterval);
+      if (isNaN(intervalNum) || intervalNum < 1) {
+        toast({
+          title: 'ערך לא תקין',
+          description: 'יש להזין מספר חיובי של דקות',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log('Saving refresh interval:', refreshInterval);
+      
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({ 
+          key: 'schedule_xml_refresh_interval', 
+          value: refreshInterval 
+        }, { onConflict: 'key' });
+        
+      if (error) {
+        console.error('Error saving refresh interval:', error);
+        throw error;
+      }
+      
+      toast({
+        title: 'הגדרות נשמרו בהצלחה',
+        description: `מרווח רענון עודכן ל-${refreshInterval} דקות`,
+      });
+    } catch (error) {
+      console.error('Error saving refresh interval:', error);
+      toast({
+        title: 'שגיאה בשמירת ההגדרות',
+        description: 'אנא נסה שנית מאוחר יותר',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const updateScheduler = async () => {
+    setIsUpdatingSchedule(true);
+    try {
+      console.log('Updating scheduler...');
+      // Save the refresh interval first to ensure it's up to date
+      const intervalNum = parseInt(refreshInterval);
+      if (!isNaN(intervalNum) && intervalNum >= 1) {
+        await supabase
+          .from('system_settings')
+          .upsert({ 
+            key: 'schedule_xml_refresh_interval', 
+            value: refreshInterval 
+          }, { onConflict: 'key' });
+      }
+      
+      // Call the Edge Function to update the scheduler
+      const { data, error } = await supabase.functions.invoke('schedule-xml-refresh', {
+        body: { refreshInterval }
+      });
+      
+      if (error) {
+        console.error('Error from edge function:', error);
+        throw error;
+      }
+      
+      console.log('Scheduler update response:', data);
+      
+      toast({
+        title: 'מתזמן העדכונים הופעל',
+        description: `קובץ ה-XML יתעדכן כל ${refreshInterval} דקות`,
+      });
+      
+      // Refresh the XML data immediately after updating the scheduler
+      await refreshXML();
+      
+    } catch (error) {
+      console.error('Error updating scheduler:', error);
+      toast({
+        title: 'שגיאה בהפעלת מתזמן העדכונים',
+        description: 'אנא נסה שנית מאוחר יותר',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingSchedule(false);
+    }
+  };
 
   const refreshXML = async () => {
     setIsRefreshing(true);
     try {
-      // Call the server API to refresh the XML
-      const response = await fetch('/api/refresh-schedule-xml');
+      console.log('Refreshing XML...');
+      // Call the Supabase Edge Function to generate the XML
+      const { data, error } = await supabase.functions.invoke('generate-schedule-xml');
       
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+      if (error) {
+        console.error('Error from generate function:', error);
+        throw error;
       }
       
-      const result = await response.json();
+      console.log('XML refresh response length:', data ? data.length : 0);
       
-      if (result.success) {
-        // Get the updated XML data
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('value, updated_at')
-          .eq('key', 'schedule_xml')
-          .maybeSingle();
-        
-        if (!error && data) {
-          // Update last updated time
-          if (data.updated_at) {
-            const now = new Date(data.updated_at);
-            setLastUpdated(now.toLocaleString());
-          }
-          
-          // Set XML preview
-          if (data.value) {
-            setXmlPreview(data.value.substring(0, 100) + '...');
-          }
+      // Get the updated XML and timestamp
+      const { data: updatedData, error: getError } = await supabase
+        .from('system_settings')
+        .select('value, updated_at')
+        .eq('key', 'schedule_xml')
+        .maybeSingle();
+      
+      if (getError) {
+        console.error('Error fetching updated XML:', getError);
+      } else if (updatedData) {
+        // Update last refreshed time
+        if (updatedData.updated_at) {
+          const now = new Date(updatedData.updated_at);
+          setLastUpdated(now.toLocaleString());
         }
         
-        toast({
-          title: 'XML עודכן בהצלחה',
-          description: `עודכן בתאריך ${new Date().toLocaleString()}`,
-        });
-      } else {
-        throw new Error('Failed to refresh XML');
+        // Set XML preview
+        if (updatedData.value) {
+          setXmlPreview(updatedData.value.substring(0, 100) + '...');
+        }
       }
+      
+      toast({
+        title: 'XML עודכן בהצלחה',
+        description: `עודכן בתאריך ${new Date().toLocaleString()}`,
+      });
     } catch (error) {
       console.error('Error refreshing XML:', error);
       toast({
@@ -95,17 +197,12 @@ const ScheduleXMLSettings = () => {
     }
   };
 
-  const testXmlUrl = () => {
-    const xmlUrl = `${window.location.origin}/schedule.xml`;
-    window.open(xmlUrl, '_blank');
-  };
-
   return (
     <Card>
       <CardHeader>
         <CardTitle>הגדרות Schedule XML</CardTitle>
         <CardDescription>
-          ניהול קובץ XML של לוח השידורים
+          ניהול קובץ XML של לוח השידורים המתעדכן אוטומטית
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -123,6 +220,24 @@ const ScheduleXMLSettings = () => {
               }}
               className="font-mono text-sm"
             />
+          </div>
+        </div>
+        
+        <div className="space-y-1">
+          <Label htmlFor="refresh-interval">מרווח רענון (דקות)</Label>
+          <div className="flex items-center space-x-2">
+            <Input 
+              id="refresh-interval" 
+              type="number" 
+              min="1"
+              value={refreshInterval}
+              onChange={(e) => setRefreshInterval(e.target.value)}
+              className="w-24"
+            />
+            <Button onClick={saveRefreshInterval}>
+              <Clock className="h-4 w-4 mr-2" />
+              שמור
+            </Button>
           </div>
         </div>
         
@@ -149,12 +264,13 @@ const ScheduleXMLSettings = () => {
         </Button>
         
         <Button 
-          onClick={testXmlUrl} 
+          onClick={updateScheduler} 
           variant="outline" 
+          disabled={isUpdatingSchedule}
           className="w-full sm:w-auto"
         >
-          <ExternalLink className="h-4 w-4 mr-2" />
-          בדוק את קובץ ה-XML
+          <Play className="h-4 w-4 mr-2" />
+          {isUpdatingSchedule ? 'מפעיל מתזמן...' : 'הפעל מתזמן'}
         </Button>
       </CardFooter>
     </Card>
