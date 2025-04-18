@@ -19,6 +19,14 @@ function formatTime(timeString: string): string {
   return timeString.substring(0, 5);
 }
 
+// Get show display info (show name and host) using the same logic as in the schedule component
+function getShowDisplay(showName: string, hostName?: string): { displayName: string, displayHost: string } {
+  if (!hostName || showName === hostName) {
+    return { displayName: showName, displayHost: '' };
+  }
+  return { displayName: showName, displayHost: hostName };
+}
+
 // Get schedule slots for the next two weeks
 async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
@@ -88,17 +96,27 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
         // Add the appropriate slot version to processed slots
         if (modification) {
           if (!modification.is_deleted) {
+            // Get display information
+            const displayInfo = getShowDisplay(modification.show_name, modification.host_name);
+            
             processedSlots.push({
               ...modification,
               date: currentDateStr,
-              actualDate: new Date(currentDate)
+              actualDate: new Date(currentDate),
+              displayName: displayInfo.displayName,
+              displayHost: displayInfo.displayHost
             });
           }
         } else if (slot.is_recurring && !slot.is_deleted) {
+          // Get display information
+          const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+          
           processedSlots.push({
             ...slot,
             date: currentDateStr,
-            actualDate: new Date(currentDate)
+            actualDate: new Date(currentDate),
+            displayName: displayInfo.displayName,
+            displayHost: displayInfo.displayHost
           });
         }
       }
@@ -125,12 +143,17 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
 
 // Process a template string with schedule data
 function processTemplate(template: string, show: any): string {
-  return template
-    .replace(/%showname/g, show.show_name || '')
-    .replace(/%showhosts/g, show.host_name || '')
-    .replace(/%starttime/g, formatTime(show.start_time))
-    .replace(/%endtime/g, formatTime(show.end_time))
-    .replace(/%scheduledate/g, show.date || '');
+  try {
+    return template
+      .replace(/%showname/g, show.displayName || show.show_name || '')
+      .replace(/%showhosts/g, show.displayHost || show.host_name || '')
+      .replace(/%starttime/g, formatTime(show.start_time))
+      .replace(/%endtime/g, formatTime(show.end_time))
+      .replace(/%scheduledate/g, show.date || '');
+  } catch (error) {
+    console.error("Error in processTemplate:", error);
+    throw new Error(`Template processing error: ${error.message}`);
+  }
 }
 
 // Generate JSON from schedule data and template
@@ -159,16 +182,28 @@ function generateScheduleJSON(scheduleSlots: any[], template: string = ''): stri
       templateObj = JSON.parse(template);
       isArrayTemplate = Array.isArray(templateObj.schedule);
     } catch (e) {
-      console.warn("Template is not a valid JSON object, treating as a single-show template");
+      console.warn("Template is not a valid JSON object, treating as a single-show template:", e);
     }
 
     if (isArrayTemplate && templateObj) {
       // The template has a schedule array, we'll replace it with actual shows
       const showsArray = scheduleSlots.map(slot => {
-        // Process the template for each show
-        const showTemplate = JSON.stringify(templateObj.schedule[0]);
-        const processedShow = processTemplate(showTemplate, slot);
-        return JSON.parse(processedShow);
+        try {
+          // Process the template for each show
+          const showTemplate = JSON.stringify(templateObj.schedule[0]);
+          const processedShow = processTemplate(showTemplate, slot);
+          return JSON.parse(processedShow);
+        } catch (parseError) {
+          console.error("Error processing show template:", parseError);
+          // Fallback to a simple object if processing fails
+          return {
+            date: slot.date,
+            startTime: formatTime(slot.start_time),
+            endTime: formatTime(slot.end_time),
+            showName: slot.displayName || slot.show_name,
+            hosts: slot.displayHost || slot.host_name
+          };
+        }
       });
 
       // Replace the schedule array in the template
@@ -178,9 +213,9 @@ function generateScheduleJSON(scheduleSlots: any[], template: string = ''): stri
       // Treat as a single-item template and build array manually
       const result = {
         schedule: scheduleSlots.map(slot => {
-          // Process the template for each show
-          const showJson = processTemplate(template, slot);
           try {
+            // Process the template for each show
+            const showJson = processTemplate(template, slot);
             return JSON.parse(showJson);
           } catch (e) {
             console.error("Failed to parse processed template:", e);
@@ -189,8 +224,8 @@ function generateScheduleJSON(scheduleSlots: any[], template: string = ''): stri
               date: slot.date,
               startTime: formatTime(slot.start_time),
               endTime: formatTime(slot.end_time),
-              showName: slot.show_name,
-              hosts: slot.host_name
+              showName: slot.displayName || slot.show_name,
+              hosts: slot.displayHost || slot.host_name
             };
           }
         })
@@ -223,6 +258,7 @@ serve(async (req) => {
       try {
         const body = await req.json();
         template = body.template || '';
+        console.log("Using template from request:", template.substring(0, 100) + "...");
       } catch (e) {
         console.warn("Could not parse request body", e);
       }
@@ -243,7 +279,7 @@ serve(async (req) => {
         
       if (!templateError && templateData && templateData.value) {
         template = templateData.value;
-        console.log("Using template from database");
+        console.log("Using template from database:", template.substring(0, 100) + "...");
       }
     }
     

@@ -263,6 +263,18 @@ const ScheduleExportSettings = () => {
 
   const saveJsonTemplate = async () => {
     try {
+      // Validate JSON format before saving
+      try {
+        JSON.parse(jsonTemplate);
+      } catch (parseError) {
+        toast({
+          title: 'פורמט JSON שגוי',
+          description: 'יש לוודא שהפורמט תקין לפני השמירה',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       const { error } = await supabase
         .from('system_settings')
         .upsert({ 
