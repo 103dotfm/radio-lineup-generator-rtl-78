@@ -516,22 +516,26 @@ const ScheduleExportSettings = () => {
       
       addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        addLog(`RESPONSE TEXT: ${errorText}`);
-        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
-      }
-      
       const contentType = response.headers.get('content-type');
       addLog(`Content-Type של התשובה: ${contentType}`);
       
+      let responseText = await response.text();
+      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
+      
       let result;
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
+      }
+      
       if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+          throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
+        }
       } else {
-        const text = await response.text();
-        addLog(`RESPONSE TEXT: ${text}`);
-        throw new Error(`Server returned non-JSON response: ${text}`);
+        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
       }
       
       if (result.success) {
@@ -597,22 +601,26 @@ const ScheduleExportSettings = () => {
       
       addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        addLog(`RESPONSE TEXT: ${errorText}`);
-        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
-      }
-      
       const contentType = response.headers.get('content-type');
       addLog(`Content-Type של התשובה: ${contentType}`);
       
+      let responseText = await response.text();
+      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
+      
       let result;
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
+      }
+      
       if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+          throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
+        }
       } else {
-        const text = await response.text();
-        addLog(`RESPONSE TEXT: ${text}`);
-        throw new Error(`Server returned non-JSON response: ${text}`);
+        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
       }
       
       if (result.success) {
@@ -690,22 +698,26 @@ const ScheduleExportSettings = () => {
       
       addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        addLog(`RESPONSE TEXT: ${errorText}`);
-        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
-      }
-      
       const contentType = response.headers.get('content-type');
       addLog(`Content-Type של התשובה: ${contentType}`);
       
+      let responseText = await response.text();
+      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
+      
       let result;
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
+      }
+      
       if (contentType && contentType.includes('application/json')) {
-        result = await response.json();
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+          throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
+        }
       } else {
-        const text = await response.text();
-        addLog(`RESPONSE TEXT: ${text}`);
-        throw new Error(`Server returned non-JSON response: ${text}`);
+        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
       }
       
       if (result.success) {
@@ -981,7 +993,7 @@ const ScheduleExportSettings = () => {
               <CardHeader>
                 <CardTitle>תבנית JSON</CardTitle>
                 <CardDescription>
-                  עריכת תבנית קובץ JSON. ניתן להשתמש בתגיות כגון %showname, %showhosts, %starttime, %endtime, %scheduledate, %showcombined
+                  עריכת תבנית קובץ JSON. ניתן להשתמש בתגי��ת כגון %showname, %showhosts, %starttime, %endtime, %scheduledate, %showcombined
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

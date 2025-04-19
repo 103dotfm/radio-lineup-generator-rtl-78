@@ -1,4 +1,3 @@
-
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
@@ -17,116 +16,8 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0'
 );
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, '../dist')));
-
-// Handle schedule.xml requests
-app.get('/schedule.xml', async (req, res) => {
-  try {
-    console.log('Serving XML file from /schedule.xml route');
-    
-    // Get XML content from system_settings
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'schedule_xml')
-      .single();
-      
-    if (error) {
-      console.error('Error fetching XML:', error);
-      throw error;
-    }
-    
-    if (!data || !data.value) {
-      console.log('No XML found, generating now');
-      try {
-        // If no XML is available, generate it by calling the Edge Function
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
-        
-        if (functionError) {
-          console.error('Error generating XML:', functionError);
-          throw functionError;
-        }
-        
-        console.log('XML generated successfully');
-        // Set content type and return the XML
-        res.setHeader('Content-Type', 'application/xml');
-        return res.send(functionData);
-      } catch (genError) {
-        console.error('Failed to generate XML:', genError);
-        throw new Error('Failed to generate XML: ' + genError.message);
-      }
-    }
-    
-    console.log('XML found, serving from database:', data.value.substring(0, 100) + '...');
-    // Set content type and return the XML
-    res.setHeader('Content-Type', 'application/xml');
-    return res.send(data.value);
-  } catch (error) {
-    console.error('Error serving XML:', error);
-    res.status(500)
-      .set('Content-Type', 'application/xml')
-      .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML: ' + error.message + '</error>');
-  }
-});
-
-// Handle schedule.json requests
-app.get('/schedule.json', async (req, res) => {
-  try {
-    console.log('Serving JSON file from /schedule.json route');
-    
-    // Get JSON content from system_settings
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'schedule_json')
-      .single();
-      
-    if (error) {
-      console.error('Error fetching JSON:', error);
-      throw error;
-    }
-    
-    if (!data || !data.value) {
-      console.log('No JSON found, generating now');
-      try {
-        // If no JSON is available, generate it by calling the Edge Function
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-json');
-        
-        if (functionError) {
-          console.error('Error generating JSON:', functionError);
-          throw functionError;
-        }
-        
-        console.log('JSON generated successfully');
-        // Set content type and return the JSON
-        res.setHeader('Content-Type', 'application/json');
-        return res.json(functionData);
-      } catch (genError) {
-        console.error('Failed to generate JSON:', genError);
-        throw new Error('Failed to generate JSON: ' + genError.message);
-      }
-    }
-    
-    console.log('JSON found, serving from database:', data.value.substring(0, 100) + '...');
-    // Set content type and return the JSON
-    res.setHeader('Content-Type', 'application/json');
-    
-    // Parse the JSON string into an object before sending
-    try {
-      const jsonData = JSON.parse(data.value);
-      return res.json(jsonData);
-    } catch (parseError) {
-      console.error('Error parsing JSON data:', parseError);
-      // If parsing fails, send the raw string
-      return res.send(data.value);
-    }
-  } catch (error) {
-    console.error('Error serving JSON:', error);
-    res.status(500)
-      .json({ error: 'Failed to serve schedule JSON', message: error.message });
-  }
-});
+// API routes - Define these BEFORE the static files middleware
+// This is crucial to make sure API routes are handled correctly
 
 // API endpoint to test FTP connection
 app.post('/api/test-ftp-connection', async (req, res) => {
@@ -302,8 +193,120 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
   }
 });
 
+// Serve static files from the React app - AFTER API routes
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Handle schedule.xml requests
+app.get('/schedule.xml', async (req, res) => {
+  try {
+    console.log('Serving XML file from /schedule.xml route');
+    
+    // Get XML content from system_settings
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'schedule_xml')
+      .single();
+      
+    if (error) {
+      console.error('Error fetching XML:', error);
+      throw error;
+    }
+    
+    if (!data || !data.value) {
+      console.log('No XML found, generating now');
+      try {
+        // If no XML is available, generate it by calling the Edge Function
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
+        
+        if (functionError) {
+          console.error('Error generating XML:', functionError);
+          throw functionError;
+        }
+        
+        console.log('XML generated successfully');
+        // Set content type and return the XML
+        res.setHeader('Content-Type', 'application/xml');
+        return res.send(functionData);
+      } catch (genError) {
+        console.error('Failed to generate XML:', genError);
+        throw new Error('Failed to generate XML: ' + genError.message);
+      }
+    }
+    
+    console.log('XML found, serving from database:', data.value.substring(0, 100) + '...');
+    // Set content type and return the XML
+    res.setHeader('Content-Type', 'application/xml');
+    return res.send(data.value);
+  } catch (error) {
+    console.error('Error serving XML:', error);
+    res.status(500)
+      .set('Content-Type', 'application/xml')
+      .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML: ' + error.message + '</error>');
+  }
+});
+
+// Handle schedule.json requests
+app.get('/schedule.json', async (req, res) => {
+  try {
+    console.log('Serving JSON file from /schedule.json route');
+    
+    // Get JSON content from system_settings
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'schedule_json')
+      .single();
+      
+    if (error) {
+      console.error('Error fetching JSON:', error);
+      throw error;
+    }
+    
+    if (!data || !data.value) {
+      console.log('No JSON found, generating now');
+      try {
+        // If no JSON is available, generate it by calling the Edge Function
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-json');
+        
+        if (functionError) {
+          console.error('Error generating JSON:', functionError);
+          throw functionError;
+        }
+        
+        console.log('JSON generated successfully');
+        // Set content type and return the JSON
+        res.setHeader('Content-Type', 'application/json');
+        return res.json(functionData);
+      } catch (genError) {
+        console.error('Failed to generate JSON:', genError);
+        throw new Error('Failed to generate JSON: ' + genError.message);
+      }
+    }
+    
+    console.log('JSON found, serving from database:', data.value.substring(0, 100) + '...');
+    // Set content type and return the JSON
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Parse the JSON string into an object before sending
+    try {
+      const jsonData = JSON.parse(data.value);
+      return res.json(jsonData);
+    } catch (parseError) {
+      console.error('Error parsing JSON data:', parseError);
+      // If parsing fails, send the raw string
+      return res.send(data.value);
+    }
+  } catch (error) {
+    console.error('Error serving JSON:', error);
+    res.status(500)
+      .json({ error: 'Failed to serve schedule JSON', message: error.message });
+  }
+});
+
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
+// This MUST be AFTER all the other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
