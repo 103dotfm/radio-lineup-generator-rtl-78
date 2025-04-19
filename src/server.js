@@ -1,3 +1,4 @@
+
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
@@ -193,9 +194,6 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
   }
 });
 
-// Serve static files from the React app - AFTER API routes
-app.use(express.static(path.join(__dirname, '../dist')));
-
 // Handle schedule.xml requests
 app.get('/schedule.xml', async (req, res) => {
   try {
@@ -303,6 +301,9 @@ app.get('/schedule.json', async (req, res) => {
       .json({ error: 'Failed to serve schedule JSON', message: error.message });
   }
 });
+
+// Serve static files from the React app - AFTER API routes
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.

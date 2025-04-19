@@ -152,6 +152,16 @@ function escapeXml(unsafe: string): string {
 
 // Process a template string with schedule data
 function processTemplate(template: string, show: any): string {
+  // Explicitly log the values being substituted for debugging
+  console.log("Show data for template:", {
+    showName: show.displayName || show.show_name || '',
+    hostName: show.displayHost || show.host_name || '',
+    combinedDisplay: show.combinedDisplay || '',
+    startTime: formatTime(show.start_time),
+    endTime: formatTime(show.end_time),
+    date: show.date || ''
+  });
+
   return template
     .replace(/%showname/g, escapeXml(show.displayName || show.show_name || ''))
     .replace(/%showhosts/g, escapeXml(show.displayHost || show.host_name || ''))
@@ -175,6 +185,7 @@ function generateScheduleXML(scheduleSlots: any[], template: string = ''): strin
     <end_time>%endtime</end_time>
     <name>%showname</name>
     <host>%showhosts</host>
+    <combined>%showcombined</combined>
   </show>
 </schedule>`;
     }
@@ -209,14 +220,29 @@ function generateScheduleXML(scheduleSlots: any[], template: string = ''): strin
       if (seenShows.has(showKey)) continue;
       seenShows.add(showKey);
       
+      // Add the combined display to the slot
+      const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+      const enhancedSlot = {
+        ...slot,
+        displayName: displayInfo.displayName,
+        displayHost: displayInfo.displayHost,
+        combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+      };
+      
       // Process the show template for this slot
-      const processedShow = processTemplate(showTemplate, slot);
+      const processedShow = processTemplate(showTemplate, enhancedSlot);
       xml += processedShow;
       showCount++;
     }
     
     xml += footerPart;
     console.log(`Generated XML with ${showCount} shows, length: ${xml.length} bytes`);
+    
+    // Debug: Output a sample of the generated XML to check template replacements
+    if (showCount > 0) {
+      console.log(`XML sample (first 500 characters): ${xml.substring(0, 500)}`);
+    }
+    
     return xml;
   } catch (error) {
     console.error("Error generating XML:", error);
@@ -239,6 +265,7 @@ serve(async (req) => {
       try {
         const body = await req.json();
         template = body.template || '';
+        console.log("Received template in request body, length:", template.length);
       } catch (e) {
         console.warn("Could not parse request body", e);
       }
@@ -259,7 +286,7 @@ serve(async (req) => {
         
       if (!templateError && templateData && templateData.value) {
         template = templateData.value;
-        console.log("Using template from database");
+        console.log("Using template from database, length:", template.length);
       }
     }
     
@@ -281,6 +308,11 @@ serve(async (req) => {
         combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
       };
     });
+    
+    // Log a sample of enhanced slots to verify data
+    if (enhancedSlots.length > 0) {
+      console.log("Sample of enhanced slot data:", JSON.stringify(enhancedSlots[0], null, 2));
+    }
     
     // Generate XML
     console.log("Generating XML from schedule slots");
