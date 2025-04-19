@@ -19,6 +19,22 @@ function formatTime(timeString: string): string {
   return timeString.substring(0, 5);
 }
 
+// Get show display info (show name and host) using the same logic as in the schedule component
+function getShowDisplay(showName: string, hostName?: string): { displayName: string, displayHost: string } {
+  if (!hostName || showName === hostName) {
+    return { displayName: showName, displayHost: '' };
+  }
+  return { displayName: showName, displayHost: hostName };
+}
+
+// Get combined show display string (show name with host) based on the specified logic
+function getCombinedShowDisplay(showName: string, hostName?: string): string {
+  if (!hostName || showName === hostName) {
+    return showName;
+  }
+  return `${showName} עם ${hostName}`;
+}
+
 // Get schedule slots for the next two weeks
 async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
@@ -137,8 +153,9 @@ function escapeXml(unsafe: string): string {
 // Process a template string with schedule data
 function processTemplate(template: string, show: any): string {
   return template
-    .replace(/%showname/g, escapeXml(show.show_name || ''))
-    .replace(/%showhosts/g, escapeXml(show.host_name || ''))
+    .replace(/%showname/g, escapeXml(show.displayName || show.show_name || ''))
+    .replace(/%showhosts/g, escapeXml(show.displayHost || show.host_name || ''))
+    .replace(/%showcombined/g, escapeXml(show.combinedDisplay || ''))
     .replace(/%starttime/g, formatTime(show.start_time))
     .replace(/%endtime/g, formatTime(show.end_time))
     .replace(/%scheduledate/g, show.date || '');
@@ -254,9 +271,20 @@ serve(async (req) => {
     console.log("Fetching schedule slots");
     const scheduleSlots = await getScheduleSlots(supabase, today);
     
+    // Add the combined display to each slot
+    const enhancedSlots = scheduleSlots.map(slot => {
+      const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+      return {
+        ...slot,
+        displayName: displayInfo.displayName,
+        displayHost: displayInfo.displayHost,
+        combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+      };
+    });
+    
     // Generate XML
     console.log("Generating XML from schedule slots");
-    const xml = generateScheduleXML(scheduleSlots, template);
+    const xml = generateScheduleXML(enhancedSlots, template);
     
     // Store the generated XML in Supabase
     console.log("Storing XML in system_settings");

@@ -27,6 +27,14 @@ function getShowDisplay(showName: string, hostName?: string): { displayName: str
   return { displayName: showName, displayHost: hostName };
 }
 
+// Get combined show display string (show name with host) based on the specified logic
+function getCombinedShowDisplay(showName: string, hostName?: string): string {
+  if (!hostName || showName === hostName) {
+    return showName;
+  }
+  return `${showName} עם ${hostName}`;
+}
+
 // Get schedule slots for the next two weeks
 async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
@@ -147,6 +155,7 @@ function processTemplate(template: string, show: any): string {
     return template
       .replace(/%showname/g, show.displayName || show.show_name || '')
       .replace(/%showhosts/g, show.displayHost || show.host_name || '')
+      .replace(/%showcombined/g, show.combinedDisplay || getCombinedShowDisplay(show.show_name, show.host_name) || '')
       .replace(/%starttime/g, formatTime(show.start_time))
       .replace(/%endtime/g, formatTime(show.end_time))
       .replace(/%scheduledate/g, show.date || '');
@@ -291,9 +300,20 @@ serve(async (req) => {
     console.log("Fetching schedule slots");
     const scheduleSlots = await getScheduleSlots(supabase, today);
     
+    // Add the combined display to each slot
+    const enhancedSlots = scheduleSlots.map(slot => {
+      const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+      return {
+        ...slot,
+        displayName: displayInfo.displayName,
+        displayHost: displayInfo.displayHost,
+        combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+      };
+    });
+    
     // Generate JSON
     console.log("Generating JSON from schedule slots");
-    const json = generateScheduleJSON(scheduleSlots, template);
+    const json = generateScheduleJSON(enhancedSlots, template);
     
     // Store the generated JSON in Supabase
     console.log("Storing JSON in system_settings");
