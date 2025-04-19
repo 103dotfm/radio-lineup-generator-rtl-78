@@ -130,16 +130,20 @@ app.get('/schedule.json', async (req, res) => {
 
 // API endpoint to test FTP connection
 app.post('/api/test-ftp-connection', async (req, res) => {
+  console.log('FTP connection test requested', JSON.stringify(req.body));
   try {
     const { server, port, username, password, passive } = req.body;
     
     // Validate required parameters
     if (!server || !port || !username || !password) {
+      console.log('Missing FTP parameters:', { server, port, username, passwordProvided: !!password });
       return res.status(400).json({ 
         success: false, 
         message: 'Missing required FTP parameters' 
       });
     }
+    
+    console.log(`Attempting FTP connection to ${server}:${port} with user ${username}, passive mode: ${passive}`);
     
     // Set up FTP client
     const client = new ftp.Client();
@@ -156,8 +160,11 @@ app.post('/api/test-ftp-connection', async (req, res) => {
         passive: passive === true
       });
       
+      console.log('FTP connection successful. Listing directory content...');
+      
       // List directory contents to verify connection
       const list = await client.list();
+      console.log('Directory listing:', list.map(item => item.name).join(', '));
       
       return res.json({ 
         success: true, 
@@ -169,28 +176,33 @@ app.post('/api/test-ftp-connection', async (req, res) => {
       return res.status(500).json({ 
         success: false, 
         message: 'FTP connection failed',
-        error: ftpError.message
+        error: ftpError.message,
+        stack: ftpError.stack
       });
     } finally {
       client.close();
+      console.log('FTP client closed');
     }
   } catch (error) {
     console.error('Server error testing FTP connection:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Server error processing FTP test request',
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
   }
 });
 
 // API endpoint to upload XML/JSON to FTP server
 app.post('/api/upload-xml-ftp', async (req, res) => {
+  console.log('FTP upload requested', JSON.stringify(req.body));
   try {
     const { server, port, username, password, remotePath, passive, fileType = 'xml' } = req.body;
     
     // Validate required parameters
     if (!server || !port || !username || !password) {
+      console.log('Missing FTP upload parameters:', { server, port, username, passwordProvided: !!password });
       return res.status(400).json({ 
         success: false, 
         message: 'Missing required FTP parameters' 
@@ -202,6 +214,8 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
     const filename = fileType === 'json' ? 'schedule.json' : 'schedule.xml';
     const contentType = fileType === 'json' ? 'application/json' : 'application/xml';
     
+    console.log(`Preparing to upload ${fileType.toUpperCase()} file '${filename}' to ${server}:${port}`);
+    
     // Get the file content
     const { data, error } = await supabase
       .from('system_settings')
@@ -210,6 +224,7 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
       .single();
       
     if (error || !data || !data.value) {
+      console.error(`Failed to retrieve ${fileType.toUpperCase()} content:`, error);
       return res.status(500).json({ 
         success: false, 
         message: `Failed to retrieve ${fileType.toUpperCase()} content`,
@@ -217,11 +232,15 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
       });
     }
     
+    console.log(`Retrieved ${fileType.toUpperCase()} content (${data.value.length} bytes)`);
+    
     // Set up FTP client
     const client = new ftp.Client();
     client.ftp.verbose = true; // For detailed logs
     
     try {
+      console.log(`Connecting to FTP server ${server}:${port}`);
+      
       // Connect to the FTP server
       await client.access({
         host: server,
@@ -232,17 +251,25 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
         passive: passive === true
       });
       
+      console.log('FTP connection successful');
+      
       // Create a temp file with the content
       const tempFilePath = path.join(__dirname, filename);
       fs.writeFileSync(tempFilePath, data.value);
+      console.log(`Temporary file created at ${tempFilePath}`);
       
       // Upload the file
       const uploadPath = remotePath || '/';
+      console.log(`Ensuring directory exists: ${uploadPath}`);
       await client.ensureDir(uploadPath);
-      await client.uploadFrom(tempFilePath, path.join(uploadPath, filename));
+      
+      const uploadFilePath = path.join(uploadPath, filename);
+      console.log(`Uploading file to ${uploadFilePath}`);
+      await client.uploadFrom(tempFilePath, uploadFilePath);
       
       // Clean up the temp file
       fs.unlinkSync(tempFilePath);
+      console.log('Temporary file deleted');
       
       // Log the success
       console.log(`${fileType.toUpperCase()} file uploaded successfully to FTP server`);
@@ -257,17 +284,20 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
       return res.status(500).json({ 
         success: false, 
         message: 'FTP upload failed',
-        error: ftpError.message
+        error: ftpError.message,
+        stack: ftpError.stack
       });
     } finally {
       client.close();
+      console.log('FTP client closed');
     }
   } catch (error) {
     console.error('Server error handling FTP upload:', error);
     res.status(500).json({ 
       success: false, 
       message: 'Server error processing FTP upload request',
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
   }
 });

@@ -492,6 +492,14 @@ const ScheduleExportSettings = () => {
     addLog(`בודק חיבור ל-FTP: ${values.server}:${values.port}`);
     
     try {
+      addLog(`שולח בקשת חיבור FTP עם נתונים: ${JSON.stringify({
+        server: values.server,
+        port: values.port,
+        username: values.username,
+        passwordLength: values.password ? values.password.length : 0,
+        passive: values.passive,
+      })}`);
+
       const response = await fetch('/api/test-ftp-connection', {
         method: 'POST',
         headers: {
@@ -506,7 +514,25 @@ const ScheduleExportSettings = () => {
         }),
       });
       
-      const result = await response.json();
+      addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        addLog(`RESPONSE TEXT: ${errorText}`);
+        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      addLog(`Content-Type של התשובה: ${contentType}`);
+      
+      let result;
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        addLog(`RESPONSE TEXT: ${text}`);
+        throw new Error(`Server returned non-JSON response: ${text}`);
+      }
       
       if (result.success) {
         toast({
@@ -530,6 +556,9 @@ const ScheduleExportSettings = () => {
       });
       
       addLog(`שגיאה בחיבור FTP: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
+      if (error instanceof Error && error.stack) {
+        addLog(`Stack trace: ${error.stack}`);
+      }
     } finally {
       setIsTesting(false);
     }
@@ -541,6 +570,15 @@ const ScheduleExportSettings = () => {
     addLog(`מעלה קובץ XML לשרת FTP: ${values.server}:${values.port}`);
     
     try {
+      addLog(`שולח בקשת העלאת XML עם נתונים: ${JSON.stringify({
+        server: values.server,
+        port: values.port,
+        username: values.username,
+        passwordLength: values.password ? values.password.length : 0,
+        remotePath: values.remotePath,
+        passive: values.passive,
+      })}`);
+
       const response = await fetch('/api/upload-xml-ftp', {
         method: 'POST',
         headers: {
@@ -557,7 +595,25 @@ const ScheduleExportSettings = () => {
         }),
       });
       
-      const result = await response.json();
+      addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        addLog(`RESPONSE TEXT: ${errorText}`);
+        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      addLog(`Content-Type של התשובה: ${contentType}`);
+      
+      let result;
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        addLog(`RESPONSE TEXT: ${text}`);
+        throw new Error(`Server returned non-JSON response: ${text}`);
+      }
       
       if (result.success) {
         const now = new Date().toLocaleString();
@@ -593,6 +649,9 @@ const ScheduleExportSettings = () => {
       });
       
       addLog(`שגיאה בהעלאת קובץ XML: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
+      if (error instanceof Error && error.stack) {
+        addLog(`Stack trace: ${error.stack}`);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -604,6 +663,15 @@ const ScheduleExportSettings = () => {
     addLog(`מעלה קובץ JSON לשרת FTP: ${values.server}:${values.port}`);
     
     try {
+      addLog(`שולח בקשת העלאת JSON עם נתונים: ${JSON.stringify({
+        server: values.server,
+        port: values.port,
+        username: values.username,
+        passwordLength: values.password ? values.password.length : 0,
+        remotePath: values.remotePath,
+        passive: values.passive,
+      })}`);
+
       const response = await fetch('/api/upload-xml-ftp', {
         method: 'POST',
         headers: {
@@ -620,7 +688,25 @@ const ScheduleExportSettings = () => {
         }),
       });
       
-      const result = await response.json();
+      addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        addLog(`RESPONSE TEXT: ${errorText}`);
+        throw new Error(`Server responded with status ${response.status}: ${errorText}`);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      addLog(`Content-Type של התשובה: ${contentType}`);
+      
+      let result;
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        addLog(`RESPONSE TEXT: ${text}`);
+        throw new Error(`Server returned non-JSON response: ${text}`);
+      }
       
       if (result.success) {
         const now = new Date().toLocaleString();
@@ -656,6 +742,9 @@ const ScheduleExportSettings = () => {
       });
       
       addLog(`שגיאה בהעלאת קובץ JSON: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
+      if (error instanceof Error && error.stack) {
+        addLog(`Stack trace: ${error.stack}`);
+      }
     } finally {
       setIsUploading(false);
     }
