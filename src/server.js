@@ -3,6 +3,7 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const ftp = require('basic-ftp');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -28,14 +29,15 @@ app.get('/schedule.xml', async (req, res) => {
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_xml');
+      .eq('key', 'schedule_xml')
+      .single();
       
     if (error) {
       console.error('Error fetching XML:', error);
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0]?.value) {
+    if (!data || !data.value) {
       console.log('No XML found, generating now');
       try {
         // If no XML is available, generate it by calling the Edge Function
@@ -56,10 +58,10 @@ app.get('/schedule.xml', async (req, res) => {
       }
     }
     
-    console.log('XML found, serving from database:', data[0].value.substring(0, 100) + '...');
+    console.log('XML found, serving from database:', data.value.substring(0, 100) + '...');
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
-    return res.send(data[0].value);
+    return res.send(data.value);
   } catch (error) {
     console.error('Error serving XML:', error);
     res.status(500)
@@ -77,14 +79,15 @@ app.get('/schedule.json', async (req, res) => {
     const { data, error } = await supabase
       .from('system_settings')
       .select('value')
-      .eq('key', 'schedule_json');
+      .eq('key', 'schedule_json')
+      .single();
       
     if (error) {
       console.error('Error fetching JSON:', error);
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0]?.value) {
+    if (!data || !data.value) {
       console.log('No JSON found, generating now');
       try {
         // If no JSON is available, generate it by calling the Edge Function
@@ -98,119 +101,44 @@ app.get('/schedule.json', async (req, res) => {
         console.log('JSON generated successfully');
         // Set content type and return the JSON
         res.setHeader('Content-Type', 'application/json');
-        return res.send(functionData);
+        return res.json(functionData);
       } catch (genError) {
         console.error('Failed to generate JSON:', genError);
         throw new Error('Failed to generate JSON: ' + genError.message);
       }
     }
     
-    console.log('JSON found, serving from database:', data[0].value.substring(0, 100) + '...');
+    console.log('JSON found, serving from database:', data.value.substring(0, 100) + '...');
     // Set content type and return the JSON
     res.setHeader('Content-Type', 'application/json');
-    return res.send(data[0].value);
+    
+    // Parse the JSON string into an object before sending
+    try {
+      const jsonData = JSON.parse(data.value);
+      return res.json(jsonData);
+    } catch (parseError) {
+      console.error('Error parsing JSON data:', parseError);
+      // If parsing fails, send the raw string
+      return res.send(data.value);
+    }
   } catch (error) {
     console.error('Error serving JSON:', error);
     res.status(500)
-      .set('Content-Type', 'application/json')
-      .send(JSON.stringify({ error: 'Failed to serve schedule JSON: ' + error.message }));
+      .json({ error: 'Failed to serve schedule JSON', message: error.message });
   }
 });
 
-// API endpoint to upload XML to FTP server
-app.post('/api/upload-xml-ftp', async (req, res) => {
-  try {
-    const { server, port, username, password, remotePath, passive, fileType = 'xml' } = req.body;
-    
-    // Validate required parameters
-    if (!server || !port || !username || !password) {
-      return res.status(400).json({ success: false, message: 'Missing required FTP parameters' });
-    }
-    
-    // Determine file type and settings key
-    const settingsKey = fileType === 'json' ? 'schedule_json' : 'schedule_xml';
-    const filename = fileType === 'json' ? 'schedule.json' : 'schedule.xml';
-    const contentType = fileType === 'json' ? 'application/json' : 'application/xml';
-    
-    // Get the file content
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('value')
-      .eq('key', settingsKey)
-      .single();
-      
-    if (error || !data || !data.value) {
-      return res.status(500).json({ 
-        success: false, 
-        message: `Failed to retrieve ${fileType.toUpperCase()} content`,
-        error: error?.message || `No ${fileType.toUpperCase()} content found`
-      });
-    }
-    
-    // Set up FTP client
-    const client = new ftp.Client();
-    client.ftp.verbose = true; // For detailed logs
-    
-    try {
-      // Connect to the FTP server
-      await client.access({
-        host: server,
-        port: parseInt(port),
-        user: username,
-        password: password,
-        secure: false,
-        passive: passive === true
-      });
-      
-      // Create a temp file with the content
-      const tempFilePath = path.join(__dirname, filename);
-      const fs = require('fs');
-      fs.writeFileSync(tempFilePath, data.value);
-      
-      // Upload the file
-      const uploadPath = remotePath || '/';
-      await client.ensureDir(uploadPath);
-      await client.uploadFrom(tempFilePath, path.join(uploadPath, filename));
-      
-      // Clean up the temp file
-      fs.unlinkSync(tempFilePath);
-      
-      // Log the success
-      console.log(`${fileType.toUpperCase()} file uploaded successfully to FTP server`);
-      
-      return res.json({ 
-        success: true, 
-        message: `${fileType.toUpperCase()} file uploaded successfully`,
-        timestamp: new Date().toISOString()
-      });
-    } catch (ftpError) {
-      console.error('FTP upload error:', ftpError);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'FTP upload failed',
-        error: ftpError.message
-      });
-    } finally {
-      client.close();
-    }
-  } catch (error) {
-    console.error('Server error handling FTP upload:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error processing FTP upload request',
-      error: error.message
-    });
-  }
-});
-
-// API to test the FTP connection
+// API endpoint to test FTP connection
 app.post('/api/test-ftp-connection', async (req, res) => {
   try {
     const { server, port, username, password, passive } = req.body;
     
     // Validate required parameters
     if (!server || !port || !username || !password) {
-      return res.status(400).json({ success: false, message: 'Missing required FTP parameters' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required FTP parameters' 
+      });
     }
     
     // Set up FTP client
@@ -251,6 +179,94 @@ app.post('/api/test-ftp-connection', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server error processing FTP test request',
+      error: error.message
+    });
+  }
+});
+
+// API endpoint to upload XML/JSON to FTP server
+app.post('/api/upload-xml-ftp', async (req, res) => {
+  try {
+    const { server, port, username, password, remotePath, passive, fileType = 'xml' } = req.body;
+    
+    // Validate required parameters
+    if (!server || !port || !username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required FTP parameters' 
+      });
+    }
+    
+    // Determine file type and settings key
+    const settingsKey = fileType === 'json' ? 'schedule_json' : 'schedule_xml';
+    const filename = fileType === 'json' ? 'schedule.json' : 'schedule.xml';
+    const contentType = fileType === 'json' ? 'application/json' : 'application/xml';
+    
+    // Get the file content
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', settingsKey)
+      .single();
+      
+    if (error || !data || !data.value) {
+      return res.status(500).json({ 
+        success: false, 
+        message: `Failed to retrieve ${fileType.toUpperCase()} content`,
+        error: error?.message || `No ${fileType.toUpperCase()} content found`
+      });
+    }
+    
+    // Set up FTP client
+    const client = new ftp.Client();
+    client.ftp.verbose = true; // For detailed logs
+    
+    try {
+      // Connect to the FTP server
+      await client.access({
+        host: server,
+        port: parseInt(port),
+        user: username,
+        password: password,
+        secure: false,
+        passive: passive === true
+      });
+      
+      // Create a temp file with the content
+      const tempFilePath = path.join(__dirname, filename);
+      fs.writeFileSync(tempFilePath, data.value);
+      
+      // Upload the file
+      const uploadPath = remotePath || '/';
+      await client.ensureDir(uploadPath);
+      await client.uploadFrom(tempFilePath, path.join(uploadPath, filename));
+      
+      // Clean up the temp file
+      fs.unlinkSync(tempFilePath);
+      
+      // Log the success
+      console.log(`${fileType.toUpperCase()} file uploaded successfully to FTP server`);
+      
+      return res.json({ 
+        success: true, 
+        message: `${fileType.toUpperCase()} file uploaded successfully`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (ftpError) {
+      console.error('FTP upload error:', ftpError);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'FTP upload failed',
+        error: ftpError.message
+      });
+    } finally {
+      client.close();
+    }
+  } catch (error) {
+    console.error('Server error handling FTP upload:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error processing FTP upload request',
       error: error.message
     });
   }
