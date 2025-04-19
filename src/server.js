@@ -130,6 +130,7 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
     // Determine file type and settings key
     const settingsKey = fileType === 'json' ? 'schedule_json' : 'schedule_xml';
     const filename = fileType === 'json' ? 'schedule.json' : 'schedule.xml';
+    const contentType = fileType === 'json' ? 'application/json' : 'application/xml';
     
     // Get the file content
     const { data, error } = await supabase

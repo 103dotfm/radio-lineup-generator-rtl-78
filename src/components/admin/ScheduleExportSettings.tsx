@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +14,6 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-// Define the schema for FTP settings
 const ftpSettingsSchema = z.object({
   server: z.string().min(1, { message: 'שרת FTP נדרש' }),
   port: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0 && Number(val) <= 65535, {
@@ -49,7 +47,6 @@ const ScheduleExportSettings = () => {
   const [jsonTemplate, setJsonTemplate] = useState<string>('');
   const { toast } = useToast();
 
-  // Initialize the FTP form
   const ftpForm = useForm<FTPSettings>({
     resolver: zodResolver(ftpSettingsSchema),
     defaultValues: {
@@ -65,10 +62,8 @@ const ScheduleExportSettings = () => {
   });
 
   useEffect(() => {
-    // Load settings, templates, and previews
     const loadSettings = async () => {
       try {
-        // Load XML refresh interval
         const { data: intervalData } = await supabase
           .from('system_settings')
           .select('value')
@@ -79,7 +74,6 @@ const ScheduleExportSettings = () => {
           setRefreshInterval(intervalData.value);
         }
         
-        // Load XML data and timestamp
         const { data: xmlData } = await supabase
           .from('system_settings')
           .select('value, updated_at')
@@ -97,7 +91,6 @@ const ScheduleExportSettings = () => {
           }
         }
         
-        // Load XML template
         const { data: xmlTemplateData } = await supabase
           .from('system_settings')
           .select('value')
@@ -107,7 +100,6 @@ const ScheduleExportSettings = () => {
         if (xmlTemplateData?.value) {
           setXmlTemplate(xmlTemplateData.value);
         } else {
-          // Default XML template
           const defaultTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 <schedule>
   <!-- For each show in the schedule -->
@@ -117,12 +109,12 @@ const ScheduleExportSettings = () => {
     <end_time>%endtime</end_time>
     <name>%showname</name>
     <host>%showhosts</host>
+    <combined>%showcombined</combined>
   </show>
 </schedule>`;
           setXmlTemplate(defaultTemplate);
         }
         
-        // Load JSON data
         const { data: jsonData } = await supabase
           .from('system_settings')
           .select('value')
@@ -133,7 +125,6 @@ const ScheduleExportSettings = () => {
           setJsonPreview(jsonData.value);
         }
         
-        // Load JSON template
         const { data: jsonTemplateData } = await supabase
           .from('system_settings')
           .select('value')
@@ -143,7 +134,6 @@ const ScheduleExportSettings = () => {
         if (jsonTemplateData?.value) {
           setJsonTemplate(jsonTemplateData.value);
         } else {
-          // Default JSON template
           const defaultJsonTemplate = `{
   "schedule": [
     {
@@ -151,14 +141,14 @@ const ScheduleExportSettings = () => {
       "startTime": "%starttime",
       "endTime": "%endtime",
       "showName": "%showname",
-      "hosts": "%showhosts"
+      "hosts": "%showhosts",
+      "combined": "%showcombined"
     }
   ]
 }`;
           setJsonTemplate(defaultJsonTemplate);
         }
         
-        // Load FTP settings
         const { data: ftpData } = await supabase
           .from('system_settings')
           .select('value')
@@ -196,7 +186,6 @@ const ScheduleExportSettings = () => {
 
   const saveRefreshInterval = async () => {
     try {
-      // Validate input
       const intervalNum = parseInt(refreshInterval);
       if (isNaN(intervalNum) || intervalNum < 1) {
         toast({
@@ -249,7 +238,6 @@ const ScheduleExportSettings = () => {
         title: 'תבנית XML נשמרה בהצלחה',
       });
 
-      // Refresh the XML with the new template
       await refreshXML();
     } catch (error) {
       console.error('Error saving XML template:', error);
@@ -263,7 +251,6 @@ const ScheduleExportSettings = () => {
 
   const saveJsonTemplate = async () => {
     try {
-      // Validate JSON format before saving
       try {
         JSON.parse(jsonTemplate);
       } catch (parseError) {
@@ -290,7 +277,6 @@ const ScheduleExportSettings = () => {
         title: 'תבנית JSON נשמרה בהצלחה',
       });
 
-      // Refresh the JSON with the new template
       await refreshJSON();
     } catch (error) {
       console.error('Error saving JSON template:', error);
@@ -305,7 +291,6 @@ const ScheduleExportSettings = () => {
   const updateScheduler = async () => {
     setIsUpdatingSchedule(true);
     try {
-      // Save the refresh interval first to ensure it's up to date
       const intervalNum = parseInt(refreshInterval);
       if (!isNaN(intervalNum) && intervalNum >= 1) {
         await supabase
@@ -316,7 +301,6 @@ const ScheduleExportSettings = () => {
           }, { onConflict: 'key' });
       }
       
-      // Call the Edge Function to update the scheduler
       const { data, error } = await supabase.functions.invoke('schedule-xml-refresh', {
         body: { refreshInterval }
       });
@@ -330,7 +314,6 @@ const ScheduleExportSettings = () => {
         description: `קבצי ה-XML ו-JSON יתעדכנו כל ${refreshInterval} דקות`,
       });
       
-      // Refresh the files immediately after updating the scheduler
       await refreshXML();
       await refreshJSON();
       
@@ -350,7 +333,6 @@ const ScheduleExportSettings = () => {
     setIsRefreshing(true);
     addLog('מרענן XML...');
     try {
-      // Save the XML template first
       await supabase
         .from('system_settings')
         .upsert({ 
@@ -358,7 +340,6 @@ const ScheduleExportSettings = () => {
           value: xmlTemplate 
         }, { onConflict: 'key' });
 
-      // Call the Supabase Edge Function to generate the XML with the current template
       const { data, error } = await supabase.functions.invoke('generate-schedule-xml', {
         body: { template: xmlTemplate }
       });
@@ -367,7 +348,6 @@ const ScheduleExportSettings = () => {
         throw error;
       }
       
-      // Get the updated XML and timestamp
       const { data: updatedData, error: getError } = await supabase
         .from('system_settings')
         .select('value, updated_at')
@@ -377,13 +357,11 @@ const ScheduleExportSettings = () => {
       if (getError) {
         throw getError;
       } else if (updatedData) {
-        // Update last refreshed time
         if (updatedData.updated_at) {
           const now = new Date(updatedData.updated_at);
           setLastUpdated(now.toLocaleString());
         }
         
-        // Set XML preview
         if (updatedData.value) {
           setXmlPreview(updatedData.value);
         }
@@ -413,7 +391,6 @@ const ScheduleExportSettings = () => {
     setIsRefreshing(true);
     addLog('מרענן JSON...');
     try {
-      // Save the JSON template first
       await supabase
         .from('system_settings')
         .upsert({ 
@@ -421,7 +398,6 @@ const ScheduleExportSettings = () => {
           value: jsonTemplate 
         }, { onConflict: 'key' });
 
-      // Call the Supabase Edge Function to generate the JSON with the current template
       const { data, error } = await supabase.functions.invoke('generate-schedule-json', {
         body: { template: jsonTemplate }
       });
@@ -430,7 +406,6 @@ const ScheduleExportSettings = () => {
         throw error;
       }
       
-      // Get the updated JSON
       const { data: updatedData, error: getError } = await supabase
         .from('system_settings')
         .select('value')
@@ -440,7 +415,6 @@ const ScheduleExportSettings = () => {
       if (getError) {
         throw getError;
       } else if (updatedData) {
-        // Set JSON preview
         if (updatedData.value) {
           setJsonPreview(updatedData.value);
         }
@@ -476,7 +450,6 @@ const ScheduleExportSettings = () => {
     addLog('שומר הגדרות FTP...');
     
     try {
-      // Add lastUploaded to preserve the timestamp
       const settings = {
         ...values,
         lastUploaded: lastUploaded,
@@ -590,7 +563,6 @@ const ScheduleExportSettings = () => {
         const now = new Date().toLocaleString();
         setLastUploaded(now);
         
-        // Update the settings with the new timestamp
         const updatedSettings = {
           ...ftpForm.getValues(),
           lastUploaded: now,
@@ -654,7 +626,6 @@ const ScheduleExportSettings = () => {
         const now = new Date().toLocaleString();
         setLastUploaded(now);
         
-        // Update the settings with the new timestamp
         const updatedSettings = {
           ...ftpForm.getValues(),
           lastUploaded: now,
@@ -695,7 +666,6 @@ const ScheduleExportSettings = () => {
     setIsUploading(true);
     
     try {
-      // First, generate new file
       if (fileType === 'xml') {
         await refreshXML();
       } else {
@@ -704,7 +674,6 @@ const ScheduleExportSettings = () => {
       
       addLog(`${fileType.toUpperCase()} יוצר בהצלחה, מעלה לשרת FTP...`);
       
-      // Then upload to FTP
       if (fileType === 'xml') {
         await uploadXMLToFTP();
       } else {
@@ -730,17 +699,12 @@ const ScheduleExportSettings = () => {
     
     ftpForm.setValue('autoUpload', newValue);
     
-    // Save the updated setting
     await saveFTPSettings(ftpForm.getValues());
     
-    // Update the scheduler if needed
     if (newValue) {
       addLog(`הפעלת העלאה אוטומטית כל ${ftpForm.getValues('interval')} דקות`);
-      // Here you would set up the auto upload scheduler
-      // This would need to be implemented on the server side with a cron job or similar
     } else {
       addLog('השבתת העלאה אוטומטית');
-      // Here you would disable the auto upload scheduler
     }
   };
 
@@ -762,10 +726,8 @@ const ScheduleExportSettings = () => {
           </TabsTrigger>
         </TabsList>
         
-        {/* Files Tab */}
         <TabsContent value="files">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* XML File Section */}
             <Card>
               <CardHeader>
                 <CardTitle>קובץ XML</CardTitle>
@@ -846,7 +808,6 @@ const ScheduleExportSettings = () => {
               </CardFooter>
             </Card>
             
-            {/* JSON File Section */}
             <Card>
               <CardHeader>
                 <CardTitle>קובץ JSON</CardTitle>
@@ -895,15 +856,13 @@ const ScheduleExportSettings = () => {
           </div>
         </TabsContent>
         
-        {/* Templates Tab */}
         <TabsContent value="templates">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* XML Template Section */}
             <Card>
               <CardHeader>
                 <CardTitle>תבנית XML</CardTitle>
                 <CardDescription>
-                  עריכת תבנית קובץ XML. ניתן להשתמש בתגיות כגון %showname, %showhosts, %starttime, %endtime, %scheduledate
+                  עריכת תבנית קובץ XML. ניתן להשתמש בתגיות כגון %showname, %showhosts, %starttime, %endtime, %scheduledate, %showcombined
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -929,12 +888,11 @@ const ScheduleExportSettings = () => {
               </CardFooter>
             </Card>
             
-            {/* JSON Template Section */}
             <Card>
               <CardHeader>
                 <CardTitle>תבנית JSON</CardTitle>
                 <CardDescription>
-                  עריכת תבנית קובץ JSON. ניתן להשתמש בתגיות כגון %showname, %showhosts, %starttime, %endtime, %scheduledate
+                  עריכת תבנית קובץ JSON. ניתן להשתמש בתגיות כגון %showname, %showhosts, %starttime, %endtime, %scheduledate, %showcombined
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -962,7 +920,6 @@ const ScheduleExportSettings = () => {
           </div>
         </TabsContent>
         
-        {/* FTP Tab */}
         <TabsContent value="ftp">
           <Card>
             <CardHeader>
