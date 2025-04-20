@@ -221,8 +221,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return <TableCell key={`cell-${section}-${day}-${shiftType}`} className={`p-2 border digital-cell digital-cell-${section}`}>
         {cellShifts.map(shift => <div key={`shift-${shift.id}`} className={`mb-2 digital-shift digital-shift-${section}`}>
             <div className={`digital-shift-time ${shift.is_custom_time ? 'digital-shift-custom-time digital-shift-irregular-hours' : ''} flex items-center justify-center`}>
-              <Clock className="h-3 w-3 mr-1 opacity-70 px-px py-0 mx-[4px]" />
-              {shift.start_time.substring(0, 5)} - {shift.end_time.substring(0, 5)}
+              {shift.end_time.substring(0, 5)}-{shift.start_time.substring(0, 5)}
             </div>
             <div className="digital-shift-person mt-1 text-center">
               {getWorkerName(shift.person_name) || ''}
