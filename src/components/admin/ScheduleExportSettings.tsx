@@ -492,6 +492,14 @@ const ScheduleExportSettings = () => {
     addLog(`בודק חיבור ל-FTP: ${values.server}:${values.port}`);
     
     try {
+      const reqData = {
+        server: values.server,
+        port: values.port,
+        username: values.username,
+        password: values.password,
+        passive: values.passive,
+      };
+      
       addLog(`שולח בקשת חיבור FTP עם נתונים: ${JSON.stringify({
         server: values.server,
         port: values.port,
@@ -500,18 +508,15 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const response = await fetch('/api/test-ftp-connection', {
+      const fullApiPath = window.location.origin + '/api/test-ftp-connection';
+      addLog(`Sending request to: ${fullApiPath}`);
+
+      const response = await fetch(fullApiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          server: values.server,
-          port: values.port,
-          username: values.username,
-          password: values.password,
-          passive: values.passive,
-        }),
+        body: JSON.stringify(reqData),
       });
       
       addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
@@ -574,6 +579,16 @@ const ScheduleExportSettings = () => {
     addLog(`מעלה קובץ XML לשרת FTP: ${values.server}:${values.port}`);
     
     try {
+      const reqData = {
+        server: values.server,
+        port: values.port,
+        username: values.username,
+        password: values.password,
+        remotePath: values.remotePath,
+        passive: values.passive,
+        fileType: 'xml'
+      };
+      
       addLog(`שולח בקשת העלאת XML עם נתונים: ${JSON.stringify({
         server: values.server,
         port: values.port,
@@ -583,20 +598,15 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const response = await fetch('/api/upload-xml-ftp', {
+      const fullApiPath = window.location.origin + '/api/upload-xml-ftp';
+      addLog(`Sending upload request to: ${fullApiPath}`);
+
+      const response = await fetch(fullApiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          server: values.server,
-          port: values.port,
-          username: values.username,
-          password: values.password,
-          remotePath: values.remotePath,
-          passive: values.passive,
-          fileType: 'xml'
-        }),
+        body: JSON.stringify(reqData),
       });
       
       addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
@@ -671,6 +681,16 @@ const ScheduleExportSettings = () => {
     addLog(`מעלה קובץ JSON לשרת FTP: ${values.server}:${values.port}`);
     
     try {
+      const reqData = {
+        server: values.server,
+        port: values.port,
+        username: values.username,
+        password: values.password,
+        remotePath: values.remotePath,
+        passive: values.passive,
+        fileType: 'json'
+      };
+      
       addLog(`שולח בקשת העלאת JSON עם נתונים: ${JSON.stringify({
         server: values.server,
         port: values.port,
@@ -680,20 +700,15 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const response = await fetch('/api/upload-xml-ftp', {
+      const fullApiPath = window.location.origin + '/api/upload-xml-ftp';
+      addLog(`Sending JSON upload request to: ${fullApiPath}`);
+
+      const response = await fetch(fullApiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          server: values.server,
-          port: values.port,
-          username: values.username,
-          password: values.password,
-          remotePath: values.remotePath,
-          passive: values.passive,
-          fileType: 'json'
-        }),
+        body: JSON.stringify(reqData),
       });
       
       addLog(`תשובה התקבלה עם קוד סטטוס: ${response.status}`);
@@ -993,7 +1008,7 @@ const ScheduleExportSettings = () => {
               <CardHeader>
                 <CardTitle>תבנית JSON</CardTitle>
                 <CardDescription>
-                  עריכת תבנית קובץ JSON. ניתן להשתמש בתגי��ת כגון %showname, %showhosts, %starttime, %endtime, %scheduledate, %showcombined
+                  עריכת תבנית קובץ JSON. ניתן להשתמש בתגיות כגון %showname, %showhosts, %starttime, %endtime, %scheduledate, %showcombined
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
