@@ -330,3 +330,6 @@
     vertical-align: top !important;
     padding: 0.3rem 0.1rem 0rem 0.1rem !important;
 }
+.html2pdf__digital-work-arrangement-view td {
+    display: none;
+}
