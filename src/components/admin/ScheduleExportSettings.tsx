@@ -508,10 +508,10 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const fullApiPath = window.location.origin + '/api/test-ftp-connection';
-      addLog(`Sending request to: ${fullApiPath}`);
+      const apiUrl = new URL('/api/test-ftp-connection', window.location.origin).href;
+      addLog(`Sending request to: ${apiUrl}`);
 
-      const response = await fetch(fullApiPath, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -524,14 +524,22 @@ const ScheduleExportSettings = () => {
       const contentType = response.headers.get('content-type');
       addLog(`Content-Type של התשובה: ${contentType}`);
       
-      let responseText = await response.text();
-      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
-      
-      let result;
       if (!response.ok) {
+        const responseText = await response.text();
+        addLog(`Error response text: ${responseText.substring(0, 200)}...`);
         throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
       }
       
+      let responseText;
+      try {
+        responseText = await response.text();
+        addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
+      } catch (textError) {
+        addLog(`Error getting response text: ${textError instanceof Error ? textError.message : 'Unknown error'}`);
+        throw new Error('Failed to read response text');
+      }
+      
+      let result;
       if (contentType && contentType.includes('application/json')) {
         try {
           result = JSON.parse(responseText);
@@ -598,10 +606,10 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const fullApiPath = window.location.origin + '/api/upload-xml-ftp';
-      addLog(`Sending upload request to: ${fullApiPath}`);
+      const apiUrl = new URL('/api/upload-xml-ftp', window.location.origin).href;
+      addLog(`Sending upload request to: ${apiUrl}`);
 
-      const response = await fetch(fullApiPath, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -614,14 +622,22 @@ const ScheduleExportSettings = () => {
       const contentType = response.headers.get('content-type');
       addLog(`Content-Type של התשובה: ${contentType}`);
       
-      let responseText = await response.text();
-      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
-      
-      let result;
       if (!response.ok) {
+        const responseText = await response.text();
+        addLog(`Error response text: ${responseText.substring(0, 200)}...`);
         throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
       }
       
+      let responseText;
+      try {
+        responseText = await response.text();
+        addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
+      } catch (textError) {
+        addLog(`Error getting response text: ${textError instanceof Error ? textError.message : 'Unknown error'}`);
+        throw new Error('Failed to read response text');
+      }
+      
+      let result;
       if (contentType && contentType.includes('application/json')) {
         try {
           result = JSON.parse(responseText);
@@ -700,10 +716,10 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const fullApiPath = window.location.origin + '/api/upload-xml-ftp';
-      addLog(`Sending JSON upload request to: ${fullApiPath}`);
+      const apiUrl = new URL('/api/upload-xml-ftp', window.location.origin).href;
+      addLog(`Sending JSON upload request to: ${apiUrl}`);
 
-      const response = await fetch(fullApiPath, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -716,14 +732,22 @@ const ScheduleExportSettings = () => {
       const contentType = response.headers.get('content-type');
       addLog(`Content-Type של התשובה: ${contentType}`);
       
-      let responseText = await response.text();
-      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
-      
-      let result;
       if (!response.ok) {
+        const responseText = await response.text();
+        addLog(`Error response text: ${responseText.substring(0, 200)}...`);
         throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
       }
       
+      let responseText;
+      try {
+        responseText = await response.text();
+        addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
+      } catch (textError) {
+        addLog(`Error getting response text: ${textError instanceof Error ? textError.message : 'Unknown error'}`);
+        throw new Error('Failed to read response text');
+      }
+      
+      let result;
       if (contentType && contentType.includes('application/json')) {
         try {
           result = JSON.parse(responseText);

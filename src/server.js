@@ -17,8 +17,13 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0'
 );
 
-// *** API ROUTES *** - Define these before any static file middleware
-// This ensures API routes aren't intercepted by the static file handler
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url}`);
+  next();
+});
+
+// *** API ROUTES *** - Define API routes first to ensure they take precedence
 
 // API endpoint to test FTP connection
 app.post('/api/test-ftp-connection', async (req, res) => {
@@ -318,4 +323,9 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  console.log(`API endpoints available at:`);
+  console.log(`- POST /api/test-ftp-connection`);
+  console.log(`- POST /api/upload-xml-ftp`);
+  console.log(`- GET /schedule.xml`);
+  console.log(`- GET /schedule.json`);
 });

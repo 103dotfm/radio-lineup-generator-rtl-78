@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useSearchParams } from 'react-router-dom';
@@ -32,6 +33,7 @@ const Admin = () => {
       setDefaultTab("database");
     } else if (tab === 'exports') {
       setDefaultTab("exports");
+      console.log("Setting default tab to exports based on URL parameter");
     }
   }, [searchParams, redirectProcessed]);
 
