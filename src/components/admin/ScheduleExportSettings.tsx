@@ -508,7 +508,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const apiUrl = new URL('/api/test-ftp-connection', window.location.origin).href;
+      const apiUrl = '/api/test-ftp-connection';
       addLog(`Sending request to: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
@@ -548,7 +548,12 @@ const ScheduleExportSettings = () => {
           throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
         }
       } else {
-        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          addLog(`התשובה אינה בפורמט JSON תקין: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+          throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+        }
       }
       
       if (result.success) {
@@ -606,7 +611,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const apiUrl = new URL('/api/upload-xml-ftp', window.location.origin).href;
+      const apiUrl = '/api/upload-xml-ftp';
       addLog(`Sending upload request to: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
@@ -646,7 +651,12 @@ const ScheduleExportSettings = () => {
           throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
         }
       } else {
-        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          addLog(`התשובה אינה בפורמט JSON תקין: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+          throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+        }
       }
       
       if (result.success) {
@@ -716,7 +726,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const apiUrl = new URL('/api/upload-xml-ftp', window.location.origin).href;
+      const apiUrl = '/api/upload-xml-ftp';
       addLog(`Sending JSON upload request to: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
@@ -756,7 +766,12 @@ const ScheduleExportSettings = () => {
           throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
         }
       } else {
-        throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          addLog(`התשובה אינה בפורמט JSON תקין: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+          throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
+        }
       }
       
       if (result.success) {
@@ -1142,7 +1157,7 @@ const ScheduleExportSettings = () => {
                     name="remotePath"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>נתיב בשרת</FormLabel>
+                        <FormLabel>נ��יב בשרת</FormLabel>
                         <FormControl>
                           <Input placeholder="/public_html/xml" {...field} />
                         </FormControl>

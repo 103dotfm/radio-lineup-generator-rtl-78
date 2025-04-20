@@ -48,14 +48,20 @@ app.post('/api/test-ftp-connection', async (req, res) => {
     
     try {
       // Connect to the FTP server
-      await client.access({
+      const accessOptions = {
         host: server,
         port: parseInt(port),
         user: username,
         password: password,
-        secure: false,
-        passive: passive === true
-      });
+        secure: false
+      };
+      
+      // Set passive mode separately
+      if (passive === true) {
+        accessOptions.passive = true;
+      }
+      
+      await client.access(accessOptions);
       
       console.log('FTP connection successful. Listing directory content...');
       
@@ -139,14 +145,20 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
       console.log(`Connecting to FTP server ${server}:${port}`);
       
       // Connect to the FTP server
-      await client.access({
+      const accessOptions = {
         host: server,
         port: parseInt(port),
         user: username,
         password: password,
-        secure: false,
-        passive: passive === true
-      });
+        secure: false
+      };
+      
+      // Set passive mode separately
+      if (passive === true) {
+        accessOptions.passive = true;
+      }
+      
+      await client.access(accessOptions);
       
       console.log('FTP connection successful');
       
