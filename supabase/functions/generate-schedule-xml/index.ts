@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -162,6 +161,7 @@ function processTemplate(template: string, show: any): string {
     date: show.date || ''
   });
 
+  // Process the template with all substitutions
   return template
     .replace(/%showname/g, escapeXml(show.displayName || show.show_name || ''))
     .replace(/%showhosts/g, escapeXml(show.displayHost || show.host_name || ''))

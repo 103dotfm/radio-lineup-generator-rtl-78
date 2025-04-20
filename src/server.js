@@ -17,8 +17,8 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5cm1vZGdibnpxYm1hdGx5cHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MDc2ODEsImV4cCI6MjA1MzI4MzY4MX0.GH07WGicLLqRaTk7fCaE-sJ2zK7e25eGtB3dbzh_cx0'
 );
 
-// API routes - Define these BEFORE the static files middleware
-// This is crucial to make sure API routes are handled correctly
+// *** API ROUTES *** - Define these before any static file middleware
+// This ensures API routes aren't intercepted by the static file handler
 
 // API endpoint to test FTP connection
 app.post('/api/test-ftp-connection', async (req, res) => {
@@ -194,6 +194,8 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
   }
 });
 
+// *** FILE SERVING ROUTES (XML, JSON) ***
+
 // Handle schedule.xml requests
 app.get('/schedule.xml', async (req, res) => {
   try {
@@ -302,12 +304,14 @@ app.get('/schedule.json', async (req, res) => {
   }
 });
 
-// Serve static files from the React app - AFTER API routes
+// *** STATIC FILES & CATCHALL ***
+// IMPORTANT: These must come AFTER all API and file serving routes
+
+// Serve static files from the React app
 app.use(express.static(path.join(__dirname, '../dist')));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
-// This MUST be AFTER all the other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });

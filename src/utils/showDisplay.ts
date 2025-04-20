@@ -12,4 +12,3 @@ export const getCombinedShowDisplay = (showName: string, hostName?: string) => {
   }
   return `${showName} עם ${hostName}`;
 };
-
