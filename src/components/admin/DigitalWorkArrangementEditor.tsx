@@ -767,7 +767,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     if (!element) return;
 
     const options = {
-      margin: 1,
+      margin: 10,
       filename: `סידור_עבודה_דיגיטל_${format(weekDate, 'yyyy-MM-dd')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
