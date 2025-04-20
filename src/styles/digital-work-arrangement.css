@@ -1,3 +1,7 @@
+/* Fix PDF */
+.digital-work-arrangement img {
+  display: block;
+}
 
 /* Digital Work Arrangement Styles */
 .digital-work-arrangement table,
