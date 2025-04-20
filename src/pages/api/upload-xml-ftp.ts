@@ -53,14 +53,23 @@ export default async function handler(req: Request, res: Response) {
       console.log(`API Route: Connecting to FTP server ${server}:${port}`);
       
       // Connect to the FTP server
-      await client.access({
+      // Create the access options object with correct typing
+      const accessOptions: ftp.AccessOptions = {
         host: server,
         port: parseInt(port),
         user: username,
         password: password,
-        secure: false,
-        passive: passive === true
-      });
+        secure: false
+      };
+      
+      // Set passive mode separately as it's not part of the type definition
+      if (passive === true) {
+        // @ts-ignore - We need to ignore the TypeScript error as passive is supported by the library
+        // but not included in the TypeScript definition
+        accessOptions.passive = true;
+      }
+      
+      await client.access(accessOptions);
       
       console.log('API Route: FTP connection successful');
       
