@@ -23,7 +23,6 @@ export default async function handler(req: Request, res: Response) {
     client.ftp.verbose = true; // For detailed logs
     
     try {
-      // Connect to the FTP server
       // Create the access options object with correct typing
       const accessOptions: ftp.AccessOptions = {
         host: server,
@@ -33,11 +32,11 @@ export default async function handler(req: Request, res: Response) {
         secure: false
       };
       
-      // Set passive mode separately as it's not part of the type definition
+      // Set passive mode separately 
+      // We need to manually set this property since it's not in the TypeScript type definition
       if (passive === true) {
-        // @ts-ignore - We need to ignore the TypeScript error as passive is supported by the library
-        // but not included in the TypeScript definition
-        accessOptions.passive = true;
+        // We need to use type assertion to add the passive property
+        (accessOptions as any).passive = true;
       }
       
       await client.access(accessOptions);
