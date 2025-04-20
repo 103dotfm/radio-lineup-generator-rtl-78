@@ -27,6 +27,7 @@
 .digital-work-arrangement-view th {
   width: 16.666% !important; /* Equal width for all 6 columns */
   table-layout: fixed;
+  padding: 0.2rem 1rem 0.2rem 1rem;
 }
 
 /* RTL direction for time display */
@@ -321,12 +322,14 @@
   margin-bottom: -0.22rem;
   font-size: 0.8rem;
 }
-
 .digital-shift-note {
     font-size: 0.75rem !important;
     line-height: 0.8rem !important;
 }
 .digital-work-arrangement-view td {
     vertical-align: top !important;
-    padding: 0.3rem 0 0 0 !important;
+    padding: 0.3rem 0.1rem 0rem 0.1rem !important;
+}
+.digital-section-title {
+    padding: 1rem !important;
 }
