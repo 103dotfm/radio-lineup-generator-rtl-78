@@ -1,6 +1,6 @@
 /* Fix PDF */
 .digital-work-arrangement img {
-  display: block;
+  display: unset;
 }
 
 /* Digital Work Arrangement Styles */
