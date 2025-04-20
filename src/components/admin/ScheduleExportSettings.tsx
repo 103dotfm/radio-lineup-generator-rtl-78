@@ -508,10 +508,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const apiUrl = '/api/test-ftp-connection';
-      addLog(`Sending request to: ${apiUrl}`);
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/api/test-ftp-connection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -530,30 +527,15 @@ const ScheduleExportSettings = () => {
         throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
       }
       
-      let responseText;
-      try {
-        responseText = await response.text();
-        addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
-      } catch (textError) {
-        addLog(`Error getting response text: ${textError instanceof Error ? textError.message : 'Unknown error'}`);
-        throw new Error('Failed to read response text');
-      }
+      const responseText = await response.text();
+      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
       
       let result;
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
-          throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
-        }
-      } else {
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          addLog(`התשובה אינה בפורמט JSON תקין: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
-          throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
-        }
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+        throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
       }
       
       if (result.success) {
@@ -611,10 +593,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const apiUrl = '/api/upload-xml-ftp';
-      addLog(`Sending upload request to: ${apiUrl}`);
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/api/upload-xml-ftp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -633,30 +612,15 @@ const ScheduleExportSettings = () => {
         throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
       }
       
-      let responseText;
-      try {
-        responseText = await response.text();
-        addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
-      } catch (textError) {
-        addLog(`Error getting response text: ${textError instanceof Error ? textError.message : 'Unknown error'}`);
-        throw new Error('Failed to read response text');
-      }
+      const responseText = await response.text();
+      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
       
       let result;
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
-          throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
-        }
-      } else {
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          addLog(`התשובה אינה בפורמט JSON תקין: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
-          throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
-        }
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+        throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
       }
       
       if (result.success) {
@@ -726,10 +690,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const apiUrl = '/api/upload-xml-ftp';
-      addLog(`Sending JSON upload request to: ${apiUrl}`);
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/api/upload-xml-ftp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -748,30 +709,15 @@ const ScheduleExportSettings = () => {
         throw new Error(`Server responded with status ${response.status}: ${responseText.substring(0, 100)}`);
       }
       
-      let responseText;
-      try {
-        responseText = await response.text();
-        addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
-      } catch (textError) {
-        addLog(`Error getting response text: ${textError instanceof Error ? textError.message : 'Unknown error'}`);
-        throw new Error('Failed to read response text');
-      }
+      const responseText = await response.text();
+      addLog(`RESPONSE RAW TEXT (first 200 chars): ${responseText.substring(0, 200)}...`);
       
       let result;
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
-          throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
-        }
-      } else {
-        try {
-          result = JSON.parse(responseText);
-        } catch (parseError) {
-          addLog(`התשובה אינה בפורמט JSON תקין: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
-          throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}`);
-        }
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        addLog(`שגיאה בפענוח JSON: ${parseError instanceof Error ? parseError.message : 'שגיאה לא ידועה'}`);
+        throw new Error(`Failed to parse JSON response: ${responseText.substring(0, 100)}`);
       }
       
       if (result.success) {

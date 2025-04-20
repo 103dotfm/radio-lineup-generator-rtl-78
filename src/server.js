@@ -211,8 +211,6 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
   }
 });
 
-// *** FILE SERVING ROUTES (XML, JSON) ***
-
 // Handle schedule.xml requests
 app.get('/schedule.xml', async (req, res) => {
   try {
