@@ -315,3 +315,13 @@
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+.digital-shift-time {
+  text-decoration: underline;
+  margin-bottom: -0.22rem;
+  font-size: 0.8rem;
+}
+
+.digital-shift-note {
+  font-size: 0.75rem;
+}
