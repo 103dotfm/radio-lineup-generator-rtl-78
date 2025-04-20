@@ -773,7 +773,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    html2pdf().set(options).from(element).save();
+    html2pdf().set(options).from(element).toContainer().save();
   };
 
   const togglePreviewMode = () => {
