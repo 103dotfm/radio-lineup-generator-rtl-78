@@ -508,7 +508,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const response = await fetch('/api/test-ftp-connection', {
+      const response = await fetch(`${window.location.origin}/api/test-ftp-connection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -593,7 +593,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const response = await fetch('/api/upload-xml-ftp', {
+      const response = await fetch(`${window.location.origin}/api/upload-xml-ftp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -690,7 +690,7 @@ const ScheduleExportSettings = () => {
         passive: values.passive,
       })}`);
 
-      const response = await fetch('/api/upload-xml-ftp', {
+      const response = await fetch(`${window.location.origin}/api/upload-xml-ftp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

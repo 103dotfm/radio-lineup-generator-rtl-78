@@ -61,11 +61,11 @@ export default async function handler(req: Request, res: Response) {
         secure: false
       };
       
-      // Set passive mode separately
+      // Set passive mode separately 
       // We need to manually set this property since it's not in the TypeScript type definition
       if (passive === true) {
-        // We need to use type assertion to add the passive property
-        (accessOptions as any).passive = true;
+        // @ts-ignore
+        accessOptions.passive = true;
       }
       
       await client.access(accessOptions);

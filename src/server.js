@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const ftp = require('basic-ftp');
 const fs = require('fs');
+const os = require('os');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -163,7 +164,7 @@ app.post('/api/upload-xml-ftp', async (req, res) => {
       console.log('FTP connection successful');
       
       // Create a temp file with the content
-      const tempFilePath = path.join(__dirname, filename);
+      const tempFilePath = path.join(os.tmpdir(), filename);
       fs.writeFileSync(tempFilePath, data.value);
       console.log(`Temporary file created at ${tempFilePath}`);
       
