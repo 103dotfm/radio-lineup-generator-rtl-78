@@ -323,8 +323,10 @@
 }
 
 .digital-shift-note {
-  font-size: 0.75rem !important;
+    font-size: 0.75rem !important;
+    line-height: 0.8rem !important;
 }
 .digital-work-arrangement-view td {
     vertical-align: top !important;
+    padding: 0.3rem 0 0 0 !important;
 }
