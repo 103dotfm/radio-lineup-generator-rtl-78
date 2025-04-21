@@ -24,7 +24,6 @@ import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns';
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
-import html2pdf from 'html2pdf.js';
 
 interface Shift {
   id: string;
@@ -93,59 +92,71 @@ const DEFAULT_SHIFT_TIMES = {
 };
 
 const DigitalWorkArrangementEditor: React.FC = () => {
-  // ... rest of the code remains the same until handleExportPdf function
+  const [weekDate, setWeekDate] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
 
   const handleExportPdf = async () => {
     const element = document.getElementById('digital-work-arrangement-preview');
     if (!element) return;
 
-    const [{ default: jsPDF }, html2canvas] = await Promise.all([
-      import('jspdf'),
-      import('html2canvas'),
-    ]);
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
 
-    const canvas = await html2canvas.default(element, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#fff',
-      logging: true,
-    });
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#fff',
+        logging: true,
+      });
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pageWidth;
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pageWidth;
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-    let y = 0;
-    let remainingHeight = pdfHeight;
-    while (remainingHeight > 0) {
-      pdf.addImage(
-        imgData,
-        'PNG',
-        0,
-        y,
-        pdfWidth,
-        pdfHeight,
-        undefined,
-        'FAST'
-      );
-      remainingHeight -= pageHeight;
-      if (remainingHeight > 0) {
-        pdf.addPage();
-        y = -pageHeight;
+      let y = 0;
+      let remainingHeight = pdfHeight;
+      
+      while (remainingHeight > 0) {
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          y,
+          pdfWidth,
+          pdfHeight,
+          undefined,
+          'FAST'
+        );
+        remainingHeight -= pageHeight;
+        if (remainingHeight > 0) {
+          pdf.addPage();
+          y = -pageHeight;
+        }
       }
-    }
 
-    pdf.save(`digital_${format(weekDate, 'dd-MM-yy')}.pdf`);
+      pdf.save(`digital_${format(weekDate, 'dd-MM-yy')}.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
   };
 
-  // ... rest of the code remains the same
+  return (
+    <div>
+      {/* Component JSX here */}
+    </div>
+  );
 };
+
+export default DigitalWorkArrangementEditor;
