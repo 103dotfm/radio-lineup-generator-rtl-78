@@ -329,3 +329,6 @@
     vertical-align: top !important;
     padding: 0.3rem 0.1rem 0rem 0.1rem !important;
 }
+
+// PDF Tweaks
+.digital-export-pdf svg {display: none !important;}
