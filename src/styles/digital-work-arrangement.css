@@ -109,24 +109,156 @@
   
   .digital-work-arrangement-view table {
     page-break-inside: avoid;
+    table-layout: fixed !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 14px !important;
   }
-  
-  .digital-section-title-row {
-    background-color: #f7fafc !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+
+  /* NEW PDF/PRINT-SPECIFIC OVERRIDES */
+  .digital-work-arrangement-view th,
+  .digital-work-arrangement-view td {
+    padding: 8px 4px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    line-height: 1.25 !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+    word-break: break-word !important;
+    font-size: 16px !important;
+    font-family: 'Heebo', Arial, sans-serif !important;
   }
-  
-  .digital-header-cell {
+
+  .digital-work-arrangement-view th {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    height: 56px !important;
+    vertical-align: middle !important;
+    text-align: center !important;
     background-color: #000 !important;
-    color: white !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #fff !important;
+    border-color: #ddd !important;
+  }
+
+  .digital-work-arrangement-view td {
+    vertical-align: middle !important;
+    font-size: 16px !important;
+    line-height: 1.3 !important;
+    padding: 0.35rem 0.5rem !important;
+  }
+
+  .digital-work-arrangement-view .digital-shift-time,
+  .digital-work-arrangement-view .digital-radio-time {
+    font-size: 1.05em !important;
+    vertical-align: middle !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+    text-decoration: underline !important;
+    font-weight: 500 !important;
+    padding: 0 !important;
+  }
+
+  .digital-work-arrangement-view .worker-name,
+  .digital-work-arrangement-view .digital-shift-person,
+  .digital-work-arrangement-view .digital-radio-person {
+    font-size: 17px !important;
+    font-weight: bold !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+  }
+
+  .digital-work-arrangement-view .digital-shift-note,
+  .digital-work-arrangement-view .digital-radio-note,
+  .digital-work-arrangement-view .additional-text {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+    color: #666 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Fix for SVG icons inside table cells */
+  .digital-work-arrangement-view td svg,
+  .digital-work-arrangement-view th svg,
+  .digital-work-arrangement-view .lucide,
+  .digital-work-arrangement-view img {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    height: 1.2em !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: 1.2em !important;
+  }
+
+  /* Fix image alignment & uncropping */
+  .digital-work-arrangement-view img {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    max-height: 34px !important;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* Override Tailwind for background/padding/spacing */
+  .digital-work-arrangement-view .section-title,
+  .digital-work-arrangement-view .digital-section-title {
+    background-color: #f7fafc !important;
+    color: #2d3748 !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+    padding-right: 1rem !important;
+    border-right: 3px solid #3b82f6 !important;
+    border-top: none !important;
+    font-size: 20px !important;
+    height: auto !important;
+    min-height: unset !important;
+  }
+
+  .digital-work-arrangement-view .section-container {
+    margin-bottom: 10mm !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Always show right border for the first column */
+  .digital-work-arrangement-view td:first-child,
+  .digital-work-arrangement-view th:first-child {
+    border-right: 2px solid #333 !important;
+  }
+
+  /* Padding fix for table headers/footers (stop cropping) */
+  .digital-work-arrangement-view tr th,
+  .digital-work-arrangement-view tr td {
+    box-sizing: border-box !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
   }
   
-  .digital-footer-image {
-    max-width: 100%;
-    page-break-inside: avoid;
+  /* Ensure footer text and logos look correct in PDF */
+  .digital-work-arrangement-view .digital-footer-text {
+    text-align: center !important;
+    font-size: 17px !important;
+    font-weight: 500 !important;
+    margin: 24px 0 0 0 !important;
+    line-height: 1.5 !important;
+    padding: 0 !important;
+    background: none !important;
+  }
+
+  .digital-work-arrangement-view .digital-footer-image {
+    max-width: 120px !important;
+    max-height: 40px !important;
+    display: block !important;
+    margin: 0 auto !important;
+    vertical-align: middle !important;
+  }
+
+  /* Optional: Remove selection coloring if present */
+  .digital-work-arrangement-view ::selection {
+    background: none !important;
   }
 }
 
