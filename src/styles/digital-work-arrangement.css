@@ -1,4 +1,3 @@
-
 /* Digital Work Arrangement Styles */
 .digital-work-arrangement table,
 .digital-work-arrangement-view table {
@@ -100,6 +99,35 @@
 /* Custom row styles */
 .digital-custom-row {
   background-color: #f9fafb;
+}
+
+/* Print styles */
+@media print {
+  .digital-work-arrangement-view {
+    page-break-inside: avoid;
+  }
+  
+  .digital-work-arrangement-view table {
+    page-break-inside: avoid;
+  }
+  
+  .digital-section-title-row {
+    background-color: #f7fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .digital-header-cell {
+    background-color: #000 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .digital-footer-image {
+    max-width: 100%;
+    page-break-inside: avoid;
+  }
 }
 
 /* Improved input styling */
@@ -300,142 +328,4 @@
 .digital-work-arrangement-view td {
     vertical-align: top !important;
     padding: 0.3rem 0.1rem 0rem 0.1rem !important;
-}
-
-/* PDF Export Styles */
-@media print {
-  /* Hide all SVG icons */
-  svg {display: none !important;}
-  
-  /* Make sure all content is visible in PDF */
-  #digital-work-arrangement-preview {
-    width: 100% !important;
-    overflow: visible !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-  
-  /* Fix table layout for PDF */
-  .digital-work-arrangement-view table {
-    width: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
-    page-break-inside: auto !important;
-  }
-  
-  /* Ensure table headers and cells have proper height and alignment */
-  .digital-work-arrangement-view th,
-  .digital-work-arrangement-view td {
-    padding: 6px 4px !important;
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
-    vertical-align: middle !important;
-    page-break-inside: avoid !important;
-    overflow: visible !important;
-  }
-  
-  /* Ensure text in cells is properly sized and aligned */
-  .digital-work-arrangement-view th *,
-  .digital-work-arrangement-view td * {
-    font-size: 11pt !important;
-    line-height: 1.3 !important;
-    overflow: visible !important;
-  }
-  
-  /* Worker name styling */
-  .digital-shift-person, 
-  .digital-radio-person,
-  .worker-name {
-    font-size: 12pt !important;
-    font-weight: bold !important;
-    margin: 4px 0 !important;
-    padding: 0 !important;
-    display: block !important;
-  }
-  
-  /* Fix shift time display */
-  .digital-shift-time,
-  .digital-radio-time {
-    display: block !important;
-    text-align: center !important;
-    margin: 3px 0 !important;
-    padding: 0 !important;
-    font-size: 10pt !important;
-  }
-  
-  /* Fix additional notes */
-  .digital-shift-note,
-  .digital-radio-note,
-  .additional-text {
-    display: block !important;
-    text-align: center !important;
-    margin: 2px 0 !important;
-    padding: 0 !important;
-    font-size: 9pt !important;
-    line-height: 1.2 !important;
-  }
-  
-  /* Fix irregular hours highlight */
-  .digital-shift-irregular-hours {
-    background-color: #000000 !important;
-    color: #e4ff6c !important;
-    padding: 2px 6px !important;
-    margin: 2px auto !important;
-    display: inline-block !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  
-  /* Fix section titles */
-  .digital-section-title,
-  .section-title {
-    font-size: 14pt !important;
-    font-weight: 600 !important;
-    background-color: #f7fafc !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    border-right: 3px solid #3b82f6 !important;
-    padding: 6px 8px !important;
-    margin: 12px 0 8px 0 !important;
-  }
-  
-  /* Fix footer text */
-  .digital-footer-text {
-    font-size: 11pt !important;
-    line-height: 1.4 !important;
-    margin-top: 20px !important;
-    text-align: center !important;
-    white-space: pre-line !important;
-  }
-  
-  /* Fix background colors for specific sections */
-  .digital-cell-digital_shifts,
-  .digital-cell-radio_north,
-  .digital-cell-transcription_shifts,
-  .digital-cell-live_social_shifts {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  
-  /* Fix borders */
-  table, th, td {
-    border: 1px solid #000000 !important;
-  }
-  
-  /* Fix column widths for print */
-  .digital-work-arrangement-view th:nth-child(n),
-  .digital-work-arrangement-view td:nth-child(n) {
-    width: 16.66% !important;
-  }
-  
-  /* Remove any interactive elements from print */
-  button, 
-  .Button, 
-  [role="button"],
-  input,
-  select,
-  .actions {
-    display: none !important;
-  }
 }
