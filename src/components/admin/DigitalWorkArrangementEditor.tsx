@@ -11,10 +11,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight, Calendar, Eye, Printer, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight, Calendar, Eye, Printer } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +38,7 @@ interface Shift {
   is_custom_time: boolean;
   is_hidden: boolean;
   position: number;
+  arrangement_id?: string;
 }
 
 interface CustomRow {
@@ -46,6 +46,7 @@ interface CustomRow {
   section_name: string;
   contents: Record<number, string>;
   position: number;
+  arrangement_id?: string;
 }
 
 interface WorkArrangement {
@@ -146,7 +147,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       if (arrangementError) throw arrangementError;
       
       if (arrangementData) {
-        setArrangementData(arrangementData);
+        setArrangementData(arrangementData as WorkArrangement);
         setFooterText(arrangementData.footer_text || '');
         setNotes(arrangementData.notes || '');
       } else {
@@ -156,27 +157,31 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       }
       
       // Fetch shifts
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('digital_work_shifts')
-        .select('*')
-        .eq('week_start', weekStartStr)
-        .order('position', { ascending: true });
-      
-      if (shiftsError) throw shiftsError;
-      
-      setShifts(shiftsData || []);
-      
-      // Fetch custom rows
-      const { data: customRowsData, error: customRowsError } = await supabase
-        .from('digital_work_custom_rows')
-        .select('*')
-        .eq('week_start', weekStartStr)
-        .order('position', { ascending: true });
-      
-      if (customRowsError) throw customRowsError;
-      
-      setCustomRows(customRowsData || []);
-
+      if (arrangementData?.id) {
+        const { data: shiftsData, error: shiftsError } = await supabase
+          .from('digital_shifts')
+          .select('*')
+          .eq('arrangement_id', arrangementData.id)
+          .order('position', { ascending: true });
+        
+        if (shiftsError) throw shiftsError;
+        
+        setShifts(shiftsData as Shift[] || []);
+        
+        // Fetch custom rows
+        const { data: customRowsData, error: customRowsError } = await supabase
+          .from('digital_shift_custom_rows')
+          .select('*')
+          .eq('arrangement_id', arrangementData.id)
+          .order('position', { ascending: true });
+        
+        if (customRowsError) throw customRowsError;
+        
+        setCustomRows(customRowsData as CustomRow[] || []);
+      } else {
+        setShifts([]);
+        setCustomRows([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -200,14 +205,21 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           .insert({
             week_start: weekStartStr,
             footer_text: footerText,
-            notes: notes
+            notes: notes,
+            footer_image_url: null
           })
           .select('id')
           .single();
         
         if (error) throw error;
         arrangementId = data.id;
-        setArrangementData({ ...data, week_start: weekStartStr, footer_text: footerText, notes: notes });
+        setArrangementData({ 
+          id: data.id, 
+          week_start: weekStartStr, 
+          footer_text: footerText, 
+          notes: notes, 
+          footer_image_url: null 
+        });
       } else {
         // Update existing arrangement
         const { error } = await supabase
@@ -220,7 +232,13 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         
         if (error) throw error;
         
-        setArrangementData(prev => prev ? { ...prev, footer_text: footerText, notes: notes } : null);
+        if (arrangementData) {
+          setArrangementData({
+            ...arrangementData,
+            footer_text: footerText,
+            notes: notes
+          });
+        }
       }
       
       toast({
@@ -243,7 +261,8 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       .filter(s => s.section_name === sectionName)
       .reduce((max, shift) => Math.max(max, shift.position), 0);
     
-    const newShift: Omit<Shift, 'id'> = {
+    const newShift: Shift = {
+      id: '',
       section_name: sectionName,
       day_of_week: 0, // Sunday
       shift_type: SHIFT_TYPES.MORNING,
@@ -256,7 +275,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       position: highestPosition + 1
     };
     
-    setEditingShift(newShift as Shift);
+    setEditingShift(newShift);
     setShowShiftDialog(true);
   };
 
@@ -266,30 +285,34 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   };
 
   const handleSaveShift = async () => {
-    if (!editingShift) return;
+    if (!editingShift || !arrangementData?.id) return;
     
     try {
-      const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      
       const shiftData = {
         ...editingShift,
-        week_start: weekStartStr
+        arrangement_id: arrangementData.id
       };
       
-      delete (shiftData as any).id;
+      let result;
       
       if (editingShift.id) {
         // Update existing shift
-        await supabase
-          .from('digital_work_shifts')
-          .update(shiftData)
-          .eq('id', editingShift.id);
+        const { id, ...dataWithoutId } = shiftData;
+        result = await supabase
+          .from('digital_shifts')
+          .update(dataWithoutId)
+          .eq('id', id)
+          .select();
       } else {
         // Insert new shift
-        await supabase
-          .from('digital_work_shifts')
-          .insert(shiftData);
+        const { id, ...dataWithoutId } = shiftData;
+        result = await supabase
+          .from('digital_shifts')
+          .insert(dataWithoutId)
+          .select();
       }
+      
+      if (result.error) throw result.error;
       
       setShowShiftDialog(false);
       fetchData();
@@ -307,7 +330,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const handleDeleteShift = async (shiftId: string) => {
     try {
       await supabase
-        .from('digital_work_shifts')
+        .from('digital_shifts')
         .delete()
         .eq('id', shiftId);
       
@@ -328,24 +351,22 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   };
 
   const handleCreateCustomRow = async () => {
+    if (!arrangementData?.id) return;
+    
     try {
-      const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      
-      const highestPosition = customRows
-        .filter(r => r.section_name === newCustomRowSection)
-        .reduce((max, row) => Math.max(max, row.position), 0);
-      
       const newCustomRow = {
         section_name: newCustomRowSection,
         contents: customRowContentsByDay,
-        position: highestPosition + 1,
-        week_start: weekStartStr
+        position: customRows
+          .filter(r => r.section_name === newCustomRowSection)
+          .reduce((max, row) => Math.max(max, row.position), 0) + 1,
+        arrangement_id: arrangementData.id
       };
       
       if (editingCustomRowId) {
         // Update existing row
         await supabase
-          .from('digital_work_custom_rows')
+          .from('digital_shift_custom_rows')
           .update({
             contents: customRowContentsByDay,
             section_name: newCustomRowSection
@@ -354,7 +375,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       } else {
         // Insert new row
         await supabase
-          .from('digital_work_custom_rows')
+          .from('digital_shift_custom_rows')
           .insert(newCustomRow);
       }
       
@@ -384,7 +405,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const handleDeleteCustomRow = async (rowId: string) => {
     try {
       await supabase
-        .from('digital_work_custom_rows')
+        .from('digital_shift_custom_rows')
         .delete()
         .eq('id', rowId);
       
