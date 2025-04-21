@@ -24,7 +24,8 @@ import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns';
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
-import html2pdf from 'html2pdf.js';
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface Shift {
   id: string;
@@ -762,18 +763,43 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     window.print();
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     const element = document.getElementById('digital-work-arrangement-preview');
     if (!element) return;
 
-    const options = {
-      filename: `digital_${format(weekDate, 'dd-MM-yy')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    element.classList.add('digital-export-pdf');
 
-    html2pdf().set(options).from(element).toContainer().save();
+    try {
+      const canvas = await html2canvas(element, {
+        scrollY: -window.scrollY,
+        useCORS: true,
+        scale: 2,
+        backgroundColor: "#ffffff"
+      });
+
+      const imageData = canvas.toDataURL("image/jpeg", 1.0);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = {
+        width: canvas.width,
+        height: canvas.height
+      };
+      const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+      const imgWidth = imgProps.width * ratio;
+      const imgHeight = imgProps.height * ratio;
+
+      pdf.addImage(imageData, "JPEG", 0, 0, imgWidth, imgHeight);
+
+      pdf.save(`digital_${format(weekDate, 'dd-MM-yy')}.pdf`);
+    } finally {
+      element.classList.remove('digital-export-pdf');
+    }
   };
 
   const togglePreviewMode = () => {
