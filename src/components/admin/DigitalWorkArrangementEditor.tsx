@@ -766,14 +766,52 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     const element = document.getElementById('digital-work-arrangement-preview');
     if (!element) return;
 
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        svg { display: none !important; }
+        #digital-work-arrangement-preview table { width: 100% !important; }
+        #digital-work-arrangement-preview td, #digital-work-arrangement-preview th { 
+          padding: 6px 4px !important;
+          vertical-align: middle !important;
+        }
+        .digital-shift-person, .digital-radio-person, .worker-name {
+          font-size: 12pt !important;
+          font-weight: bold !important;
+          margin: 4px 0 !important;
+        }
+        .digital-shift-time, .digital-radio-time {
+          display: block !important;
+          text-align: center !important;
+          margin: 3px 0 !important;
+          font-size: 10pt !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
     const options = {
       filename: `digital_${format(weekDate, 'dd-MM-yy')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        letterRendering: true,
+        logging: true 
+      },
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true
+      },
+      windowWidth: 1024,
+      windowHeight: 768
     };
 
-    html2pdf().set(options).from(element).toContainer().save();
+    html2pdf().set(options).from(element).save().then(() => {
+      document.head.removeChild(style);
+    });
   };
 
   const togglePreviewMode = () => {
