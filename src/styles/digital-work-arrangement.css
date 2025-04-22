@@ -330,5 +330,20 @@
     padding: 0.3rem 0.1rem 0rem 0.1rem !important;
 }
 
-// PDF Tweaks
-.digital-export-pdf svg {display: none !important;}
+/* PDF Export Specific Styles */
+.digital-export-pdf svg {
+  display: none !important;
+}
+
+.digital-export-pdf button svg {
+  display: none !important;
+}
+
+.digital-export-pdf .lucide-icon {
+  display: none !important;
+}
+
+/* Hide all icons and SVGs when exporting to PDF */
+.digital-export-pdf [data-lucide] {
+  display: none !important;
+}
