@@ -354,3 +354,35 @@
   display: none !important;
 }
 
+/* Improve PDF page breaks and margins */
+@media print {
+  .digital-work-arrangement-view {
+    page-break-inside: avoid;
+    margin: 20mm !important;
+  }
+  
+  .digital-work-arrangement-view table {
+    page-break-inside: avoid;
+    margin-bottom: 15mm !important;
+  }
+  
+  .digital-work-arrangement-view tr {
+    page-break-inside: avoid;
+  }
+  
+  .digital-section-title-row {
+    page-break-before: always;
+    margin-top: 15mm !important;
+  }
+  
+  .digital-work-arrangement-view td {
+    padding: 3mm 2mm !important;
+  }
+  
+  /* Ensure footer has proper spacing */
+  .credits {
+    margin-top: 15mm !important;
+    page-break-before: auto;
+    page-break-after: avoid;
+  }
+}
