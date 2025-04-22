@@ -40,43 +40,96 @@ const Print = () => {
     loadShow();
   }, [id]);
 
-  // Add inline script to ensure column width CSS works with print
+  // Add enhanced print styles for lineup specifically
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
+      @page {
+        size: portrait;
+        margin: 10mm 10mm 15mm 10mm !important;
+      }
+      
       @media print {
+        body * {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+        
+        .print-container {
+          padding: 10mm !important;
+        }
+        
+        .print-content {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        
         .col-print-name, th.col-print-name, td.col-print-name { 
           width: 16% !important; 
           min-width: 16% !important; 
           max-width: 16% !important; 
         }
+        
         .col-print-title, th.col-print-title, td.col-print-title { 
           width: 16% !important; 
           min-width: 16% !important; 
           max-width: 16% !important; 
         }
+        
         .col-print-details, th.col-print-details, td.col-print-details { 
           width: 56% !important; 
           min-width: 56% !important; 
           max-width: 56% !important; 
         }
+        
         .col-print-phone, th.col-print-phone, td.col-print-phone { 
           width: 12% !important; 
           min-width: 12% !important; 
           max-width: 12% !important; 
         }
+        
         .col-print-minutes, th.col-print-minutes, td.col-print-minutes { 
           width: 48px !important; 
           min-width: 48px !important; 
           max-width: 48px !important; 
         }
+        
         .details-column { 
           font-size: 0.95rem !important; 
           line-height: 1.3 !important; 
         }
+        
         .print-divider-cell {
           border-left: 0 !important;
           border-right: 0 !important;
+        }
+        
+        /* Improved page break handling */
+        .table-section {
+          page-break-inside: avoid !important;
+          margin-bottom: 20mm !important;
+        }
+        
+        tbody tr {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        
+        .divider-heading {
+          page-break-before: always !important;
+          page-break-after: avoid !important;
+          margin-top: 20mm !important;
+          margin-bottom: 10mm !important;
+        }
+        
+        td {
+          padding: 5mm 4mm !important;
+          vertical-align: top !important;
+        }
+        
+        .credits {
+          margin-top: 25mm !important;
+          page-break-inside: avoid !important;
         }
       }
     `;
