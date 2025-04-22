@@ -50,7 +50,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
       </div>
 
       {/* Unified table approach with dividers as headings */}
-      <table className="w-full border-collapse border border-gray-200 mb-4">
+      <table className="w-full border-collapse border border-gray-200 mb-4 print-safe-table">
         <thead>
           <tr>
             <th className="py-2 px-4 text-right border border-gray-200 text-base col-print-name">מרואיינ/ת</th>
@@ -63,7 +63,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
             )}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="print-safe-body">
           {groupedItems.map((group, groupIndex) => {
             // Check if the first item in this group is a divider
             const startsWithDivider = group[0]?.is_divider;
@@ -72,7 +72,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
               <React.Fragment key={`print-group-${groupIndex}`}>
                 {/* Render the divider as a special row with className for styling */}
                 {startsWithDivider && (
-                  <tr className="divider-row">
+                  <tr className="divider-row print-avoid-break">
                     <td 
                       colSpan={isAuthenticated ? (showMinutes ? 5 : 4) : (showMinutes ? 4 : 3)} 
                       className="py-0 print-divider-cell"
@@ -89,7 +89,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   
                   if (item.is_break) {
                     return (
-                      <tr key={item.id} className="breakRow bg-black/10">
+                      <tr key={item.id} className="breakRow bg-black/10 print-avoid-break">
                         <td colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 font-medium text-base">
                           {item.name}
                         </td>
@@ -99,7 +99,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                   
                   if (item.is_note) {
                     return (
-                      <tr key={item.id} className="noteRow">
+                      <tr key={item.id} className="noteRow print-avoid-break">
                         <td colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
                           <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
                         </td>
@@ -111,7 +111,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
 
                   return (
                     <React.Fragment key={item.id}>
-                      <tr>
+                      <tr className="print-avoid-break item-row">
                         <td className="py-3 px-4 border border-gray-200 font-medium text-base col-print-name">
                           <strong>{item.name}</strong><br />{item.title}
                         </td>
@@ -131,7 +131,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
                         )}
                       </tr>
                       {item.interviewees?.map((interviewee) => (
-                        <tr key={interviewee.id}>
+                        <tr key={interviewee.id} className="print-avoid-break interviewee-row">
                           <td className="py-3 px-4 border border-gray-200 text-base col-print-name">
                             <strong>{interviewee.name}</strong><br />{interviewee.title}
                           </td>
@@ -165,7 +165,7 @@ const PrintPreview = ({ showName, showTime, showDate, items, editorContent, show
 
       {editorContent && (
         <div 
-          className="credits mt-8 pt-4 border-t border-gray-200 text-base text-black text-center"
+          className="credits mt-8 pt-4 border-t border-gray-200 text-base text-black text-center print-avoid-break"
           dangerouslySetInnerHTML={{ __html: editorContent }}
         />
       )}

@@ -234,7 +234,7 @@ body {
 @media print {
   @page {
     size: portrait;
-    margin: 5mm 5mm 13mm 10mm;
+    margin: 10mm 10mm 15mm 10mm;
     padding: 0;
   }
   
@@ -263,6 +263,33 @@ body {
   /* Lineup-specific print styles - PORTRAIT */
   .lineup-print {
     padding: 5mm !important;
+  }
+  
+  /* Prevent content from being split across pages */
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+  }
+  
+  .item-row, .interviewee-row {
+    page-break-inside: avoid !important;
+  }
+  
+  /* Add more spacing to prevent awkward breaks */
+  .divider-row {
+    page-break-after: avoid !important;
+    page-break-before: auto !important;
+    margin-top: 20mm !important;
+  }
+  
+  /* Additional spacing between content sections */
+  .print-safe-table {
+    margin-bottom: 10mm !important;
+  }
+  
+  /* Ensure proper spacing for table rows */
+  .print-safe-body tr td {
+    padding-top: 3mm !important;
+    padding-bottom: 3mm !important;
   }
   
   /* Schedule-specific print styles - LANDSCAPE */
