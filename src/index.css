@@ -265,6 +265,56 @@ body {
     padding: 5mm !important;
   }
   
+  /* Add better lineup print styles to prevent content cropping */
+  .print-content {
+    margin: 0;
+    padding: 10mm !important;
+  }
+  
+  .print-content table {
+    page-break-inside: avoid !important;
+    margin-bottom: 20mm !important; /* More margin at the bottom of tables */
+  }
+  
+  .print-content tr {
+    page-break-inside: avoid !important; /* Prevent rows from breaking across pages */
+  }
+  
+  .print-content tbody tr {
+    break-inside: avoid !important;
+  }
+  
+  /* Improve divider spacing to help with page breaks */
+  .divider-heading {
+    margin-top: 25mm !important; /* Add more space before dividers */
+    page-break-before: always !important; /* Force dividers to start on a new page */
+    page-break-after: avoid !important; /* Keep content after divider together */
+  }
+  
+  /* Keep interviewee information with main item */
+  .print-content td[rowspan] {
+    page-break-inside: avoid !important;
+  }
+  
+  /* Ensure proper cell spacing */
+  .print-content td {
+    padding: 6mm 4mm !important;
+    vertical-align: top !important;
+  }
+  
+  /* Add more spacing between table sections */
+  .table-section {
+    margin-bottom: 25mm !important;
+    page-break-inside: avoid !important;
+  }
+  
+  .print-content .credits {
+    margin-top: 30mm !important; /* More space before credits */
+    page-break-before: auto;
+    page-break-after: avoid;
+    page-break-inside: avoid !important;
+  }
+  
   /* Schedule-specific print styles - LANDSCAPE */
   .schedule-page {
     padding: 0 !important;
@@ -689,7 +739,7 @@ tbody {vertical-align: top;}
   }
 }
 
- /* Public Digital work arrangement */
+/* Public Digital work arrangement */
   .digital-footer-text {
     text-align: center;
     font-size: 1.5em;

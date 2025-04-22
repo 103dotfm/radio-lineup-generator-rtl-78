@@ -48,7 +48,6 @@ const Index = () => {
     onUpdate: () => setHasUnsavedChanges(true),
   });
 
-  // Fetch next show information based on current show date and time
   const fetchNextShowInfo = useCallback(async () => {
     if (showDate && showTime) {
       try {
@@ -138,7 +137,6 @@ const Index = () => {
     }
   }, [state, isNewLineup]);
 
-  // Fetch next show info when show date or time changes
   useEffect(() => {
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
@@ -252,7 +250,6 @@ const Index = () => {
       setHasUnsavedChanges(false);
       toast.success('הליינאפ נשמר בהצלחה');
       
-      // Refresh next show info after saving
       fetchNextShowInfo();
     } catch (error) {
       console.error('Error saving show:', error);
@@ -311,7 +308,7 @@ const Index = () => {
     
     const element = printRef.current;
     const opt = {
-      margin: [5, 5],
+      margin: [15, 10],
       filename: `${showName || 'lineup'}-${format(showDate || new Date(), 'dd-MM-yyyy')}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
@@ -320,18 +317,27 @@ const Index = () => {
         logging: true,
         letterRendering: true
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true
+      },
+      pagebreak: { mode: 'avoid-all', before: '.divider-heading' }
     };
     
+    document.body.classList.add('pdf-exporting');
     element.style.display = 'block';
     
     html2pdf().set(opt).from(element).save()
       .then(() => {
         toast.success('PDF נוצר בהצלחה');
+        document.body.classList.remove('pdf-exporting');
       })
       .catch((error) => {
         console.error('Error generating PDF:', error);
         toast.error('שגיאה ביצירת ה־PDF');
+        document.body.classList.remove('pdf-exporting');
       });
   }, [printRef, showName, showDate]);
 
@@ -343,21 +349,19 @@ const Index = () => {
   const handleTimeChange = useCallback((time: string) => {
     setShowTime(time);
     setHasUnsavedChanges(true);
-    // Refresh next show when time changes
     fetchNextShowInfo();
   }, [fetchNextShowInfo]);
 
   const handleDateChange = useCallback((date: Date | undefined) => {
     setShowDate(date || new Date());
     setHasUnsavedChanges(true);
-    // Refresh next show when date changes
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
   const handleDelete = useCallback((id: string) => {
     setItems(items.filter(item => item.id !== id));
     setHasUnsavedChanges(true);
-    toast.success('פריט נמחק בהצלחה');
+    toast.success('��ריט נמחק בהצלחה');
   }, [items]);
 
   const handleDurationChange = useCallback((id: string, duration: number) => {
@@ -425,7 +429,6 @@ const Index = () => {
   }, [items]);
 
   const handleRemoveNextShowLine = useCallback(() => {
-    // Refresh next show info when line is removed
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
