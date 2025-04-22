@@ -40,11 +40,40 @@ const Print = () => {
     loadShow();
   }, [id]);
 
-  // Add inline script to ensure column width CSS works with print
+  // Add improved print styles for lineup
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
       @media print {
+        @page {
+          size: portrait;
+          margin: 10mm 10mm 15mm 10mm !important;
+        }
+        
+        /* Prevent content from being split across pages */
+        tr, td, th {
+          page-break-inside: avoid !important;
+        }
+        
+        /* Ensure dividers don't break awkwardly */
+        .divider-row {
+          page-break-after: avoid !important;
+          page-break-before: auto !important;
+          margin-top: 20px !important;
+        }
+        
+        /* Add more spacing between sections to encourage better page breaks */
+        table {
+          margin-bottom: 8mm !important;
+        }
+        
+        /* Ensure table rows have more breathing room */
+        tr td {
+          padding-top: 2mm !important;
+          padding-bottom: 2mm !important;
+        }
+        
+        /* Column widths with !important to override any other styles */
         .col-print-name, th.col-print-name, td.col-print-name { 
           width: 16% !important; 
           min-width: 16% !important; 
