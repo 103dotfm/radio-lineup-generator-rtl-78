@@ -344,10 +344,13 @@
 }
 
 .digital-export-pdf td, .digital-export-pdf .digital-work-arrangement-view td {
-    padding: .3rem .1rem 0.5rem !important;
+    padding: .3rem .1rem 0.8rem !important;
 }
+
+.digital-export-pdf .digital-work-header {margin-bottom: -3rem;}
 
 /* Hide all icons and SVGs when exporting to PDF */
 .digital-export-pdf [data-lucide] {
   display: none !important;
 }
+
