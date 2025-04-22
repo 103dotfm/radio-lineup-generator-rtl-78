@@ -1,8 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getShowWithItems } from '@/lib/supabase/shows';
 import PrintPreview from '@/components/lineup/PrintPreview';
+import html2pdf from 'html2pdf.js';
+import { format } from 'date-fns';
 
 const Print = () => {
   const { id } = useParams();
@@ -12,6 +14,8 @@ const Print = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const showMinutes = searchParams.get('minutes') === 'true';
+  const exportPdf = searchParams.get('export') === 'pdf';
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadShow = async () => {
@@ -40,7 +44,110 @@ const Print = () => {
     loadShow();
   }, [id]);
 
-  // Add improved print styles for lineup
+  // Export PDF automatically if ?export=pdf param is present
+  useEffect(() => {
+    if (exportPdf && !loading && show && pdfRef.current) {
+      const exportToPdf = () => {
+        // Add CSS for PDF export
+        const style = document.createElement('style');
+        style.innerHTML = `
+          .lineup-pdf-export {
+            direction: rtl;
+            font-family: 'Heebo', sans-serif;
+            padding: 15mm;
+          }
+          
+          @page {
+            size: A4 portrait;
+            margin: 15mm 10mm 20mm 10mm !important;
+          }
+          
+          .lineup-pdf-export .print-avoid-break {
+            page-break-inside: avoid !important;
+          }
+          
+          .lineup-pdf-export .divider-row {
+            page-break-before: auto !important;
+            page-break-after: avoid !important;
+            margin-top: 10mm !important;
+          }
+          
+          .lineup-pdf-export .credits {
+            page-break-before: avoid !important;
+            margin-top: 30mm !important;
+          }
+          
+          .lineup-pdf-export table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-bottom: 5mm !important;
+          }
+          
+          .lineup-pdf-export td, .lineup-pdf-export th {
+            padding: 3mm !important;
+            font-size: 11pt !important;
+            border: 1px solid #e2e8f0 !important;
+          }
+          
+          .lineup-pdf-export .col-print-name { 
+            width: 15% !important; 
+          }
+          
+          .lineup-pdf-export .col-print-details { 
+            width: 65% !important; 
+          }
+          
+          .lineup-pdf-export .col-print-phone { 
+            width: 15% !important; 
+          }
+          
+          .lineup-pdf-export .col-print-minutes { 
+            width: 5% !important; 
+          }
+          
+          .lineup-pdf-export .divider-heading {
+            padding: 2mm !important;
+            margin: 5mm 0 !important;
+            background-color: #f3f4f6 !important;
+            font-size: 14pt !important;
+            font-weight: bold !important;
+          }
+        `;
+        document.head.appendChild(style);
+        
+        const element = pdfRef.current;
+        const opt = {
+          margin: [15, 10, 20, 10], // [top, right, bottom, left] in mm
+          filename: `${show.name || 'lineup'}-${format(show.date ? new Date(show.date) : new Date(), 'dd-MM-yyyy')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            letterRendering: true
+          },
+          jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait',
+            compress: true,
+            precision: 2,
+          }
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+          // Clean up
+          document.head.removeChild(style);
+          window.close(); // Close the window after download
+        });
+      };
+      
+      // Small delay to ensure the DOM is fully rendered
+      setTimeout(exportToPdf, 1000);
+    }
+  }, [exportPdf, loading, show, items]);
+
+  // Add print styles for lineup
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -121,16 +228,31 @@ const Print = () => {
   if (!show) return <div className="container mx-auto py-8 px-2 text-center">לא נמצאה תוכנית</div>;
 
   return (
-    <div className="container mx-auto py-8 px-2 print-container lineup-print">
-      <PrintPreview
-        showName={show.name}
-        showTime={show.time}
-        showDate={show.date ? new Date(show.date) : undefined}
-        items={items}
-        editorContent={show.notes || ''}
-        showMinutes={showMinutes}
-      />
-    </div>
+    <>
+      <div className="container mx-auto py-8 px-2 print-container lineup-print">
+        <PrintPreview
+          showName={show.name}
+          showTime={show.time}
+          showDate={show.date ? new Date(show.date) : undefined}
+          items={items}
+          editorContent={show.notes || ''}
+          showMinutes={showMinutes}
+        />
+      </div>
+      
+      {/* Hidden element for PDF export */}
+      <div ref={pdfRef} className="hidden">
+        <PrintPreview
+          showName={show.name}
+          showTime={show.time}
+          showDate={show.date ? new Date(show.date) : undefined}
+          items={items}
+          editorContent={show.notes || ''}
+          showMinutes={showMinutes}
+          isPdfExport={true}
+        />
+      </div>
+    </>
   );
 };
 

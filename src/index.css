@@ -527,6 +527,62 @@ body {
   }
 } /* Added missing closing brace for @media print */
 
+/* Lineup PDF Export Styles */
+.lineup-pdf-export {
+  direction: rtl;
+  font-family: 'Heebo', sans-serif;
+  padding: 15mm;
+}
+
+.lineup-pdf-export .table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10mm;
+}
+
+.lineup-pdf-export .divider-heading {
+  background-color: #f3f4f6;
+  padding: 2mm;
+  margin: 8mm 0 4mm 0;
+  border-radius: 2mm;
+  font-size: 14pt;
+  font-weight: bold;
+}
+
+.lineup-pdf-export td, 
+.lineup-pdf-export th {
+  padding: 3mm;
+  border: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.lineup-pdf-export .credits {
+  margin-top: 15mm;
+  padding-top: 5mm;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.lineup-pdf-export .print-avoid-break {
+  page-break-inside: avoid;
+}
+
+.lineup-pdf-export .col-print-name { 
+  width: 15%;
+}
+
+.lineup-pdf-export .col-print-details { 
+  width: 65%;
+}
+
+.lineup-pdf-export .col-print-phone { 
+  width: 15%;
+}
+
+.lineup-pdf-export .col-print-minutes { 
+  width: 5%;
+}
+
 /* UI Components */
 #radix-\:r1\: {
   background: white;
@@ -716,7 +772,7 @@ tbody {vertical-align: top;}
   }
 }
 
- /* Public Digital work arrangement */
+/* Public Digital work arrangement */
   .digital-footer-text {
     text-align: center;
     font-size: 1.5em;
