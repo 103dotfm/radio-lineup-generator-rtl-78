@@ -48,23 +48,23 @@ const PrintPreview = ({
   }, [] as Array<Array<ShowItem & { interviewees?: Interviewee[] }>>);
 
   const containerClassName = isPdfExport 
-    ? "print-content bg-white p-4 lineup-pdf-export" 
+    ? "print-content lineup-pdf-export" 
     : "print-content bg-white p-4";
 
   return (
     <div className={containerClassName}>
-      <div className="flex flex-col items-center mb-2">
+      <div className="flex flex-col items-center mb-4">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12" />
-        <div className="text-center mt-1">
+        <div className="text-center mt-2">
           <h1 className="text-2xl font-bold showName showNamePrint">{showName}</h1>
-          <h2 className="text-lg text-gray-600 mt-0 showTimePrint">
+          <h2 className="text-lg text-gray-600 mt-1 showTimePrint">
             {showTime} // {showDate ? format(showDate, 'dd.MM.yyyy') : ''}
           </h2>
         </div>
       </div>
 
       {/* Unified table approach with dividers as headings */}
-      <Table className="w-full border-collapse border border-gray-200 mb-4 print-safe-table">
+      <Table className="w-full border-collapse border border-gray-200 mb-6 print-safe-table">
         <TableHeader>
           <TableRow>
             <TableHead className="py-2 px-4 text-right border border-gray-200 text-base col-print-name">מרואיינ/ת</TableHead>
@@ -129,17 +129,21 @@ const PrintPreview = ({
                         <TableCell className="py-3 px-4 border border-gray-200 font-medium text-base col-print-name">
                           <strong>{item.name}</strong><br />{item.title}
                         </TableCell>
-                        <TableCell className="py-3 px-4 border border-gray-200 details-column prose prose-sm max-w-none col-print-details" 
-                            rowSpan={intervieweeCount + 1}
-                            dangerouslySetInnerHTML={{ __html: item.details }} />
+                        <TableCell 
+                          className="py-3 px-4 border border-gray-200 details-column prose prose-sm max-w-none col-print-details" 
+                          rowSpan={intervieweeCount + 1}
+                          dangerouslySetInnerHTML={{ __html: item.details }} 
+                        />
                         {isAuthenticated && (
                           <TableCell className="py-3 px-4 border border-gray-200 text-base whitespace-nowrap col-print-phone">
                             {item.phone}
                           </TableCell>
                         )}
                         {showMinutes && (
-                          <TableCell className="py-3 px-4 text-center border border-gray-200 text-base col-print-minutes"
-                              rowSpan={intervieweeCount + 1}>
+                          <TableCell 
+                            className="py-3 px-4 text-center border border-gray-200 text-base col-print-minutes"
+                            rowSpan={intervieweeCount + 1}
+                          >
                             {item.duration}
                           </TableCell>
                         )}
