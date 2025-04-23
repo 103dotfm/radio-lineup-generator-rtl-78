@@ -47,103 +47,155 @@ const Print = () => {
   // Export PDF automatically if ?export=pdf param is present
   useEffect(() => {
     if (exportPdf && !loading && show && pdfRef.current) {
-      const exportToPdf = () => {
-        // Add CSS for PDF export
-        const style = document.createElement('style');
-        style.innerHTML = `
-          .lineup-pdf-export {
-            direction: rtl;
-            font-family: 'Heebo', sans-serif;
-            padding: 15mm;
+      // Delay to ensure content is fully rendered
+      setTimeout(() => {
+        const exportToPdf = () => {
+          // Add PDF-specific styles
+          const style = document.createElement('style');
+          style.innerHTML = `
+            @page {
+              size: A4 portrait;
+              margin: 15mm 15mm 25mm 15mm !important;
+            }
+            
+            .lineup-pdf-export {
+              direction: rtl;
+              font-family: 'Heebo', sans-serif;
+              padding: 10mm;
+              font-size: 11pt;
+            }
+            
+            .lineup-pdf-export .print-avoid-break {
+              page-break-inside: avoid !important;
+            }
+            
+            .lineup-pdf-export .divider-row {
+              page-break-before: auto !important;
+              page-break-after: avoid !important;
+              margin-top: 10mm !important;
+            }
+            
+            .lineup-pdf-export .credits {
+              page-break-before: avoid !important;
+              margin-top: 30mm !important;
+            }
+            
+            .lineup-pdf-export table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin-bottom: 8mm !important;
+            }
+            
+            .lineup-pdf-export td, .lineup-pdf-export th {
+              padding: 3mm !important;
+              font-size: 11pt !important;
+              border: 1px solid #e2e8f0 !important;
+              vertical-align: top !important;
+            }
+            
+            .lineup-pdf-export .col-print-name { 
+              width: 15% !important; 
+            }
+            
+            .lineup-pdf-export .col-print-details { 
+              width: 65% !important; 
+            }
+            
+            .lineup-pdf-export .col-print-phone { 
+              width: 15% !important; 
+            }
+            
+            .lineup-pdf-export .col-print-minutes { 
+              width: 5% !important; 
+            }
+            
+            .lineup-pdf-export .divider-heading {
+              padding: 2mm !important;
+              margin: 5mm 0 !important;
+              background-color: #f3f4f6 !important;
+              font-size: 14pt !important;
+              font-weight: bold !important;
+            }
+            
+            /* Add more spacing after each row to prevent content cut-off */
+            .lineup-pdf-export tr td {
+              padding-bottom: 5mm !important;
+            }
+            
+            /* Ensure text doesn't get cut off */
+            .lineup-pdf-export .details-column {
+              font-size: 10pt !important;
+              line-height: 1.5 !important;
+              overflow-wrap: break-word !important;
+              word-wrap: break-word !important;
+            }
+            
+            /* Ensure proper page breaks around section dividers */
+            .lineup-pdf-export .divider-heading {
+              margin-top: 15mm !important;
+              page-break-after: avoid !important;
+            }
+            
+            /* Reduce font size slightly to fit more content */
+            .lineup-pdf-export .prose p, 
+            .lineup-pdf-export .prose * {
+              font-size: 10pt !important;
+              line-height: 1.4 !important;
+              margin-bottom: 2mm !important;
+            }
+          `;
+          document.head.appendChild(style);
+          
+          const element = pdfRef.current;
+          
+          if (!element) {
+            console.error('PDF reference element not found');
+            return;
           }
           
-          @page {
-            size: A4 portrait;
-            margin: 15mm 10mm 20mm 10mm !important;
-          }
+          const opt = {
+            margin: [15, 15, 25, 15], // [top, right, bottom, left] in mm
+            filename: `${show.name || 'lineup'}-${format(show.date ? new Date(show.date) : new Date(), 'dd-MM-yyyy')}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              letterRendering: true,
+              allowTaint: true
+            },
+            jsPDF: { 
+              unit: 'mm', 
+              format: 'a4', 
+              orientation: 'portrait',
+              compress: true,
+              precision: 2,
+              putOnlyUsedFonts: true
+            }
+          };
           
-          .lineup-pdf-export .print-avoid-break {
-            page-break-inside: avoid !important;
-          }
-          
-          .lineup-pdf-export .divider-row {
-            page-break-before: auto !important;
-            page-break-after: avoid !important;
-            margin-top: 10mm !important;
-          }
-          
-          .lineup-pdf-export .credits {
-            page-break-before: avoid !important;
-            margin-top: 30mm !important;
-          }
-          
-          .lineup-pdf-export table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            margin-bottom: 5mm !important;
-          }
-          
-          .lineup-pdf-export td, .lineup-pdf-export th {
-            padding: 3mm !important;
-            font-size: 11pt !important;
-            border: 1px solid #e2e8f0 !important;
-          }
-          
-          .lineup-pdf-export .col-print-name { 
-            width: 15% !important; 
-          }
-          
-          .lineup-pdf-export .col-print-details { 
-            width: 65% !important; 
-          }
-          
-          .lineup-pdf-export .col-print-phone { 
-            width: 15% !important; 
-          }
-          
-          .lineup-pdf-export .col-print-minutes { 
-            width: 5% !important; 
-          }
-          
-          .lineup-pdf-export .divider-heading {
-            padding: 2mm !important;
-            margin: 5mm 0 !important;
-            background-color: #f3f4f6 !important;
-            font-size: 14pt !important;
-            font-weight: bold !important;
-          }
-        `;
-        document.head.appendChild(style);
-        
-        const element = pdfRef.current;
-        const opt = {
-          margin: [15, 10, 20, 10], // [top, right, bottom, left] in mm
-          filename: `${show.name || 'lineup'}-${format(show.date ? new Date(show.date) : new Date(), 'dd-MM-yyyy')}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            letterRendering: true
-          },
-          jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait',
-            compress: true,
-            precision: 2,
-          }
+          html2pdf()
+            .from(element)
+            .set(opt)
+            .save()
+            .then(() => {
+              // Clean up
+              document.head.removeChild(style);
+              
+              // Close the window after download
+              setTimeout(() => {
+                window.close();
+              }, 1000);
+            })
+            .catch(err => {
+              console.error('Error generating PDF:', err);
+              alert('שגיאה ביצירת ה-PDF. נסה שוב.');
+              document.head.removeChild(style);
+            });
         };
         
-        html2pdf().set(opt).from(element).save().then(() => {
-          // Clean up
-          document.head.removeChild(style);
-          window.close(); // Close the window after download
-        });
-      };
-      
-      // Small delay to ensure the DOM is fully rendered
-      setTimeout(exportToPdf, 1000);
+        exportToPdf();
+      }, 1500); // Increased delay for more reliable rendering
     }
   }, [exportPdf, loading, show, items]);
 
@@ -240,8 +292,8 @@ const Print = () => {
         />
       </div>
       
-      {/* Hidden element for PDF export */}
-      <div ref={pdfRef} className="hidden">
+      {/* Hidden element for PDF export with special class for PDF-specific styling */}
+      <div ref={pdfRef} className="hidden lineup-pdf-export">
         <PrintPreview
           showName={show.name}
           showTime={show.time}
