@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -83,36 +84,30 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
         // Only match slots for this day of week
         if (slot.day_of_week !== currentDayOfWeek) continue;
         
-        // Only consider slots that are relevant for this date range
-        // For non-recurring, must be for this actual calendar date
-        if (!slot.is_recurring && formatDate(new Date(slot.created_at)) !== currentDateStr)
-          continue;
-        
         // Filter by slot color BEFORE processing for XML/JSON
         if (slot.color && slot.color.trim().toLowerCase() === "red") {
           continue;
         }
         
-        // Check for modifications or deletions for this slot
-        const matchingSlots = slots.filter(s =>
-          s.day_of_week === slot.day_of_week && s.start_time === slot.start_time
-        );
-        
-        // If there's a non-recurring modification for the current date
-        const modification = matchingSlots.find(s =>
-          !s.is_recurring &&
+        // First check if there's a non-recurring slot specifically for this date
+        // This matches the dashboard behavior - non-recurring slots override recurring ones
+        const nonRecurringSlot = slots.find(s => 
+          !s.is_recurring && 
+          s.day_of_week === currentDayOfWeek && 
+          s.start_time === slot.start_time && 
           formatDate(new Date(s.created_at)) === currentDateStr
         );
         
-        if (modification) {
-          if (!modification.is_deleted) {
-            processedSlots.push({
-              ...modification,
-              date: currentDateStr,
-              actualDate: new Date(currentDate)
-            });
-          }
-        } else if (slot.is_recurring && !slot.is_deleted) {
+        if (nonRecurringSlot && !nonRecurringSlot.is_deleted) {
+          // Use the non-recurring slot as it overrides the recurring one for this specific date
+          processedSlots.push({
+            ...nonRecurringSlot,
+            date: currentDateStr,
+            actualDate: new Date(currentDate)
+          });
+        } else if (slot.is_recurring && !slot.is_deleted && !nonRecurringSlot) {
+          // If no non-recurring override exists, use the recurring slot
+          // But skip if there's a non-recurring deleted slot (which means the show is canceled for this date)
           processedSlots.push({
             ...slot,
             date: currentDateStr,
@@ -132,8 +127,20 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       return a.start_time.localeCompare(b.start_time);
     });
     
-    console.log(`Processed ${processedSlots.length} slots for XML output`);
-    return processedSlots;
+    // Remove duplicates (in case we have multiple entries for the same time slot)
+    const uniqueSlots = [];
+    const seenKeys = new Set();
+    
+    for (const slot of processedSlots) {
+      const key = `${slot.date}_${slot.start_time}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueSlots.push(slot);
+      }
+    }
+    
+    console.log(`Processed ${uniqueSlots.length} slots for XML output`);
+    return uniqueSlots;
   } catch (error) {
     console.error("Error in getScheduleSlots:", error);
     throw error;
