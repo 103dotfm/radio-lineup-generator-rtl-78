@@ -55,7 +55,7 @@ const Print = () => {
           style.innerHTML = `
             @page {
               size: A4 portrait;
-              margin: 15mm 15mm 25mm 15mm !important;
+              margin: 15mm 15mm 30mm 15mm !important; /* Increased bottom margin */
             }
             
             .lineup-pdf-export {
@@ -83,11 +83,11 @@ const Print = () => {
             .lineup-pdf-export table {
               width: 100% !important;
               border-collapse: collapse !important;
-              margin-bottom: 8mm !important;
+              margin-bottom: 12mm !important; /* Increased margin */
             }
             
             .lineup-pdf-export td, .lineup-pdf-export th {
-              padding: 3mm !important;
+              padding: 3mm 4mm !important; /* Increased padding */
               font-size: 11pt !important;
               border: 1px solid #e2e8f0 !important;
               vertical-align: top !important;
@@ -119,13 +119,13 @@ const Print = () => {
             
             /* Add more spacing after each row to prevent content cut-off */
             .lineup-pdf-export tr td {
-              padding-bottom: 5mm !important;
+              padding-bottom: 6mm !important; /* Increased padding */
             }
             
             /* Ensure text doesn't get cut off */
             .lineup-pdf-export .details-column {
               font-size: 10pt !important;
-              line-height: 1.5 !important;
+              line-height: 1.6 !important; /* Increased line height */
               overflow-wrap: break-word !important;
               word-wrap: break-word !important;
             }
@@ -140,8 +140,18 @@ const Print = () => {
             .lineup-pdf-export .prose p, 
             .lineup-pdf-export .prose * {
               font-size: 10pt !important;
-              line-height: 1.4 !important;
-              margin-bottom: 2mm !important;
+              line-height: 1.5 !important; /* Increased line height */
+              margin-bottom: 3mm !important; /* Increased margin */
+            }
+            
+            /* Ensure there's extra space at the bottom of each page */
+            .lineup-pdf-export table {
+              margin-bottom: 15mm !important;
+            }
+            
+            /* Add extra space after table rows */
+            .lineup-pdf-export tr {
+              margin-bottom: 4mm !important;
             }
           `;
           document.head.appendChild(style);
@@ -154,15 +164,25 @@ const Print = () => {
           }
           
           const opt = {
-            margin: [15, 15, 25, 15], // [top, right, bottom, left] in mm
+            margin: [15, 15, 30, 15], // [top, right, bottom, left] in mm - increased bottom margin
             filename: `${show.name || 'lineup'}-${format(show.date ? new Date(show.date) : new Date(), 'dd-MM-yyyy')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { 
               scale: 2,
               useCORS: true,
-              logging: false,
+              logging: true, // Enable logging for debugging
               letterRendering: true,
-              allowTaint: true
+              allowTaint: true,
+              windowWidth: 1000, // Set a fixed width for better rendering
+              onclone: function(clonedDoc) {
+                console.log('Document cloned for PDF generation');
+                const clonedElement = clonedDoc.querySelector('.lineup-pdf-export');
+                if (clonedElement) {
+                  console.log('Found cloned element:', clonedElement.innerHTML.substring(0, 100) + '...');
+                } else {
+                  console.error('Could not find cloned element');
+                }
+              }
             },
             jsPDF: { 
               unit: 'mm', 
@@ -174,12 +194,22 @@ const Print = () => {
             }
           };
           
+          // Make sure the content is fully visible before generating the PDF
+          element.style.display = 'block';
+          element.style.visibility = 'visible';
+          element.style.height = 'auto';
+          element.style.overflow = 'visible';
+          
+          console.log('Starting PDF generation with element:', element);
+          console.log('Element HTML preview:', element.innerHTML.substring(0, 200) + '...');
+          
           html2pdf()
             .from(element)
             .set(opt)
             .save()
             .then(() => {
               // Clean up
+              console.log('PDF generation complete');
               document.head.removeChild(style);
               
               // Close the window after download
@@ -195,7 +225,7 @@ const Print = () => {
         };
         
         exportToPdf();
-      }, 1500); // Increased delay for more reliable rendering
+      }, 2000); // Increased delay for more reliable rendering
     }
   }, [exportPdf, loading, show, items]);
 
@@ -293,7 +323,7 @@ const Print = () => {
       </div>
       
       {/* Hidden element for PDF export with special class for PDF-specific styling */}
-      <div ref={pdfRef} className="hidden lineup-pdf-export">
+      <div ref={pdfRef} className="lineup-pdf-export" style={{ display: exportPdf ? 'block' : 'none', visibility: 'visible', height: 'auto', overflow: 'visible' }}>
         <PrintPreview
           showName={show.name}
           showTime={show.time}
