@@ -10,18 +10,24 @@ export default async function handler(req: Request, res: Response) {
     // Get XML content from system_settings
     const { data, error } = await supabase
       .from('system_settings')
-      .select('value')
-      .eq('key', 'schedule_xml');
+      .select('value, updated_at')
+      .eq('key', 'schedule_xml')
+      .maybeSingle();
       
     if (error) {
       console.error('API Route: Error fetching XML:', error);
       throw error;
     }
     
-    if (!data || data.length === 0 || !data[0]?.value) {
-      console.log('API Route: No XML found, generating now');
+    // If no XML is available or it hasn't been updated in more than 1 hour, generate it
+    const shouldRefresh = !data || !data.value || 
+      !data.updated_at || 
+      (new Date().getTime() - new Date(data.updated_at).getTime() > 3600000);
+    
+    if (shouldRefresh) {
+      console.log('API Route: XML not found or outdated, generating now');
       
-      // If no XML is available, generate it by calling the Edge Function
+      // Generate fresh XML by calling the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
       
       if (functionError) {
@@ -35,10 +41,12 @@ export default async function handler(req: Request, res: Response) {
       return res.send(functionData);
     }
     
-    // Process any showcombined tags if needed
-    let xmlContent = data[0].value;
+    // Use existing XML
+    let xmlContent = data.value;
     
-    console.log('API Route: XML found, serving:', xmlContent.substring(0, 100) + '...');
+    console.log('API Route: XML found (last updated: ' + new Date(data.updated_at).toLocaleString() + '), serving:', 
+      xmlContent.substring(0, 100) + '...');
+    
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
     return res.send(xmlContent);
