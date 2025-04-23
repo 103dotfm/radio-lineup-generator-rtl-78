@@ -34,7 +34,7 @@ function getCombinedShowDisplay(showName: string, hostName?: string): string {
   return `${showName} עם ${hostName}`;
 }
 
-// Get schedule slots for the next two weeks
+// Get schedule slots for the next two weeks, starting from TODAY (not the week start), and skipping 'red' slots.
 async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
     // Calculate the end date (2 weeks from start)
@@ -46,8 +46,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
     
     console.log(`Fetching schedule from ${startDateStr} to ${endDateStr}`);
     
-    // Fetch the schedule data using the same logic as the frontend
-    // This approach aligns with how the dashboard displays the schedule
+    // Fetch all slots for the time range
     const { data: slots, error } = await supabase
       .from('schedule_slots_old')
       .select(`
@@ -71,36 +70,40 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
     
     console.log(`Retrieved ${slots ? slots.length : 0} raw slots from database`);
     
-    // Process slots to match the dashboard display logic
-    const startOfWeek = new Date(startDate);
-    startOfWeek.setDate(startDate.getDate() - startDate.getDay()); // Get Sunday of current week
-    
-    // For each day in the 2-week period, process slots according to dashboard logic
+    // Process slots to match dashboard logic – always starting from TODAY.
     const processedSlots = [];
-    const currentDate = new Date(startOfWeek);
+    const currentDate = new Date(startDate);
     
     while (currentDate <= endDate) {
       const currentDayOfWeek = currentDate.getDay();
       const currentDateStr = formatDate(currentDate);
       
-      // Process recurring slots
+      // For each recurring/nonrecurring slot, process for current date only (not from week start)
       for (const slot of slots) {
-        // Skip if not applicable to current day
+        // Only match slots for this day of week
         if (slot.day_of_week !== currentDayOfWeek) continue;
         
-        // Check for modifications or deletions for this specific week
-        const matchingSlots = slots.filter(s => 
-          s.day_of_week === slot.day_of_week && 
-          s.start_time === slot.start_time
+        // Only consider slots that are relevant for this date range
+        // For non-recurring, must be for this actual calendar date
+        if (!slot.is_recurring && formatDate(new Date(slot.created_at)) !== currentDateStr)
+          continue;
+        
+        // Filter by slot color BEFORE processing for XML/JSON
+        if (slot.color && slot.color.trim().toLowerCase() === "red") {
+          continue;
+        }
+        
+        // Check for modifications or deletions for this slot
+        const matchingSlots = slots.filter(s =>
+          s.day_of_week === slot.day_of_week && s.start_time === slot.start_time
         );
         
-        // If there's a non-recurring modification for current week
-        const modification = matchingSlots.find(s => 
-          !s.is_recurring && 
-          new Date(s.created_at).getDay() === currentDayOfWeek
+        // If there's a non-recurring modification for the current date
+        const modification = matchingSlots.find(s =>
+          !s.is_recurring &&
+          formatDate(new Date(s.created_at)) === currentDateStr
         );
         
-        // Add the appropriate slot version to processed slots
         if (modification) {
           if (!modification.is_deleted) {
             processedSlots.push({
@@ -118,7 +121,6 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
         }
       }
       
-      // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
