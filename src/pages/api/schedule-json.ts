@@ -12,57 +12,55 @@ export default async function handler(req: Request, res: Response) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Fetch schedule slots directly using the same function that the dashboard uses
-    const scheduleSlots = await getScheduleSlots(today, false);
+    const allScheduleData = [];
     
-    if (!scheduleSlots || scheduleSlots.length === 0) {
-      console.error('API Route: No schedule data found');
-      return res.status(500).json({
-        error: 'No schedule data found'
-      });
-    }
-    
-    console.log(`API Route: Retrieved ${scheduleSlots.length} schedule slots from dashboard data`);
-    
-    // Filter out the "red" slots
-    const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
-    console.log(`API Route: ${scheduleSlots.length - filteredSlots.length} red slots filtered out`);
-    
-    // Format slots for JSON output
-    const formattedSchedule = filteredSlots.map(slot => {
-      // Calculate the actual date for this slot based on day_of_week
-      const weekStart = today;
-      const slotDate = addDays(weekStart, slot.day_of_week - weekStart.getDay());
+    // Fetch data for the next 10 days
+    for (let i = 0; i < 10; i++) {
+      const currentDate = addDays(today, i);
+      console.log(`Fetching schedule for date: ${format(currentDate, 'yyyy-MM-dd')}`);
       
-      // Format the date to YYYY-MM-DD
-      const formattedDate = format(slotDate, 'yyyy-MM-dd');
+      // Fetch schedule slots for this specific date
+      const scheduleSlots = await getScheduleSlots(currentDate, false);
       
-      // Format times as HH:MM
-      const startTime = slot.start_time.substring(0, 5);
-      const endTime = slot.end_time.substring(0, 5);
-      
-      // Get show and host display information
-      const showName = slot.show_name || '';
-      const hostName = slot.host_name || '';
-      
-      // Create combined display (like in the dashboard)
-      let combinedDisplay = showName;
-      if (hostName && showName !== hostName) {
-        combinedDisplay = `${showName} עם ${hostName}`;
+      if (!scheduleSlots || scheduleSlots.length === 0) {
+        console.log(`No schedule data found for ${format(currentDate, 'yyyy-MM-dd')}`);
+        continue;
       }
       
-      return {
-        date: formattedDate,
-        startTime: startTime,
-        endTime: endTime,
-        showName: showName,
-        hosts: hostName,
-        combinedDisplay: combinedDisplay
-      };
-    });
+      // Filter out the "red" slots
+      const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
+      
+      // Format slots for this day
+      const formattedSlots = filteredSlots.map(slot => {
+        // Format times as HH:MM
+        const startTime = slot.start_time.substring(0, 5);
+        const endTime = slot.end_time.substring(0, 5);
+        
+        // Get show and host display information
+        const showName = slot.show_name || '';
+        const hostName = slot.host_name || '';
+        
+        // Create combined display (like in the dashboard)
+        let combinedDisplay = showName;
+        if (hostName && showName !== hostName) {
+          combinedDisplay = `${showName} עם ${hostName}`;
+        }
+        
+        return {
+          date: format(currentDate, 'yyyy-MM-dd'),
+          startTime: startTime,
+          endTime: endTime,
+          showName: showName,
+          hosts: hostName,
+          combinedDisplay: combinedDisplay
+        };
+      });
+      
+      allScheduleData.push(...formattedSlots);
+    }
     
     // Sort by date and start time
-    formattedSchedule.sort((a, b) => {
+    allScheduleData.sort((a, b) => {
       if (a.date !== b.date) {
         return a.date.localeCompare(b.date);
       }
@@ -71,7 +69,7 @@ export default async function handler(req: Request, res: Response) {
     
     // Create the JSON structure
     const jsonOutput = {
-      schedule: formattedSchedule
+      schedule: allScheduleData
     };
     
     const jsonString = JSON.stringify(jsonOutput, null, 2);
