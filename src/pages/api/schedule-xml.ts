@@ -1,59 +1,110 @@
 
 import { Request, Response } from 'express';
 import { supabase } from '@/lib/supabase';
-import { getCombinedShowDisplay } from '@/utils/showDisplay';
+import { getScheduleSlots } from '@/lib/supabase/schedule';
+import { format } from 'date-fns';
 
 export default async function handler(req: Request, res: Response) {
   try {
-    console.log('API Route: Serving XML file');
+    console.log('API Route: Generating XML file');
     
-    // Get XML content from system_settings
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('value, updated_at')
-      .eq('key', 'schedule_xml')
-      .maybeSingle();
-      
-    if (error) {
-      console.error('API Route: Error fetching XML:', error);
-      throw error;
+    // Get today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Fetch schedule slots directly using the same function that the dashboard uses
+    const scheduleSlots = await getScheduleSlots(today, false);
+    
+    if (!scheduleSlots || scheduleSlots.length === 0) {
+      console.error('API Route: No schedule data found');
+      return res.status(500)
+        .set('Content-Type', 'application/xml')
+        .send('<?xml version="1.0" encoding="UTF-8"?><error>No schedule data found</error>');
     }
     
-    // If no XML is available or it hasn't been updated in more than 1 hour, generate it
-    const shouldRefresh = !data || !data.value || 
-      !data.updated_at || 
-      (new Date().getTime() - new Date(data.updated_at).getTime() > 3600000);
+    console.log(`API Route: Retrieved ${scheduleSlots.length} schedule slots from dashboard data`);
     
-    if (shouldRefresh) {
-      console.log('API Route: XML not found or outdated, generating now');
+    // Filter out the "red" slots
+    const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
+    console.log(`API Route: ${scheduleSlots.length - filteredSlots.length} red slots filtered out`);
+    
+    // Generate XML
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<schedule>\n';
+    
+    // Sort by date and start time
+    filteredSlots.sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
       
-      // Generate fresh XML by calling the Edge Function
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
+      if (dateA !== dateB) return dateA - dateB;
+      return a.start_time.localeCompare(b.start_time);
+    });
+    
+    // Process each slot
+    for (const slot of filteredSlots) {
+      // Format the date to YYYY-MM-DD
+      const formattedDate = slot.date ? format(new Date(slot.date), 'yyyy-MM-dd') : '';
       
-      if (functionError) {
-        console.error('API Route: Error generating XML:', functionError);
-        throw functionError;
+      // Format times as HH:MM
+      const startTime = slot.start_time.substring(0, 5);
+      const endTime = slot.end_time.substring(0, 5);
+      
+      // Get show and host display information
+      const showName = slot.show_name || '';
+      const hostName = slot.host_name || '';
+      
+      // Create combined display (like in the dashboard)
+      let combinedDisplay = showName;
+      if (hostName && showName !== hostName) {
+        combinedDisplay = `${showName} עם ${hostName}`;
       }
       
-      console.log('API Route: XML generated successfully');
-      // Set content type and return the XML
-      res.setHeader('Content-Type', 'application/xml');
-      return res.send(functionData);
+      // Add to XML
+      xml += `  <show>\n`;
+      xml += `    <date>${formattedDate}</date>\n`;
+      xml += `    <start_time>${startTime}</start_time>\n`;
+      xml += `    <end_time>${endTime}</end_time>\n`;
+      xml += `    <name>${escapeXml(showName)}</name>\n`;
+      xml += `    <host>${escapeXml(hostName)}</host>\n`;
+      xml += `    <combined>${escapeXml(combinedDisplay)}</combined>\n`;
+      xml += `  </show>\n`;
     }
     
-    // Use existing XML
-    let xmlContent = data.value;
+    xml += '</schedule>';
     
-    console.log('API Route: XML found (last updated: ' + new Date(data.updated_at).toLocaleString() + '), serving:', 
-      xmlContent.substring(0, 100) + '...');
+    // Store the generated XML in Supabase
+    const { error: storageError } = await supabase
+      .from('system_settings')
+      .upsert({ 
+        key: 'schedule_xml', 
+        value: xml,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+    
+    if (storageError) {
+      console.error("API Route: Error storing XML:", storageError);
+    } else {
+      console.log("API Route: XML stored successfully");
+    }
     
     // Set content type and return the XML
     res.setHeader('Content-Type', 'application/xml');
-    return res.send(xmlContent);
+    return res.send(xml);
   } catch (error) {
     console.error('API Route: Error serving XML:', error);
     res.status(500)
       .set('Content-Type', 'application/xml')
       .send('<?xml version="1.0" encoding="UTF-8"?><error>Failed to serve schedule XML</error>');
   }
+}
+
+// Helper function to escape XML special characters
+function escapeXml(unsafe: string): string {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
