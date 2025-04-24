@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { supabase } from '@/lib/supabase';
 import { getScheduleSlots } from '@/lib/supabase/schedule';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 export default async function handler(req: Request, res: Response) {
   try {
@@ -30,8 +30,12 @@ export default async function handler(req: Request, res: Response) {
     
     // Format slots for JSON output
     const formattedSchedule = filteredSlots.map(slot => {
+      // Calculate the actual date for this slot based on day_of_week
+      const weekStart = today;
+      const slotDate = addDays(weekStart, slot.day_of_week - weekStart.getDay());
+      
       // Format the date to YYYY-MM-DD
-      const formattedDate = slot.date ? format(new Date(slot.date), 'yyyy-MM-dd') : '';
+      const formattedDate = format(slotDate, 'yyyy-MM-dd');
       
       // Format times as HH:MM
       const startTime = slot.start_time.substring(0, 5);
