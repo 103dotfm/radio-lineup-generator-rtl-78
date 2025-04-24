@@ -261,13 +261,19 @@ serve(async (req) => {
   try {
     console.log("Starting XML generation process");
     
-    // Get template from request if available
+    // Get template and offset from request if available
     let template = '';
+    let previewOffset: number | undefined;
+    
     if (req.method === 'POST') {
       try {
         const body = await req.json();
         template = body.template || '';
-        console.log("Received template in request body, length:", template.length);
+        previewOffset = body.previewOffset;
+        console.log("Using template from request:", template.substring(0, 100) + "...");
+        if (previewOffset !== undefined) {
+          console.log("Using preview offset:", previewOffset);
+        }
       } catch (e) {
         console.warn("Could not parse request body", e);
       }
@@ -280,25 +286,41 @@ serve(async (req) => {
     
     // If no template in request, try to get it from the database
     if (!template) {
-      const { data: templateData, error: templateError } = await supabase
+      const { data: templateData } = await supabase
         .from('system_settings')
         .select('value')
         .eq('key', 'schedule_xml_template')
         .maybeSingle();
         
-      if (!templateError && templateData && templateData.value) {
+      if (templateData?.value) {
         template = templateData.value;
-        console.log("Using template from database, length:", template.length);
       }
+    }
+
+    // Get offset from settings if not previewing
+    let dataOffset = 0;
+    if (previewOffset === undefined) {
+      const { data: offsetData } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'schedule_data_offset')
+        .maybeSingle();
+        
+      if (offsetData?.value) {
+        dataOffset = parseInt(offsetData.value) || 0;
+      }
+    } else {
+      dataOffset = previewOffset;
     }
     
     // Get today's date as starting point
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const adjustedDate = new Date(today);
+    adjustedDate.setDate(today.getDate() + dataOffset);
+    console.log(`Using date ${adjustedDate.toISOString()} (offset: ${dataOffset} days)`);
     
-    // Get schedule slots for the next two weeks
-    console.log("Fetching schedule slots");
-    const scheduleSlots = await getScheduleSlots(supabase, today);
+    // Get schedule slots
+    const scheduleSlots = await getScheduleSlots(supabase, adjustedDate);
     
     // Add the combined display to each slot
     const enhancedSlots = scheduleSlots.map(slot => {
@@ -311,33 +333,22 @@ serve(async (req) => {
       };
     });
     
-    // Log a sample of enhanced slots to verify data
-    if (enhancedSlots.length > 0) {
-      console.log("Sample of enhanced slot data:", JSON.stringify(enhancedSlots[0], null, 2));
-    }
-    
     // Generate XML
     console.log("Generating XML from schedule slots");
     const xml = generateScheduleXML(enhancedSlots, template);
     
-    // Store the generated XML in Supabase
-    console.log("Storing XML in system_settings");
-    const { error: storageError } = await supabase
-      .from('system_settings')
-      .upsert({ 
-        key: 'schedule_xml', 
-        value: xml,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
-    
-    if (storageError) {
-      console.error("Error storing XML:", storageError);
-      throw new Error(`Failed to store XML: ${storageError.message}`);
-    } else {
-      console.log("XML stored successfully");
+    // If not previewing, store the generated XML
+    if (previewOffset === undefined) {
+      console.log("Storing XML in system_settings");
+      await supabase
+        .from('system_settings')
+        .upsert({ 
+          key: 'schedule_xml', 
+          value: xml,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
     }
     
-    // Return XML response
     return new Response(xml, {
       headers: {
         ...corsHeaders,
