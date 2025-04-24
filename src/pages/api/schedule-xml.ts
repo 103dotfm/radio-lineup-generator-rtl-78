@@ -1,81 +1,69 @@
 
 import { Request, Response } from 'express';
 import { supabase } from '@/lib/supabase';
-import { getScheduleSlots } from '@/lib/supabase/schedule';
 import { format, addDays } from 'date-fns';
+import { ScheduleView } from '@/components/schedule/ScheduleView';
+import { renderToString } from 'react-dom/server';
 
 export default async function handler(req: Request, res: Response) {
   try {
-    console.log('API Route: Generating XML file');
+    console.log('API Route: Generating XML file from frontend schedule');
     
     // Get today's date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    let allScheduleData = [];
-    
-    // Fetch data for the next 10 days
-    for (let i = 0; i < 10; i++) {
-      const currentDate = addDays(today, i);
-      console.log(`Fetching schedule for date: ${format(currentDate, 'yyyy-MM-dd')}`);
-      
-      // Fetch schedule slots for this specific date
-      const scheduleSlots = await getScheduleSlots(currentDate, false);
-      
-      if (!scheduleSlots || scheduleSlots.length === 0) {
-        console.log(`No schedule data found for ${format(currentDate, 'yyyy-MM-dd')}`);
-        continue;
-      }
-      
-      // Filter out the "red" slots
-      const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
-      
-      // Add to all slots array
-      allScheduleData.push(...filteredSlots.map(slot => ({
-        ...slot,
-        targetDate: currentDate
-      })));
-    }
-    
-    // Sort by date and start time
-    allScheduleData.sort((a, b) => {
-      const dateA = format(a.targetDate, 'yyyy-MM-dd');
-      const dateB = format(b.targetDate, 'yyyy-MM-dd');
-      
-      if (dateA !== dateB) {
-        return dateA.localeCompare(dateB);
-      }
-      return a.start_time.localeCompare(b.start_time);
-    });
-    
-    // Generate XML
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<schedule>\n';
     
-    // Process each slot
-    for (const slot of allScheduleData) {
-      // Format times as HH:MM
-      const startTime = slot.start_time.substring(0, 5);
-      const endTime = slot.end_time.substring(0, 5);
+    // Process next 10 days
+    for (let i = 0; i < 10; i++) {
+      const currentDate = addDays(today, i);
+      console.log(`Processing schedule for date: ${format(currentDate, 'yyyy-MM-dd')}`);
       
-      // Get show and host display information
-      const showName = slot.show_name || '';
-      const hostName = slot.host_name || '';
+      // Render the schedule component to string for this specific date
+      const scheduleHtml = renderToString(
+        <ScheduleView 
+          selectedDate={currentDate}
+          viewMode="daily"
+          hideDateControls={true}
+          hideHeaderDates={true}
+        />
+      );
       
-      // Create combined display (like in the dashboard)
-      let combinedDisplay = showName;
-      if (hostName && showName !== hostName) {
-        combinedDisplay = `${showName} עם ${hostName}`;
-      }
+      // Parse the rendered HTML to extract schedule data
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(scheduleHtml, 'text/html');
       
-      // Add to XML
-      xml += `  <show>\n`;
-      xml += `    <date>${format(slot.targetDate, 'yyyy-MM-dd')}</date>\n`;
-      xml += `    <start_time>${startTime}</start_time>\n`;
-      xml += `    <end_time>${endTime}</end_time>\n`;
-      xml += `    <name>${escapeXml(showName)}</name>\n`;
-      xml += `    <host>${escapeXml(hostName)}</host>\n`;
-      xml += `    <combined>${escapeXml(combinedDisplay)}</combined>\n`;
-      xml += `  </show>\n`;
+      // Find all schedule slots in the rendered output
+      const slots = doc.querySelectorAll('.schedule-slot');
+      
+      slots.forEach(slot => {
+        // Skip red slots
+        const slotColor = slot.getAttribute('data-color')?.toLowerCase();
+        if (slotColor === 'red') return;
+        
+        // Extract data from the slot
+        const showName = escapeXml(slot.getAttribute('data-show-name') || '');
+        const hostName = escapeXml(slot.getAttribute('data-host-name') || '');
+        const startTime = slot.getAttribute('data-start-time')?.substring(0, 5) || '';
+        const endTime = slot.getAttribute('data-end-time')?.substring(0, 5) || '';
+        
+        // Create combined display (like in the dashboard)
+        let combinedDisplay = showName;
+        if (hostName && showName !== hostName) {
+          combinedDisplay = `${showName} עם ${hostName}`;
+        }
+        
+        // Add to XML
+        xml += `  <show>\n`;
+        xml += `    <date>${format(currentDate, 'yyyy-MM-dd')}</date>\n`;
+        xml += `    <start_time>${startTime}</start_time>\n`;
+        xml += `    <end_time>${endTime}</end_time>\n`;
+        xml += `    <name>${showName}</name>\n`;
+        xml += `    <host>${hostName}</host>\n`;
+        xml += `    <combined>${escapeXml(combinedDisplay)}</combined>\n`;
+        xml += `  </show>\n`;
+      });
     }
     
     xml += '</schedule>';
