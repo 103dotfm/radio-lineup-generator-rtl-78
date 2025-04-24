@@ -1,12 +1,13 @@
 
 import { Request, Response } from 'express';
 import { supabase } from '@/lib/supabase';
-import { getScheduleSlots } from '@/lib/supabase/schedule';
 import { format, addDays } from 'date-fns';
+import { ScheduleView } from '@/components/schedule/ScheduleView';
+import { renderToString } from 'react-dom/server';
 
 export default async function handler(req: Request, res: Response) {
   try {
-    console.log('API Route: Generating JSON file');
+    console.log('API Route: Generating JSON file from frontend schedule');
     
     // Get today's date
     const today = new Date();
@@ -14,31 +15,37 @@ export default async function handler(req: Request, res: Response) {
     
     const allScheduleData = [];
     
-    // Fetch data for the next 10 days
+    // Process next 10 days
     for (let i = 0; i < 10; i++) {
       const currentDate = addDays(today, i);
-      console.log(`Fetching schedule for date: ${format(currentDate, 'yyyy-MM-dd')}`);
+      console.log(`Processing schedule for date: ${format(currentDate, 'yyyy-MM-dd')}`);
       
-      // Fetch schedule slots for this specific date
-      const scheduleSlots = await getScheduleSlots(currentDate, false);
+      // Render the schedule component to string for this specific date
+      const scheduleHtml = renderToString(
+        <ScheduleView 
+          selectedDate={currentDate}
+          viewMode="daily"
+          hideDateControls={true}
+          hideHeaderDates={true}
+        />
+      );
       
-      if (!scheduleSlots || scheduleSlots.length === 0) {
-        console.log(`No schedule data found for ${format(currentDate, 'yyyy-MM-dd')}`);
-        continue;
-      }
+      // Parse the rendered HTML to extract schedule data
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(scheduleHtml, 'text/html');
       
-      // Filter out the "red" slots
-      const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
+      // Find all schedule slots in the rendered output
+      const slots = doc.querySelectorAll('.schedule-slot');
       
-      // Format slots for this day
-      const formattedSlots = filteredSlots.map(slot => {
-        // Format times as HH:MM
-        const startTime = slot.start_time.substring(0, 5);
-        const endTime = slot.end_time.substring(0, 5);
+      slots.forEach(slot => {
+        // Skip red slots
+        const slotColor = slot.getAttribute('data-color')?.toLowerCase();
+        if (slotColor === 'red') return;
         
-        // Get show and host display information
-        const showName = slot.show_name || '';
-        const hostName = slot.host_name || '';
+        // Extract data from the slot
+        const showName = slot.getAttribute('data-show-name') || '';
+        const hostName = slot.getAttribute('data-host-name') || '';
+        const startTime = slot.getAttribute('data-start-time') || '';
         
         // Create combined display (like in the dashboard)
         let combinedDisplay = showName;
@@ -46,17 +53,16 @@ export default async function handler(req: Request, res: Response) {
           combinedDisplay = `${showName} עם ${hostName}`;
         }
         
-        return {
+        // Add to the schedule data
+        allScheduleData.push({
           date: format(currentDate, 'yyyy-MM-dd'),
-          startTime: startTime,
-          endTime: endTime,
+          startTime: startTime.substring(0, 5),
+          endTime: slot.getAttribute('data-end-time')?.substring(0, 5) || '',
           showName: showName,
           hosts: hostName,
           combinedDisplay: combinedDisplay
-        };
+        });
       });
-      
-      allScheduleData.push(...formattedSlots);
     }
     
     // Sort by date and start time
