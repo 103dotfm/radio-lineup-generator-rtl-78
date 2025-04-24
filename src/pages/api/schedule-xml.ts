@@ -12,42 +12,47 @@ export default async function handler(req: Request, res: Response) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Fetch schedule slots directly using the same function that the dashboard uses
-    const scheduleSlots = await getScheduleSlots(today, false);
+    let allScheduleData = [];
     
-    if (!scheduleSlots || scheduleSlots.length === 0) {
-      console.error('API Route: No schedule data found');
-      return res.status(500)
-        .set('Content-Type', 'application/xml')
-        .send('<?xml version="1.0" encoding="UTF-8"?><error>No schedule data found</error>');
+    // Fetch data for the next 10 days
+    for (let i = 0; i < 10; i++) {
+      const currentDate = addDays(today, i);
+      console.log(`Fetching schedule for date: ${format(currentDate, 'yyyy-MM-dd')}`);
+      
+      // Fetch schedule slots for this specific date
+      const scheduleSlots = await getScheduleSlots(currentDate, false);
+      
+      if (!scheduleSlots || scheduleSlots.length === 0) {
+        console.log(`No schedule data found for ${format(currentDate, 'yyyy-MM-dd')}`);
+        continue;
+      }
+      
+      // Filter out the "red" slots
+      const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
+      
+      // Add to all slots array
+      allScheduleData.push(...filteredSlots.map(slot => ({
+        ...slot,
+        targetDate: currentDate
+      })));
     }
     
-    console.log(`API Route: Retrieved ${scheduleSlots.length} schedule slots from dashboard data`);
-    
-    // Filter out the "red" slots
-    const filteredSlots = scheduleSlots.filter(slot => slot.color?.toLowerCase() !== 'red');
-    console.log(`API Route: ${scheduleSlots.length - filteredSlots.length} red slots filtered out`);
-    
-    // Generate XML
-    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<schedule>\n';
-    
     // Sort by date and start time
-    filteredSlots.sort((a, b) => {
-      if (a.day_of_week !== b.day_of_week) {
-        return a.day_of_week - b.day_of_week;
+    allScheduleData.sort((a, b) => {
+      const dateA = format(a.targetDate, 'yyyy-MM-dd');
+      const dateB = format(b.targetDate, 'yyyy-MM-dd');
+      
+      if (dateA !== dateB) {
+        return dateA.localeCompare(dateB);
       }
       return a.start_time.localeCompare(b.start_time);
     });
     
+    // Generate XML
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<schedule>\n';
+    
     // Process each slot
-    for (const slot of filteredSlots) {
-      // Calculate the actual date for this slot based on day_of_week
-      const weekStart = today;
-      const slotDate = addDays(weekStart, slot.day_of_week - weekStart.getDay());
-      
-      // Format the date to YYYY-MM-DD
-      const formattedDate = format(slotDate, 'yyyy-MM-dd');
-      
+    for (const slot of allScheduleData) {
       // Format times as HH:MM
       const startTime = slot.start_time.substring(0, 5);
       const endTime = slot.end_time.substring(0, 5);
@@ -64,7 +69,7 @@ export default async function handler(req: Request, res: Response) {
       
       // Add to XML
       xml += `  <show>\n`;
-      xml += `    <date>${formattedDate}</date>\n`;
+      xml += `    <date>${format(slot.targetDate, 'yyyy-MM-dd')}</date>\n`;
       xml += `    <start_time>${startTime}</start_time>\n`;
       xml += `    <end_time>${endTime}</end_time>\n`;
       xml += `    <name>${escapeXml(showName)}</name>\n`;
