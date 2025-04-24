@@ -254,13 +254,19 @@ serve(async (req) => {
   try {
     console.log("Starting JSON generation process");
     
-    // Get template from request if available
+    // Get template and offset from request if available
     let template = '';
+    let previewOffset: number | undefined;
+    
     if (req.method === 'POST') {
       try {
         const body = await req.json();
         template = body.template || '';
+        previewOffset = body.previewOffset;
         console.log("Using template from request:", template.substring(0, 100) + "...");
+        if (previewOffset !== undefined) {
+          console.log("Using preview offset:", previewOffset);
+        }
       } catch (e) {
         console.warn("Could not parse request body", e);
       }
@@ -273,25 +279,41 @@ serve(async (req) => {
     
     // If no template in request, try to get it from the database
     if (!template) {
-      const { data: templateData, error: templateError } = await supabase
+      const { data: templateData } = await supabase
         .from('system_settings')
         .select('value')
         .eq('key', 'schedule_json_template')
         .maybeSingle();
         
-      if (!templateError && templateData && templateData.value) {
+      if (templateData?.value) {
         template = templateData.value;
-        console.log("Using template from database:", template.substring(0, 100) + "...");
       }
+    }
+
+    // Get offset from settings if not previewing
+    let dataOffset = 0;
+    if (previewOffset === undefined) {
+      const { data: offsetData } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'schedule_data_offset')
+        .maybeSingle();
+        
+      if (offsetData?.value) {
+        dataOffset = parseInt(offsetData.value) || 0;
+      }
+    } else {
+      dataOffset = previewOffset;
     }
     
     // Get today's date as starting point
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const adjustedDate = new Date(today);
+    adjustedDate.setDate(today.getDate() + dataOffset);
+    console.log(`Using date ${adjustedDate.toISOString()} (offset: ${dataOffset} days)`);
     
-    // Get schedule slots for the next two weeks
-    console.log("Fetching schedule slots");
-    const scheduleSlots = await getScheduleSlots(supabase, today);
+    // Get schedule slots
+    const scheduleSlots = await getScheduleSlots(supabase, adjustedDate);
     
     // Add the combined display to each slot
     const enhancedSlots = scheduleSlots.map(slot => {
@@ -308,24 +330,18 @@ serve(async (req) => {
     console.log("Generating JSON from schedule slots");
     const json = generateScheduleJSON(enhancedSlots, template);
     
-    // Store the generated JSON in Supabase
-    console.log("Storing JSON in system_settings");
-    const { error: storageError } = await supabase
-      .from('system_settings')
-      .upsert({ 
-        key: 'schedule_json', 
-        value: json,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
-    
-    if (storageError) {
-      console.error("Error storing JSON:", storageError);
-      throw new Error(`Failed to store JSON: ${storageError.message}`);
-    } else {
-      console.log("JSON stored successfully");
+    // If not previewing, store the generated JSON
+    if (previewOffset === undefined) {
+      console.log("Storing JSON in system_settings");
+      await supabase
+        .from('system_settings')
+        .upsert({ 
+          key: 'schedule_json', 
+          value: json,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
     }
     
-    // Return JSON response
     return new Response(json, {
       headers: {
         ...corsHeaders,
