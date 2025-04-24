@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { supabase } from '@/lib/supabase';
 import { getScheduleSlots } from '@/lib/supabase/schedule';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 export default async function handler(req: Request, res: Response) {
   try {
@@ -33,17 +33,20 @@ export default async function handler(req: Request, res: Response) {
     
     // Sort by date and start time
     filteredSlots.sort((a, b) => {
-      const dateA = a.date ? new Date(a.date).getTime() : 0;
-      const dateB = b.date ? new Date(b.date).getTime() : 0;
-      
-      if (dateA !== dateB) return dateA - dateB;
+      if (a.day_of_week !== b.day_of_week) {
+        return a.day_of_week - b.day_of_week;
+      }
       return a.start_time.localeCompare(b.start_time);
     });
     
     // Process each slot
     for (const slot of filteredSlots) {
+      // Calculate the actual date for this slot based on day_of_week
+      const weekStart = today;
+      const slotDate = addDays(weekStart, slot.day_of_week - weekStart.getDay());
+      
       // Format the date to YYYY-MM-DD
-      const formattedDate = slot.date ? format(new Date(slot.date), 'yyyy-MM-dd') : '';
+      const formattedDate = format(slotDate, 'yyyy-MM-dd');
       
       // Format times as HH:MM
       const startTime = slot.start_time.substring(0, 5);
