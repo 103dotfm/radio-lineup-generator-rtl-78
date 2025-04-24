@@ -220,38 +220,56 @@ app.get('/schedule.xml', async (req, res) => {
     // Get XML content from system_settings
     const { data, error } = await supabase
       .from('system_settings')
-      .select('value')
+      .select('value, updated_at')
       .eq('key', 'schedule_xml')
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error('Error fetching XML:', error);
       throw error;
     }
     
-    if (!data || !data.value) {
-      console.log('No XML found, generating now');
-      try {
-        // If no XML is available, generate it by calling the Edge Function
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-xml');
+    // If no XML is available or it hasn't been updated in the last hour, generate it
+    const oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+    
+    const xmlNeedsRefresh = !data || !data.value || 
+      !data.updated_at || 
+      new Date(data.updated_at) < oneHourAgo;
+    
+    if (xmlNeedsRefresh) {
+      console.log('No XML found or it needs refreshing');
+      
+      // Import the XML generator function dynamically
+      const xmlGenerator = require('./pages/api/schedule-xml').default;
+      
+      // Call it with a mock request/response to get fresh data
+      await new Promise((resolve) => {
+        const mockRes = {
+          setHeader: () => {},
+          send: () => { resolve(); }
+        };
+        xmlGenerator({}, mockRes);
+      });
+      
+      // Get the freshly generated XML
+      const { data: freshData, error: freshError } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'schedule_xml')
+        .maybeSingle();
         
-        if (functionError) {
-          console.error('Error generating XML:', functionError);
-          throw functionError;
-        }
-        
-        console.log('XML generated successfully');
-        // Set content type and return the XML
-        res.setHeader('Content-Type', 'application/xml');
-        return res.send(functionData);
-      } catch (genError) {
-        console.error('Failed to generate XML:', genError);
-        throw new Error('Failed to generate XML: ' + genError.message);
+      if (freshError || !freshData) {
+        console.error('Error fetching fresh XML:', freshError);
+        throw freshError || new Error('No XML data found after generation');
       }
+      
+      console.log('XML refreshed successfully');
+      res.setHeader('Content-Type', 'application/xml');
+      return res.send(freshData.value);
     }
     
-    console.log('XML found, serving from database:', data.value.substring(0, 100) + '...');
-    // Set content type and return the XML
+    console.log('XML found, serving from database');
     res.setHeader('Content-Type', 'application/xml');
     return res.send(data.value);
   } catch (error) {
@@ -270,47 +288,70 @@ app.get('/schedule.json', async (req, res) => {
     // Get JSON content from system_settings
     const { data, error } = await supabase
       .from('system_settings')
-      .select('value')
+      .select('value, updated_at')
       .eq('key', 'schedule_json')
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error('Error fetching JSON:', error);
       throw error;
     }
     
-    if (!data || !data.value) {
-      console.log('No JSON found, generating now');
+    // If no JSON is available or it hasn't been updated in the last hour, generate it
+    const oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+    
+    const jsonNeedsRefresh = !data || !data.value || 
+      !data.updated_at || 
+      new Date(data.updated_at) < oneHourAgo;
+    
+    if (jsonNeedsRefresh) {
+      console.log('No JSON found or it needs refreshing');
+      
+      // Import the JSON generator function dynamically
+      const jsonGenerator = require('./pages/api/schedule-json').default;
+      
+      // Call it with a mock request/response to get fresh data
+      await new Promise((resolve) => {
+        const mockRes = {
+          setHeader: () => {},
+          json: () => { resolve(); }
+        };
+        jsonGenerator({}, mockRes);
+      });
+      
+      // Get the freshly generated JSON
+      const { data: freshData, error: freshError } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'schedule_json')
+        .maybeSingle();
+        
+      if (freshError || !freshData) {
+        console.error('Error fetching fresh JSON:', freshError);
+        throw freshError || new Error('No JSON data found after generation');
+      }
+      
+      console.log('JSON refreshed successfully');
+      res.setHeader('Content-Type', 'application/json');
+      
       try {
-        // If no JSON is available, generate it by calling the Edge Function
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('generate-schedule-json');
-        
-        if (functionError) {
-          console.error('Error generating JSON:', functionError);
-          throw functionError;
-        }
-        
-        console.log('JSON generated successfully');
-        // Set content type and return the JSON
-        res.setHeader('Content-Type', 'application/json');
-        return res.json(functionData);
-      } catch (genError) {
-        console.error('Failed to generate JSON:', genError);
-        throw new Error('Failed to generate JSON: ' + genError.message);
+        const jsonData = JSON.parse(freshData.value);
+        return res.json(jsonData);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        return res.send(freshData.value);
       }
     }
     
-    console.log('JSON found, serving from database:', data.value.substring(0, 100) + '...');
-    // Set content type and return the JSON
+    console.log('JSON found, serving from database');
     res.setHeader('Content-Type', 'application/json');
     
-    // Parse the JSON string into an object before sending
     try {
       const jsonData = JSON.parse(data.value);
       return res.json(jsonData);
     } catch (parseError) {
       console.error('Error parsing JSON data:', parseError);
-      // If parsing fails, send the raw string
       return res.send(data.value);
     }
   } catch (error) {
