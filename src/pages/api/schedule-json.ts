@@ -25,7 +25,6 @@ export default async function handler(req: Request, res: Response) {
       const scheduleHtml = renderToString(
         React.createElement(ScheduleView, {
           selectedDate: currentDate,
-          viewMode: "daily",
           hideDateControls: true,
           hideHeaderDates: true
         })

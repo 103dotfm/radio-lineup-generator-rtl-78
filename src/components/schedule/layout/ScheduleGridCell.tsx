@@ -56,7 +56,10 @@ const ScheduleGridCell = ({
         {isAuthenticated && (
           <div className="flex items-center space-x-1 rtl:space-x-reverse ml-2">
             {slot.is_prerecorded && (
-              <FileCheck className="h-4 w-4 text-blue-500" title="תוכנית מוקלטת" />
+              <FileCheck 
+                className="h-4 w-4 text-blue-500" 
+                aria-label="תוכנית מוקלטת" 
+              />
             )}
             {isAdmin && (
               <>
