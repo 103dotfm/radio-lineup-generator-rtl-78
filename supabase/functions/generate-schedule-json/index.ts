@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -79,43 +78,51 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       const currentDayOfWeek = currentDate.getDay();
       const currentDateStr = formatDate(currentDate);
 
-      // For each recurring/nonrecurring slot, process for current date only (not from week start)
       for (const slot of slots) {
         // Only match slots for this day of week
         if (slot.day_of_week !== currentDayOfWeek) continue;
-        
+
+        // Only consider slots that are relevant for this date range
+        if (!slot.is_recurring && formatDate(new Date(slot.created_at)) !== currentDateStr)
+          continue;
+
         // Filter by slot color BEFORE processing for XML/JSON
         if (slot.color && slot.color.trim().toLowerCase() === "red") {
           continue;
         }
-        
-        // First check if there's a non-recurring slot specifically for this date
-        // This matches the dashboard behavior - non-recurring slots override recurring ones
-        const nonRecurringSlot = slots.find(s => 
-          !s.is_recurring && 
-          s.day_of_week === currentDayOfWeek && 
-          s.start_time === slot.start_time && 
+
+        // Check for modifications or deletions for this slot
+        const matchingSlots = slots.filter(s =>
+          s.day_of_week === slot.day_of_week && s.start_time === slot.start_time
+        );
+
+        const modification = matchingSlots.find(s =>
+          !s.is_recurring &&
           formatDate(new Date(s.created_at)) === currentDateStr
         );
-        
-        if (nonRecurringSlot && !nonRecurringSlot.is_deleted) {
-          // Use the non-recurring slot as it overrides the recurring one for this specific date
-          processedSlots.push({
-            ...nonRecurringSlot,
-            date: currentDateStr,
-            actualDate: new Date(currentDate)
-          });
-        } else if (slot.is_recurring && !slot.is_deleted && !nonRecurringSlot) {
-          // If no non-recurring override exists, use the recurring slot
-          // But skip if there's a non-recurring deleted slot (which means the show is canceled for this date)
+
+        if (modification) {
+          if (!modification.is_deleted) {
+            const displayInfo = getShowDisplay(modification.show_name, modification.host_name);
+            processedSlots.push({
+              ...modification,
+              date: currentDateStr,
+              actualDate: new Date(currentDate),
+              displayName: displayInfo.displayName,
+              displayHost: displayInfo.displayHost
+            });
+          }
+        } else if (slot.is_recurring && !slot.is_deleted) {
+          const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
           processedSlots.push({
             ...slot,
             date: currentDateStr,
-            actualDate: new Date(currentDate)
+            actualDate: new Date(currentDate),
+            displayName: displayInfo.displayName,
+            displayHost: displayInfo.displayHost
           });
         }
       }
-
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -126,21 +133,9 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       }
       return a.start_time.localeCompare(b.start_time);
     });
-    
-    // Remove duplicates (in case we have multiple entries for the same time slot)
-    const uniqueSlots = [];
-    const seenKeys = new Set();
-    
-    for (const slot of processedSlots) {
-      const key = `${slot.date}_${slot.start_time}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        uniqueSlots.push(slot);
-      }
-    }
 
-    console.log(`Processed ${uniqueSlots.length} slots for JSON output`);
-    return uniqueSlots;
+    console.log(`Processed ${processedSlots.length} slots for JSON output`);
+    return processedSlots;
   } catch (error) {
     console.error("Error in getScheduleSlots:", error);
     throw error;
