@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { format, addDays } from 'date-fns';
 import { ScheduleView } from '@/components/schedule/ScheduleView';
 import { renderToString } from 'react-dom/server';
+import React from 'react';
 
 export default async function handler(req: Request, res: Response) {
   try {
@@ -22,12 +23,12 @@ export default async function handler(req: Request, res: Response) {
       
       // Render the schedule component to string for this specific date
       const scheduleHtml = renderToString(
-        <ScheduleView 
-          selectedDate={currentDate}
-          viewMode="daily"
-          hideDateControls={true}
-          hideHeaderDates={true}
-        />
+        React.createElement(ScheduleView, {
+          selectedDate: currentDate,
+          viewMode: "daily",
+          hideDateControls: true,
+          hideHeaderDates: true
+        })
       );
       
       // Parse the rendered HTML to extract schedule data

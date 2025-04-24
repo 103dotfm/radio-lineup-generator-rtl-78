@@ -22,7 +22,7 @@ const ScheduleGridCell = ({
   isAdmin,
   isAuthenticated
 }: ScheduleGridCellProps) => {
-  const displayText = getShowDisplay(slot);
+  const { displayName, displayHost } = getShowDisplay(slot.show_name, slot.host_name);
   const bgColorClass = slot.color?.toLowerCase() === 'red' ? 'bg-red-100' : 
     slot.color?.toLowerCase() === 'blue' ? 'bg-blue-100' : 
     slot.color?.toLowerCase() === 'green' ? 'bg-green-100' : 
@@ -41,8 +41,13 @@ const ScheduleGridCell = ({
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
-            {displayText}
+            {displayName}
           </p>
+          {displayHost && (
+            <p className="text-xs text-gray-700 truncate">
+              עם {displayHost}
+            </p>
+          )}
           <p className="text-xs text-gray-500">
             {slot.start_time?.substring(0, 5)} - {slot.end_time?.substring(0, 5)}
           </p>
