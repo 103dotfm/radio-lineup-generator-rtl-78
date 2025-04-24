@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -34,19 +35,19 @@ function getCombinedShowDisplay(showName: string, hostName?: string): string {
   return `${showName} עם ${hostName}`;
 }
 
-// Get schedule slots for the next two weeks, starting from TODAY (not the week start), and skipping 'red' slots.
+// Get schedule slots for the next two weeks, starting from today (with offset), focusing on non-recurring slots first
 async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
     // Calculate the end date (2 weeks from start)
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 14);
-
+    
     const startDateStr = formatDate(startDate);
     const endDateStr = formatDate(endDate);
-
+    
     console.log(`Fetching schedule from ${startDateStr} to ${endDateStr}`);
-
-    // Fetch all slots for the time range
+    
+    // Get all slots (both recurring and non-recurring)
     const { data: slots, error } = await supabase
       .from('schedule_slots_old')
       .select(`
@@ -60,72 +61,92 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
           created_at,
           slot_id
         )
-      `)
-      .or(`is_recurring.eq.false,is_recurring.eq.true`);
-
+      `);
+    
     if (error) {
       console.error("Error fetching slots:", error);
       throw new Error(`Failed to fetch schedule slots: ${error.message}`);
     }
-
+    
     console.log(`Retrieved ${slots ? slots.length : 0} raw slots from database`);
-
-    // Process slots to match dashboard logic – always starting from TODAY.
+    
+    // Process slots to match dashboard logic – always starting from TODAY with offset
     const processedSlots = [];
     const currentDate = new Date(startDate);
-
+    const processedDaySlots = new Map(); // Track processed slots by day and time
+    
     while (currentDate <= endDate) {
       const currentDayOfWeek = currentDate.getDay();
       const currentDateStr = formatDate(currentDate);
-
-      for (const slot of slots) {
-        // Only match slots for this day of week
-        if (slot.day_of_week !== currentDayOfWeek) continue;
-
-        // Only consider slots that are relevant for this date range
-        if (!slot.is_recurring && formatDate(new Date(slot.created_at)) !== currentDateStr)
-          continue;
-
-        // Filter by slot color BEFORE processing for XML/JSON
+      
+      // First, find any non-recurring slots for this specific date
+      // These override recurring slots
+      const nonRecurringSlots = slots.filter(slot => 
+        !slot.is_recurring && 
+        !slot.is_deleted &&
+        formatDate(new Date(slot.created_at)) === currentDateStr &&
+        slot.day_of_week === currentDayOfWeek
+      );
+      
+      // Process non-recurring slots first (highest priority)
+      for (const slot of nonRecurringSlots) {
+        // Skip slots with red color
         if (slot.color && slot.color.trim().toLowerCase() === "red") {
           continue;
         }
-
-        // Check for modifications or deletions for this slot
-        const matchingSlots = slots.filter(s =>
-          s.day_of_week === slot.day_of_week && s.start_time === slot.start_time
-        );
-
-        const modification = matchingSlots.find(s =>
-          !s.is_recurring &&
-          formatDate(new Date(s.created_at)) === currentDateStr
-        );
-
-        if (modification) {
-          if (!modification.is_deleted) {
-            const displayInfo = getShowDisplay(modification.show_name, modification.host_name);
-            processedSlots.push({
-              ...modification,
-              date: currentDateStr,
-              actualDate: new Date(currentDate),
-              displayName: displayInfo.displayName,
-              displayHost: displayInfo.displayHost
-            });
-          }
-        } else if (slot.is_recurring && !slot.is_deleted) {
-          const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
-          processedSlots.push({
-            ...slot,
-            date: currentDateStr,
-            actualDate: new Date(currentDate),
-            displayName: displayInfo.displayName,
-            displayHost: displayInfo.displayHost
-          });
-        }
+        
+        const key = `${currentDateStr}_${slot.start_time}`;
+        const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+        
+        processedSlots.push({
+          ...slot,
+          date: currentDateStr,
+          actualDate: new Date(currentDate),
+          displayName: displayInfo.displayName,
+          displayHost: displayInfo.displayHost,
+          combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+        });
+        
+        // Mark this time slot as processed for this day
+        processedDaySlots.set(key, true);
       }
+      
+      // Now process recurring slots for any time slots not already filled
+      const recurringSlots = slots.filter(slot => 
+        slot.is_recurring && 
+        !slot.is_deleted &&
+        slot.day_of_week === currentDayOfWeek
+      );
+      
+      for (const slot of recurringSlots) {
+        const key = `${currentDateStr}_${slot.start_time}`;
+        
+        // Skip if we already processed a non-recurring slot for this time
+        if (processedDaySlots.has(key)) {
+          continue;
+        }
+        
+        // Skip slots with red color
+        if (slot.color && slot.color.trim().toLowerCase() === "red") {
+          continue;
+        }
+        
+        const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+        
+        processedSlots.push({
+          ...slot,
+          date: currentDateStr,
+          actualDate: new Date(currentDate),
+          displayName: displayInfo.displayName,
+          displayHost: displayInfo.displayHost,
+          combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+        });
+      }
+      
+      // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
-
+    
     // Sort processed slots by date and start time
     processedSlots.sort((a, b) => {
       if (a.date !== b.date) {
@@ -133,7 +154,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
       }
       return a.start_time.localeCompare(b.start_time);
     });
-
+    
     console.log(`Processed ${processedSlots.length} slots for JSON output`);
     return processedSlots;
   } catch (error) {
@@ -170,7 +191,8 @@ function generateScheduleJSON(scheduleSlots: any[], template: string = ''): stri
       "startTime": "%starttime",
       "endTime": "%endtime",
       "showName": "%showname",
-      "hosts": "%showhosts"
+      "hosts": "%showhosts",
+      "combined": "%showcombined"
     }
   ]
 }`;
@@ -203,7 +225,8 @@ function generateScheduleJSON(scheduleSlots: any[], template: string = ''): stri
             startTime: formatTime(slot.start_time),
             endTime: formatTime(slot.end_time),
             showName: slot.displayName || slot.show_name,
-            hosts: slot.displayHost || slot.host_name
+            hosts: slot.displayHost || slot.host_name,
+            combined: slot.combinedDisplay || getCombinedShowDisplay(slot.show_name, slot.host_name)
           };
         }
       });
@@ -227,7 +250,8 @@ function generateScheduleJSON(scheduleSlots: any[], template: string = ''): stri
               startTime: formatTime(slot.start_time),
               endTime: formatTime(slot.end_time),
               showName: slot.displayName || slot.show_name,
-              hosts: slot.displayHost || slot.host_name
+              hosts: slot.displayHost || slot.host_name,
+              combined: slot.combinedDisplay || getCombinedShowDisplay(slot.show_name, slot.host_name)
             };
           }
         })

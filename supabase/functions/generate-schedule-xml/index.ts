@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -34,7 +35,7 @@ function getCombinedShowDisplay(showName: string, hostName?: string): string {
   return `${showName} עם ${hostName}`;
 }
 
-// Get schedule slots for the next two weeks, starting from TODAY (not the week start), and skipping 'red' slots.
+// Get schedule slots for the next two weeks, starting from today (with offset), focusing on non-recurring slots first
 async function getScheduleSlots(supabase: any, startDate: Date) {
   try {
     // Calculate the end date (2 weeks from start)
@@ -46,7 +47,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
     
     console.log(`Fetching schedule from ${startDateStr} to ${endDateStr}`);
     
-    // Fetch all slots for the time range
+    // Get all slots (both recurring and non-recurring)
     const { data: slots, error } = await supabase
       .from('schedule_slots_old')
       .select(`
@@ -60,8 +61,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
           created_at,
           slot_id
         )
-      `)
-      .or(`is_recurring.eq.false,is_recurring.eq.true`);
+      `);
     
     if (error) {
       console.error("Error fetching slots:", error);
@@ -70,57 +70,80 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
     
     console.log(`Retrieved ${slots ? slots.length : 0} raw slots from database`);
     
-    // Process slots to match dashboard logic – always starting from TODAY.
+    // Process slots to match dashboard logic – always starting from TODAY with offset
     const processedSlots = [];
     const currentDate = new Date(startDate);
+    const processedDaySlots = new Map(); // Track processed slots by day and time
     
     while (currentDate <= endDate) {
       const currentDayOfWeek = currentDate.getDay();
       const currentDateStr = formatDate(currentDate);
       
-      // For each recurring/nonrecurring slot, process for current date only (not from week start)
-      for (const slot of slots) {
-        // Only match slots for this day of week
-        if (slot.day_of_week !== currentDayOfWeek) continue;
-        
-        // Only consider slots that are relevant for this date range
-        // For non-recurring, must be for this actual calendar date
-        if (!slot.is_recurring && formatDate(new Date(slot.created_at)) !== currentDateStr)
-          continue;
-        
-        // Filter by slot color BEFORE processing for XML/JSON
+      // First, find any non-recurring slots for this specific date
+      // These override recurring slots
+      const nonRecurringSlots = slots.filter(slot => 
+        !slot.is_recurring && 
+        !slot.is_deleted &&
+        formatDate(new Date(slot.created_at)) === currentDateStr &&
+        slot.day_of_week === currentDayOfWeek
+      );
+      
+      // Process non-recurring slots first (highest priority)
+      for (const slot of nonRecurringSlots) {
+        // Skip slots with red color
         if (slot.color && slot.color.trim().toLowerCase() === "red") {
           continue;
         }
         
-        // Check for modifications or deletions for this slot
-        const matchingSlots = slots.filter(s =>
-          s.day_of_week === slot.day_of_week && s.start_time === slot.start_time
-        );
+        const key = `${currentDateStr}_${slot.start_time}`;
+        const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
         
-        // If there's a non-recurring modification for the current date
-        const modification = matchingSlots.find(s =>
-          !s.is_recurring &&
-          formatDate(new Date(s.created_at)) === currentDateStr
-        );
+        processedSlots.push({
+          ...slot,
+          date: currentDateStr,
+          actualDate: new Date(currentDate),
+          displayName: displayInfo.displayName,
+          displayHost: displayInfo.displayHost,
+          combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+        });
         
-        if (modification) {
-          if (!modification.is_deleted) {
-            processedSlots.push({
-              ...modification,
-              date: currentDateStr,
-              actualDate: new Date(currentDate)
-            });
-          }
-        } else if (slot.is_recurring && !slot.is_deleted) {
-          processedSlots.push({
-            ...slot,
-            date: currentDateStr,
-            actualDate: new Date(currentDate)
-          });
-        }
+        // Mark this time slot as processed for this day
+        processedDaySlots.set(key, true);
       }
       
+      // Now process recurring slots for any time slots not already filled
+      const recurringSlots = slots.filter(slot => 
+        slot.is_recurring && 
+        !slot.is_deleted &&
+        slot.day_of_week === currentDayOfWeek
+      );
+      
+      for (const slot of recurringSlots) {
+        const key = `${currentDateStr}_${slot.start_time}`;
+        
+        // Skip if we already processed a non-recurring slot for this time
+        if (processedDaySlots.has(key)) {
+          continue;
+        }
+        
+        // Skip slots with red color
+        if (slot.color && slot.color.trim().toLowerCase() === "red") {
+          continue;
+        }
+        
+        const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
+        
+        processedSlots.push({
+          ...slot,
+          date: currentDateStr,
+          actualDate: new Date(currentDate),
+          displayName: displayInfo.displayName,
+          displayHost: displayInfo.displayHost,
+          combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
+        });
+      }
+      
+      // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
     
@@ -153,16 +176,6 @@ function escapeXml(unsafe: string): string {
 
 // Process a template string with schedule data
 function processTemplate(template: string, show: any): string {
-  // Explicitly log the values being substituted for debugging
-  console.log("Show data for template:", {
-    showName: show.displayName || show.show_name || '',
-    hostName: show.displayHost || show.host_name || '',
-    combinedDisplay: show.combinedDisplay || '',
-    startTime: formatTime(show.start_time),
-    endTime: formatTime(show.end_time),
-    date: show.date || ''
-  });
-
   // Process the template with all substitutions
   return template
     .replace(/%showname/g, escapeXml(show.displayName || show.show_name || ''))
@@ -222,17 +235,8 @@ function generateScheduleXML(scheduleSlots: any[], template: string = ''): strin
       if (seenShows.has(showKey)) continue;
       seenShows.add(showKey);
       
-      // Add the combined display to the slot
-      const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
-      const enhancedSlot = {
-        ...slot,
-        displayName: displayInfo.displayName,
-        displayHost: displayInfo.displayHost,
-        combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
-      };
-      
       // Process the show template for this slot
-      const processedShow = processTemplate(showTemplate, enhancedSlot);
+      const processedShow = processTemplate(showTemplate, slot);
       xml += processedShow;
       showCount++;
     }
@@ -322,20 +326,9 @@ serve(async (req) => {
     // Get schedule slots
     const scheduleSlots = await getScheduleSlots(supabase, adjustedDate);
     
-    // Add the combined display to each slot
-    const enhancedSlots = scheduleSlots.map(slot => {
-      const displayInfo = getShowDisplay(slot.show_name, slot.host_name);
-      return {
-        ...slot,
-        displayName: displayInfo.displayName,
-        displayHost: displayInfo.displayHost,
-        combinedDisplay: getCombinedShowDisplay(slot.show_name, slot.host_name)
-      };
-    });
-    
     // Generate XML
     console.log("Generating XML from schedule slots");
-    const xml = generateScheduleXML(enhancedSlots, template);
+    const xml = generateScheduleXML(scheduleSlots, template);
     
     // If not previewing, store the generated XML
     if (previewOffset === undefined) {

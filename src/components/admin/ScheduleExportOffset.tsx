@@ -40,15 +40,15 @@ export function ScheduleExportOffset() {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(data, "text/xml");
       const shows = xmlDoc.getElementsByTagName("show");
-      let previewText = "Preview of first 3 shows with offset:\n\n";
+      let previewText = "### Preview of first 3 shows with offset:\n\n";
       
       for (let i = 0; i < Math.min(shows.length, 3); i++) {
         const show = shows[i];
         const date = show.getElementsByTagName("date")[0]?.textContent;
-        const name = show.getElementsByTagName("name")[0]?.textContent;
         const startTime = show.getElementsByTagName("start_time")[0]?.textContent;
+        const combinedName = show.getElementsByTagName("combined")[0]?.textContent;
         
-        previewText += `${date} - ${startTime} - ${name}\n`;
+        previewText += `${date || 'N/A'} - ${startTime || 'N/A'} - ${combinedName || 'N/A'}\n`;
       }
       
       setPreview(previewText);
