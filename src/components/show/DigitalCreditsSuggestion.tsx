@@ -5,6 +5,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Editor } from '@tiptap/react';
 import { Check, X } from 'lucide-react';
 import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { InfoIcon } from 'lucide-react';
 
 interface DigitalCreditsSuggestionProps {
   showDate: Date | undefined;
@@ -17,11 +20,13 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
   const [isLoading, setIsLoading] = useState(true);
   const [editedSuggestion, setEditedSuggestion] = useState('');
   const [error, setError] = useState('');
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
     const fetchSuggestion = async () => {
       if (!showDate || !showTime) {
         setIsLoading(false);
+        setHasChecked(true);
         return;
       }
 
@@ -58,6 +63,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         setError('שגיאה בטעינת הצעה לקרדיטים לדיגיטל');
       } finally {
         setIsLoading(false);
+        setHasChecked(true);
       }
     };
 
@@ -84,8 +90,8 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
     setSuggestion(null);
   };
 
-  // Don't render anything if there's no suggestion or if we're still loading
-  if (isLoading) {
+  // Don't render anything if we're still loading and haven't checked yet
+  if (isLoading && !hasChecked) {
     return (
       <div className="bg-gray-50 border rounded-md p-4 my-2 text-center">
         <p className="text-sm text-gray-500">טוען הצעה לקרדיטים לדיגיטל...</p>
@@ -101,12 +107,34 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
     );
   }
 
-  if (!suggestion) {
-    return null;
+  // If we've checked and there's no suggestion, show a help message
+  if (hasChecked && !suggestion) {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-md p-3 my-2 text-center">
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-gray-500">אין קרדיטים לדיגיטל זמינים לתוכנית זו</p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <InfoIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" side="left">
+              <div dir="rtl" className="space-y-2 text-sm">
+                <h4 className="font-medium">אודות קרדיטים לדיגיטל</h4>
+                <p>הקרדיטים לדיגיטל נלקחים מסידור העבודה השבועי של מחלקת הדיגיטל.</p>
+                <p>אם אין קרדיטים זמינים, יתכן שטרם נוסף המידע לסידור העבודה.</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+    );
   }
 
+  // If we have a suggestion, show it
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 my-2">
+    <div className="digital-credits-suggestion p-4 my-2">
       <div className="mb-2">
         <h3 className="text-sm font-medium text-blue-800">הצעה לקרדיטים לדיגיטל:</h3>
       </div>
