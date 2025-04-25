@@ -31,6 +31,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const formattedTime = formatTime(timeString);
     console.log(`Formatted time: ${formattedTime}`);
     
+    // Get the most recent digital work arrangement
     const { data: arrangements, error: arrangementError } = await supabase
       .from('digital_work_arrangements')
       .select('id')
@@ -50,6 +51,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const arrangementId = arrangements[0].id;
     console.log(`Using arrangement ID: ${arrangementId}`);
     
+    // Fetch all shifts for the day (don't filter by time yet to debug)
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
@@ -69,17 +71,44 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     }
     
     console.log(`Found ${shifts.length} shifts for day ${day}`);
+    console.log('All shifts for this day:', shifts);
     
     // Find shifts that match the time
     const matchingShifts = shifts.filter(shift => {
       const shiftStartTime = formatTime(shift.start_time);
+      console.log(`Comparing shift time ${shiftStartTime} with target time ${formattedTime}`);
       return shiftStartTime === formattedTime;
     });
     
     console.log(`Found ${matchingShifts.length} matching shifts for time ${formattedTime}`);
+    console.log('Matching shifts:', matchingShifts);
     
     if (matchingShifts.length === 0) {
-      return null;
+      // If no exact match, try to find shifts that contain this time
+      const containingShifts = shifts.filter(shift => {
+        const shiftStart = formatTime(shift.start_time);
+        const shiftEnd = formatTime(shift.end_time);
+        // Convert times to minutes for easier comparison
+        const getMinutes = (time: string) => {
+          const [hours, minutes] = time.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+        
+        const timeInMinutes = getMinutes(formattedTime);
+        const startInMinutes = getMinutes(shiftStart);
+        const endInMinutes = getMinutes(shiftEnd);
+        
+        // Check if the time falls within the shift's time range
+        return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
+      });
+      
+      console.log(`Found ${containingShifts.length} containing shifts for time ${formattedTime}`);
+      
+      if (containingShifts.length > 0) {
+        matchingShifts.push(...containingShifts);
+      } else {
+        return null;
+      }
     }
     
     // Group by shift type
@@ -103,17 +132,17 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     
     // Get all names for digital workers
     const digitalWorkerIds = matchingShifts
-      .filter(shift => shift.shift_type.includes("דיגיטל"))
+      .filter(shift => shift.section_name === 'digital_shifts')
       .map(shift => shift.person_name);
     
-    console.log(`Filtered names for credits:`, digitalWorkerIds);
+    console.log(`Filtered digital worker IDs:`, digitalWorkerIds);
     
     // Fetch actual worker names from the workers table
     let digitalWorkerNames: string[] = digitalWorkerIds;
     
     if (digitalWorkerIds.length > 0) {
       // Check if these are UUIDs or already names
-      const isUUID = digitalWorkerIds[0].match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      const isUUID = digitalWorkerIds[0] && digitalWorkerIds[0].match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       
       if (isUUID) {
         console.log("IDs appear to be UUIDs, fetching worker names...");
