@@ -51,12 +51,13 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const arrangementId = arrangements[0].id;
     console.log(`Using arrangement ID: ${arrangementId}`);
     
-    // Fetch all shifts for the day (don't filter by time yet to debug)
+    // Fetch all digital shifts specifically for the digital section
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
       .eq('arrangement_id', arrangementId)
       .eq('day_of_week', day)
+      .eq('section_name', 'digital_shifts') // Specifically target digital shifts
       .not('person_name', 'is', null)
       .not('is_hidden', 'eq', true);
     
@@ -66,12 +67,12 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     }
     
     if (!shifts || shifts.length === 0) {
-      console.log(`No shifts found for day ${day}`);
+      console.log(`No digital shifts found for day ${day}`);
       return null;
     }
     
-    console.log(`Found ${shifts.length} shifts for day ${day}`);
-    console.log('All shifts for this day:', shifts);
+    console.log(`Found ${shifts.length} digital shifts for day ${day}`);
+    console.log('All digital shifts for this day:', shifts);
     
     // Find shifts that match the time
     const matchingShifts = shifts.filter(shift => {
@@ -81,7 +82,6 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     });
     
     console.log(`Found ${matchingShifts.length} matching shifts for time ${formattedTime}`);
-    console.log('Matching shifts:', matchingShifts);
     
     if (matchingShifts.length === 0) {
       // If no exact match, try to find shifts that contain this time
@@ -105,58 +105,22 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       console.log(`Found ${containingShifts.length} containing shifts for time ${formattedTime}`);
       
       if (containingShifts.length > 0) {
+        console.log('Using shifts that contain this time:', containingShifts);
         matchingShifts.push(...containingShifts);
       } else {
+        console.log('No shifts found that match or contain this time');
         return null;
       }
     }
     
-    // Group by shift type
-    const groupedByType: Record<string, string[]> = {};
+    // Get worker names directly from the person_name field
+    const digitalWorkerNames = matchingShifts.map(shift => shift.person_name);
     
-    matchingShifts.forEach(shift => {
-      if (!groupedByType[shift.shift_type]) {
-        groupedByType[shift.shift_type] = [];
-      }
-      groupedByType[shift.shift_type].push(shift.person_name);
-    });
+    console.log(`Digital worker names:`, digitalWorkerNames);
     
-    // Count shifts by category
-    const categories = {
-      "Digital": Object.keys(groupedByType).filter(type => type.includes("דיגיטל")).length,
-      "Transcription": Object.keys(groupedByType).filter(type => type.includes("תמלול")).length,
-      "Live": Object.keys(groupedByType).filter(type => !type.includes("דיגיטל") && !type.includes("תמלול")).length
-    };
-    
-    console.log(`Matching shifts by category - Digital: ${categories.Digital}, Transcription: ${categories.Transcription}, Live: ${categories.Live}`);
-    
-    // Get all names for digital workers
-    const digitalWorkerIds = matchingShifts
-      .filter(shift => shift.section_name === 'digital_shifts')
-      .map(shift => shift.person_name);
-    
-    console.log(`Filtered digital worker IDs:`, digitalWorkerIds);
-    
-    // Fetch actual worker names from the workers table
-    let digitalWorkerNames: string[] = digitalWorkerIds;
-    
-    if (digitalWorkerIds.length > 0) {
-      // Check if these are UUIDs or already names
-      const isUUID = digitalWorkerIds[0] && digitalWorkerIds[0].match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-      
-      if (isUUID) {
-        console.log("IDs appear to be UUIDs, fetching worker names...");
-        const workers = await getWorkersByIds(digitalWorkerIds);
-        
-        if (workers && workers.length > 0) {
-          digitalWorkerNames = workers.map(worker => worker.name);
-          console.log("Converted worker IDs to names:", digitalWorkerNames);
-        } else {
-          console.warn("Failed to fetch worker names, falling back to IDs");
-        }
-      } else {
-        console.log("IDs appear to already be names, using directly");
-      }
+    if (digitalWorkerNames.length === 0) {
+      console.log('No digital worker names found');
+      return null;
     }
     
     // Format the credit line for digital workers
