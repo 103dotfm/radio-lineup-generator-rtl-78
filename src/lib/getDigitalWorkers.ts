@@ -51,13 +51,12 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const arrangementId = arrangements[0].id;
     console.log(`Using arrangement ID: ${arrangementId}`);
     
-    // Fetch all digital shifts specifically for the digital section
+    // Fetch all digital shifts for the day - not filtered by section initially
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
       .eq('arrangement_id', arrangementId)
       .eq('day_of_week', day)
-      .eq('section_name', 'digital_shifts') // Specifically target digital shifts
       .not('person_name', 'is', null)
       .not('is_hidden', 'eq', true);
     
@@ -71,7 +70,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    console.log(`Found ${shifts.length} digital shifts for day ${day}`);
+    console.log(`Found ${shifts.length} total digital shifts for day ${day}`);
     console.log('All digital shifts for this day:', shifts);
     
     // Find shifts that match the time
@@ -81,7 +80,9 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return shiftStartTime === formattedTime;
     });
     
-    console.log(`Found ${matchingShifts.length} matching shifts for time ${formattedTime}`);
+    console.log(`Found ${matchingShifts.length} matching shifts for exact time ${formattedTime}`);
+    
+    let relevantShifts = [...matchingShifts];
     
     if (matchingShifts.length === 0) {
       // If no exact match, try to find shifts that contain this time
@@ -106,7 +107,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       
       if (containingShifts.length > 0) {
         console.log('Using shifts that contain this time:', containingShifts);
-        matchingShifts.push(...containingShifts);
+        relevantShifts = containingShifts;
       } else {
         console.log('No shifts found that match or contain this time');
         return null;
@@ -114,7 +115,8 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     }
     
     // Get worker names directly from the person_name field
-    const digitalWorkerNames = matchingShifts.map(shift => shift.person_name);
+    // No section filtering - we'll include all digital workers regardless of section
+    const digitalWorkerNames = relevantShifts.map(shift => shift.person_name);
     
     console.log(`Digital worker names:`, digitalWorkerNames);
     

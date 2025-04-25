@@ -40,7 +40,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
           // If it has a colon, take the first 5 characters (HH:mm)
           formattedShowTime = showTime.substring(0, 5);
         } else if (showTime.length === 4) {
-          // If it's 4 digits without colon (e.g. "0900"), format it
+          // If it's 4 digits without colon (e.g. "0700"), format it
           formattedShowTime = `${showTime.substring(0, 2)}:${showTime.substring(2, 4)}`;
         }
         
