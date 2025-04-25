@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Editor } from '@tiptap/react';
-import { Check, X } from 'lucide-react';
+import { Check, X, Info } from 'lucide-react';
 import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -34,20 +34,19 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         setIsLoading(true);
         setError('');
         
-        // Ensure showTime is in the correct format (HH:mm)
+        // Ensure showTime is in the correct format
         let formattedShowTime = showTime;
         if (showTime.includes(':')) {
-          // If it has a colon, take the first 5 characters (HH:mm)
           formattedShowTime = showTime.substring(0, 5);
         } else if (showTime.length === 4) {
-          // If it's 4 digits without colon (e.g. "0700"), format it
           formattedShowTime = `${showTime.substring(0, 2)}:${showTime.substring(2, 4)}`;
         }
         
         // Extract day of week as a number (0-6, where 0 is Sunday)
         const dayOfWeek = showDate.getDay();
         
-        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} at ${formattedShowTime} (day ${dayOfWeek})`);
+        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} (day ${dayOfWeek}) at ${formattedShowTime}`);
+        
         const result = await getDigitalWorkersForShow(dayOfWeek, formattedShowTime);
         
         console.log("Digital workers suggestion result:", result);

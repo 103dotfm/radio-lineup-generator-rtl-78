@@ -4,9 +4,15 @@ import { getWorkersByIds } from "@/lib/supabase/workers";
 
 const formatTime = (timeString: string): string => {
   try {
-    // Extract hours and minutes from the time string (e.g., "07:00:00")
-    const [hours, minutes] = timeString.split(':');
-    return `${hours}:${minutes}`;
+    // Handle different time formats
+    if (timeString.includes(':')) {
+      // Already has a colon, just take HH:MM portion
+      return timeString.substring(0, 5);
+    } else if (timeString.length === 4) {
+      // Format like "0700" to "07:00"
+      return `${timeString.substring(0, 2)}:${timeString.substring(2, 4)}`;
+    }
+    return timeString;
   } catch (e) {
     console.error('Error formatting time:', e);
     return timeString; 
@@ -27,9 +33,9 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
   try {
     console.log(`Finding digital workers for day ${day} at time ${timeString}`);
     
-    // Format time for comparison (remove seconds)
+    // Format time for comparison
     const formattedTime = formatTime(timeString);
-    console.log(`Formatted time: ${formattedTime}`);
+    console.log(`Formatted time for comparison: ${formattedTime}`);
     
     // Get the most recent digital work arrangement
     const { data: arrangements, error: arrangementError } = await supabase
@@ -51,14 +57,14 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const arrangementId = arrangements[0].id;
     console.log(`Using arrangement ID: ${arrangementId}`);
     
-    // Fetch all digital shifts for the day - not filtered by section initially
+    // Fetch ALL digital shifts for the day without any section filtering
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
       .eq('arrangement_id', arrangementId)
       .eq('day_of_week', day)
-      .not('person_name', 'is', null)
-      .not('is_hidden', 'eq', true);
+      .not('person_name', 'is', null)  // Make sure we only get shifts with assigned workers
+      .not('is_hidden', 'eq', true);   // Exclude hidden shifts
     
     if (shiftsError) {
       console.error('Error fetching digital shifts:', shiftsError);
@@ -70,58 +76,58 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    console.log(`Found ${shifts.length} total digital shifts for day ${day}`);
-    console.log('All digital shifts for this day:', shifts);
+    console.log(`Found ${shifts.length} digital shifts for day ${day}`);
+    console.log('All shifts for this day:', shifts);
     
-    // Find shifts that match the time
-    const matchingShifts = shifts.filter(shift => {
+    // Find exact time matches first
+    let matchingShifts = shifts.filter(shift => {
       const shiftStartTime = formatTime(shift.start_time);
-      console.log(`Comparing shift time ${shiftStartTime} with target time ${formattedTime}`);
+      console.log(`Comparing shift start time ${shiftStartTime} with target time ${formattedTime}`);
       return shiftStartTime === formattedTime;
     });
     
-    console.log(`Found ${matchingShifts.length} matching shifts for exact time ${formattedTime}`);
+    console.log(`Found ${matchingShifts.length} matching shifts with exact start time ${formattedTime}`);
     
-    let relevantShifts = [...matchingShifts];
-    
+    // If no exact time match, find shifts that include this time
     if (matchingShifts.length === 0) {
-      // If no exact match, try to find shifts that contain this time
-      const containingShifts = shifts.filter(shift => {
-        const shiftStart = formatTime(shift.start_time);
-        const shiftEnd = formatTime(shift.end_time);
+      console.log('No exact time matches found, checking for containing shifts...');
+      
+      matchingShifts = shifts.filter(shift => {
         // Convert times to minutes for easier comparison
         const getMinutes = (time: string) => {
-          const [hours, minutes] = time.split(':').map(Number);
+          const formattedTimeStr = formatTime(time);
+          const [hours, minutes] = formattedTimeStr.split(':').map(Number);
           return hours * 60 + minutes;
         };
         
-        const timeInMinutes = getMinutes(formattedTime);
-        const startInMinutes = getMinutes(shiftStart);
-        const endInMinutes = getMinutes(shiftEnd);
+        const targetTimeInMinutes = getMinutes(formattedTime);
+        const shiftStartInMinutes = getMinutes(shift.start_time);
+        const shiftEndInMinutes = getMinutes(shift.end_time);
         
-        // Check if the time falls within the shift's time range
-        return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
+        console.log(`Checking if ${targetTimeInMinutes} is between ${shiftStartInMinutes} and ${shiftEndInMinutes} for shift:`, shift);
+        
+        // Check if the target time falls within this shift's time range
+        return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
       });
       
-      console.log(`Found ${containingShifts.length} containing shifts for time ${formattedTime}`);
-      
-      if (containingShifts.length > 0) {
-        console.log('Using shifts that contain this time:', containingShifts);
-        relevantShifts = containingShifts;
-      } else {
-        console.log('No shifts found that match or contain this time');
-        return null;
-      }
+      console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
     }
     
-    // Get worker names directly from the person_name field
-    // No section filtering - we'll include all digital workers regardless of section
-    const digitalWorkerNames = relevantShifts.map(shift => shift.person_name);
+    if (matchingShifts.length === 0) {
+      console.log('No matching shifts found after all attempts');
+      return null;
+    }
     
-    console.log(`Digital worker names:`, digitalWorkerNames);
+    // Get the worker names directly from the shift's person_name field
+    const digitalWorkerNames = matchingShifts.map(shift => {
+      console.log(`Including worker for shift:`, shift);
+      return shift.person_name;
+    }).filter(Boolean); // Filter out any null/undefined values
+    
+    console.log(`Final digital worker names:`, digitalWorkerNames);
     
     if (digitalWorkerNames.length === 0) {
-      console.log('No digital worker names found');
+      console.log('No digital worker names found after filtering');
       return null;
     }
     
