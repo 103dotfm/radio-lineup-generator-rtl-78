@@ -57,7 +57,25 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const arrangementId = arrangements[0].id;
     console.log(`Using arrangement ID: ${arrangementId}`);
     
-    // Fetch digital shifts for the day without additional filtering
+    // Log all digital shifts to debug
+    const { data: allShifts, error: allShiftsError } = await supabase
+      .from('digital_shifts')
+      .select('*')
+      .eq('arrangement_id', arrangementId);
+      
+    if (allShiftsError) {
+      console.error('Error fetching all digital shifts:', allShiftsError);
+    } else {
+      console.log(`Total digital shifts in arrangement: ${allShifts?.length || 0}`);
+      console.log('All days available:', [...new Set(allShifts?.map(s => s.day_of_week) || [])]);
+    }
+    
+    // IMPORTANT: In JavaScript, getDay() returns 0 for Sunday, 1 for Monday, etc.
+    // But our database might be using a different convention
+    // Let's log the exact day number we're looking for:
+    console.log(`Looking for shifts on day_of_week = ${day}`);
+    
+    // Fetch digital shifts for the specific day
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
@@ -79,20 +97,21 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     console.log(`Found ${shifts.length} digital shifts for day ${day}`);
     console.log('All shifts for this day:', shifts);
     
-    // Instead of exact time matching first, directly look for shifts covering this time
+    // Convert times to minutes for easier comparison
+    const getMinutes = (time: string) => {
+      const formattedTimeStr = formatTime(time);
+      const [hours, minutes] = formattedTimeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    
+    const targetTimeInMinutes = getMinutes(formattedTime);
+    
+    // Look for shifts covering this time
     let matchingShifts = shifts.filter(shift => {
-      // Convert times to minutes for easier comparison
-      const getMinutes = (time: string) => {
-        const formattedTimeStr = formatTime(time);
-        const [hours, minutes] = formattedTimeStr.split(':').map(Number);
-        return hours * 60 + minutes;
-      };
-      
-      const targetTimeInMinutes = getMinutes(formattedTime);
       const shiftStartInMinutes = getMinutes(shift.start_time);
       const shiftEndInMinutes = getMinutes(shift.end_time);
       
-      console.log(`Checking if ${targetTimeInMinutes} is between ${shiftStartInMinutes} and ${shiftEndInMinutes} for shift:`, shift);
+      console.log(`Checking if ${targetTimeInMinutes} (${formattedTime}) is between ${shiftStartInMinutes} (${shift.start_time}) and ${shiftEndInMinutes} (${shift.end_time}) for shift:`, shift);
       
       // Check if the target time falls within this shift's time range
       return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
@@ -100,15 +119,36 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     
     console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
     
+    // If no shifts cover this time, try to find shifts that start at this time (legacy behavior)
     if (matchingShifts.length === 0) {
-      // If no shifts cover this time, try to find shifts that start at this time (legacy behavior)
       matchingShifts = shifts.filter(shift => {
         const shiftStartTime = formatTime(shift.start_time);
         console.log(`Checking if shift start time ${shiftStartTime} equals target time ${formattedTime}`);
         return shiftStartTime === formattedTime;
       });
       
-      console.log(`Found ${matchingShifts.length} matching shifts with exact start time ${formattedTime}`);
+      console.log(`Found ${matchingShifts.length} shifts with exact start time ${formattedTime}`);
+    }
+    
+    // If still no matches, find the first shift that starts after this time
+    if (matchingShifts.length === 0) {
+      // Sort shifts by start time
+      const sortedShifts = [...shifts].sort((a, b) => 
+        getMinutes(a.start_time) - getMinutes(b.start_time)
+      );
+      
+      // Find the first shift that starts after or at the target time
+      matchingShifts = sortedShifts.filter(shift => 
+        getMinutes(shift.start_time) >= targetTimeInMinutes
+      ).slice(0, 1); // Take only the first one
+      
+      console.log(`Found ${matchingShifts.length} shifts that start after ${formattedTime}`);
+      
+      // If still no matches, just take the first shift of the day
+      if (matchingShifts.length === 0 && sortedShifts.length > 0) {
+        matchingShifts = [sortedShifts[0]];
+        console.log(`Using the first shift of the day as fallback`);
+      }
     }
     
     if (matchingShifts.length === 0) {

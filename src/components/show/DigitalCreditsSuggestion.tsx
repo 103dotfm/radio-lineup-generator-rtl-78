@@ -3,9 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Editor } from '@tiptap/react';
-import { Check, X, Info } from 'lucide-react';
+import { Check, X, Info, RefreshCcw } from 'lucide-react';
 import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
-import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { InfoIcon } from 'lucide-react';
 
@@ -125,7 +124,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
   // If we've checked and there's no suggestion, show a help message
   if (hasChecked && !suggestion) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-md p-3 my-2 text-center">
+      <div className="bg-gray-50 border border-gray-200 rounded-md p-3 my-2">
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-500">אין קרדיטים לדיגיטל זמינים לתוכנית זו</p>
           <div className="flex gap-2">
@@ -133,8 +132,9 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
               variant="ghost" 
               size="sm" 
               onClick={handleRetry}
-              className="h-8"
+              className="h-8 flex items-center gap-1"
             >
+              <RefreshCcw className="h-3 w-3" />
               רענן
             </Button>
             <Popover>
