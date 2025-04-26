@@ -1,6 +1,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { getWorkersByIds } from "@/lib/supabase/workers";
+import { Worker } from "@/lib/supabase/workers";
 
 const formatTime = (timeString: string): string => {
   try {
@@ -128,38 +129,91 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    // Get the worker names directly
-    const digitalWorkerNames = matchingShifts
+    // Get the worker IDs from shifts
+    const workerIds = matchingShifts
       .filter(shift => shift.person_name && shift.person_name.trim() !== '')
       .map(shift => {
-        console.log(`Including worker for shift:`, shift);
+        console.log(`Including worker ID for shift:`, shift);
         return shift.person_name;
       });
     
-    console.log(`Final digital worker names:`, digitalWorkerNames);
+    console.log(`Worker IDs from shifts:`, workerIds);
     
-    if (digitalWorkerNames.length === 0) {
-      console.log('No digital worker names found after filtering');
+    if (workerIds.length === 0) {
+      console.log('No worker IDs found after filtering');
       return null;
     }
-    
-    // Format the credit line for digital workers
-    let creditLine = "";
-    
-    if (digitalWorkerNames.length > 0) {
-      if (digitalWorkerNames.length === 1) {
-        creditLine = `בדיגיטל: ${digitalWorkerNames[0]}.`;
-      } else if (digitalWorkerNames.length === 2) {
-        creditLine = `בדיגיטל: ${digitalWorkerNames[0]} ו${digitalWorkerNames[1]}.`;
-      } else {
-        const allButLast = digitalWorkerNames.slice(0, -1).join(', ');
-        const last = digitalWorkerNames[digitalWorkerNames.length - 1];
-        creditLine = `בדיגיטל: ${allButLast} ו${last}.`;
+
+    // NEW: Look up worker names from the workers table using the IDs
+    try {
+      console.log('Looking up worker names from IDs:', workerIds);
+      const workers = await getWorkersByIds(workerIds);
+      console.log('Workers found:', workers);
+      
+      // Map worker IDs to their names
+      const workerNameMap: { [key: string]: string } = {};
+      workers.forEach(worker => {
+        workerNameMap[worker.id] = worker.name;
+      });
+      
+      // Get actual names using the map
+      const digitalWorkerNames = workerIds.map(id => {
+        const name = workerNameMap[id];
+        if (!name) {
+          console.log(`Could not find name for worker ID: ${id}`);
+          return id; // Fall back to ID if name not found
+        }
+        return name;
+      });
+      
+      console.log(`Final digital worker names:`, digitalWorkerNames);
+      
+      if (digitalWorkerNames.length === 0) {
+        console.log('No digital worker names found after looking up names');
+        return null;
       }
+      
+      // Format the credit line for digital workers
+      let creditLine = "";
+      
+      if (digitalWorkerNames.length > 0) {
+        if (digitalWorkerNames.length === 1) {
+          creditLine = `בדיגיטל: ${digitalWorkerNames[0]}.`;
+        } else if (digitalWorkerNames.length === 2) {
+          creditLine = `בדיגיטל: ${digitalWorkerNames[0]} ו${digitalWorkerNames[1]}.`;
+        } else {
+          const allButLast = digitalWorkerNames.slice(0, -1).join(', ');
+          const last = digitalWorkerNames[digitalWorkerNames.length - 1];
+          creditLine = `בדיגיטל: ${allButLast} ו${last}.`;
+        }
+      }
+      
+      console.log(`Generated credit line with actual names: ${creditLine}`);
+      return creditLine;
+    } catch (workerLookupError) {
+      console.error('Error looking up worker names:', workerLookupError);
+      
+      // Fall back to using IDs if name lookup fails
+      console.log('Falling back to using IDs instead of names due to lookup error');
+      
+      // Format the credit line for digital workers using IDs
+      let creditLine = "";
+      
+      if (workerIds.length > 0) {
+        if (workerIds.length === 1) {
+          creditLine = `בדיגיטל: ${workerIds[0]}.`;
+        } else if (workerIds.length === 2) {
+          creditLine = `בדיגיטל: ${workerIds[0]} ו${workerIds[1]}.`;
+        } else {
+          const allButLast = workerIds.slice(0, -1).join(', ');
+          const last = workerIds[workerIds.length - 1];
+          creditLine = `בדיגיטל: ${allButLast} ו${last}.`;
+        }
+      }
+      
+      console.log(`Generated fallback credit line using IDs: ${creditLine}`);
+      return creditLine;
     }
-    
-    console.log(`Generated credit line: ${creditLine}`);
-    return creditLine;
     
   } catch (error) {
     console.error('Error fetching digital workers:', error);
