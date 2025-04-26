@@ -41,7 +41,8 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     // This is a critical change to fix the connection issue
     console.log(`Running direct query on digital_shifts for day ${day}`);
     
-    const { data: shifts, error: shiftsError } = await supabase
+    // Changed from const to let so we can reassign it later if needed
+    let { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
       .eq('day_of_week', day)
@@ -74,6 +75,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       
       if (allShifts && allShifts.length > 0) {
         console.log('Using shifts from all arrangements as fallback');
+        // Now this assignment is valid since shifts is declared with let
         shifts = allShifts;
       } else {
         console.log(`No digital shifts found for day ${day} even with fallback`);
