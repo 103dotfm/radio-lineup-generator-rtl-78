@@ -38,8 +38,16 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const formattedTime = formatTime(timeString);
     console.log(`Formatted time for comparison: ${formattedTime}`);
     
+    // Convert times to minutes for easier comparison
+    const getMinutes = (time: string) => {
+      const formattedTimeStr = formatTime(time);
+      const [hours, minutes] = formattedTimeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    
+    const targetTimeInMinutes = getMinutes(formattedTime);
+    
     // IMPORTANT: Directly query digital_shifts instead of going through arrangements
-    // This is a critical change to fix the connection issue
     console.log(`Running direct query on digital_shifts for day ${day}`);
     
     // Changed from const to let so we can reassign it later if needed
@@ -84,21 +92,10 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       }
     }
     
-    // Convert times to minutes for easier comparison
-    const getMinutes = (time: string) => {
-      const formattedTimeStr = formatTime(time);
-      const [hours, minutes] = formattedTimeStr.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
-    
-    const targetTimeInMinutes = getMinutes(formattedTime);
-    
     // Look for shifts covering this time
     let matchingShifts = shifts.filter(shift => {
       const shiftStartInMinutes = getMinutes(shift.start_time);
       const shiftEndInMinutes = getMinutes(shift.end_time);
-      
-      console.log(`Checking if ${targetTimeInMinutes} (${formattedTime}) is between ${shiftStartInMinutes} (${shift.start_time}) and ${shiftEndInMinutes} (${shift.end_time}) for shift:`, shift);
       
       // Check if the target time falls within this shift's time range
       return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
@@ -106,22 +103,36 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     
     console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
     
-    // If no shifts cover this time, try to find shifts that start at this time (legacy behavior)
+    // If no shifts cover this time, try to find shifts that start at this time
     if (matchingShifts.length === 0) {
       matchingShifts = shifts.filter(shift => {
         const shiftStartTime = formatTime(shift.start_time);
-        console.log(`Checking if shift start time ${shiftStartTime} equals target time ${formattedTime}`);
         return shiftStartTime === formattedTime;
       });
       
       console.log(`Found ${matchingShifts.length} shifts with exact start time ${formattedTime}`);
     }
     
-    // If still no matches, find any shift for that day as a final fallback
+    // If still no matches, get the shifts with the closest start time
     if (matchingShifts.length === 0) {
-      console.log(`No matching shifts by time, showing all shifts for day ${day} as ultimate fallback`);
-      matchingShifts = shifts;
-      console.log(`Using all ${matchingShifts.length} shifts for day ${day}`);
+      // Find the shift with the closest start time to the target time
+      let closestShift = null;
+      let minTimeDifference = Infinity;
+      
+      for (const shift of shifts) {
+        const shiftStartInMinutes = getMinutes(shift.start_time);
+        const timeDifference = Math.abs(targetTimeInMinutes - shiftStartInMinutes);
+        
+        if (timeDifference < minTimeDifference) {
+          minTimeDifference = timeDifference;
+          closestShift = shift;
+        }
+      }
+      
+      if (closestShift) {
+        console.log(`No exact matches found, using closest shift with start time ${closestShift.start_time}`);
+        matchingShifts = [closestShift];
+      }
     }
     
     if (matchingShifts.length === 0) {
@@ -129,25 +140,46 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    // Get the worker IDs from shifts
-    const workerIds = matchingShifts
-      .filter(shift => shift.person_name && shift.person_name.trim() !== '')
-      .map(shift => {
-        console.log(`Including worker ID for shift:`, shift);
-        return shift.person_name;
-      });
+    // Filter for unique workers (since same person can have multiple shifts)
+    // and prioritize workers from specific sections
+    const prioritySections = ['digital_shifts', 'live_social_shifts', 'transcription_shifts'];
     
-    console.log(`Worker IDs from shifts:`, workerIds);
+    // Create a map to track unique worker IDs and their priority
+    const uniqueWorkerMap = new Map();
     
-    if (workerIds.length === 0) {
+    matchingShifts.forEach(shift => {
+      if (shift.person_name && shift.person_name.trim() !== '') {
+        const workerId = shift.person_name;
+        const sectionPriority = prioritySections.indexOf(shift.section_name);
+        
+        // If worker isn't in map, or new occurrence has higher priority, update the map
+        if (!uniqueWorkerMap.has(workerId) || 
+            (sectionPriority > -1 && sectionPriority < uniqueWorkerMap.get(workerId).priority)) {
+          uniqueWorkerMap.set(workerId, {
+            id: workerId,
+            priority: sectionPriority > -1 ? sectionPriority : 999
+          });
+        }
+      }
+    });
+    
+    // Convert map to array and sort by priority
+    const uniqueWorkerIds = Array.from(uniqueWorkerMap.values())
+      .sort((a, b) => a.priority - b.priority)
+      .map(worker => worker.id)
+      .slice(0, 3); // Limit to top 3 workers
+    
+    console.log(`Filtered to ${uniqueWorkerIds.length} unique workers (limit 3):`, uniqueWorkerIds);
+    
+    if (uniqueWorkerIds.length === 0) {
       console.log('No worker IDs found after filtering');
       return null;
     }
 
-    // NEW: Look up worker names from the workers table using the IDs
+    // Look up worker names from the workers table using the IDs
     try {
-      console.log('Looking up worker names from IDs:', workerIds);
-      const workers = await getWorkersByIds(workerIds);
+      console.log('Looking up worker names from IDs:', uniqueWorkerIds);
+      const workers = await getWorkersByIds(uniqueWorkerIds);
       console.log('Workers found:', workers);
       
       // Map worker IDs to their names
@@ -157,7 +189,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       });
       
       // Get actual names using the map
-      const digitalWorkerNames = workerIds.map(id => {
+      const digitalWorkerNames = uniqueWorkerIds.map(id => {
         const name = workerNameMap[id];
         if (!name) {
           console.log(`Could not find name for worker ID: ${id}`);
@@ -166,7 +198,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
         return name;
       });
       
-      console.log(`Final digital worker names:`, digitalWorkerNames);
+      console.log(`Final digital worker names (limited):`, digitalWorkerNames);
       
       if (digitalWorkerNames.length === 0) {
         console.log('No digital worker names found after looking up names');
@@ -196,17 +228,17 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       // Fall back to using IDs if name lookup fails
       console.log('Falling back to using IDs instead of names due to lookup error');
       
-      // Format the credit line for digital workers using IDs
+      // Format the credit line for digital workers using IDs (limited to 3)
       let creditLine = "";
       
-      if (workerIds.length > 0) {
-        if (workerIds.length === 1) {
-          creditLine = `בדיגיטל: ${workerIds[0]}.`;
-        } else if (workerIds.length === 2) {
-          creditLine = `בדיגיטל: ${workerIds[0]} ו${workerIds[1]}.`;
+      if (uniqueWorkerIds.length > 0) {
+        if (uniqueWorkerIds.length === 1) {
+          creditLine = `בדיגיטל: ${uniqueWorkerIds[0]}.`;
+        } else if (uniqueWorkerIds.length === 2) {
+          creditLine = `בדיגיטל: ${uniqueWorkerIds[0]} ו${uniqueWorkerIds[1]}.`;
         } else {
-          const allButLast = workerIds.slice(0, -1).join(', ');
-          const last = workerIds[workerIds.length - 1];
+          const allButLast = uniqueWorkerIds.slice(0, -1).join(', ');
+          const last = uniqueWorkerIds[uniqueWorkerIds.length - 1];
           creditLine = `בדיגיטל: ${allButLast} ו${last}.`;
         }
       }
