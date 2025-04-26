@@ -37,49 +37,13 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const formattedTime = formatTime(timeString);
     console.log(`Formatted time for comparison: ${formattedTime}`);
     
-    // Get the most recent digital work arrangement
-    const { data: arrangements, error: arrangementError } = await supabase
-      .from('digital_work_arrangements')
-      .select('id')
-      .order('week_start', { ascending: false })
-      .limit(1);
+    // IMPORTANT: Directly query digital_shifts instead of going through arrangements
+    // This is a critical change to fix the connection issue
+    console.log(`Running direct query on digital_shifts for day ${day}`);
     
-    if (arrangementError) {
-      console.error('Error fetching digital work arrangement:', arrangementError);
-      return null;
-    }
-    
-    if (!arrangements || arrangements.length === 0) {
-      console.log('No digital work arrangements found');
-      return null;
-    }
-    
-    const arrangementId = arrangements[0].id;
-    console.log(`Using arrangement ID: ${arrangementId}`);
-    
-    // Log all digital shifts to debug
-    const { data: allShifts, error: allShiftsError } = await supabase
-      .from('digital_shifts')
-      .select('*')
-      .eq('arrangement_id', arrangementId);
-      
-    if (allShiftsError) {
-      console.error('Error fetching all digital shifts:', allShiftsError);
-    } else {
-      console.log(`Total digital shifts in arrangement: ${allShifts?.length || 0}`);
-      console.log('All days available:', [...new Set(allShifts?.map(s => s.day_of_week) || [])]);
-    }
-    
-    // IMPORTANT: In JavaScript, getDay() returns 0 for Sunday, 1 for Monday, etc.
-    // But our database might be using a different convention
-    // Let's log the exact day number we're looking for:
-    console.log(`Looking for shifts on day_of_week = ${day}`);
-    
-    // Fetch digital shifts for the specific day
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
-      .eq('arrangement_id', arrangementId)
       .eq('day_of_week', day)
       .not('person_name', 'is', null)
       .not('is_hidden', 'eq', true);
@@ -89,13 +53,33 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    if (!shifts || shifts.length === 0) {
-      console.log(`No digital shifts found for day ${day}`);
-      return null;
-    }
+    console.log(`Direct query found ${shifts?.length || 0} shifts for day ${day}`);
     
-    console.log(`Found ${shifts.length} digital shifts for day ${day}`);
-    console.log('All shifts for this day:', shifts);
+    if (!shifts || shifts.length === 0) {
+      console.log(`No digital shifts found directly for day ${day}, trying all arrangements`);
+      
+      // Fallback: Try to get all digital shifts from all arrangements for this day
+      const { data: allShifts, error: allShiftsError } = await supabase
+        .from('digital_shifts')
+        .select('*')
+        .eq('day_of_week', day)
+        .not('person_name', 'is', null);
+      
+      if (allShiftsError) {
+        console.error('Error fetching all digital shifts:', allShiftsError);
+        return null;
+      }
+      
+      console.log(`Fallback query found ${allShifts?.length || 0} shifts for day ${day} across all arrangements`);
+      
+      if (allShifts && allShifts.length > 0) {
+        console.log('Using shifts from all arrangements as fallback');
+        shifts = allShifts;
+      } else {
+        console.log(`No digital shifts found for day ${day} even with fallback`);
+        return null;
+      }
+    }
     
     // Convert times to minutes for easier comparison
     const getMinutes = (time: string) => {
@@ -130,25 +114,11 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       console.log(`Found ${matchingShifts.length} shifts with exact start time ${formattedTime}`);
     }
     
-    // If still no matches, find the first shift that starts after this time
+    // If still no matches, find any shift for that day as a final fallback
     if (matchingShifts.length === 0) {
-      // Sort shifts by start time
-      const sortedShifts = [...shifts].sort((a, b) => 
-        getMinutes(a.start_time) - getMinutes(b.start_time)
-      );
-      
-      // Find the first shift that starts after or at the target time
-      matchingShifts = sortedShifts.filter(shift => 
-        getMinutes(shift.start_time) >= targetTimeInMinutes
-      ).slice(0, 1); // Take only the first one
-      
-      console.log(`Found ${matchingShifts.length} shifts that start after ${formattedTime}`);
-      
-      // If still no matches, just take the first shift of the day
-      if (matchingShifts.length === 0 && sortedShifts.length > 0) {
-        matchingShifts = [sortedShifts[0]];
-        console.log(`Using the first shift of the day as fallback`);
-      }
+      console.log(`No matching shifts by time, showing all shifts for day ${day} as ultimate fallback`);
+      matchingShifts = shifts;
+      console.log(`Using all ${matchingShifts.length} shifts for day ${day}`);
     }
     
     if (matchingShifts.length === 0) {

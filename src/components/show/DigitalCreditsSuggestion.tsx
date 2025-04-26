@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Editor } from '@tiptap/react';
-import { Check, X, Info, RefreshCcw } from 'lucide-react';
+import { Check, X, RefreshCcw } from 'lucide-react';
 import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { InfoIcon } from 'lucide-react';
