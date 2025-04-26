@@ -57,14 +57,14 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     const arrangementId = arrangements[0].id;
     console.log(`Using arrangement ID: ${arrangementId}`);
     
-    // Fetch ALL digital shifts for the day without any section filtering
+    // Fetch digital shifts for the day without additional filtering
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
       .eq('arrangement_id', arrangementId)
       .eq('day_of_week', day)
-      .not('person_name', 'is', null)  // Make sure we only get shifts with assigned workers
-      .not('is_hidden', 'eq', true);   // Exclude hidden shifts
+      .not('person_name', 'is', null)
+      .not('is_hidden', 'eq', true);
     
     if (shiftsError) {
       console.error('Error fetching digital shifts:', shiftsError);
@@ -79,38 +79,36 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     console.log(`Found ${shifts.length} digital shifts for day ${day}`);
     console.log('All shifts for this day:', shifts);
     
-    // Find exact time matches first
+    // Instead of exact time matching first, directly look for shifts covering this time
     let matchingShifts = shifts.filter(shift => {
-      const shiftStartTime = formatTime(shift.start_time);
-      console.log(`Comparing shift start time ${shiftStartTime} with target time ${formattedTime}`);
-      return shiftStartTime === formattedTime;
+      // Convert times to minutes for easier comparison
+      const getMinutes = (time: string) => {
+        const formattedTimeStr = formatTime(time);
+        const [hours, minutes] = formattedTimeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      const targetTimeInMinutes = getMinutes(formattedTime);
+      const shiftStartInMinutes = getMinutes(shift.start_time);
+      const shiftEndInMinutes = getMinutes(shift.end_time);
+      
+      console.log(`Checking if ${targetTimeInMinutes} is between ${shiftStartInMinutes} and ${shiftEndInMinutes} for shift:`, shift);
+      
+      // Check if the target time falls within this shift's time range
+      return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
     });
     
-    console.log(`Found ${matchingShifts.length} matching shifts with exact start time ${formattedTime}`);
+    console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
     
-    // If no exact time match, find shifts that include this time
     if (matchingShifts.length === 0) {
-      console.log('No exact time matches found, checking for containing shifts...');
-      
+      // If no shifts cover this time, try to find shifts that start at this time (legacy behavior)
       matchingShifts = shifts.filter(shift => {
-        // Convert times to minutes for easier comparison
-        const getMinutes = (time: string) => {
-          const formattedTimeStr = formatTime(time);
-          const [hours, minutes] = formattedTimeStr.split(':').map(Number);
-          return hours * 60 + minutes;
-        };
-        
-        const targetTimeInMinutes = getMinutes(formattedTime);
-        const shiftStartInMinutes = getMinutes(shift.start_time);
-        const shiftEndInMinutes = getMinutes(shift.end_time);
-        
-        console.log(`Checking if ${targetTimeInMinutes} is between ${shiftStartInMinutes} and ${shiftEndInMinutes} for shift:`, shift);
-        
-        // Check if the target time falls within this shift's time range
-        return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
+        const shiftStartTime = formatTime(shift.start_time);
+        console.log(`Checking if shift start time ${shiftStartTime} equals target time ${formattedTime}`);
+        return shiftStartTime === formattedTime;
       });
       
-      console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
+      console.log(`Found ${matchingShifts.length} matching shifts with exact start time ${formattedTime}`);
     }
     
     if (matchingShifts.length === 0) {
@@ -118,11 +116,13 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    // Get the worker names directly from the shift's person_name field
-    const digitalWorkerNames = matchingShifts.map(shift => {
-      console.log(`Including worker for shift:`, shift);
-      return shift.person_name;
-    }).filter(Boolean); // Filter out any null/undefined values
+    // Get the worker names directly
+    const digitalWorkerNames = matchingShifts
+      .filter(shift => shift.person_name && shift.person_name.trim() !== '')
+      .map(shift => {
+        console.log(`Including worker for shift:`, shift);
+        return shift.person_name;
+      });
     
     console.log(`Final digital worker names:`, digitalWorkerNames);
     

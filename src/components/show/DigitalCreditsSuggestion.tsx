@@ -21,6 +21,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
   const [editedSuggestion, setEditedSuggestion] = useState('');
   const [error, setError] = useState('');
   const [hasChecked, setHasChecked] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const fetchSuggestion = async () => {
@@ -34,20 +35,12 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         setIsLoading(true);
         setError('');
         
-        // Ensure showTime is in the correct format
-        let formattedShowTime = showTime;
-        if (showTime.includes(':')) {
-          formattedShowTime = showTime.substring(0, 5);
-        } else if (showTime.length === 4) {
-          formattedShowTime = `${showTime.substring(0, 2)}:${showTime.substring(2, 4)}`;
-        }
-        
         // Extract day of week as a number (0-6, where 0 is Sunday)
         const dayOfWeek = showDate.getDay();
         
-        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} (day ${dayOfWeek}) at ${formattedShowTime}`);
+        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} (day ${dayOfWeek}) at ${showTime}`);
         
-        const result = await getDigitalWorkersForShow(dayOfWeek, formattedShowTime);
+        const result = await getDigitalWorkersForShow(dayOfWeek, showTime);
         
         console.log("Digital workers suggestion result:", result);
         
@@ -60,6 +53,12 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
       } catch (err) {
         console.error('Error fetching digital workers suggestion:', err);
         setError('שגיאה בטעינת הצעה לקרדיטים לדיגיטל');
+        
+        // If we're seeing errors, retry once after a short delay
+        if (retryCount < 1) {
+          setRetryCount(prev => prev + 1);
+          setTimeout(fetchSuggestion, 1500);
+        }
       } finally {
         setIsLoading(false);
         setHasChecked(true);
@@ -67,7 +66,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
     };
 
     fetchSuggestion();
-  }, [showDate, showTime]);
+  }, [showDate, showTime, retryCount]);
 
   const handleApply = () => {
     if (!editor || !editedSuggestion) return;
@@ -89,6 +88,13 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
     setSuggestion(null);
   };
 
+  const handleRetry = () => {
+    setRetryCount(0);
+    setIsLoading(true);
+    setHasChecked(false);
+    setError('');
+  };
+
   // Don't render anything if we're still loading and haven't checked yet
   if (isLoading && !hasChecked) {
     return (
@@ -100,8 +106,18 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4 my-2 text-center">
-        <p className="text-sm text-red-500">{error}</p>
+      <div className="bg-red-50 border border-red-200 rounded-md p-4 my-2">
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-red-500">{error}</p>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRetry}
+            className="h-8 ml-2"
+          >
+            נסה שוב
+          </Button>
+        </div>
       </div>
     );
   }
@@ -112,20 +128,30 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
       <div className="bg-gray-50 border border-gray-200 rounded-md p-3 my-2 text-center">
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-500">אין קרדיטים לדיגיטל זמינים לתוכנית זו</p>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <InfoIcon className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4" side="left">
-              <div dir="rtl" className="space-y-2 text-sm">
-                <h4 className="font-medium">אודות קרדיטים לדיגיטל</h4>
-                <p>הקרדיטים לדיגיטל נלקחים מסידור העבודה השבועי של מחלקת הדיגיטל.</p>
-                <p>אם אין קרדיטים זמינים, יתכן שטרם נוסף המידע לסידור העבודה.</p>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleRetry}
+              className="h-8"
+            >
+              רענן
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <InfoIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" side="left">
+                <div dir="rtl" className="space-y-2 text-sm">
+                  <h4 className="font-medium">אודות קרדיטים לדיגיטל</h4>
+                  <p>הקרדיטים לדיגיטל נלקחים מסידור העבודה השבועי של מחלקת הדיגיטל.</p>
+                  <p>מערכת זו מחפשת עובדים שמשובצים לתוכנית זו בהתאם ליום ולשעה.</p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
     );
@@ -133,7 +159,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
 
   // If we have a suggestion, show it
   return (
-    <div className="digital-credits-suggestion p-4 my-2">
+    <div className="digital-credits-suggestion p-4 my-2 border rounded-md bg-blue-50">
       <div className="mb-2">
         <h3 className="text-sm font-medium text-blue-800">הצעה לקרדיטים לדיגיטל:</h3>
       </div>
