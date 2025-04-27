@@ -1,7 +1,6 @@
 
 import { supabase } from "@/lib/supabase";
 import { getWorkersByIds } from "@/lib/supabase/workers";
-import { Worker } from "@/lib/supabase/workers";
 
 const formatTime = (timeString: string): string => {
   try {
@@ -34,11 +33,10 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
   try {
     // Format date as YYYY-MM-DD for database query
     const formattedDate = date.toISOString().split('T')[0];
-    console.log(`Finding digital workers for date ${formattedDate} at time ${timeString}`);
+    console.log(`Finding digital workers for exact date ${formattedDate} at time ${timeString}`);
     
     // Format time for comparison
     const formattedTime = formatTime(timeString);
-    console.log(`Formatted time for comparison: ${formattedTime}`);
     
     // Convert times to minutes for easier comparison
     const getMinutes = (time: string) => {
@@ -49,15 +47,33 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
     
     // Target time in minutes
     const targetTimeInMinutes = getMinutes(formattedTime);
-    console.log(`Target time in minutes: ${targetTimeInMinutes} (${Math.floor(targetTimeInMinutes/60)}:${targetTimeInMinutes%60})`);
     
-    // Query digital shifts for the exact date (use day of week from the date)
-    const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
+    // First, get the digital work arrangement for this specific date
+    const { data: arrangements, error: arrangementError } = await supabase
+      .from('digital_work_arrangements')
+      .select('id')
+      .lte('week_start', formattedDate)
+      .order('week_start', { ascending: false })
+      .limit(1);
     
+    if (arrangementError) {
+      console.error('Error fetching digital work arrangement:', arrangementError);
+      return null;
+    }
+    
+    if (!arrangements || arrangements.length === 0) {
+      console.log(`No digital work arrangement found that includes date ${formattedDate}`);
+      return null;
+    }
+    
+    const arrangementId = arrangements[0].id;
+    console.log(`Found arrangement ${arrangementId} for date ${formattedDate}`);
+    
+    // Now get shifts from this arrangement
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
-      .eq('day_of_week', dayOfWeek)
+      .eq('arrangement_id', arrangementId)
       .not('person_name', 'is', null)
       .not('is_hidden', 'eq', true);
     
@@ -66,15 +82,27 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
       return null;
     }
     
-    console.log(`Found ${shifts?.length || 0} total shifts for date ${formattedDate} (day ${dayOfWeek})`);
+    console.log(`Found ${shifts?.length || 0} total shifts in the selected arrangement`);
     
     if (!shifts || shifts.length === 0) {
       console.log(`No digital shifts found for date ${formattedDate}`);
       return null;
     }
     
+    // Get the day of week for filtering
+    const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
+    
+    // Filter shifts for this specific day of week
+    const shiftsForThisDay = shifts.filter(shift => shift.day_of_week === dayOfWeek);
+    
+    console.log(`Found ${shiftsForThisDay.length} shifts for day ${dayOfWeek} (${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek]})`);
+    
+    if (shiftsForThisDay.length === 0) {
+      return null;
+    }
+    
     // Look for shifts covering this time
-    const matchingShifts = shifts.filter(shift => {
+    const matchingShifts = shiftsForThisDay.filter(shift => {
       const shiftStartInMinutes = getMinutes(shift.start_time);
       const shiftEndInMinutes = getMinutes(shift.end_time);
       
@@ -98,31 +126,26 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
     // CRITICAL PRIORITY SECTIONS: We specifically want workers from these three sections
     const prioritySections = ['digital_shifts', 'transcription_shifts', 'live_social_shifts'];
     
-    // Get unique workers from priority sections
-    const uniqueWorkerIds = new Set<string>();
+    // Initialize section worker map
     const sectionWorkerMap: Record<string, string[]> = {};
-    
-    // First, organize by section
     prioritySections.forEach(section => {
       sectionWorkerMap[section] = [];
     });
     
-    // Group by section
+    // Group by section, ensuring no duplicates
     matchingShifts.forEach(shift => {
       const section = shift.section_name;
       const workerId = shift.person_name;
       
-      if (prioritySections.includes(section) && workerId) {
-        // Add to section map if not already there
-        if (!sectionWorkerMap[section].includes(workerId)) {
-          sectionWorkerMap[section].push(workerId);
-        }
+      if (prioritySections.includes(section) && workerId && !sectionWorkerMap[section].includes(workerId)) {
+        sectionWorkerMap[section].push(workerId);
       }
     });
     
     console.log('Workers by section:', sectionWorkerMap);
     
-    // Now build a final list with at most one worker from each priority section
+    // Build a final list with at most one worker from each priority section
+    const uniqueWorkerIds = new Set<string>();
     const finalWorkerIds: string[] = [];
     
     // Take 1 worker from each priority section, in order
@@ -153,7 +176,6 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
     try {
       console.log('Looking up worker names from IDs:', finalWorkerIds);
       const workers = await getWorkersByIds(finalWorkerIds);
-      console.log('Workers found:', workers);
       
       if (!workers || workers.length === 0) {
         console.log('No workers found by IDs');
