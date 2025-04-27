@@ -30,9 +30,11 @@ export interface DigitalShift {
   section_name: string;
 }
 
-export const getDigitalWorkersForShow = async (day: number, timeString: string) => {
+export const getDigitalWorkersForShow = async (date: Date, timeString: string) => {
   try {
-    console.log(`Finding digital workers for day ${day} at time ${timeString}`);
+    // Format date as YYYY-MM-DD for database query
+    const formattedDate = date.toISOString().split('T')[0];
+    console.log(`Finding digital workers for date ${formattedDate} at time ${timeString}`);
     
     // Format time for comparison
     const formattedTime = formatTime(timeString);
@@ -45,15 +47,17 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return hours * 60 + minutes;
     };
     
-    // Add 5 minutes to the target time for more accurate shift matching
-    const targetTimeInMinutes = getMinutes(formattedTime) + 5;
-    console.log(`Using shifted target time: ${Math.floor(targetTimeInMinutes/60)}:${targetTimeInMinutes%60} (${targetTimeInMinutes} minutes)`);
+    // Target time in minutes
+    const targetTimeInMinutes = getMinutes(formattedTime);
+    console.log(`Target time in minutes: ${targetTimeInMinutes} (${Math.floor(targetTimeInMinutes/60)}:${targetTimeInMinutes%60})`);
     
-    // Query digital_shifts for the specified day
+    // Query digital shifts for the exact date (use day of week from the date)
+    const dayOfWeek = date.getDay(); // 0-6, where 0 is Sunday
+    
     const { data: shifts, error: shiftsError } = await supabase
       .from('digital_shifts')
       .select('*')
-      .eq('day_of_week', day)
+      .eq('day_of_week', dayOfWeek)
       .not('person_name', 'is', null)
       .not('is_hidden', 'eq', true);
     
@@ -62,10 +66,10 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return null;
     }
     
-    console.log(`Found ${shifts?.length || 0} total shifts for day ${day}`);
+    console.log(`Found ${shifts?.length || 0} total shifts for date ${formattedDate} (day ${dayOfWeek})`);
     
     if (!shifts || shifts.length === 0) {
-      console.log(`No digital shifts found for day ${day}`);
+      console.log(`No digital shifts found for date ${formattedDate}`);
       return null;
     }
     
@@ -78,7 +82,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
     });
     
-    console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime} (with 5-minute offset)`);
+    console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
     
     if (matchingShifts.length === 0) {
       console.log('No matching shifts found for this time');
@@ -94,45 +98,61 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
     // CRITICAL PRIORITY SECTIONS: We specifically want workers from these three sections
     const prioritySections = ['digital_shifts', 'transcription_shifts', 'live_social_shifts'];
     
-    // Group shifts by section and take one worker from each priority section
-    const workersBySection: Record<string, string[]> = {};
+    // Get unique workers from priority sections
+    const uniqueWorkerIds = new Set<string>();
+    const sectionWorkerMap: Record<string, string[]> = {};
     
-    // First, organize matching workers by their section
-    matchingShifts.forEach(shift => {
-      if (shift.person_name && shift.section_name) {
-        if (!workersBySection[shift.section_name]) {
-          workersBySection[shift.section_name] = [];
-        }
-        // Only add the worker if not already in the list
-        if (!workersBySection[shift.section_name].includes(shift.person_name)) {
-          workersBySection[shift.section_name].push(shift.person_name);
-        }
-      }
-    });
-    
-    console.log('Workers by section:', workersBySection);
-    
-    // Extract worker IDs from the priority sections only
-    const workerIds: string[] = [];
-    
-    // Add workers in the order of priority sections
+    // First, organize by section
     prioritySections.forEach(section => {
-      if (workersBySection[section] && workersBySection[section].length > 0) {
-        workerIds.push(...workersBySection[section]);
+      sectionWorkerMap[section] = [];
+    });
+    
+    // Group by section
+    matchingShifts.forEach(shift => {
+      const section = shift.section_name;
+      const workerId = shift.person_name;
+      
+      if (prioritySections.includes(section) && workerId) {
+        // Add to section map if not already there
+        if (!sectionWorkerMap[section].includes(workerId)) {
+          sectionWorkerMap[section].push(workerId);
+        }
       }
     });
     
-    console.log(`Found ${workerIds.length} unique workers from priority sections:`, workerIds);
+    console.log('Workers by section:', sectionWorkerMap);
     
-    if (workerIds.length === 0) {
+    // Now build a final list with at most one worker from each priority section
+    const finalWorkerIds: string[] = [];
+    
+    // Take 1 worker from each priority section, in order
+    for (const section of prioritySections) {
+      if (sectionWorkerMap[section]?.length > 0) {
+        // Take the first worker from this section
+        const workerId = sectionWorkerMap[section][0];
+        if (workerId && !uniqueWorkerIds.has(workerId)) {
+          uniqueWorkerIds.add(workerId);
+          finalWorkerIds.push(workerId);
+          
+          // Limit to 3 workers maximum
+          if (finalWorkerIds.length >= 3) {
+            break;
+          }
+        }
+      }
+    }
+    
+    console.log(`Final unique worker IDs (max 3):`, finalWorkerIds);
+    
+    if (finalWorkerIds.length === 0) {
       console.log('No workers found in priority sections');
       return null;
     }
     
     // Look up worker names from the workers table
     try {
-      console.log('Looking up worker names from IDs:', workerIds);
-      const workers = await getWorkersByIds(workerIds);
+      console.log('Looking up worker names from IDs:', finalWorkerIds);
+      const workers = await getWorkersByIds(finalWorkerIds);
       console.log('Workers found:', workers);
       
       if (!workers || workers.length === 0) {
@@ -147,7 +167,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       });
       
       // Get actual names using the map
-      const digitalWorkerNames = workerIds
+      const digitalWorkerNames = finalWorkerIds
         .filter(id => workerNameMap[id]) // Only include IDs that have matching names
         .map(id => workerNameMap[id]);
       
