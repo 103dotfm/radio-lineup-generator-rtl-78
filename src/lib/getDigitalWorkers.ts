@@ -84,29 +84,41 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       console.log('No matching shifts found for this time');
       return null;
     }
+
+    console.log('Matching shifts:', matchingShifts.map(s => ({
+      person: s.person_name,
+      section: s.section_name,
+      time: `${s.start_time} - ${s.end_time}`
+    })));
     
-    // Group shifts by section and take the most relevant worker from each
-    const sectionMap: Record<string, string> = {};
-    
-    // Priority sections we want to include
+    // CRITICAL PRIORITY SECTIONS: We specifically want workers from these three sections
     const prioritySections = ['digital_shifts', 'transcription_shifts', 'live_social_shifts'];
     
+    // Group shifts by section and take one worker from each priority section
+    const workersBySection: Record<string, string[]> = {};
+    
+    // First, organize matching workers by their section
     matchingShifts.forEach(shift => {
       if (shift.person_name && shift.section_name) {
-        // Only store if section is not yet present or this is a higher priority section
-        if (!sectionMap[shift.section_name]) {
-          sectionMap[shift.section_name] = shift.person_name;
+        if (!workersBySection[shift.section_name]) {
+          workersBySection[shift.section_name] = [];
+        }
+        // Only add the worker if not already in the list
+        if (!workersBySection[shift.section_name].includes(shift.person_name)) {
+          workersBySection[shift.section_name].push(shift.person_name);
         }
       }
     });
     
-    // Extract worker IDs from the priority sections
+    console.log('Workers by section:', workersBySection);
+    
+    // Extract worker IDs from the priority sections only
     const workerIds: string[] = [];
     
     // Add workers in the order of priority sections
     prioritySections.forEach(section => {
-      if (sectionMap[section]) {
-        workerIds.push(sectionMap[section]);
+      if (workersBySection[section] && workersBySection[section].length > 0) {
+        workerIds.push(...workersBySection[section]);
       }
     });
     
