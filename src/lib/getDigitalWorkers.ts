@@ -45,7 +45,9 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return hours * 60 + minutes;
     };
     
-    const targetTimeInMinutes = getMinutes(formattedTime);
+    // Add 5 minutes to the target time for more accurate shift matching
+    const targetTimeInMinutes = getMinutes(formattedTime) + 5;
+    console.log(`Using shifted target time: ${Math.floor(targetTimeInMinutes/60)}:${targetTimeInMinutes%60} (${targetTimeInMinutes} minutes)`);
     
     // IMPORTANT: Directly query digital_shifts instead of going through arrangements
     console.log(`Running direct query on digital_shifts for day ${day}`);
@@ -84,7 +86,6 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       
       if (allShifts && allShifts.length > 0) {
         console.log('Using shifts from all arrangements as fallback');
-        // Now this assignment is valid since shifts is declared with let
         shifts = allShifts;
       } else {
         console.log(`No digital shifts found for day ${day} even with fallback`);
@@ -101,7 +102,7 @@ export const getDigitalWorkersForShow = async (day: number, timeString: string) 
       return targetTimeInMinutes >= shiftStartInMinutes && targetTimeInMinutes < shiftEndInMinutes;
     });
     
-    console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime}`);
+    console.log(`Found ${matchingShifts.length} shifts that contain the time ${formattedTime} (with 5-minute offset)`);
     
     // If no shifts cover this time, try to find shifts that start at this time
     if (matchingShifts.length === 0) {
