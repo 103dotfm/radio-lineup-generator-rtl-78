@@ -36,7 +36,6 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         
         console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} at ${showTime}`);
         
-        // Pass the showDate directly to the function instead of just the day of week
         const result = await getDigitalWorkersForShow(showDate, showTime);
         
         console.log("Digital workers suggestion result:", result);
@@ -145,7 +144,7 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
                 <div dir="rtl" className="space-y-2 text-sm">
                   <h4 className="font-medium">אודות קרדיטים לדיגיטל</h4>
                   <p>הקרדיטים לדיגיטל נלקחים מסידור העבודה השבועי של מחלקת הדיגיטל.</p>
-                  <p>מערכת זו מחפשת עובדים שמשובצים לתוכנית זו בהתאם ליום ולשעה.</p>
+                  <p>מערכת זו מחפשת עובדים שמשובצים לתוכנית זו בהתאם לתאריך ולשעה.</p>
                 </div>
               </PopoverContent>
             </Popover>
