@@ -34,12 +34,10 @@ const DigitalCreditsSuggestion = ({ showDate, showTime, editor }: DigitalCredits
         setIsLoading(true);
         setError('');
         
-        // Extract day of week as a number (0-6, where 0 is Sunday)
-        const dayOfWeek = showDate.getDay();
+        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} at ${showTime}`);
         
-        console.log(`Fetching digital workers suggestion for ${showDate.toISOString().split('T')[0]} (day ${dayOfWeek}) at ${showTime}`);
-        
-        const result = await getDigitalWorkersForShow(dayOfWeek, showTime);
+        // Pass the showDate directly to the function instead of just the day of week
+        const result = await getDigitalWorkersForShow(showDate, showTime);
         
         console.log("Digital workers suggestion result:", result);
         
