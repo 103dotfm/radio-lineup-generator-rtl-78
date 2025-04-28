@@ -7,6 +7,8 @@ interface User {
   email: string;
   username: string;
   full_name?: string;
+  title?: string;
+  avatar_url?: string;
   is_admin: boolean;
 }
 
@@ -16,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 // Create the context with a default value that matches the shape
@@ -25,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => ({ error: null }),
   logout: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -42,24 +46,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      const { data, error } = await supabase
+      // First get the basic user info
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching user role:', error);
+      if (userError) {
+        console.error('Error fetching user data:', userError);
         return;
       }
+      
+      // Then get profile info
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error fetching profile data:', profileError);
+      }
 
-      if (data) {
-        setUser(data);
-        setIsAdmin(data.is_admin);
+      if (userData) {
+        // Combine user data with profile data
+        const combinedUserData = {
+          ...userData,
+          ...(profileData || {}),
+        };
+        
+        setUser(combinedUserData);
+        setIsAdmin(userData.is_admin);
         lastUserCheckRef.current = now;
       }
     } catch (error) {
       console.error('Error in checkUserRole:', error);
+    }
+  };
+
+  const refreshProfile = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user) {
+      await checkUserRole(data.session.user.id, true);
     }
   };
 
@@ -131,7 +160,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAdmin, 
     user, 
     login, 
-    logout
+    logout,
+    refreshProfile
   };
 
   return (

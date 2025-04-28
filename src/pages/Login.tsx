@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Mail } from 'lucide-react'; // Changed from Google to Mail icon
+import { Mail } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -78,10 +78,14 @@ const Login = () => {
       // Use the current origin instead of hardcoded localhost
       const redirectTo = `${window.location.origin}/google-auth-redirect`;
       
+      // Debug information
+      console.log("Redirecting to:", redirectTo);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo
+          redirectTo,
+          skipBrowserRedirect: false,
         }
       });
       
