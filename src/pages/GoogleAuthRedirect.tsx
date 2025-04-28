@@ -2,22 +2,23 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Check, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from '@/contexts/AuthContext';
 
 const GoogleAuthRedirect = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
-  const [tokenInfo, setTokenInfo] = useState<any>(null);
-  const [redirectUri, setRedirectUri] = useState<string | null>(null);
   
   useEffect(() => {
-    const processCode = async () => {
+    const processAuth = async () => {
       try {
+        // Check if we're handling Google auth for user login
         const code = searchParams.get('code');
         
         if (!code) {
@@ -26,95 +27,21 @@ const GoogleAuthRedirect = () => {
           return;
         }
         
-        console.log('Got authorization code, exchanging for tokens...');
-        
-        // Get the Gmail settings to use for the token exchange
-        const { data: emailSettings, error: settingsError } = await supabase
-          .from('email_settings')
-          .select('id, gmail_client_id, gmail_client_secret, gmail_redirect_uri')
-          .single();
-          
-        if (settingsError) {
-          setStatus('error');
-          setErrorDetails(`Failed to fetch email settings: ${settingsError.message}`);
-          return;
-        }
-        
-        if (!emailSettings || !emailSettings.gmail_client_id || !emailSettings.gmail_client_secret || !emailSettings.gmail_redirect_uri) {
-          setStatus('error');
-          setErrorDetails('Gmail settings are incomplete. Please check your Gmail configuration in the admin panel.');
-          return;
-        }
-        
-        // Store the redirect URI for display purposes
-        setRedirectUri(emailSettings.gmail_redirect_uri);
-        
-        // Log the actual redirect URI being used for debugging
-        console.log('Using redirect URI:', emailSettings.gmail_redirect_uri);
-        
-        // Exchange the code for tokens
-        const { data, error } = await supabase.functions.invoke('gmail-auth', {
-          body: { 
-            code,
-            redirectUri: emailSettings.gmail_redirect_uri,
-            clientId: emailSettings.gmail_client_id,
-            clientSecret: emailSettings.gmail_client_secret
-          }
-        });
-        
-        if (error) {
-          console.error('Error from Gmail auth function:', error);
-          setStatus('error');
-          setErrorDetails(`Error calling authentication function: ${error.message || 'Unknown error'}`);
-          return;
-        }
-        
-        if (data.error) {
-          console.error('Error in Gmail auth response:', data);
-          setStatus('error');
-          setErrorDetails(`Authentication error: ${data.error}${data.message ? ': ' + data.message : ''}`);
-          return;
-        }
-        
-        if (!data.refreshToken) {
-          setStatus('error');
-          setErrorDetails('No refresh token received. You may need to revoke access and try again.');
-          // Still save the access token if we got one
-          if (data.accessToken) {
-            setTokenInfo({
-              accessToken: data.accessToken,
-              expiryDate: data.expiryDate
-            });
-          }
-          return;
-        }
-        
-        console.log('Successfully received tokens from Gmail API');
-        
-        // Save the tokens to the database using the UUID from our query
-        const { error: updateError } = await supabase
-          .from('email_settings')
-          .update({
-            gmail_refresh_token: data.refreshToken,
-            gmail_access_token: data.accessToken,
-            gmail_token_expiry: data.expiryDate
-          })
-          .eq('id', emailSettings.id);  // Use the UUID we retrieved
-          
-        if (updateError) {
-          console.error('Failed to save tokens:', updateError);
-          setStatus('error');
-          setErrorDetails(`Failed to save tokens: ${updateError.message}`);
-          return;
-        }
-        
-        setTokenInfo({
-          refreshToken: data.refreshToken,
-          accessToken: data.accessToken,
-          expiryDate: data.expiryDate
-        });
-        
+        // We'll handle the auth state ourselves and redirect appropriately
         setStatus('success');
+        
+        // After a small delay, redirect to the profile page
+        setTimeout(() => {
+          // Refresh user profile to ensure latest data
+          if (refreshProfile) {
+            refreshProfile().then(() => {
+              navigate('/profile');
+            });
+          } else {
+            navigate('/profile');
+          }
+        }, 1000);
+        
       } catch (error) {
         console.error('Unexpected error in auth redirect:', error);
         setStatus('error');
@@ -122,8 +49,8 @@ const GoogleAuthRedirect = () => {
       }
     };
     
-    processCode();
-  }, [searchParams]);
+    processAuth();
+  }, [searchParams, navigate, refreshProfile]);
   
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -149,7 +76,7 @@ const GoogleAuthRedirect = () => {
               <Check className="h-5 w-5 text-green-600" />
               <AlertTitle className="text-green-800">Success!</AlertTitle>
               <AlertDescription className="text-green-700">
-                Google Authentication was successful. Your Gmail account is now connected.
+                Google Authentication was successful. You will be redirected shortly.
               </AlertDescription>
             </Alert>
           )}
@@ -160,62 +87,17 @@ const GoogleAuthRedirect = () => {
               <AlertTitle>Authentication Failed</AlertTitle>
               <AlertDescription>
                 {errorDetails || 'An unknown error occurred during authentication.'}
-                
-                {redirectUri && (
-                  <div className="mt-4 p-3 bg-gray-100 rounded-md text-xs">
-                    <p className="font-semibold">Current Redirect URI:</p>
-                    <p className="break-all">{redirectUri}</p>
-                    <p className="mt-2 text-red-600">
-                      Make sure this exact URI is added to your Google Cloud Console's Authorized redirect URIs.
-                    </p>
-                  </div>
-                )}
-                
-                {tokenInfo && tokenInfo.accessToken && (
-                  <div className="mt-4 p-3 bg-gray-100 rounded-md">
-                    <p className="text-sm font-medium">Note: We received an access token but no refresh token.</p>
-                    <p className="text-xs mt-1">You may need to revoke access and try again with a new consent flow.</p>
-                  </div>
-                )}
               </AlertDescription>
             </Alert>
           )}
           
           <div className="flex flex-col space-y-3 mt-6">
-            {status === 'success' && (
-              <div className="text-sm text-gray-500 mb-4">
-                <p>Refresh token: {tokenInfo?.refreshToken ? '✓ Received' : '✗ Missing'}</p>
-                <p>Access token: {tokenInfo?.accessToken ? '✓ Received' : '✗ Missing'}</p>
-                <p>Expiry date: {tokenInfo?.expiryDate ? new Date(tokenInfo.expiryDate).toLocaleString() : 'N/A'}</p>
-              </div>
-            )}
-            
             <Button 
-              onClick={() => navigate('/admin?tab=smtp')} 
+              onClick={() => navigate('/')} 
               className="w-full"
             >
-              Return to Email Settings
+              Return to Dashboard
             </Button>
-            
-            {status === 'error' && (
-              <Button
-                variant="outline"
-                onClick={() => window.open('https://myaccount.google.com/permissions', '_blank')}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                Revoke Access in Google <ExternalLink className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {status === 'error' && (
-              <Button
-                variant="outline"
-                onClick={() => window.open('https://console.cloud.google.com/apis/credentials', '_blank')}
-                className="w-full flex items-center justify-center gap-2 mt-2"
-              >
-                Google Cloud Credentials <ExternalLink className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
