@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Google } from 'lucide-react';
+import { Mail } from 'lucide-react'; // Changed from Google to Mail icon
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -141,7 +141,7 @@ const Login = () => {
             variant="outline" 
             className="w-full flex items-center justify-center gap-2"
           >
-            <Google className="h-4 w-4" />
+            <Mail className="h-4 w-4" />
             התחבר עם Google
           </Button>
         </form>
