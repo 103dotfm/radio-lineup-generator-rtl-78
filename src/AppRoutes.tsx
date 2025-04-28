@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import { format, startOfWeek } from 'date-fns';
@@ -10,6 +9,7 @@ import Admin from "./pages/Admin";
 import SchedulePage from "./pages/SchedulePage";
 import GoogleAuthRedirect from "./pages/GoogleAuthRedirect";
 import ScheduleXML from "./pages/ScheduleXML";
+import Profile from "./pages/Profile";
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
   const { isAuthenticated, isAdmin } = useAuth();
@@ -70,6 +70,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Index />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />
