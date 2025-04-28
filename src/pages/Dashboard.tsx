@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Calendar, Clock, SortAsc, List, LogOut, Settings, Trash2 } from "lucide-react";
+import { Plus, Search, Calendar, Clock, SortAsc, List, Settings, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from 'date-fns';
 import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
@@ -17,7 +17,7 @@ type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { logout, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const queryClient = useQueryClient();
@@ -57,11 +57,6 @@ const Dashboard = () => {
     setSearchQuery(e.target.value);
   };
   
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-  
   const sortedShows = React.useMemo(() => {
     if (!shows) return [];
     
@@ -85,7 +80,6 @@ const Dashboard = () => {
   
   return (
     <div className="container mx-auto py-8 px-4">
-      <UserMenu />
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
         <div className="flex gap-4">
@@ -97,10 +91,7 @@ const Dashboard = () => {
             <Plus className="h-4 w-4" />
             ליינאפ חדש
           </Button>
-          <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
-            <LogOut className="h-4 w-4" />
-            התנתקות
-          </Button>
+          <UserMenu />
         </div>
       </div>
 
