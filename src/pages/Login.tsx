@@ -74,10 +74,14 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
+      
+      // Use the current origin instead of hardcoded localhost
+      const redirectTo = `${window.location.origin}/google-auth-redirect`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/google-auth-redirect`
+          redirectTo
         }
       });
       

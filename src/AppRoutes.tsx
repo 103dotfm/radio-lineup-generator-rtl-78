@@ -16,10 +16,12 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
   const { isAuthenticated, isAdmin } = useAuth();
   
   if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
   if (adminOnly && !isAdmin) {
+    console.log("User not admin, redirecting to home");
     return <Navigate to="/" replace />;
   }
 
