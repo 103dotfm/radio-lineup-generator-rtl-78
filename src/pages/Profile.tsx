@@ -58,7 +58,7 @@ const Profile = () => {
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `${fileName}`;
       
       // Upload the file to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -78,6 +78,7 @@ const Profile = () => {
         title: "התמונה הועלתה בהצלחה"
       });
     } catch (error) {
+      console.error('Error uploading avatar:', error);
       toast({
         title: "שגיאה בהעלאת התמונה",
         description: error.message,
@@ -92,6 +93,7 @@ const Profile = () => {
     try {
       setLoading(true);
       const updates = {
+        id: user?.id, // Ensure ID is included for the update
         full_name: name,
         title,
         avatar_url: avatarUrl,
@@ -100,8 +102,7 @@ const Profile = () => {
       
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user?.id);
+        .upsert(updates);
 
       if (error) throw error;
 
@@ -114,6 +115,7 @@ const Profile = () => {
         await refreshProfile();
       }
     } catch (error) {
+      console.error('Error updating profile:', error);
       toast({
         title: "שגיאה בעדכון הפרופיל",
         description: error.message,

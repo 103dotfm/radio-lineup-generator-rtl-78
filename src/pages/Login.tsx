@@ -75,10 +75,9 @@ const Login = () => {
     try {
       setIsLoading(true);
       
-      // Use the current origin instead of hardcoded localhost
+      // Use the current origin for redirect
       const redirectTo = `${window.location.origin}/google-auth-redirect`;
       
-      // Debug information
       console.log("Redirecting to:", redirectTo);
       
       const { error } = await supabase.auth.signInWithOAuth({
