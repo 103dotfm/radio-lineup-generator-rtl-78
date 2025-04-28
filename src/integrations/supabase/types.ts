@@ -327,6 +327,30 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          google_id: string | null
+          id: string
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          google_id?: string | null
+          id: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          google_id?: string | null
+          id?: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       schedule_slots: {
         Row: {
           color: string | null
