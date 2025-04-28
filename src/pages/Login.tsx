@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { Google } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -68,6 +71,36 @@ const Login = () => {
     }
   };
   
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/google-auth-redirect`
+        }
+      });
+      
+      if (error) {
+        console.error('Google login error:', error);
+        toast({
+          variant: 'destructive',
+          title: 'שגיאה בהתחברות עם Google',
+          description: error.message
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected Google login error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'שגיאה בהתחברות',
+        description: 'אירעה שגיאה לא צפויה בהתחברות עם Google'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-sky-300 to-teal-400">
       <div className="w-full max-w-md p-8 bg-white rounded-lg shadow-lg transform transition-all duration-500 hover:shadow-xl">
         <div className="text-center">
@@ -90,8 +123,26 @@ const Login = () => {
               <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required className="mt-1" placeholder="••••••••" disabled={isLoading} dir="ltr" />
             </div>
           </div>
+          
           <Button type="submit" disabled={isLoading} className="w-full py-2 px-4 border border-transparent text-sm rounded-md text-white bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-bold">
             {isLoading ? 'מתחבר...' : 'התחבר'}
+          </Button>
+          
+          <div className="mt-4 flex items-center justify-center">
+            <div className="border-t border-gray-300 flex-grow mr-3"></div>
+            <span className="text-xs text-gray-500 px-2">או</span>
+            <div className="border-t border-gray-300 flex-grow ml-3"></div>
+          </div>
+          
+          <Button 
+            type="button" 
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+            variant="outline" 
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <Google className="h-4 w-4" />
+            התחבר עם Google
           </Button>
         </form>
       </div>

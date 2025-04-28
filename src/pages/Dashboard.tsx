@@ -11,6 +11,7 @@ import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "@/hooks/use-toast";
 import { ScheduleView } from '@/components/schedule/ScheduleView';
+import UserMenu from "@/components/UserMenu";
 
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
@@ -84,6 +85,7 @@ const Dashboard = () => {
   
   return (
     <div className="container mx-auto py-8 px-4">
+      <UserMenu />
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
         <div className="flex gap-4">
