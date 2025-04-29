@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
@@ -50,27 +51,43 @@ export default function ScheduleGrid({
   }, []);
 
   const dates = useMemo(() => {
+    if (!selectedDate || !isValid(selectedDate)) {
+      console.warn('Invalid selectedDate in ScheduleGrid:', selectedDate);
+      return [];
+    }
+    
     switch (viewMode) {
       case 'daily':
         return [selectedDate];
       case 'weekly':
         {
-          const startOfCurrentWeek = startOfWeek(selectedDate, {
-            weekStartsOn: 0
-          });
-          return Array.from({
-            length: 7
-          }, (_, i) => addDays(startOfCurrentWeek, i));
+          try {
+            const startOfCurrentWeek = startOfWeek(selectedDate, {
+              weekStartsOn: 0
+            });
+            return Array.from({
+              length: 7
+            }, (_, i) => addDays(startOfCurrentWeek, i));
+          } catch (error) {
+            console.error('Error calculating weekly dates:', error, selectedDate);
+            return [selectedDate];
+          }
         }
       case 'monthly':
         {
-          const monthStart = startOfMonth(selectedDate);
-          const daysInMonth = getDaysInMonth(selectedDate);
-          return Array.from({
-            length: daysInMonth
-          }, (_, i) => addDays(monthStart, i));
+          try {
+            const monthStart = startOfMonth(selectedDate);
+            const daysInMonth = getDaysInMonth(selectedDate);
+            return Array.from({
+              length: daysInMonth
+            }, (_, i) => addDays(monthStart, i));
+          } catch (error) {
+            console.error('Error calculating monthly dates:', error, selectedDate);
+            return [selectedDate];
+          }
         }
       default:
+        console.warn('Unknown viewMode in ScheduleGrid:', viewMode);
         return [];
     }
   }, [selectedDate, viewMode]);
@@ -99,12 +116,16 @@ export default function ScheduleGrid({
   };
 
   const getNoteForDate = (date: Date): DayNote | null => {
+    if (!date || !isValid(date)) {
+      return null;
+    }
+    
     const formattedDate = format(date, 'yyyy-MM-dd');
     return dayNotes.find(note => note.date === formattedDate) || null;
   };
 
   const handleDayHeaderClick = (date: Date) => {
-    if (isAdmin) {
+    if (isAdmin && date && isValid(date)) {
       console.log("Day header clicked for date:", date);
       setEditingNoteDate(prev => 
         prev && prev.getTime() === date.getTime() ? null : date
@@ -112,24 +133,30 @@ export default function ScheduleGrid({
     }
   };
 
-  const renderTimeCell = (dayIndex: number, time: string, isCurrentMonth: boolean = true, cellKey: string) => {
+  const renderTimeCell = (dayDate: Date, dayIndex: number, time: string, isCurrentMonth: boolean = true, cellKey: string) => {
+    // Filter slots for this day and time
     const relevantSlots = scheduleSlots.filter(
       slot => slot.day_of_week === dayIndex && isSlotStartTime(slot, time)
     );
     
     return (
       <div key={cellKey} className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
-        {isCurrentMonth && relevantSlots.map(slot => (
-          <ScheduleGridCell 
-            key={`slot-${slot.id}-${time}`}
-            slot={slot}
-            handleSlotClick={handleSlotClick}
-            handleEditSlot={handleEditSlot}
-            handleDeleteSlot={handleDeleteSlot}
-            isAdmin={isAdmin}
-            isAuthenticated={isAuthenticated}
-          />
-        ))}
+        {isCurrentMonth && relevantSlots.length > 0 && relevantSlots.map(slot => {
+          // Create a unique identifier for each slot
+          const slotKey = `slot-${slot.id}-${dayIndex}-${time.replace(':', '')}`;
+          
+          return (
+            <ScheduleGridCell 
+              key={slotKey}
+              slot={slot}
+              handleSlotClick={handleSlotClick}
+              handleEditSlot={handleEditSlot}
+              handleDeleteSlot={handleDeleteSlot}
+              isAdmin={isAdmin}
+              isAuthenticated={isAuthenticated}
+            />
+          );
+        })}
       </div>
     );
   };
@@ -142,13 +169,18 @@ export default function ScheduleGrid({
 
   const timeToMinutes = (time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
+    return hours * 60 + (minutes || 0);
   };
 
   const renderDayHeader = (date: Date, index: number) => {
+    if (!date || !isValid(date)) {
+      console.warn('Invalid date in renderDayHeader:', date);
+      return null;
+    }
+    
     const dayNote = getNoteForDate(date);
-    const isCurrentlyEditing = editingNoteDate && 
-      editingNoteDate.getTime() === date.getTime();
+    const isCurrentlyEditing = editingNoteDate && isValid(editingNoteDate) && 
+      date && isValid(date) && editingNoteDate.getTime() === date.getTime();
     const todayClass = isToday(date) ? 'bg-[#59c9c6]' : 'bg-gray-100';
     
     return (
@@ -178,6 +210,10 @@ export default function ScheduleGrid({
   };
 
   const renderGrid = () => {
+    if (!dates || dates.length === 0) {
+      return <div className="p-4 text-center">No valid dates available for rendering the schedule.</div>;
+    }
+    
     switch (viewMode) {
       case 'daily':
         return (
@@ -185,13 +221,13 @@ export default function ScheduleGrid({
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            {renderDayHeader(selectedDate, 0)}
+            {dates[0] && renderDayHeader(dates[0], 0)}
             {timeSlots.map((time, timeIndex) => (
               <React.Fragment key={`daily-${time}-${timeIndex}`}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {renderTimeCell(selectedDate.getDay(), time, true, `daily-cell-${time}-${timeIndex}`)}
+                {dates[0] && renderTimeCell(dates[0], dates[0].getDay(), time, true, `daily-cell-${time}-${timeIndex}`)}
               </React.Fragment>
             ))}
           </div>
@@ -203,14 +239,14 @@ export default function ScheduleGrid({
             <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
               שעה
             </div>
-            {dates.map((date, index) => renderDayHeader(date, index))}
+            {dates.map((date, index) => date && renderDayHeader(date, index))}
             {timeSlots.map((time, timeIndex) => (
               <React.Fragment key={`weekly-${time}-${timeIndex}`}>
                 <div className="p-2 text-center border-b border-r bg-gray-50">
                   {time}
                 </div>
-                {dates.map((date, dayIndex) => (
-                  renderTimeCell(date.getDay(), time, true, `weekly-cell-${time}-${dayIndex}-${timeIndex}`)
+                {dates.map((date, dayIndex) => date && (
+                  renderTimeCell(date, date.getDay(), time, true, `weekly-cell-${time}-${dayIndex}-${timeIndex}`)
                 ))}
               </React.Fragment>
             ))}
@@ -234,9 +270,16 @@ export default function ScheduleGrid({
                   {time}
                 </div>
                 {weekDays.map((_, dayIndex) => {
-                  const relevantDates = dates.filter(date => date.getDay() === dayIndex);
+                  const relevantDates = dates.filter(date => date && date.getDay() === dayIndex);
                   const isCurrentMonth = relevantDates.length > 0;
-                  return renderTimeCell(dayIndex, time, isCurrentMonth, `monthly-cell-${time}-${dayIndex}-${timeIndex}`);
+                  // Use a more unique key for the monthly cell
+                  return renderTimeCell(
+                    relevantDates[0] || new Date(), 
+                    dayIndex, 
+                    time, 
+                    isCurrentMonth, 
+                    `monthly-cell-${time}-${dayIndex}-${timeIndex}-${relevantDates[0]?.getDate() || 0}`
+                  );
                 })}
               </React.Fragment>
             ))}
@@ -250,4 +293,9 @@ export default function ScheduleGrid({
       {renderGrid()}
     </div>
   );
+}
+
+// Import isValid to ensure we properly check date validity
+function isValid(date: any): boolean {
+  return date instanceof Date && !isNaN(date.getTime());
 }

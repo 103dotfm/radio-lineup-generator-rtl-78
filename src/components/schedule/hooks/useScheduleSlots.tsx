@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { useToast } from '@/hooks/use-toast';
@@ -8,21 +9,50 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Validate selectedDate
+  const isValidDate = selectedDate instanceof Date && !isNaN(selectedDate.getTime());
+  if (!isValidDate) {
+    console.warn('Invalid selectedDate in useScheduleSlots:', selectedDate);
+  }
+
+  // Use a query key that depends on the date value rather than the date object
+  const dateKey = isValidDate ? format(selectedDate, 'yyyy-MM-dd') : 'invalid-date';
+
   const {
     data: scheduleSlots = [],
-    isLoading
+    isLoading,
+    error,
+    refetch
   } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
+    queryKey: ['scheduleSlots', dateKey, isMasterSchedule],
     queryFn: () => {
       console.log('Fetching slots with params:', {
         selectedDate,
-        isMasterSchedule
+        isMasterSchedule,
+        dateKey
       });
-      return getScheduleSlots(selectedDate, isMasterSchedule);
+      
+      if (!isValidDate) {
+        console.error('Cannot fetch schedule slots: Invalid date', selectedDate);
+        return Promise.resolve([]);
+      }
+      
+      return getScheduleSlots(selectedDate, isMasterSchedule)
+        .catch(err => {
+          console.error('Error fetching schedule slots:', err);
+          toast({
+            title: 'שגיאה בטעינת משבצות שידור',
+            description: 'אנא נסה שוב מאוחר יותר',
+            variant: 'destructive'
+          });
+          return [];
+        });
     },
+    staleTime: 60000, // Cache for 1 minute
+    retry: 2,
     meta: {
       onSuccess: (data: ScheduleSlot[]) => {
-        console.log('Successfully fetched slots:', data);
+        console.log('Successfully fetched slots:', data.length);
       },
       onError: (error: Error) => {
         console.error('Error fetching slots:', error);
@@ -38,10 +68,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         queryKey: ['scheduleSlots']
       });
       
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      queryClient.invalidateQueries({
-        queryKey: ['shows', dateString]
-      });
+      if (isValidDate) {
+        const dateString = format(selectedDate, 'yyyy-MM-dd');
+        queryClient.invalidateQueries({
+          queryKey: ['shows', dateString]
+        });
+      }
       
       toast({
         title: 'משבצת שידור נוספה בהצלחה'
@@ -75,10 +107,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         queryKey: ['scheduleSlots']
       });
       
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      queryClient.invalidateQueries({
-        queryKey: ['shows', dateString]
-      });
+      if (isValidDate) {
+        const dateString = format(selectedDate, 'yyyy-MM-dd');
+        queryClient.invalidateQueries({
+          queryKey: ['shows', dateString]
+        });
+      }
       
       toast({
         title: 'משבצת שידור עודכנה בהצלחה'
@@ -100,10 +134,12 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
         queryKey: ['scheduleSlots']
       });
       
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      queryClient.invalidateQueries({
-        queryKey: ['shows', dateString]
-      });
+      if (isValidDate) {
+        const dateString = format(selectedDate, 'yyyy-MM-dd');
+        queryClient.invalidateQueries({
+          queryKey: ['shows', dateString]
+        });
+      }
       
       toast({
         title: 'משבצת שידור נמחקה בהצלחה'
@@ -121,6 +157,8 @@ export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean =
   return {
     scheduleSlots,
     isLoading,
+    error,
+    refetch,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
     deleteSlot: deleteSlotMutation.mutateAsync
