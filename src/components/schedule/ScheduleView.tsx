@@ -9,6 +9,8 @@ import ScheduleDialogs from './ScheduleDialogs';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays, isValid } from 'date-fns';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface ScheduleViewProps {
   selectedDate?: Date;
@@ -35,9 +37,18 @@ export const ScheduleView = ({
   const [showSlotDialog, setShowSlotDialog] = useState(false);
   const [showEditModeDialog, setShowEditModeDialog] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
+  const [hasLoadingError, setHasLoadingError] = useState(false);
   
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  
+  // Make sure we have a valid date
+  useEffect(() => {
+    if (!isValid(selectedDateState)) {
+      console.warn('Invalid selectedDateState, resetting to current date');
+      setSelectedDate(new Date());
+    }
+  }, [selectedDateState]);
   
   // Format the date range for print header with validity check
   let dateRangeDisplay = '';
@@ -62,12 +73,41 @@ export const ScheduleView = ({
   }
 
   // Use custom hooks
-  const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
+  const { 
+    scheduleSlots, 
+    isLoading, 
+    error: scheduleSlotsError,
+    createSlot, 
+    updateSlot, 
+    deleteSlot,
+    refetch: refetchSlots
+  } = useScheduleSlots(
     selectedDateState, 
     isMasterSchedule
   );
   
-  const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
+  const { 
+    dayNotes, 
+    refreshDayNotes,
+    error: dayNotesError
+  } = useDayNotes(selectedDateState, viewMode);
+
+  // Effect to detect and handle errors
+  useEffect(() => {
+    if (scheduleSlotsError || dayNotesError) {
+      console.error('Error loading schedule data:', { scheduleSlotsError, dayNotesError });
+      setHasLoadingError(true);
+    } else {
+      setHasLoadingError(false);
+    }
+  }, [scheduleSlotsError, dayNotesError]);
+
+  // Handle retry when there's an error
+  const handleRetry = () => {
+    setHasLoadingError(false);
+    refetchSlots();
+    refreshDayNotes();
+  };
 
   useEffect(() => {
     if (selectedDate && selectedDate !== selectedDateState && isValid(selectedDate)) {
@@ -152,28 +192,37 @@ export const ScheduleView = ({
       console.log('Found existing show, navigating to:', show.id);
       navigate(`/show/${show.id}`);
     } else {
-      const weekStart = new Date(selectedDate);
-      weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
-      const slotDate = new Date(weekStart);
-      slotDate.setDate(weekStart.getDate() + slot.day_of_week);
-      
-      const generatedShowName = slot.show_name === slot.host_name 
-        ? slot.host_name 
-        : `${slot.show_name} עם ${slot.host_name}`;
-      
-      console.log('Navigating to new lineup with generated name:', generatedShowName);
-      navigate('/new', {
-        state: {
-          generatedShowName,
-          showName: slot.show_name,
-          hostName: slot.host_name,
-          time: slot.start_time,
-          date: slotDate,
-          isPrerecorded: slot.is_prerecorded,
-          isCollection: slot.is_collection,
-          slotId: slot.id
+      try {
+        const weekStart = startOfWeek(selectedDateState, { weekStartsOn: 0 });
+        if (!isValid(weekStart)) {
+          throw new Error('Invalid week start date');
         }
-      });
+        
+        const slotDate = addDays(weekStart, slot.day_of_week);
+        if (!isValid(slotDate)) {
+          throw new Error('Invalid slot date calculated');
+        }
+        
+        const generatedShowName = slot.show_name === slot.host_name 
+          ? slot.host_name 
+          : `${slot.show_name} עם ${slot.host_name}`;
+        
+        console.log('Navigating to new lineup with generated name:', generatedShowName);
+        navigate('/new', {
+          state: {
+            generatedShowName,
+            showName: slot.show_name,
+            hostName: slot.host_name,
+            time: slot.start_time,
+            date: slotDate,
+            isPrerecorded: slot.is_prerecorded,
+            isCollection: slot.is_collection,
+            slotId: slot.id
+          }
+        });
+      } catch (error) {
+        console.error('Error generating navigation state:', error);
+      }
     }
   };
 
@@ -197,19 +246,33 @@ export const ScheduleView = ({
         hideDateControls={hideDateControls}
       />
 
-      <ScheduleGrid 
-        scheduleSlots={scheduleSlots}
-        selectedDate={selectedDateState}
-        viewMode={viewMode}
-        handleSlotClick={handleSlotClick}
-        handleEditSlot={handleEditSlot}
-        handleDeleteSlot={handleDeleteSlot}
-        isAdmin={isAdmin}
-        isAuthenticated={isAuthenticated}
-        hideHeaderDates={hideHeaderDates}
-        dayNotes={dayNotes}
-        onDayNoteChange={refreshDayNotes}
-      />
+      {hasLoadingError ? (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>אירעה שגיאה בטעינת לוח השידורים. אנא נסה שוב מאוחר יותר.</span>
+            <Button variant="destructive" onClick={handleRetry} size="sm">נסה שוב</Button>
+          </AlertDescription>
+        </Alert>
+      ) : isLoading ? (
+        <div className="flex justify-center items-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : (
+        <ScheduleGrid 
+          scheduleSlots={scheduleSlots || []}
+          selectedDate={selectedDateState}
+          viewMode={viewMode}
+          handleSlotClick={handleSlotClick}
+          handleEditSlot={handleEditSlot}
+          handleDeleteSlot={handleDeleteSlot}
+          isAdmin={isAdmin}
+          isAuthenticated={isAuthenticated}
+          hideHeaderDates={hideHeaderDates}
+          dayNotes={dayNotes || []}
+          onDayNoteChange={refreshDayNotes}
+        />
+      )}
 
       <ScheduleDialogs 
         isAdmin={isAdmin}

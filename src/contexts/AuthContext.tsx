@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { toast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -10,6 +11,7 @@ interface User {
   title?: string;
   avatar_url?: string;
   is_admin: boolean;
+  google_id?: string;
 }
 
 interface AuthContextType {
@@ -37,6 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const lastUserCheckRef = useRef<number>(0);
   const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const checkUserRole = async (userId: string, force: boolean = false) => {
     const now = Date.now();
@@ -69,18 +72,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const { data: authData } = await supabase.auth.getUser();
           
           if (authData && authData.user) {
+            // Check if this is a Google auth user
+            const googleIdentity = authData.user.identities?.find(
+              identity => identity.provider === 'google'
+            );
+            
             // Insert the user into the users table
             const { error: insertError } = await supabase
               .from('users')
               .insert({
                 id: userId,
                 email: authData.user.email,
+                username: authData.user.user_metadata.name || authData.user.email,
                 full_name: authData.user.user_metadata.full_name || authData.user.email,
-                is_admin: false // Default to non-admin for new users
+                is_admin: false, // Default to non-admin for new users
+                google_id: googleIdentity?.id // Store Google ID if available
               });
               
             if (insertError) {
               console.error('Error creating user record:', insertError);
+              toast({
+                title: 'שגיאה ביצירת משתמש',
+                description: 'לא ניתן היה ליצור רשומה עבור המשתמש',
+                variant: 'destructive'
+              });
               return;
             }
             
@@ -100,6 +115,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             finalUserData = newUserData;
           }
         } else {
+          toast({
+            title: 'שגיאה בטעינת נתוני משתמש',
+            description: userError.message,
+            variant: 'destructive'
+          });
           return;
         }
       } else {
@@ -131,40 +151,74 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (error) {
       console.error('Error in checkUserRole:', error);
+      toast({
+        title: 'שגיאה בטעינת נתוני משתמש',
+        description: 'אירעה שגיאה בטעינת פרטי המשתמש',
+        variant: 'destructive'
+      });
     }
   };
 
   const refreshProfile = async () => {
     console.log('Refreshing user profile');
-    const { data } = await supabase.auth.getSession();
-    if (data.session?.user) {
-      await checkUserRole(data.session.user.id, true);
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error getting session in refreshProfile:', error);
+        return;
+      }
+      
+      if (data.session?.user) {
+        await checkUserRole(data.session.user.id, true);
+      }
+    } catch (error) {
+      console.error('Error in refreshProfile:', error);
     }
   };
 
   useEffect(() => {
     // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
+    const initializeAuth = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting initial session:', error);
+          setIsInitialized(true);
+          return;
+        }
+        
+        if (data.session) {
+          setIsAuthenticated(true);
+          await checkUserRole(data.session.user.id, true);
+        }
+        
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error in initializeAuth:', error);
+        setIsInitialized(true);
       }
-    });
+    };
+    
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
-      if (event === 'SIGNED_IN' && session) {
-        setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setUser(null);
-        lastUserCheckRef.current = 0;
-      } else if (event === 'USER_UPDATED' && session) {
-        // Refresh user data when user is updated
-        checkUserRole(session.user.id, true);
+      try {
+        if (event === 'SIGNED_IN' && session) {
+          setIsAuthenticated(true);
+          await checkUserRole(session.user.id, true);
+        } else if (event === 'SIGNED_OUT') {
+          setIsAuthenticated(false);
+          setIsAdmin(false);
+          setUser(null);
+          lastUserCheckRef.current = 0;
+        } else if (event === 'USER_UPDATED' && session) {
+          // Refresh user data when user is updated
+          await checkUserRole(session.user.id, true);
+        }
+      } catch (error) {
+        console.error('Error handling auth state change:', error);
       }
     });
     
@@ -205,6 +259,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       lastUserCheckRef.current = 0;
     } catch (error) {
       console.error('Logout error:', error);
+      toast({
+        title: 'שגיאה בתהליך ההתנתקות',
+        description: 'אירעה שגיאה בתהליך ההתנתקות',
+        variant: 'destructive'
+      });
     }
   };
 
