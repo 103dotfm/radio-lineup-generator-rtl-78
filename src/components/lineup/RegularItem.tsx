@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -42,8 +41,14 @@ const RegularItem = ({
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
   const {
     displayName,
-    displayHost
-  } = getShowDisplay(name, title);
+    displayHost,
+    backgroundColor,
+    textColor
+  } = getShowDisplay({ 
+    show_name: name, 
+    host_name: title,
+    color: null // Providing null since we don't have color information in this context
+  });
   
   // Determine min-height based on interviewees titles
   const getMinHeightClass = () => {
