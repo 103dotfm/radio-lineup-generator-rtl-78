@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Edit } from "lucide-react";
+import { ArrowLeft, Edit, LogOut } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Profile = () => {
@@ -21,6 +21,7 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const defaultAvatarUrl = "/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png";
@@ -30,8 +31,32 @@ const Profile = () => {
       setName(user.full_name || "");
       setTitle(user.title || "");
       setAvatarUrl(user.avatar_url || defaultAvatarUrl);
+      
+      // Check if user has Google connected
+      checkGoogleConnection();
     }
   }, [user]);
+
+  const checkGoogleConnection = async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error("Error checking identity providers:", error);
+        return;
+      }
+      
+      // Check if the user has identities and if Google is among them
+      const identities = data.user?.identities || [];
+      const hasGoogleIdentity = identities.some(identity => 
+        identity.provider === 'google'
+      );
+      
+      setIsGoogleConnected(hasGoogleIdentity);
+    } catch (error) {
+      console.error("Error checking Google connection:", error);
+    }
+  };
 
   const handleConnectGoogle = async () => {
     try {
@@ -45,6 +70,34 @@ const Profile = () => {
     } catch (error) {
       toast({
         title: "שגיאה בהתחברות לגוגל",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleDisconnectGoogle = async () => {
+    try {
+      // We need to unlink the Google identity
+      const { error } = await supabase.auth.unlinkIdentity({
+        provider: 'google',
+      });
+      
+      if (error) throw error;
+      
+      setIsGoogleConnected(false);
+      toast({
+        title: "חשבון גוגל נותק בהצלחה"
+      });
+      
+      // Refresh profile to update user data
+      if (refreshProfile) {
+        await refreshProfile();
+      }
+    } catch (error) {
+      console.error('Error disconnecting Google account:', error);
+      toast({
+        title: "שגיאה בניתוק חשבון גוגל",
         description: error.message,
         variant: "destructive"
       });
@@ -219,13 +272,30 @@ const Profile = () => {
           </Button>
 
           <div className="pt-4">
-            <Button
-              variant="outline"
-              onClick={handleConnectGoogle}
-              className="w-full"
-            >
-              חבר חשבון Google
-            </Button>
+            {isGoogleConnected ? (
+              <Button
+                variant="outline"
+                onClick={handleDisconnectGoogle}
+                className="w-full flex items-center gap-2 text-red-500 border-red-300 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4" />
+                נתק חשבון Google
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handleConnectGoogle}
+                className="w-full flex items-center gap-2"
+              >
+                <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                  <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+                  <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+                  <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
+                  <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+                </svg>
+                חבר חשבון Google
+              </Button>
+            )}
           </div>
         </div>
       </Card>
