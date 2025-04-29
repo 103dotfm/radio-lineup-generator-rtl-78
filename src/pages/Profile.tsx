@@ -25,6 +25,7 @@ const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const defaultAvatarUrl = "/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png";
+  const [googleIdentity, setGoogleIdentity] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -48,11 +49,17 @@ const Profile = () => {
       
       // Check if the user has identities and if Google is among them
       const identities = data.user?.identities || [];
-      const hasGoogleIdentity = identities.some(identity => 
+      const googleIdentityFound = identities.find(identity => 
         identity.provider === 'google'
       );
       
-      setIsGoogleConnected(hasGoogleIdentity);
+      if (googleIdentityFound) {
+        setIsGoogleConnected(true);
+        setGoogleIdentity(googleIdentityFound);
+      } else {
+        setIsGoogleConnected(false);
+        setGoogleIdentity(null);
+      }
     } catch (error) {
       console.error("Error checking Google connection:", error);
     }
@@ -78,14 +85,22 @@ const Profile = () => {
   
   const handleDisconnectGoogle = async () => {
     try {
-      // We need to unlink the Google identity
-      const { error } = await supabase.auth.unlinkIdentity({
-        provider: 'google',
-      });
+      // Check that we have the Google identity
+      if (!googleIdentity) {
+        await checkGoogleConnection();
+        if (!googleIdentity) {
+          throw new Error("Google account not connected");
+        }
+      }
+
+      // Unlink the Google identity with complete identity object
+      const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
       
       if (error) throw error;
       
       setIsGoogleConnected(false);
+      setGoogleIdentity(null);
+      
       toast({
         title: "חשבון גוגל נותק בהצלחה"
       });
