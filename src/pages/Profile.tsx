@@ -11,6 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Edit, LogOut } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
+// Helper function to extract first name
+const getFirstName = (fullName: string): string => {
+  if (!fullName) return "";
+  return fullName.split(" ")[0];
+};
+
 const Profile = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -49,11 +55,14 @@ const Profile = () => {
       
       // Check if the user has identities and if Google is among them
       const identities = data.user?.identities || [];
+      console.log("User identities:", identities);
+      
       const googleIdentityFound = identities.find(identity => 
         identity.provider === 'google'
       );
       
       if (googleIdentityFound) {
+        console.log("Google identity found:", googleIdentityFound);
         setIsGoogleConnected(true);
         setGoogleIdentity(googleIdentityFound);
       } else {
@@ -70,7 +79,7 @@ const Profile = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/profile`
+          redirectTo: `${window.location.origin}/google-auth-redirect`
         }
       });
       if (error) throw error;
@@ -93,10 +102,15 @@ const Profile = () => {
         }
       }
 
+      console.log("Disconnecting Google account with identity:", googleIdentity);
+      
       // Unlink the Google identity with complete identity object
       const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error unlinking identity:", error);
+        throw error;
+      }
       
       setIsGoogleConnected(false);
       setGoogleIdentity(null);

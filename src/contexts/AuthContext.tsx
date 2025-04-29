@@ -46,6 +46,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
+      console.log('Checking user role for user ID:', userId);
+      
       // First get the basic user info
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -55,7 +57,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (userError) {
         console.error('Error fetching user data:', userError);
-        return;
+        
+        // If user doesn't exist in the users table, try to create the record
+        if (userError.code === 'PGRST116') {
+          console.log('User not found in users table, creating record...');
+          
+          // Get user details from auth.users
+          const { data: authData } = await supabase.auth.getUser();
+          
+          if (authData && authData.user) {
+            // Insert the user into the users table
+            const { error: insertError } = await supabase
+              .from('users')
+              .insert({
+                id: userId,
+                email: authData.user.email,
+                full_name: authData.user.user_metadata.full_name || authData.user.email,
+                is_admin: false // Default to non-admin for new users
+              });
+              
+            if (insertError) {
+              console.error('Error creating user record:', insertError);
+              return;
+            }
+            
+            // Retry fetching the user data
+            const { data: newUserData, error: newUserError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single();
+              
+            if (newUserError) {
+              console.error('Error fetching new user data:', newUserError);
+              return;
+            }
+            
+            userData = newUserData;
+          }
+        } else {
+          return;
+        }
       }
       
       // Then get profile info
@@ -86,6 +128,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const refreshProfile = async () => {
+    console.log('Refreshing user profile');
     const { data } = await supabase.auth.getSession();
     if (data.session?.user) {
       await checkUserRole(data.session.user.id, true);
@@ -103,6 +146,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
       if (event === 'SIGNED_IN' && session) {
         setIsAuthenticated(true);
         checkUserRole(session.user.id, true);
@@ -111,6 +155,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsAdmin(false);
         setUser(null);
         lastUserCheckRef.current = 0;
+      } else if (event === 'USER_UPDATED' && session) {
+        // Refresh user data when user is updated
+        checkUserRole(session.user.id, true);
       }
     });
     
