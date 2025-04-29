@@ -48,6 +48,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Checking user role for user ID:', userId);
       
+      // Initialize a variable to hold user data that we can reassign
+      let finalUserData = null;
+
       // First get the basic user info
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -93,11 +96,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               return;
             }
             
-            userData = newUserData;
+            // Assign to our reassignable variable
+            finalUserData = newUserData;
           }
         } else {
           return;
         }
+      } else {
+        // If no error, use the userData directly
+        finalUserData = userData;
       }
       
       // Then get profile info
@@ -111,15 +118,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error fetching profile data:', profileError);
       }
 
-      if (userData) {
+      if (finalUserData) {
         // Combine user data with profile data
         const combinedUserData = {
-          ...userData,
+          ...finalUserData,
           ...(profileData || {}),
         };
         
         setUser(combinedUserData);
-        setIsAdmin(userData.is_admin);
+        setIsAdmin(finalUserData.is_admin);
         lastUserCheckRef.current = now;
       }
     } catch (error) {
