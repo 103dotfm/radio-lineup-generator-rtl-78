@@ -6,6 +6,7 @@ import { ViewMode, ScheduleSlot } from '@/types/schedule';
 import ScheduleHeader from './layout/ScheduleHeader';
 import ScheduleGrid from './layout/ScheduleGrid';
 import ScheduleDialogs from './ScheduleDialogs';
+import { Button } from "@/components/ui/button"; // Add Button import
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { useDayNotes } from './hooks/useDayNotes';
 import { format, startOfWeek, addDays, isValid } from 'date-fns';
