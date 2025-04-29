@@ -4,28 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useEffect, useState } from "react";
 
 const UserMenu = () => {
-  const { user, logout, refreshProfile } = useAuth();
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { user, logout } = useAuth();
   
   const defaultAvatarUrl = "/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png";
-
-  useEffect(() => {
-    // Make sure user data is fresh
-    if (refreshProfile) {
-      refreshProfile().finally(() => {
-        setIsLoaded(true);
-      });
-    } else {
-      setIsLoaded(true);
-    }
-  }, [refreshProfile]);
-
-  if (!isLoaded) {
-    return <div className="animate-pulse h-8 w-32 bg-gray-200 rounded"></div>;
-  }
 
   if (!user) {
     return (
