@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Profile = () => {
@@ -20,12 +20,16 @@ const Profile = () => {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const defaultAvatarUrl = "/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png";
 
   useEffect(() => {
     if (user) {
       setName(user.full_name || "");
       setTitle(user.title || "");
-      setAvatarUrl(user.avatar_url || "");
+      setAvatarUrl(user.avatar_url || defaultAvatarUrl);
     }
   }, [user]);
 
@@ -45,6 +49,10 @@ const Profile = () => {
         variant: "destructive"
       });
     }
+  };
+  
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
   };
 
   const uploadAvatar = async (event) => {
@@ -146,30 +154,35 @@ const Profile = () => {
         <h1 className="text-2xl font-bold mb-6">אזור אישי</h1>
         
         <div className="flex justify-center mb-6">
-          <div className="relative">
+          <div 
+            className="relative cursor-pointer" 
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            onClick={handleAvatarClick}
+          >
             <Avatar className="h-24 w-24">
               {avatarUrl ? (
                 <AvatarImage src={avatarUrl} alt={name || "Profile"} />
               ) : (
-                <AvatarFallback>{name ? name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                <AvatarImage src={defaultAvatarUrl} alt="Default Avatar" />
               )}
+              <AvatarFallback>{name ? name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-2 -right-2">
-              <label 
-                htmlFor="avatar-upload" 
-                className="bg-primary hover:bg-primary/90 text-white p-1 rounded-full cursor-pointer transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-                <input 
-                  type="file"
-                  id="avatar-upload"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={uploadAvatar}
-                  disabled={uploading}
-                />
-              </label>
-            </div>
+            
+            {isHovering && (
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                <Edit className="h-8 w-8 text-white" />
+              </div>
+            )}
+            
+            <input 
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={uploadAvatar}
+              disabled={uploading}
+            />
           </div>
         </div>
         
