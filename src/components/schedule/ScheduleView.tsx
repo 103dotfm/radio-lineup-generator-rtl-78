@@ -1,14 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ViewMode, ScheduleSlot } from '@/types/schedule';
+import { ScheduleSlot } from '@/types/schedule';
+import { format, isValid, startOfWeek, addDays } from 'date-fns';
+import { useScheduleSlots } from './hooks/useScheduleSlots';
+import { useDayNotes } from './hooks/useDayNotes';
+import { useScheduleState } from './hooks/useScheduleState';
+import { useScheduleHandlers } from './hooks/useScheduleHandlers';
 import ScheduleHeader from './layout/ScheduleHeader';
 import ScheduleGrid from './layout/ScheduleGrid';
 import ScheduleDialogs from './ScheduleDialogs';
-import { useScheduleSlots } from './hooks/useScheduleSlots';
-import { useDayNotes } from './hooks/useDayNotes';
-import { format, startOfWeek, addDays, isValid } from 'date-fns';
 
 interface ScheduleViewProps {
   selectedDate?: Date;
@@ -21,7 +22,7 @@ interface ScheduleViewProps {
 }
 
 export const ScheduleView = ({ 
-  selectedDate = new Date(), // Provide default current date
+  selectedDate = new Date(),
   isMasterSchedule = false, 
   hideDateControls = false, 
   hideHeaderDates = false,
@@ -29,16 +30,23 @@ export const ScheduleView = ({
   isAdmin = false,
   showAddButton = true
 }: ScheduleViewProps) => {
-  const [selectedDateState, setSelectedDate] = useState<Date>(selectedDate);
-  const [viewMode, setViewMode] = useState<ViewMode>('weekly');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showSlotDialog, setShowSlotDialog] = useState(false);
-  const [showEditModeDialog, setShowEditModeDialog] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<ScheduleSlot | undefined>();
-  
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
+  const {
+    selectedDateState,
+    setSelectedDate,
+    viewMode,
+    setViewMode,
+    showDatePicker,
+    setShowDatePicker,
+    showSlotDialog,
+    setShowSlotDialog,
+    showEditModeDialog,
+    setShowEditModeDialog,
+    editingSlot,
+    setEditingSlot,
+  } = useScheduleState(selectedDate);
+
   // Format the date range for print header with validity check
   let dateRangeDisplay = '';
   try {
@@ -69,51 +77,27 @@ export const ScheduleView = ({
   
   const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedDate && selectedDate !== selectedDateState && isValid(selectedDate)) {
       setSelectedDate(selectedDate);
     }
-  }, [selectedDate]);
+  }, [selectedDate, selectedDateState, setSelectedDate]);
 
-  const handleAddSlot = () => {
-    setEditingSlot(undefined);
-    setShowSlotDialog(true);
-  };
-
-  const handleDeleteSlot = async (slot: ScheduleSlot, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    // Skip confirmation if CTRL key is pressed
-    if (e.ctrlKey) {
-      await deleteSlot(slot.id);
-      return;
-    }
-    
-    if (window.confirm('האם אתה בטוח שברצונך למחוק משבצת שידור זו?')) {
-      await deleteSlot(slot.id);
-    }
-  };
-
-  const handleEditSlot = (slot: ScheduleSlot, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isMasterSchedule) {
-      setEditingSlot(slot);
-      setShowSlotDialog(true);
-    } else {
-      setEditingSlot(slot);
-      setShowEditModeDialog(true);
-    }
-  };
-
-  const handleEditCurrent = () => {
-    setShowEditModeDialog(false);
-    setShowSlotDialog(true);
-  };
-
-  const handleEditAll = () => {
-    setShowEditModeDialog(false);
-    setShowSlotDialog(true);
-  };
+  const {
+    handleAddSlot,
+    handleDeleteSlot,
+    handleEditSlot,
+    handleSlotClick,
+    handleEditCurrent,
+    handleEditAll
+  } = useScheduleHandlers(
+    selectedDateState,
+    setShowSlotDialog,
+    setEditingSlot,
+    setShowEditModeDialog,
+    isAuthenticated,
+    deleteSlot
+  );
 
   const handleSaveSlot = async (slotData: any) => {
     try {
@@ -137,45 +121,9 @@ export const ScheduleView = ({
     }
   };
 
-  const handleSlotClick = (slot: ScheduleSlot) => {
-    if (!isAuthenticated) return;
-    console.log('Clicked slot details:', {
-      show_name: slot.show_name,
-      host_name: slot.host_name,
-      start_time: slot.start_time,
-      is_prerecorded: slot.is_prerecorded,
-      is_collection: slot.is_collection
-    });
-    
-    if (slot.shows && slot.shows.length > 0) {
-      const show = slot.shows[0];
-      console.log('Found existing show, navigating to:', show.id);
-      navigate(`/show/${show.id}`);
-    } else {
-      const weekStart = new Date(selectedDate);
-      weekStart.setDate(selectedDate.getDate() - selectedDate.getDay());
-      const slotDate = new Date(weekStart);
-      slotDate.setDate(weekStart.getDate() + slot.day_of_week);
-      
-      const generatedShowName = slot.show_name === slot.host_name 
-        ? slot.host_name 
-        : `${slot.show_name} עם ${slot.host_name}`;
-      
-      console.log('Navigating to new lineup with generated name:', generatedShowName);
-      navigate('/new', {
-        state: {
-          generatedShowName,
-          showName: slot.show_name,
-          hostName: slot.host_name,
-          time: slot.start_time,
-          date: slotDate,
-          isPrerecorded: slot.is_prerecorded,
-          isCollection: slot.is_collection,
-          slotId: slot.id
-        }
-      });
-    }
-  };
+  // Wrap the edit slot handler to include isMasterSchedule
+  const wrappedEditSlotHandler = (slot: ScheduleSlot, e: React.MouseEvent) => 
+    handleEditSlot(slot, e, isMasterSchedule);
 
   return (
     <div className="space-y-4">
@@ -202,7 +150,7 @@ export const ScheduleView = ({
         selectedDate={selectedDateState}
         viewMode={viewMode}
         handleSlotClick={handleSlotClick}
-        handleEditSlot={handleEditSlot}
+        handleEditSlot={wrappedEditSlotHandler}
         handleDeleteSlot={handleDeleteSlot}
         isAdmin={isAdmin}
         isAuthenticated={isAuthenticated}
@@ -230,5 +178,4 @@ export const ScheduleView = ({
   );
 };
 
-// Add a default export that references the named export
 export default ScheduleView;
