@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "@/hooks/use-toast";
 import { ScheduleView } from '@/components/schedule/ScheduleView';
 import UserMenu from "@/components/UserMenu";
+import DashboardNav from "@/components/dashboard/DashboardNav";
+import SearchDialog from "@/components/dashboard/SearchDialog";
 
 type SortOption = 'recent' | 'date' | 'time' | 'name' | 'modified';
 
@@ -21,6 +24,13 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const queryClient = useQueryClient();
+  
+  // Refs for scroll functionality
+  const scheduleRef = useRef<HTMLDivElement>(null);
+  const lineupsRef = useRef<HTMLDivElement>(null);
+  
+  // Search dialog state
+  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   
   const { data: shows, isLoading } = useQuery({
     queryKey: ['shows', searchQuery],
@@ -57,6 +67,19 @@ const Dashboard = () => {
     setSearchQuery(e.target.value);
   };
   
+  // Scroll handlers
+  const scrollToSchedule = () => {
+    scheduleRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  const scrollToLineups = () => {
+    lineupsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  const openSearchDialog = () => {
+    setIsSearchDialogOpen(true);
+  };
+  
   const sortedShows = React.useMemo(() => {
     if (!shows) return [];
     
@@ -80,7 +103,7 @@ const Dashboard = () => {
   
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold dashboardTitle">מערכת ליינאפים // 103fm</h1>
         <div className="flex gap-4">
           {isAdmin && <Button onClick={() => navigate('/admin')} variant="outline" className="flex items-center gap-2">
@@ -94,6 +117,13 @@ const Dashboard = () => {
           <UserMenu />
         </div>
       </div>
+
+      {/* Navigation section */}
+      <DashboardNav 
+        onScrollToSchedule={scrollToSchedule}
+        onScrollToLineups={scrollToLineups}
+        onOpenSearch={openSearchDialog}
+      />
 
       <div className="mb-8">
         <div className="relative mb-4">
@@ -139,12 +169,12 @@ const Dashboard = () => {
         )}
       </div>
 
-      <div className="mb-8">
+      <div ref={scheduleRef} className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">לוח שידורים שבועי</h2>
         <ScheduleView selectedDate={new Date()} isAdmin={isAdmin} />
       </div>
 
-      <div>
+      <div ref={lineupsRef}>
         <h2 className="text-2xl font-semibold mb-4">ליינאפים אחרונים שנערכו במערכת</h2>
         
         <div className="flex gap-2 mb-4">
@@ -175,7 +205,7 @@ const Dashboard = () => {
             <div className="text-center py-8 text-gray-500">לא נמצאו ליינאפים</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedShows.slice(0, 15).map(show => (
+              {sortedShows.slice(0, 6).map(show => (
                 <Card key={show.id} className="p-4 hover:shadow-lg transition-shadow">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg">{show.name || 'ללא שם'}</h3>
@@ -223,6 +253,12 @@ const Dashboard = () => {
       <div className="flex justify-center mt-12">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo footer-logo" />
       </div>
+      
+      {/* Search Dialog */}
+      <SearchDialog 
+        isOpen={isSearchDialogOpen} 
+        onClose={() => setIsSearchDialogOpen(false)} 
+      />
     </div>
   );
 };
