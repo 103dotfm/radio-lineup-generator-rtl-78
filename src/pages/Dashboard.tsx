@@ -13,20 +13,17 @@ import DashboardSearch from '@/components/dashboard/DashboardSearch';
 import SearchResultsTable from '@/components/dashboard/SearchResultsTable';
 import ScheduleSection from '@/components/dashboard/ScheduleSection';
 import LineupCards from '@/components/dashboard/LineupCards';
-import SearchDialog from '@/components/dashboard/SearchDialog';
 
 const Dashboard = () => {
   const { isAdmin } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const queryClient = useQueryClient();
   
   // Refs for scroll functionality
   const scheduleRef = useRef<HTMLDivElement>(null);
   const lineupsRef = useRef<HTMLDivElement>(null);
-  
-  // Search dialog state
-  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   
   const { data: shows, isLoading } = useQuery({
     queryKey: ['shows', searchQuery],
@@ -72,8 +69,12 @@ const Dashboard = () => {
     lineupsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  const openSearchDialog = () => {
-    setIsSearchDialogOpen(true);
+  const toggleSearch = () => {
+    setIsSearchVisible(prev => !prev);
+    if (!isSearchVisible) {
+      // Reset search when opening
+      setSearchQuery('');
+    }
   };
   
   const sortedShows = React.useMemo(() => {
@@ -105,18 +106,23 @@ const Dashboard = () => {
       <DashboardNav 
         onScrollToSchedule={scrollToSchedule}
         onScrollToLineups={scrollToLineups}
-        onOpenSearch={openSearchDialog}
+        onToggleSearch={toggleSearch}
+        searchVisible={isSearchVisible}
       />
 
-      <DashboardSearch searchQuery={searchQuery} handleSearch={handleSearch} />
+      <DashboardSearch 
+        searchQuery={searchQuery} 
+        handleSearch={handleSearch} 
+        isVisible={isSearchVisible}
+      />
 
-      {searchQuery && <SearchResultsTable shows={sortedShows} />}
+      {searchQuery && isSearchVisible && <SearchResultsTable shows={sortedShows} />}
 
-      <div ref={scheduleRef}>
+      <div ref={scheduleRef} className="mb-12">
         <ScheduleSection isAdmin={isAdmin} />
       </div>
 
-      <div ref={lineupsRef}>
+      <div ref={lineupsRef} className="mb-12">
         <LineupCards 
           shows={sortedShows}
           isAdmin={isAdmin}
@@ -130,12 +136,6 @@ const Dashboard = () => {
       <div className="flex justify-center mt-12">
         <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo footer-logo" />
       </div>
-      
-      {/* Search Dialog */}
-      <SearchDialog 
-        isOpen={isSearchDialogOpen} 
-        onClose={() => setIsSearchDialogOpen(false)} 
-      />
     </div>
   );
 };
