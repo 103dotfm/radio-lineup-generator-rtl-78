@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, addDays, startOfMonth, getDaysInMonth, isSameMonth, addWeeks, isToday } from 'date-fns';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
@@ -43,7 +44,8 @@ export default function ScheduleGrid({
     for (let i = 6; i <= 23; i++) {
       slots.push(`${i.toString().padStart(2, '0')}:00`);
     }
-    for (let i = 0; i <= 2; i++) {
+    // Removing 2am, only including 0am and 1am
+    for (let i = 0; i <= 1; i++) {
       slots.push(`${i.toString().padStart(2, '0')}:00`);
     }
     return slots;

@@ -5,13 +5,46 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import { Show } from "@/types/show";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SearchResultsTableProps {
   shows: Show[];
+  isLoading?: boolean;
 }
 
-const SearchResultsTable = ({ shows }: SearchResultsTableProps) => {
+const SearchResultsTable = ({ shows, isLoading = false }: SearchResultsTableProps) => {
   const navigate = useNavigate();
+  
+  if (isLoading) {
+    return (
+      <div className="mb-8">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right font-bold">מרואיינ/ת</TableHead>
+              <TableHead className="text-right font-bold">כותרת</TableHead>
+              <TableHead className="text-right font-bold">טלפון</TableHead>
+              <TableHead className="text-right font-bold">שם תוכנית</TableHead>
+              <TableHead className="text-right font-bold">תאריך</TableHead>
+              <TableHead className="text-right font-bold">פעולות</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array(5).fill(0).map((_, index) => (
+              <TableRow key={`skeleton-${index}`}>
+                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
   
   return (
     <div className="mb-8">

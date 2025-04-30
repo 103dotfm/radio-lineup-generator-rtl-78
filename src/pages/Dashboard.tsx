@@ -116,7 +116,7 @@ const Dashboard = () => {
         isVisible={isSearchVisible}
       />
 
-      {searchQuery && isSearchVisible && <SearchResultsTable shows={sortedShows} />}
+      {searchQuery && isSearchVisible && <SearchResultsTable shows={sortedShows} isLoading={isLoading && searchQuery.length > 0} />}
 
       <div ref={scheduleRef} className="mb-12">
         <ScheduleSection isAdmin={isAdmin} />
