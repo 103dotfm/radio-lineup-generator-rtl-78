@@ -1,29 +1,25 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from 'date-fns';
 import PDFViewer from './PDFViewer';
 import ScheduleView from './ScheduleView';
 import ProducerAssignmentsView from './ProducerAssignmentsView';
-
-interface ArrangementFile {
-  id: string;
-  filename: string;
-  url: string;
-  type: 'producers' | 'engineers' | 'digital';
-  week_start: string;
-}
+import DigitalWorkArrangementView from './DigitalWorkArrangementView';
 
 interface DesktopTabsProps {
   currentWeek: Date;
   weekDate?: string;
-  arrangements: Record<'producers' | 'engineers' | 'digital', ArrangementFile | null>;
+  arrangements: {
+    producers: { url: string; filename: string } | null;
+    engineers: { url: string; filename: string } | null;
+    digital: { url: string; filename: string } | null;
+  };
 }
 
-const DesktopTabs: React.FC<DesktopTabsProps> = ({ 
-  currentWeek, 
-  weekDate, 
-  arrangements 
+const DesktopTabs: React.FC<DesktopTabsProps> = ({
+  currentWeek,
+  weekDate,
+  arrangements
 }) => {
   return (
     <div className="hidden md:block">
@@ -36,12 +32,16 @@ const DesktopTabs: React.FC<DesktopTabsProps> = ({
         </TabsList>
         
         <TabsContent value="schedule">
-          <ScheduleView selectedDate={currentWeek} hideHeaderDates hideDateControls />
+          <ScheduleView
+            selectedDate={currentWeek}
+            hideHeaderDates={true}
+            hideDateControls={true}
+          />
         </TabsContent>
         
         <TabsContent value="producers">
           {arrangements.producers ? (
-            <PDFViewer 
+            <PDFViewer
               url={arrangements.producers.url}
               filename={arrangements.producers.filename}
             />
@@ -52,7 +52,7 @@ const DesktopTabs: React.FC<DesktopTabsProps> = ({
         
         <TabsContent value="engineers">
           {arrangements.engineers ? (
-            <PDFViewer 
+            <PDFViewer
               url={arrangements.engineers.url}
               filename={arrangements.engineers.filename}
             />
@@ -66,15 +66,12 @@ const DesktopTabs: React.FC<DesktopTabsProps> = ({
         
         <TabsContent value="digital">
           {arrangements.digital ? (
-            <PDFViewer 
+            <PDFViewer
               url={arrangements.digital.url}
               filename={arrangements.digital.filename}
             />
           ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-medium mb-2">סידור עבודה לא זמין</h3>
-              <p className="text-muted-foreground">סידור עבודה לדיגיטל לשבוע זה עדיין לא הועלה למערכת.</p>
-            </div>
+            <DigitalWorkArrangementView weekStart={currentWeek} />
           )}
         </TabsContent>
       </Tabs>

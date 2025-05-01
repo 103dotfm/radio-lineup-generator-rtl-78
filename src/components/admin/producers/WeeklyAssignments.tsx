@@ -15,7 +15,8 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogFooter 
+  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { 
   Select,
@@ -25,23 +26,26 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  createProducerAssignment, 
+  createProducerAssignment,
+  createRecurringProducerAssignment,
   deleteProducerAssignment,
   getProducerAssignments,
   getProducerRoles,
   getProducers 
 } from '@/lib/supabase/producers';
 import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
+import { Label } from '@/components/ui/label';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek);
+  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, true);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -50,7 +54,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   const [currentSlot, setCurrentSlot] = useState<any>(null);
   const [formData, setFormData] = useState({
     workerId: '',
-    role: ''
+    role: '',
+    isRecurring: false
   });
   
   const { toast } = useToast();
@@ -102,7 +107,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     setCurrentSlot(slot);
     setFormData({
       workerId: '',
-      role: roles.length > 0 ? roles[0].id : ''
+      role: roles.length > 0 ? roles[0].id : '',
+      isRecurring: false
     });
     setIsDialogOpen(true);
   };
@@ -120,24 +126,46 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     try {
       const selectedRole = roles.find(r => r.id === formData.role);
       
-      const assignment = {
-        slot_id: currentSlot.id,
-        worker_id: formData.workerId,
-        role: selectedRole ? selectedRole.name : '',
-        week_start: format(currentWeek, 'yyyy-MM-dd'),
-        is_recurring: false
-      };
-      
-      const result = await createProducerAssignment(assignment);
-      if (result) {
-        toast({
-          title: "נוסף בהצלחה",
-          description: "העובד נוסף לסידור העבודה בהצלחה"
-        });
-        loadData(); // Refresh the assignments
-        setIsDialogOpen(false);
+      if (formData.isRecurring) {
+        // Create assignments for all matching slots
+        const success = await createRecurringProducerAssignment(
+          currentSlot.id,
+          formData.workerId,
+          selectedRole ? selectedRole.name : '',
+          format(currentWeek, 'yyyy-MM-dd')
+        );
+        
+        if (success) {
+          toast({
+            title: "נוסף בהצלחה",
+            description: "העובד נוסף לכל התוכניות המתאימות בסידור העבודה בהצלחה"
+          });
+          loadData(); // Refresh the assignments
+          setIsDialogOpen(false);
+        } else {
+          throw new Error("Failed to create recurring assignments");
+        }
       } else {
-        throw new Error("Failed to create assignment");
+        // Create a single assignment
+        const assignment = {
+          slot_id: currentSlot.id,
+          worker_id: formData.workerId,
+          role: selectedRole ? selectedRole.name : '',
+          week_start: format(currentWeek, 'yyyy-MM-dd'),
+          is_recurring: false
+        };
+        
+        const result = await createProducerAssignment(assignment);
+        if (result) {
+          toast({
+            title: "נוסף בהצלחה",
+            description: "העובד נוסף לסידור העבודה בהצלחה"
+          });
+          loadData(); // Refresh the assignments
+          setIsDialogOpen(false);
+        } else {
+          throw new Error("Failed to create assignment");
+        }
       }
     } catch (error) {
       console.error("Error assigning producer:", error);
@@ -197,7 +225,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                 <TableRow>
                   <TableHead>שעות</TableHead>
                   <TableHead>שם התוכנית</TableHead>
-                  <TableHead>שיבוצים</TableHead>
+                  <TableHead>עריכה</TableHead>
+                  <TableHead>הפקה</TableHead>
                   <TableHead className="text-left">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
@@ -206,6 +235,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                   .sort((a, b) => a.start_time.localeCompare(b.start_time))
                   .map(slot => {
                     const slotAssignments = getAssignmentsForSlot(slot.id);
+                    
+                    // Group assignments by role
+                    const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
+                    const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
                     
                     return (
                       <TableRow key={slot.id}>
@@ -217,27 +250,35 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                           {slot.host_name && <div className="text-sm text-muted-foreground">{slot.host_name}</div>}
                         </TableCell>
                         <TableCell>
-                          {slotAssignments.length > 0 ? (
+                          {editingAssignments.length > 0 ? (
                             <div className="space-y-1">
-                              {slotAssignments.map(assignment => {
-                                const worker = assignment.worker;
-                                
-                                return (
-                                  <div key={assignment.id} className="flex justify-between items-center bg-slate-50 p-1 rounded text-sm">
-                                    <div>
-                                      <span className="font-medium">{worker?.name}</span>
-                                      <span className="mx-1">-</span>
-                                      <span className="text-muted-foreground">{assignment.role}</span>
-                                    </div>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDeleteAssignment(assignment.id)}>
-                                      ✕
-                                    </Button>
-                                  </div>
-                                );
-                              })}
+                              {editingAssignments.map(assignment => (
+                                <div key={assignment.id} className="flex justify-between items-center bg-slate-50 p-1 rounded text-sm">
+                                  <span className="font-medium">{assignment.worker?.name}</span>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDeleteAssignment(assignment.id)}>
+                                    ✕
+                                  </Button>
+                                </div>
+                              ))}
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-sm">אין שיבוצים</span>
+                            <span className="text-muted-foreground text-sm">לא משובץ</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {producingAssignments.length > 0 ? (
+                            <div className="space-y-1">
+                              {producingAssignments.map(assignment => (
+                                <div key={assignment.id} className="flex justify-between items-center bg-slate-50 p-1 rounded text-sm">
+                                  <span className="font-medium">{assignment.worker?.name}</span>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDeleteAssignment(assignment.id)}>
+                                    ✕
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">לא משובץ</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -258,6 +299,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>הוספת עובד לתוכנית</DialogTitle>
+            <DialogDescription>
+              שבץ עובד לתפקיד בתוכנית. ניתן לבחור האם לשבץ לכל התוכניות המתאימות.
+            </DialogDescription>
           </DialogHeader>
           {currentSlot && (
             <div className="space-y-4 py-4">
@@ -298,6 +342,17 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Switch 
+                  id="recurring"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
+                />
+                <Label htmlFor="recurring" className="mr-2">
+                  שבץ לכל התוכניות המתאימות (יום, שעה, שם)
+                </Label>
               </div>
             </div>
           )}
