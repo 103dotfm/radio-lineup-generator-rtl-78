@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Calendar } from 'lucide-react';
 
 interface ScheduleHeaderProps {
   weekStart: string;
