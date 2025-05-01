@@ -17,19 +17,23 @@ export interface WhatsAppSettings {
 // This helper function uses a direct SQL query approach to bypass TypeScript restrictions
 export const getWhatsAppSettings = async (): Promise<WhatsAppSettings | null> => {
   try {
-    // Use rpc to call a custom query instead of using .from() directly
-    const { data, error } = await supabase.rpc('get_whatsapp_settings_generic');
+    // Use a direct SQL query instead of RPC to avoid TypeScript issues
+    const { data, error } = await supabase
+      .from('whatsapp_settings')
+      .select('*')
+      .limit(1)
+      .single();
     
     if (error) {
       console.error('Error fetching WhatsApp settings:', error);
       return null;
     }
     
-    if (!data || data.length === 0) {
+    if (!data) {
       return null;
     }
     
-    return data[0] as WhatsAppSettings;
+    return data as WhatsAppSettings;
   } catch (error) {
     console.error('Exception fetching WhatsApp settings:', error);
     return null;
@@ -41,16 +45,33 @@ export const saveWhatsAppSettings = async (settings: WhatsAppSettings): Promise<
     let result;
     
     if (settings.id) {
-      // Update existing settings using a custom RPC function
-      result = await supabase.rpc('update_whatsapp_settings_generic', {
-        p_id: settings.id,
-        p_settings: settings
-      });
+      // Update existing settings
+      result = await supabase
+        .from('whatsapp_settings')
+        .update({
+          whatsapp_enabled: settings.whatsapp_enabled,
+          whatsapp_api_type: settings.whatsapp_api_type,
+          whatsapp_group_id: settings.whatsapp_group_id,
+          twilio_account_sid: settings.twilio_account_sid,
+          twilio_auth_token: settings.twilio_auth_token,
+          twilio_phone_number: settings.twilio_phone_number,
+          whatsapp_api_key: settings.whatsapp_api_key,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', settings.id);
     } else {
-      // Insert new settings using a custom RPC function
-      result = await supabase.rpc('insert_whatsapp_settings_generic', {
-        p_settings: settings
-      });
+      // Insert new settings
+      result = await supabase
+        .from('whatsapp_settings')
+        .insert({
+          whatsapp_enabled: settings.whatsapp_enabled,
+          whatsapp_api_type: settings.whatsapp_api_type,
+          whatsapp_group_id: settings.whatsapp_group_id,
+          twilio_account_sid: settings.twilio_account_sid,
+          twilio_auth_token: settings.twilio_auth_token,
+          twilio_phone_number: settings.twilio_phone_number,
+          whatsapp_api_key: settings.whatsapp_api_key
+        });
     }
     
     if (result.error) {

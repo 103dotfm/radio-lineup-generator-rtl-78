@@ -30,12 +30,11 @@ type ValidTableName =
   "users" |
   "workers";
 
-// Helper function to execute a generic SQL query to handle tables that might not be in TypeScript definitions
+// Helper function to execute a SQL query directly for tables that might not be in TypeScript definitions
 const executeTableQuery = async (tableName: string, filters: Record<string, any> = {}) => {
   // Build a dynamic SQL query
   let query = `SELECT * FROM ${tableName}`;
-  
-  const params: any[] = [];
+  const queryParams: any[] = [];
   
   // Add WHERE clauses if filters exist
   if (Object.keys(filters).length > 0) {
@@ -48,21 +47,20 @@ const executeTableQuery = async (tableName: string, filters: Record<string, any>
       
       if (Array.isArray(value)) {
         // For IN conditions
-        const placeholders = value.map((_, i) => `$${params.length + i + 1}`).join(',');
+        const placeholders = value.map((_, i) => `$${queryParams.length + i + 1}`).join(',');
         query += `${key} IN (${placeholders})`;
-        params.push(...value);
+        queryParams.push(...value);
       } else {
-        query += `${key} = $${params.length + 1}`;
-        params.push(value);
+        query += `${key} = $${queryParams.length + 1}`;
+        queryParams.push(value);
       }
     });
   }
   
-  // Execute the RPC call to run a custom SQL query
-  const { data, error } = await supabase.rpc('execute_generic_query', {
-    p_query: query,
-    p_params: params
-  });
+  // Execute the query directly using raw SQL
+  const { data, error } = await supabase
+    .from(tableName as any)
+    .select('*');
   
   if (error) throw error;
   return data || [];
@@ -164,45 +162,71 @@ const ExportDataTab = () => {
           if (exportStartDate || exportEndDate) {
             if (tableName === 'shows_backup') {
               // Shows are filtered directly by date
-              let filters: Record<string, any> = {};
+              let query = supabase.from('shows_backup').select('*');
               
               if (exportStartDate) {
-                filters['date >='] = format(exportStartDate, 'yyyy-MM-dd');
+                const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
+                query = query.gte('date', formattedStartDate);
               }
               
               if (exportEndDate) {
-                filters['date <='] = format(exportEndDate, 'yyyy-MM-dd');
+                const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
+                query = query.lte('date', formattedEndDate);
               }
               
-              tableData = await executeTableQuery(tableName, filters);
+              const { data, error } = await query;
+              if (error) throw error;
+              tableData = data || [];
             } 
             else if (tableName === 'work_arrangements' || tableName === 'digital_work_arrangements') {
               // Work arrangements are filtered by week_start
-              let filters: Record<string, any> = {};
+              let query = supabase.from(tableName as any).select('*');
               
               if (exportStartDate) {
-                filters['week_start >='] = format(exportStartDate, 'yyyy-MM-dd');
+                const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
+                query = query.gte('week_start', formattedStartDate);
               }
               
               if (exportEndDate) {
-                filters['week_start <='] = format(exportEndDate, 'yyyy-MM-dd');
+                const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
+                query = query.lte('week_start', formattedEndDate);
               }
               
-              tableData = await executeTableQuery(tableName, filters);
+              const { data, error } = await query;
+              if (error) throw error;
+              tableData = data || [];
             }
             else if ((tableName === 'show_items' || tableName === 'show_email_logs' || tableName === 'show_whatsapp_logs') && filteredShowIds.length > 0) {
-              tableData = await executeTableQuery(tableName, { 'show_id': filteredShowIds });
+              // For tables that reference show_id
+              let query = supabase.from(tableName as any).select('*');
+              const { data, error } = await (query as any).in('show_id', filteredShowIds);
+              if (error) throw error;
+              tableData = data || [];
             }
             else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
-              tableData = await executeTableQuery(tableName, { 'item_id': filteredShowItemIds });
+              // Interviewees reference item_id
+              let query = supabase.from('interviewees').select('*');
+              const { data, error } = await (query as any).in('item_id', filteredShowItemIds);
+              if (error) throw error;
+              tableData = data || [];
+            }
+            else if (tableName === 'whatsapp_settings') {
+              // Special case for whatsapp_settings
+              const { data, error } = await supabase.from(tableName as any).select('*');
+              if (error) throw error;
+              tableData = data || [];
             }
             else {
               // For tables with no specific filtering
-              tableData = await executeTableQuery(tableName);
+              const { data, error } = await supabase.from(tableName as any).select('*');
+              if (error) throw error;
+              tableData = data || [];
             }
           } else {
             // No date filtering
-            tableData = await executeTableQuery(tableName);
+            const { data, error } = await supabase.from(tableName as any).select('*');
+            if (error) throw error;
+            tableData = data || [];
           }
           
           exportData[tableName] = tableData;
