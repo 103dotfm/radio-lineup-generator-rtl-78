@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -9,9 +10,24 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
-type ValidTableName = "show_items" | "shows_backup" | "interviewees" | "schedule_slots_old" | 
-  "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
-  "show_email_logs" | "system_settings" | "users";
+type ValidTableName = 
+  "show_items" | 
+  "shows_backup" | 
+  "interviewees" | 
+  "schedule_slots_old" | 
+  "schedule_slots" |
+  "day_notes" | 
+  "email_settings" | 
+  "email_recipients" | 
+  "work_arrangements" |
+  "digital_work_arrangements" |
+  "digital_shifts" |
+  "digital_shift_custom_rows" |
+  "digital_employees" |
+  "show_email_logs" | 
+  "system_settings" | 
+  "users" |
+  "workers";
 
 const ExportDataTab = () => {
   const { toast } = useToast();
@@ -19,16 +35,23 @@ const ExportDataTab = () => {
   const [exportEndDate, setExportEndDate] = useState<Date | undefined>(undefined);
   const [isExporting, setIsExporting] = useState(false);
   
-  // Tables to export
+  // Tables to export - updated with all current tables
   const [selectedTables, setSelectedTables] = useState({
-    shows_backup: true,  // Changed from 'shows' to 'shows_backup'
+    shows_backup: true,
     show_items: true,
     interviewees: true,
     schedule_slots_old: true,
+    schedule_slots: true, // Added new schedule slots table
     day_notes: true,
+    workers: true, // Added workers table
     email_settings: false,
     email_recipients: false,
     work_arrangements: false,
+    digital_work_arrangements: false, // Added digital work arrangements
+    digital_shifts: false, // Added digital shifts
+    digital_shift_custom_rows: false, // Added digital shift custom rows
+    digital_employees: false, // Added digital employees
+    system_settings: false,
   });
 
   // Helper to format dates for display
@@ -51,7 +74,7 @@ const ExportDataTab = () => {
       
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = supabase.from('shows_backup').select('id');  // Changed from 'shows' to 'shows_backup'
+        let showsQuery = supabase.from('shows_backup').select('id');
         
         if (exportStartDate) {
           const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -96,7 +119,7 @@ const ExportDataTab = () => {
         
         // Apply filters based on date range for each table type
         if (exportStartDate || exportEndDate) {
-          if (tableName === 'shows_backup') {  // Changed from 'shows' to 'shows_backup'
+          if (tableName === 'shows_backup') {
             // Shows are filtered directly by date
             if (exportStartDate) {
               const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -108,7 +131,7 @@ const ExportDataTab = () => {
               query = query.lte('date', formattedEndDate);
             }
           } 
-          else if (tableName === 'work_arrangements') {
+          else if (tableName === 'work_arrangements' || tableName === 'digital_work_arrangements') {
             // Work arrangements are filtered by week_start
             if (exportStartDate) {
               const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
@@ -128,7 +151,6 @@ const ExportDataTab = () => {
             // Cast query to any before calling .in()
             query = (query as any).in('item_id', filteredShowItemIds);
           }
-          // Other tables not filtered by date range
         }
         
         const { data, error } = await query;

@@ -1,18 +1,29 @@
-
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 export const supabase = supabaseClient;
 
-// Get the Supabase URL from environment variables or client
+// Get the storage URL from environment variables or configuration
 export const getStorageUrl = () => {
-  // Using the Supabase URL from the client
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yyrmodgbnzqbmatlypuc.supabase.co';
-  return `${supabaseUrl}/storage/v1/object/public/lovable`;
+  // Using the storage URL from environment variables if available
+  // Otherwise, fallback to the default Supabase URL
+  const storageUrl = import.meta.env.VITE_STORAGE_URL || 
+                     import.meta.env.VITE_SUPABASE_URL ? 
+                     `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/lovable` : 
+                     'http://localhost:8080/storage/lovable';
+                     
+  return storageUrl;
 };
 
 // Check if a file exists in the specified path
 export const checkFileExists = async (path: string) => {
   try {
+    // If using custom storage implementation
+    if (import.meta.env.VITE_STORAGE_URL) {
+      const response = await fetch(`${import.meta.env.VITE_STORAGE_URL}/check/${path}`);
+      return response.ok;
+    }
+    
+    // Default Supabase implementation
     const { data, error } = await supabase
       .storage
       .from('lovable')

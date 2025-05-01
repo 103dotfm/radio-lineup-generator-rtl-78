@@ -17,9 +17,25 @@ type ConflictItem = {
   newData: any;
   resolution?: 'overwrite' | 'keep';
 };
-type ValidTableName = "show_items" | "shows_backup" | "interviewees" | "schedule_slots_old" | 
-  "day_notes" | "email_settings" | "email_recipients" | "work_arrangements" | 
-  "show_email_logs" | "system_settings" | "users";
+
+type ValidTableName = 
+  "show_items" | 
+  "shows_backup" | 
+  "interviewees" | 
+  "schedule_slots_old" | 
+  "schedule_slots" |
+  "day_notes" | 
+  "email_settings" | 
+  "email_recipients" | 
+  "work_arrangements" |
+  "digital_work_arrangements" |
+  "digital_shifts" |
+  "digital_shift_custom_rows" |
+  "digital_employees" |
+  "show_email_logs" | 
+  "system_settings" | 
+  "users" |
+  "workers";
 
 const ImportDataTab = () => {
   const { toast } = useToast();
@@ -92,6 +108,7 @@ const ImportDataTab = () => {
     const conflictItems: ConflictItem[] = [];
     
     for (const [tableName, records] of Object.entries(importData)) {
+      // Handle legacy "shows" table mapping to "shows_backup"
       const mappedTableName = tableName === 'shows' ? 'shows_backup' : tableName;
       
       if (!Array.isArray(records) || records.length === 0) continue;
@@ -132,6 +149,7 @@ const ImportDataTab = () => {
   const saveImportData = async (importData: Record<string, any[]>, resolution: ConflictResolution) => {
     try {
       for (const [tableName, records] of Object.entries(importData)) {
+        // Handle legacy "shows" table mapping to "shows_backup"
         const mappedTableName = tableName === 'shows' ? 'shows_backup' : tableName;
         
         if (!Array.isArray(records) || records.length === 0) continue;
