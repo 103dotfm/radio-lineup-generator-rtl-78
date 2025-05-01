@@ -10,7 +10,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ExportDataTab from './ExportDataTab';
+import ExportDataTab from './export/ExportDataTab';
 import ImportDataTab from './ImportDataTab';
 
 const DataManagement = () => {
