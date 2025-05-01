@@ -1,9 +1,10 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScheduleView } from '@/components/schedule/ScheduleView';
-import PdfViewer from './PdfViewer';
-import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
+import { format } from 'date-fns';
+import PDFViewer from './PDFViewer';
+import ScheduleView from './ScheduleView';
+import ProducerAssignmentsView from './ProducerAssignmentsView';
 
 interface ArrangementFile {
   id: string;
@@ -19,40 +20,66 @@ interface DesktopTabsProps {
   arrangements: Record<'producers' | 'engineers' | 'digital', ArrangementFile | null>;
 }
 
-export default function DesktopTabs({ currentWeek, weekDate, arrangements }: DesktopTabsProps) {
+const DesktopTabs: React.FC<DesktopTabsProps> = ({ 
+  currentWeek, 
+  weekDate, 
+  arrangements 
+}) => {
   return (
     <div className="hidden md:block">
-      <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8 schedTabs" dir="rtl">
-          <TabsTrigger value="schedule" className="font-extrabold bg-slate-300 hover:bg-slate-200 mx-[15px]">לוח שידורים</TabsTrigger>
-          <TabsTrigger value="producers" className="font-extrabold bg-blue-200 hover:bg-blue-100 mx-[15px]">סידור עבודה עורכים ומפיקים</TabsTrigger>
-          <TabsTrigger value="engineers" className="bg-slate-300 hover:bg-slate-200 text-sm font-extrabold mx-[15px]">סידור עבודה טכנאים</TabsTrigger>
-          <TabsTrigger value="digital" className="bg-green-200 hover:bg-green-100 text-sm font-extrabold mx-[15px]">סידור עבודה דיגיטל</TabsTrigger>
+      <Tabs defaultValue="schedule">
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="schedule">לוח שידורים</TabsTrigger>
+          <TabsTrigger value="producers">סידור הפקה</TabsTrigger>
+          <TabsTrigger value="engineers">סידור טכנאים</TabsTrigger>
+          <TabsTrigger value="digital">סידור דיגיטל</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="schedule" className="mt-4 schedule-content">
-          <div className="border rounded-lg overflow-hidden bg-white p-4">
-            <ScheduleView 
-              selectedDate={currentWeek} 
-              hideDateControls 
-              hideHeaderDates={false}
-              filterShowsByWeek={true}
+        <TabsContent value="schedule">
+          <ScheduleView selectedDate={currentWeek} hideHeaderDates hideDateControls />
+        </TabsContent>
+        
+        <TabsContent value="producers">
+          {arrangements.producers ? (
+            <PDFViewer 
+              url={arrangements.producers.url}
+              filename={arrangements.producers.filename}
             />
-          </div>
+          ) : (
+            <ProducerAssignmentsView selectedDate={currentWeek} />
+          )}
         </TabsContent>
         
-        <TabsContent value="producers" className="mt-4">
-          <PdfViewer url={arrangements.producers?.url || null} />
+        <TabsContent value="engineers">
+          {arrangements.engineers ? (
+            <PDFViewer 
+              url={arrangements.engineers.url}
+              filename={arrangements.engineers.filename}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <h3 className="text-xl font-medium mb-2">סידור עבודה לא זמין</h3>
+              <p className="text-muted-foreground">סידור עבודה לטכנאים לשבוע זה עדיין לא הועלה למערכת.</p>
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="engineers" className="mt-4">
-          <PdfViewer url={arrangements.engineers?.url || null} />
-        </TabsContent>
-        
-        <TabsContent value="digital" className="mt-4">
-          <DigitalWorkArrangementView weekDate={weekDate} />
+        <TabsContent value="digital">
+          {arrangements.digital ? (
+            <PDFViewer 
+              url={arrangements.digital.url}
+              filename={arrangements.digital.filename}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <h3 className="text-xl font-medium mb-2">סידור עבודה לא זמין</h3>
+              <p className="text-muted-foreground">סידור עבודה לדיגיטל לשבוע זה עדיין לא הועלה למערכת.</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
   );
-}
+};
+
+export default DesktopTabs;

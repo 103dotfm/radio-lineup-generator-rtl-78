@@ -327,6 +327,102 @@ export type Database = {
           },
         ]
       }
+      producer_assignments: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_recurring: boolean | null
+          notes: string | null
+          role: string
+          slot_id: string
+          updated_at: string | null
+          week_start: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          role: string
+          slot_id: string
+          updated_at?: string | null
+          week_start: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          role?: string
+          slot_id?: string
+          updated_at?: string | null
+          week_start?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producer_assignments_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producer_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producer_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      producer_work_arrangements: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+          week_start: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          week_start: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+          week_start?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
