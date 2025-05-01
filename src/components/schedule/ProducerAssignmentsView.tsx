@@ -20,7 +20,7 @@ interface ProducerAssignmentsViewProps {
 }
 
 const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selectedDate }) => {
-  const { slots: scheduleSlots, loading: slotsLoading } = useScheduleSlots(selectedDate);
+  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
