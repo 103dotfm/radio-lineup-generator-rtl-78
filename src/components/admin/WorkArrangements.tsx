@@ -22,11 +22,14 @@ import * as z from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
+import ProducerWorkArrangement from "./producers/ProducerWorkArrangement";
+
 const formSchema = z.object({
   week_start: z.date(),
   type: z.enum(["producers", "engineers", "digital"]),
   pdf_file: z.any().refine(files => files?.length > 0, "PDF File is required.").refine(files => files?.[0]?.size <= 2000000, `Max file size is 2MB.`).refine(files => files?.[0]?.type === "application/pdf", "Only PDF files are accepted.")
 });
+
 export default function WorkArrangements() {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [filename, setFilename] = useState<string | null>(null);
@@ -161,10 +164,12 @@ export default function WorkArrangements() {
 
       <div className="py-6">
         <Tabs defaultValue="file-upload">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="file-upload" className="direction-rtl">העלאת קובץ פדף</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-3">
+            <TabsTrigger value="file-upload" className="direction-rtl">העלאת קובץ PDF</TabsTrigger>
+            <TabsTrigger value="producers">עורך סידור הפקה</TabsTrigger>
             <TabsTrigger value="digital-editor">עורך סידור דיגיטל</TabsTrigger>
           </TabsList>
+          
           <TabsContent value="file-upload" className="py-4">
             <Card>
               <CardHeader>
@@ -271,6 +276,11 @@ export default function WorkArrangements() {
               </CardFooter>
             </Card>
           </TabsContent>
+          
+          <TabsContent value="producers" className="py-4">
+            <ProducerWorkArrangement />
+          </TabsContent>
+          
           <TabsContent value="digital-editor" className="py-4">
             <DigitalWorkArrangement />
           </TabsContent>
