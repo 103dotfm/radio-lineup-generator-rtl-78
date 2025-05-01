@@ -14,15 +14,15 @@ export interface WhatsAppSettings {
   updated_at?: string;
 }
 
-// This helper function uses a direct SQL query approach to bypass TypeScript restrictions
+// This helper function uses type assertions to bypass TypeScript restrictions
 export const getWhatsAppSettings = async (): Promise<WhatsAppSettings | null> => {
   try {
-    // Use a direct SQL query instead of RPC to avoid TypeScript issues
-    const { data, error } = await supabase
-      .from('whatsapp_settings')
+    // Use type assertion to bypass TypeScript limitations
+    const { data, error } = await (supabase
+      .from('whatsapp_settings' as any)
       .select('*')
       .limit(1)
-      .single();
+      .single() as any);
     
     if (error) {
       console.error('Error fetching WhatsApp settings:', error);
@@ -45,9 +45,9 @@ export const saveWhatsAppSettings = async (settings: WhatsAppSettings): Promise<
     let result;
     
     if (settings.id) {
-      // Update existing settings
-      result = await supabase
-        .from('whatsapp_settings')
+      // Update existing settings with type assertion
+      result = await (supabase
+        .from('whatsapp_settings' as any)
         .update({
           whatsapp_enabled: settings.whatsapp_enabled,
           whatsapp_api_type: settings.whatsapp_api_type,
@@ -58,11 +58,11 @@ export const saveWhatsAppSettings = async (settings: WhatsAppSettings): Promise<
           whatsapp_api_key: settings.whatsapp_api_key,
           updated_at: new Date().toISOString()
         })
-        .eq('id', settings.id);
+        .eq('id', settings.id) as any);
     } else {
-      // Insert new settings
-      result = await supabase
-        .from('whatsapp_settings')
+      // Insert new settings with type assertion
+      result = await (supabase
+        .from('whatsapp_settings' as any)
         .insert({
           whatsapp_enabled: settings.whatsapp_enabled,
           whatsapp_api_type: settings.whatsapp_api_type,
@@ -71,7 +71,7 @@ export const saveWhatsAppSettings = async (settings: WhatsAppSettings): Promise<
           twilio_auth_token: settings.twilio_auth_token,
           twilio_phone_number: settings.twilio_phone_number,
           whatsapp_api_key: settings.whatsapp_api_key
-        });
+        } as any) as any);
     }
     
     if (result.error) {
@@ -82,4 +82,13 @@ export const saveWhatsAppSettings = async (settings: WhatsAppSettings): Promise<
   } catch (error) {
     return { success: false, error };
   }
+};
+
+// Helper to get WhatsApp number formatting
+export const formatWhatsAppNumber = (phoneNumber: string): string => {
+  // Remove any non-numeric characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Ensure the number starts with a plus if it doesn't already
+  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
 };

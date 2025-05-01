@@ -32,38 +32,33 @@ type ValidTableName =
 
 // Helper function to execute a SQL query directly for tables that might not be in TypeScript definitions
 const executeTableQuery = async (tableName: string, filters: Record<string, any> = {}) => {
-  // Build a dynamic SQL query
-  let query = `SELECT * FROM ${tableName}`;
-  const queryParams: any[] = [];
-  
-  // Add WHERE clauses if filters exist
-  if (Object.keys(filters).length > 0) {
-    query += ' WHERE ';
+  try {
+    // Build a dynamic query using the from method with type assertion
+    let query = supabase
+      .from(tableName as any)
+      .select('*');
     
-    Object.entries(filters).forEach(([key, value], index) => {
-      if (index > 0) {
-        query += ' AND ';
+    // Add filters if they exist
+    if (Object.keys(filters).length > 0) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (Array.isArray(value)) {
+          // For IN conditions
+          query = (query as any).in(key, value);
+        } else {
+          // For equality conditions
+          query = (query as any).eq(key, value);
+        }
       }
-      
-      if (Array.isArray(value)) {
-        // For IN conditions
-        const placeholders = value.map((_, i) => `$${queryParams.length + i + 1}`).join(',');
-        query += `${key} IN (${placeholders})`;
-        queryParams.push(...value);
-      } else {
-        query += `${key} = $${queryParams.length + 1}`;
-        queryParams.push(value);
-      }
-    });
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error(`Error executing query for ${tableName}:`, error);
+    throw error;
   }
-  
-  // Execute the query directly using raw SQL
-  const { data, error } = await supabase
-    .from(tableName as any)
-    .select('*');
-  
-  if (error) throw error;
-  return data || [];
 };
 
 const ExportDataTab = () => {
@@ -114,42 +109,47 @@ const ExportDataTab = () => {
       
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
-        let showsQuery = supabase.from('shows_backup').select('id');
-        
-        if (exportStartDate) {
-          const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
-          showsQuery = showsQuery.gte('date', formattedStartDate);
-        }
-        
-        if (exportEndDate) {
-          const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
-          showsQuery = showsQuery.lte('date', formattedEndDate);
-        }
-        
-        const { data: filteredShows, error: showsError } = await showsQuery;
-        
-        if (showsError) {
-          throw new Error(`Error filtering shows: ${showsError.message}`);
-        }
-        
-        filteredShowIds = filteredShows?.map(show => show.id) || [];
-        
-        // Get show items for these shows to later filter interviewees
-        if (filteredShowIds.length > 0) {
-          // Need to cast to any before using .in()
-          const queryBuilder = supabase
-            .from('show_items')
-            .select('id');
+        try {
+          let showsQuery = supabase.from('shows_backup').select('id');
           
-          // Cast queryBuilder to any before calling .in()
-          const { data: filteredItems, error: itemsError } = await (queryBuilder as any)
-            .in('show_id', filteredShowIds);
-            
-          if (itemsError) {
-            throw new Error(`Error filtering show items: ${itemsError.message}`);
+          if (exportStartDate) {
+            const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
+            showsQuery = showsQuery.gte('date', formattedStartDate);
           }
           
-          filteredShowItemIds = filteredItems?.map(item => item.id) || [];
+          if (exportEndDate) {
+            const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
+            showsQuery = showsQuery.lte('date', formattedEndDate);
+          }
+          
+          const { data: filteredShows, error: showsError } = await showsQuery;
+          
+          if (showsError) {
+            throw new Error(`Error filtering shows: ${showsError.message}`);
+          }
+          
+          filteredShowIds = filteredShows?.map(show => show.id) || [];
+          
+          // Get show items for these shows to later filter interviewees
+          if (filteredShowIds.length > 0) {
+            const { data: filteredItems, error: itemsError } = await (supabase
+              .from('show_items') as any)
+              .select('id')
+              .in('show_id', filteredShowIds);
+              
+            if (itemsError) {
+              throw new Error(`Error filtering show items: ${itemsError.message}`);
+            }
+            
+            filteredShowItemIds = filteredItems?.map(item => item.id) || [];
+          }
+        } catch (error: any) {
+          console.error('Error preparing filtered IDs:', error);
+          toast({
+            title: 'שגיאה בהכנת מסנני תאריכים',
+            description: error.message,
+            variant: 'destructive',
+          });
         }
       }
       
@@ -180,53 +180,40 @@ const ExportDataTab = () => {
             } 
             else if (tableName === 'work_arrangements' || tableName === 'digital_work_arrangements') {
               // Work arrangements are filtered by week_start
-              let query = supabase.from(tableName as any).select('*');
+              const { data, error } = await (supabase
+                .from(tableName)
+                .select('*') as any);
               
-              if (exportStartDate) {
-                const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
-                query = query.gte('week_start', formattedStartDate);
-              }
-              
-              if (exportEndDate) {
-                const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
-                query = query.lte('week_start', formattedEndDate);
-              }
-              
-              const { data, error } = await query;
               if (error) throw error;
-              tableData = data || [];
+              
+              // Filter in memory to handle date comparisons reliably
+              if (data) {
+                tableData = data.filter(item => {
+                  const itemDate = new Date(item.week_start);
+                  return (!exportStartDate || itemDate >= exportStartDate) && 
+                         (!exportEndDate || itemDate <= exportEndDate);
+                });
+              }
             }
             else if ((tableName === 'show_items' || tableName === 'show_email_logs' || tableName === 'show_whatsapp_logs') && filteredShowIds.length > 0) {
               // For tables that reference show_id
-              let query = supabase.from(tableName as any).select('*');
-              const { data, error } = await (query as any).in('show_id', filteredShowIds);
-              if (error) throw error;
-              tableData = data || [];
+              tableData = await executeTableQuery(tableName, { show_id: filteredShowIds });
             }
             else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
               // Interviewees reference item_id
-              let query = supabase.from('interviewees').select('*');
-              const { data, error } = await (query as any).in('item_id', filteredShowItemIds);
-              if (error) throw error;
-              tableData = data || [];
+              tableData = await executeTableQuery(tableName, { item_id: filteredShowItemIds });
             }
             else if (tableName === 'whatsapp_settings') {
-              // Special case for whatsapp_settings
-              const { data, error } = await supabase.from(tableName as any).select('*');
-              if (error) throw error;
-              tableData = data || [];
+              // Special case for whatsapp_settings - no date filtering
+              tableData = await executeTableQuery(tableName);
             }
             else {
               // For tables with no specific filtering
-              const { data, error } = await supabase.from(tableName as any).select('*');
-              if (error) throw error;
-              tableData = data || [];
+              tableData = await executeTableQuery(tableName);
             }
           } else {
-            // No date filtering
-            const { data, error } = await supabase.from(tableName as any).select('*');
-            if (error) throw error;
-            tableData = data || [];
+            // No date filtering - simple query for all tables
+            tableData = await executeTableQuery(tableName);
           }
           
           exportData[tableName] = tableData;
