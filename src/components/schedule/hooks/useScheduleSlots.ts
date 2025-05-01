@@ -4,7 +4,7 @@ import { ScheduleSlot } from '@/types/schedule';
 import { supabase } from "@/lib/supabase";
 import { startOfWeek, format } from 'date-fns';
 
-interface UseScheduleSlotsResult {
+export interface UseScheduleSlotsResult {
   scheduleSlots: ScheduleSlot[];
   isLoading: boolean;
   error: Error | null;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -45,7 +44,7 @@ interface WeeklyAssignmentsProps {
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, true);
+  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);

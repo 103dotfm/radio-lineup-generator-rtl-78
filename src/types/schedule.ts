@@ -1,3 +1,4 @@
+
 // Type definitions for scheduling components
 
 export interface DigitalWorkArrangement {
