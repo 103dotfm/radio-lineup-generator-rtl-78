@@ -88,15 +88,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     }
   };
   
-  // Group slots by day
-  const slotsByDay: { [key: number]: any[] } = scheduleSlots.reduce((acc, slot) => {
+  // Group slots by day and time for a more organized display
+  const slotsByDayAndTime: { [key: string]: any[] } = {};
+  
+  scheduleSlots.forEach(slot => {
     const day = slot.day_of_week;
-    if (!acc[day]) {
-      acc[day] = [];
+    const time = slot.start_time;
+    const key = `${day}-${time}`;
+    
+    if (!slotsByDayAndTime[key]) {
+      slotsByDayAndTime[key] = [];
     }
-    acc[day].push(slot);
-    return acc;
-  }, {} as { [key: number]: any[] });
+    slotsByDayAndTime[key].push(slot);
+  });
   
   // Get assignments for a slot
   const getAssignmentsForSlot = (slotId: string) => {
@@ -210,6 +214,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   };
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+  const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
   
   if (isLoading || slotsLoading) {
     return <div className="text-center py-4">טוען...</div>;
@@ -219,89 +224,125 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     <div className="space-y-6">
       <h3 className="text-lg font-medium">סידור שבועי</h3>
       
-      {dayNames.map((dayName, dayIndex) => {
-        const daySlotsData = slotsByDay[dayIndex] || [];
-        if (daySlotsData.length === 0) return null;
-        
-        return (
-          <Card key={dayIndex} className="mb-4">
-            <div className="bg-slate-100 p-2 font-bold border-b">
-              {dayName} - {format(addDays(currentWeek, dayIndex), 'dd/MM/yyyy', { locale: he })}
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>שעות</TableHead>
-                  <TableHead>שם התוכנית</TableHead>
-                  <TableHead>עריכה</TableHead>
-                  <TableHead>הפקה</TableHead>
-                  <TableHead className="text-left">פעולות</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {daySlotsData
-                  .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                  .map(slot => {
-                    const slotAssignments = getAssignmentsForSlot(slot.id);
-                    
-                    // Group assignments by role
-                    const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
-                    const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
+      <Card className="mb-4">
+        <div className="p-2 font-bold border-b bg-slate-100">
+          שבוע {format(currentWeek, 'dd/MM/yyyy', { locale: he })} - {format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[150px]">משבצת</TableHead>
+                {dayNames.slice(0, 7).map((day, index) => (
+                  <TableHead key={index} className="text-center min-w-[150px]">
+                    {day}
+                    <div className="text-xs font-normal">
+                      {format(addDays(currentWeek, index), 'dd/MM', { locale: he })}
+                    </div>
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {timeslots.map(time => (
+                <TableRow key={time}>
+                  <TableCell className="font-medium">{time}</TableCell>
+                  {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
+                    const key = `${dayIndex}-${time}`;
+                    const slotsForCell = slotsByDayAndTime[key] || [];
                     
                     return (
-                      <TableRow key={slot.id}>
-                        <TableCell className="whitespace-nowrap">
-                          {slot.start_time} - {slot.end_time}
-                        </TableCell>
-                        <TableCell>
-                          {slot.show_name}
-                          {slot.host_name && <div className="text-sm text-muted-foreground">{slot.host_name}</div>}
-                        </TableCell>
-                        <TableCell>
-                          {editingAssignments.length > 0 ? (
-                            <div className="space-y-1">
-                              {editingAssignments.map(assignment => (
-                                <div key={assignment.id} className="flex justify-between items-center bg-slate-50 p-1 rounded text-sm">
-                                  <span className="font-medium">{assignment.worker?.name}</span>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDeleteAssignment(assignment.id)}>
-                                    ✕
-                                  </Button>
+                      <TableCell key={dayIndex} className="p-2 align-top">
+                        {slotsForCell.length > 0 ? (
+                          <div>
+                            {slotsForCell.map(slot => {
+                              const slotAssignments = getAssignmentsForSlot(slot.id);
+                              
+                              // Group assignments by role
+                              const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
+                              const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
+                              
+                              return (
+                                <div key={slot.id} className="mb-3 border rounded p-2 bg-gray-50">
+                                  <div className="flex justify-between items-center">
+                                    <div className="font-medium text-sm">
+                                      {slot.show_name}
+                                      <div className="text-xs text-gray-500">
+                                        {slot.start_time} - {slot.end_time}
+                                      </div>
+                                    </div>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => handleAssignProducer(slot)}
+                                    >
+                                      הוסף
+                                    </Button>
+                                  </div>
+                                  
+                                  {(editingAssignments.length > 0 || producingAssignments.length > 0) && (
+                                    <div className="mt-2 text-sm border-t pt-2">
+                                      {editingAssignments.length > 0 && (
+                                        <div className="mb-1">
+                                          <span className="font-medium">עריכה: </span>
+                                          <div className="space-y-1">
+                                            {editingAssignments.map(assignment => (
+                                              <div key={assignment.id} className="flex justify-between items-center bg-white p-1 rounded">
+                                                <span>{assignment.worker?.name}</span>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-6 w-6 p-0"
+                                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                                >
+                                                  ✕
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {producingAssignments.length > 0 && (
+                                        <div>
+                                          <span className="font-medium">הפקה: </span>
+                                          <div className="space-y-1">
+                                            {producingAssignments.map(assignment => (
+                                              <div key={assignment.id} className="flex justify-between items-center bg-white p-1 rounded">
+                                                <span>{assignment.worker?.name}</span>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-6 w-6 p-0"
+                                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                                >
+                                                  ✕
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">לא משובץ</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {producingAssignments.length > 0 ? (
-                            <div className="space-y-1">
-                              {producingAssignments.map(assignment => (
-                                <div key={assignment.id} className="flex justify-between items-center bg-slate-50 p-1 rounded text-sm">
-                                  <span className="font-medium">{assignment.worker?.name}</span>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleDeleteAssignment(assignment.id)}>
-                                    ✕
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">לא משובץ</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" onClick={() => handleAssignProducer(slot)}>
-                            הוסף עובד
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center text-gray-400 text-xs">
+                            אין תוכניות
+                          </div>
+                        )}
+                      </TableCell>
                     );
                   })}
-              </TableBody>
-            </Table>
-          </Card>
-        );
-      })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>

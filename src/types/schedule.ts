@@ -47,6 +47,24 @@ export interface ScheduleSlot {
   updated_at?: string;
 }
 
+export interface ProducerAssignment {
+  id: string;
+  slot_id: string;
+  worker_id: string;
+  role: string;
+  notes?: string;
+  is_recurring: boolean;
+  week_start: string;
+  worker?: {
+    id: string;
+    name: string;
+    position?: string;
+  };
+  slot?: ScheduleSlot | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface DayNote {
   id: string;
   date: string;
