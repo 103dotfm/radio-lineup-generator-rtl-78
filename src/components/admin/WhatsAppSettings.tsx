@@ -125,7 +125,7 @@ const WhatsAppSettings = () => {
       });
     } catch (error: any) {
       toast({
-        title: 'שגיאה ב��ליחת הודעת בדיקה',
+        title: 'שגיאה ב��ליחת הודעת בדי��ה',
         description: error.message || 'אירעה שגיאה בלתי צפויה',
         variant: 'destructive',
       });
