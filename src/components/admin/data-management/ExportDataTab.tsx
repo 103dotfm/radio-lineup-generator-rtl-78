@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Download, Calendar } from 'lucide-react';
@@ -30,6 +29,44 @@ type ValidTableName =
   "system_settings" | 
   "users" |
   "workers";
+
+// Helper function to execute a generic SQL query to handle tables that might not be in TypeScript definitions
+const executeTableQuery = async (tableName: string, filters: Record<string, any> = {}) => {
+  // Build a dynamic SQL query
+  let query = `SELECT * FROM ${tableName}`;
+  
+  const params: any[] = [];
+  
+  // Add WHERE clauses if filters exist
+  if (Object.keys(filters).length > 0) {
+    query += ' WHERE ';
+    
+    Object.entries(filters).forEach(([key, value], index) => {
+      if (index > 0) {
+        query += ' AND ';
+      }
+      
+      if (Array.isArray(value)) {
+        // For IN conditions
+        const placeholders = value.map((_, i) => `$${params.length + i + 1}`).join(',');
+        query += `${key} IN (${placeholders})`;
+        params.push(...value);
+      } else {
+        query += `${key} = $${params.length + 1}`;
+        params.push(value);
+      }
+    });
+  }
+  
+  // Execute the RPC call to run a custom SQL query
+  const { data, error } = await supabase.rpc('execute_generic_query', {
+    p_query: query,
+    p_params: params
+  });
+  
+  if (error) throw error;
+  return data || [];
+};
 
 const ExportDataTab = () => {
   const { toast } = useToast();
@@ -120,51 +157,65 @@ const ExportDataTab = () => {
       
       // Process each selected table
       for (const tableName of tables) {
-        let query = supabase.from(tableName as ValidTableName).select('*');
-        
-        // Apply filters based on date range for each table type
-        if (exportStartDate || exportEndDate) {
-          if (tableName === 'shows_backup') {
-            // Shows are filtered directly by date
-            if (exportStartDate) {
-              const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
-              query = query.gte('date', formattedStartDate);
+        try {
+          let tableData: any[] = [];
+          
+          // Handle tables that need special filtering
+          if (exportStartDate || exportEndDate) {
+            if (tableName === 'shows_backup') {
+              // Shows are filtered directly by date
+              let filters: Record<string, any> = {};
+              
+              if (exportStartDate) {
+                filters['date >='] = format(exportStartDate, 'yyyy-MM-dd');
+              }
+              
+              if (exportEndDate) {
+                filters['date <='] = format(exportEndDate, 'yyyy-MM-dd');
+              }
+              
+              tableData = await executeTableQuery(tableName, filters);
+            } 
+            else if (tableName === 'work_arrangements' || tableName === 'digital_work_arrangements') {
+              // Work arrangements are filtered by week_start
+              let filters: Record<string, any> = {};
+              
+              if (exportStartDate) {
+                filters['week_start >='] = format(exportStartDate, 'yyyy-MM-dd');
+              }
+              
+              if (exportEndDate) {
+                filters['week_start <='] = format(exportEndDate, 'yyyy-MM-dd');
+              }
+              
+              tableData = await executeTableQuery(tableName, filters);
             }
-            
-            if (exportEndDate) {
-              const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
-              query = query.lte('date', formattedEndDate);
+            else if ((tableName === 'show_items' || tableName === 'show_email_logs' || tableName === 'show_whatsapp_logs') && filteredShowIds.length > 0) {
+              tableData = await executeTableQuery(tableName, { 'show_id': filteredShowIds });
             }
-          } 
-          else if (tableName === 'work_arrangements' || tableName === 'digital_work_arrangements') {
-            // Work arrangements are filtered by week_start
-            if (exportStartDate) {
-              const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
-              query = query.gte('week_start', formattedStartDate);
+            else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
+              tableData = await executeTableQuery(tableName, { 'item_id': filteredShowItemIds });
             }
-            
-            if (exportEndDate) {
-              const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
-              query = query.lte('week_start', formattedEndDate);
+            else {
+              // For tables with no specific filtering
+              tableData = await executeTableQuery(tableName);
             }
+          } else {
+            // No date filtering
+            tableData = await executeTableQuery(tableName);
           }
-          else if ((tableName === 'show_items' || tableName === 'show_email_logs' || tableName === 'show_whatsapp_logs') && filteredShowIds.length > 0) {
-            // Cast query to any before calling .in()
-            query = (query as any).in('show_id', filteredShowIds);
-          }
-          else if (tableName === 'interviewees' && filteredShowItemIds.length > 0) {
-            // Cast query to any before calling .in()
-            query = (query as any).in('item_id', filteredShowItemIds);
-          }
+          
+          exportData[tableName] = tableData;
+        } catch (error: any) {
+          console.error(`Error exporting ${tableName}:`, error);
+          toast({
+            title: `שגיאה בטבלה ${tableName}`,
+            description: error.message,
+            variant: "destructive",
+          });
+          // Continue with the next table
+          exportData[tableName] = [];
         }
-        
-        const { data, error } = await query;
-        
-        if (error) {
-          throw new Error(`Error exporting ${tableName}: ${error.message}`);
-        }
-        
-        exportData[tableName] = data || [];
       }
       
       // Create and download file

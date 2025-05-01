@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/lib/supabase';
 import { CardContent, CardFooter, Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { formatWhatsAppNumber } from '@/lib/supabase';
+import { WhatsAppSettings as WhatsAppSettingsType, getWhatsAppSettings, saveWhatsAppSettings } from '@/lib/whatsapp';
 
 interface WhatsAppSettings {
   id: string;
@@ -27,7 +27,7 @@ const WhatsAppSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   
-  const [settings, setSettings] = useState<WhatsAppSettings>({
+  const [settings, setSettings] = useState<WhatsAppSettingsType>({
     id: '',
     whatsapp_enabled: false,
     whatsapp_api_type: 'twilio',
@@ -47,16 +47,8 @@ const WhatsAppSettings = () => {
   const loadSettings = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_settings')
-        .select('*')
-        .limit(1)
-        .single();
+      const data = await getWhatsAppSettings();
         
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw error;
-      }
-
       if (data) {
         setSettings(data);
       }
@@ -82,24 +74,10 @@ const WhatsAppSettings = () => {
           formatWhatsAppNumber(settings.twilio_phone_number) : settings.twilio_phone_number
       };
 
-      let result;
-      if (settings.id) {
-        // Update existing settings
-        result = await supabase
-          .from('whatsapp_settings')
-          .update(formattedSettings)
-          .eq('id', settings.id);
-      } else {
-        // Insert new settings
-        result = await supabase
-          .from('whatsapp_settings')
-          .insert([formattedSettings]);
-      }
-
-      const { error } = result;
+      const result = await saveWhatsAppSettings(formattedSettings);
       
-      if (error) {
-        throw error;
+      if (!result.success) {
+        throw result.error;
       }
 
       toast({
@@ -147,7 +125,7 @@ const WhatsAppSettings = () => {
       });
     } catch (error: any) {
       toast({
-        title: 'שגיאה בשליחת הודעת בדיקה',
+        title: 'שגיאה ב��ליחת הודעת בדיקה',
         description: error.message || 'אירעה שגיאה בלתי צפויה',
         variant: 'destructive',
       });
