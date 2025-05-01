@@ -4,10 +4,11 @@ import { ViewMode } from '@/types/schedule';
 
 export const timeSlotsList = () => {
   const slots = [];
+  // Hours from 6am to 11pm (6-23)
   for (let i = 6; i <= 23; i++) {
     slots.push(`${i.toString().padStart(2, '0')}:00`);
   }
-  // Removing 2am, only including 0am and 1am
+  // Only include midnight and 1am, removing 2am
   for (let i = 0; i <= 1; i++) {
     slots.push(`${i.toString().padStart(2, '0')}:00`);
   }
