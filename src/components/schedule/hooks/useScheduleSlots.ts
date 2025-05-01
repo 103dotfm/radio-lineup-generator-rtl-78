@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { getScheduleSlots } from '@/lib/supabase/schedule';
+import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { ScheduleSlot } from '@/types/schedule';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { startOfWeek } from 'date-fns';
+import { startOfWeek, format } from 'date-fns';
 
 export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean = false) {
   const queryClient = useQueryClient();
@@ -28,11 +28,7 @@ export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean =
 
   const createSlotMutation = useMutation({
     mutationFn: (newSlot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      getScheduleSlots().then(() => {
-        // This is a placeholder implementation
-        // Replace with the actual implementation once available
-        return {} as ScheduleSlot;
-      }),
+      createScheduleSlot(newSlot, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
     },
@@ -40,11 +36,7 @@ export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean =
 
   const updateSlotMutation = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => 
-      getScheduleSlots().then(() => {
-        // This is a placeholder implementation
-        // Replace with the actual implementation once available
-        return {} as ScheduleSlot;
-      }),
+      updateScheduleSlot(id, updates, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
     },
@@ -52,11 +44,7 @@ export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean =
 
   const deleteSlotMutation = useMutation({
     mutationFn: (id: string) => 
-      getScheduleSlots().then(() => {
-        // This is a placeholder implementation
-        // Replace with the actual implementation once available
-        return;
-      }),
+      deleteScheduleSlot(id, isMasterSchedule, selectedDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
     },
@@ -65,6 +53,7 @@ export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean =
   return {
     scheduleSlots,
     isLoading,
+    error,
     createSlot: createSlotMutation.mutateAsync,
     updateSlot: updateSlotMutation.mutateAsync,
     deleteSlot: deleteSlotMutation.mutateAsync,

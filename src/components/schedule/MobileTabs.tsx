@@ -1,28 +1,24 @@
 
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Printer } from 'lucide-react';
-import { format } from 'date-fns';
 import PDFViewer from './PDFViewer';
 import ScheduleView from './ScheduleView';
 import ProducerAssignmentsView from './ProducerAssignmentsView';
-
-interface ArrangementFile {
-  id: string;
-  filename: string;
-  url: string;
-  type: 'producers' | 'engineers' | 'digital';
-  week_start: string;
-}
+import DigitalWorkArrangementView from './DigitalWorkArrangementView';
 
 interface MobileTabsProps {
   selectedTab: string;
-  onSelectTab: (tab: string) => void;
+  onSelectTab: (value: string) => void;
   onPrint: () => void;
   currentWeek: Date;
   weekDate?: string;
-  arrangements: Record<'producers' | 'engineers' | 'digital', ArrangementFile | null>;
+  arrangements: {
+    producers: { url: string; filename: string } | null;
+    engineers: { url: string; filename: string } | null;
+    digital: { url: string; filename: string } | null;
+  };
 }
 
 const MobileTabs: React.FC<MobileTabsProps> = ({
@@ -50,12 +46,16 @@ const MobileTabs: React.FC<MobileTabsProps> = ({
       </div>
 
       {selectedTab === 'schedule' && (
-        <ScheduleView selectedDate={currentWeek} hideHeaderDates hideDateControls />
+        <ScheduleView
+          selectedDate={currentWeek}
+          hideHeaderDates={true}
+          hideDateControls={true}
+        />
       )}
-
+      
       {selectedTab === 'producers' && (
         arrangements.producers ? (
-          <PDFViewer 
+          <PDFViewer
             url={arrangements.producers.url}
             filename={arrangements.producers.filename}
           />
@@ -63,10 +63,10 @@ const MobileTabs: React.FC<MobileTabsProps> = ({
           <ProducerAssignmentsView selectedDate={currentWeek} />
         )
       )}
-
+      
       {selectedTab === 'engineers' && (
         arrangements.engineers ? (
-          <PDFViewer 
+          <PDFViewer
             url={arrangements.engineers.url}
             filename={arrangements.engineers.filename}
           />
@@ -77,18 +77,15 @@ const MobileTabs: React.FC<MobileTabsProps> = ({
           </div>
         )
       )}
-
+      
       {selectedTab === 'digital' && (
         arrangements.digital ? (
-          <PDFViewer 
+          <PDFViewer
             url={arrangements.digital.url}
             filename={arrangements.digital.filename}
           />
         ) : (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium mb-2">סידור עבודה לא זמין</h3>
-            <p className="text-muted-foreground text-sm">סידור עבודה לדיגיטל לשבוע זה עדיין לא הועלה למערכת.</p>
-          </div>
+          <DigitalWorkArrangementView weekStart={currentWeek} />
         )
       )}
     </div>

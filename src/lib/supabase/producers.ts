@@ -97,7 +97,7 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('week_start', formattedDate);
       
@@ -112,17 +112,81 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
 // Create a new producer assignment
 export const createProducerAssignment = async (assignment: Omit<ProducerAssignment, 'id' | 'created_at' | 'updated_at'>): Promise<ProducerAssignment | null> => {
   try {
+    console.log("Creating assignment:", assignment);
+    
     const { data, error } = await supabase
       .from('producer_assignments')
       .insert(assignment)
       .select()
       .single();
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error creating producer assignment:", error);
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Error creating producer assignment:', error);
     return null;
+  }
+};
+
+// Create recurring producer assignments for all instances of a show
+export const createRecurringProducerAssignment = async (
+  slotId: string,
+  workerId: string,
+  role: string,
+  weekStart: string
+): Promise<boolean> => {
+  try {
+    // First get the slot details to find day and time
+    const { data: slotData, error: slotError } = await supabase
+      .from('schedule_slots_old')
+      .select('day_of_week, start_time, end_time, show_name')
+      .eq('id', slotId)
+      .single();
+      
+    if (slotError) throw slotError;
+    
+    if (!slotData) {
+      throw new Error("Slot not found");
+    }
+    
+    // Now find all slots with matching day, time and show name
+    const { data: matchingSlots, error: matchingSlotsError } = await supabase
+      .from('schedule_slots_old')
+      .select('id')
+      .eq('day_of_week', slotData.day_of_week)
+      .eq('start_time', slotData.start_time)
+      .eq('end_time', slotData.end_time)
+      .eq('show_name', slotData.show_name)
+      .eq('is_deleted', false);
+      
+    if (matchingSlotsError) throw matchingSlotsError;
+    
+    if (!matchingSlots || matchingSlots.length === 0) {
+      throw new Error("No matching slots found");
+    }
+    
+    // Create assignments for each matching slot
+    const assignments = matchingSlots.map(slot => ({
+      slot_id: slot.id,
+      worker_id: workerId,
+      role,
+      week_start: weekStart,
+      is_recurring: true
+    }));
+    
+    const { error: insertError } = await supabase
+      .from('producer_assignments')
+      .insert(assignments);
+      
+    if (insertError) throw insertError;
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating recurring producer assignments:', error);
+    return false;
   }
 };
 
@@ -237,7 +301,7 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('worker_id', workerId)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
@@ -263,7 +327,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
       `)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
       .lte('week_start', format(endDate, 'yyyy-MM-dd'))
