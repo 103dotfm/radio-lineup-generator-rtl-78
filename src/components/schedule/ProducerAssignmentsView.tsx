@@ -52,6 +52,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   }
 
   // Generate all days of the week based on selectedDate
+  // Changing order to match RTL (Sunday first)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
   // Get time slots from scheduleSlots - extract unique start_time values and sort them
@@ -92,18 +93,26 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
           <TableHeader>
             <TableRow>
               <TableHead className="print:py-1">משבצת</TableHead>
-              {dayNames.map((day, index) => (
-                <TableHead key={index} className="print:py-1 text-center">
-                  {day} - {format(addDays(selectedDate, index), 'dd/MM', { locale: he })}
-                </TableHead>
-              ))}
+              {/* Reverse the array to show Sunday on the right (RTL) */}
+              {[...dayNames].reverse().map((day, index) => {
+                const reversedIndex = 6 - index; // 6 = days.length - 1
+                return (
+                  <TableHead key={reversedIndex} className="print:py-1 text-center">
+                    {day} - {format(addDays(selectedDate, reversedIndex), 'dd/MM', { locale: he })}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
             {timeSlots.map((timeSlot) => (
               <TableRow key={timeSlot}>
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
-                {weekDays.map((day, dayIndex) => {
+                {/* Reverse the array to show Sunday on the right (RTL) */}
+                {[...weekDays].reverse().map((day, reversedDayIndex) => {
+                  // Calculate the actual dayIndex (0 = Sunday, 6 = Saturday)
+                  const dayIndex = 6 - reversedDayIndex; // 6 = weekDays.length - 1
+                  
                   // Find slots for this day at this time
                   const daySlots = scheduleSlots.filter(slot => 
                     slot.day_of_week === dayIndex && 
@@ -124,7 +133,10 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         
                         return (
                           <div key={slot.id} className="p-1 text-sm">
-                            <div className="font-medium">{slot.show_name}</div>
+                            <div className="font-medium">
+                              {/* Show host name if available, otherwise show name */}
+                              {slot.host_name ? `${slot.show_name} - ${slot.host_name}` : slot.show_name}
+                            </div>
                             {producingAssignments.length > 0 && (
                               <div className="mt-1">
                                 <span className="font-medium text-xs">הפקה: </span>
