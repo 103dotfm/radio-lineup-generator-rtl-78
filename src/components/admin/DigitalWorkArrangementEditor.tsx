@@ -722,7 +722,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div id="digital-work-arrangement-preview">
-                <DigitalWorkArrangementView weekDate={format(weekDate, 'yyyy-MM-dd')} />
+                <DigitalWorkArrangementView selectedDate={weekDate} weekDate={format(weekDate, 'yyyy-MM-dd')} />
               </div>
             </CardContent>
           </Card>
@@ -927,7 +927,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </>}
+        </>
     </div>;
 };
 export default DigitalWorkArrangementEditor;
