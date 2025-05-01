@@ -143,7 +143,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           loadData(); // Refresh the assignments
           setIsDialogOpen(false);
         } else {
-          throw new Error("Failed to create recurring assignments");
+          toast({
+            title: "שגיאה",
+            description: "לא נמצאו תוכניות מתאימות בסידור העבודה",
+            variant: "destructive"
+          });
         }
       } else {
         // Create a single assignment
@@ -164,7 +168,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           loadData(); // Refresh the assignments
           setIsDialogOpen(false);
         } else {
-          throw new Error("Failed to create assignment");
+          toast({
+            title: "שגיאה",
+            description: "לא ניתן להוסיף את העובד לסידור. יתכן כי התוכנית אינה קיימת.",
+            variant: "destructive"
+          });
         }
       }
     } catch (error) {

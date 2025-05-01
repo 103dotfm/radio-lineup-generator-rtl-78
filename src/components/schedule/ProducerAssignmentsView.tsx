@@ -75,7 +75,12 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
         if (daySlotsData.length === 0) return null;
         
         // Check if there are any assignments for this day
-        const hasAssignments = daySlotsData.some((slot) => getAssignmentsForSlot(slot.id).length > 0);
+        const hasAssignments = daySlotsData.some((slot) => {
+          // Verify the slot exists before checking assignments
+          if (!slot || !slot.id) return false;
+          return getAssignmentsForSlot(slot.id).length > 0;
+        });
+        
         if (!hasAssignments) return null;
         
         return (
@@ -96,6 +101,9 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                 {daySlotsData
                   .sort((a, b) => a.start_time.localeCompare(b.start_time))
                   .map((slot) => {
+                    // Skip slots that don't have a valid ID
+                    if (!slot || !slot.id) return null;
+                    
                     const slotAssignments = getAssignmentsForSlot(slot.id);
                     if (slotAssignments.length === 0) return null;
                     
