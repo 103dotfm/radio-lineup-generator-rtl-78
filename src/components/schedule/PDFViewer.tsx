@@ -4,6 +4,7 @@ import { getStorageUrl } from "@/lib/supabase";
 
 interface PdfViewerProps {
   url: string | null;
+  filename?: string; // Added filename as an optional prop to match how it's being used
 }
 
 export default function PdfViewer({ url }: PdfViewerProps) {
