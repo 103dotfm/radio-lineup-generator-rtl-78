@@ -1,33 +1,10 @@
 import { supabase } from "@/lib/supabase";
+import { ProducerAssignment } from "@/types/schedule";
 import { format } from "date-fns";
 
 export interface ProducerRole {
   id: string;
   name: string;
-}
-
-export interface ProducerAssignment {
-  id: string;
-  slot_id: string;
-  worker_id: string;
-  role: string;
-  notes?: string;
-  is_recurring: boolean;
-  week_start: string;
-  worker?: {
-    id: string;
-    name: string;
-    position?: string;
-  };
-  slot?: {
-    id: string;
-    day_of_week: number;
-    start_time: string;
-    end_time: string;
-    show_name: string;
-  } | null;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface ProducerWorkArrangement {
@@ -87,6 +64,41 @@ export const deleteProducerRole = async (id: string): Promise<boolean> => {
   }
 };
 
+// Helper function to safely handle assignments with possibly null slots
+const processAssignments = (data: any[]): ProducerAssignment[] => {
+  return (data || []).filter(assignment => {
+    // Only include assignments with valid slot data
+    return assignment && 
+           assignment.slot && 
+           typeof assignment.slot === 'object' && 
+           assignment.slot !== null &&
+           'id' in assignment.slot;
+  }).map(assignment => ({
+    id: assignment.id,
+    slot_id: assignment.slot_id,
+    worker_id: assignment.worker_id,
+    role: assignment.role,
+    notes: assignment.notes,
+    is_recurring: assignment.is_recurring,
+    week_start: assignment.week_start,
+    worker: assignment.worker ? {
+      id: assignment.worker.id,
+      name: assignment.worker.name,
+      position: assignment.worker.position
+    } : undefined,
+    slot: assignment.slot ? {
+      id: assignment.slot.id,
+      day_of_week: assignment.slot.day_of_week,
+      start_time: assignment.slot.start_time,
+      end_time: assignment.slot.end_time,
+      show_name: assignment.slot.show_name,
+      host_name: assignment.slot.host_name
+    } : null,
+    created_at: assignment.created_at,
+    updated_at: assignment.updated_at
+  }));
+};
+
 // Fetch producer assignments for a specific week
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
@@ -103,14 +115,7 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       
     if (error) throw error;
     
-    // Filter out any assignments with invalid slots
-    const validAssignments = (data || []).filter(assignment => 
-      assignment.slot && 
-      typeof assignment.slot === 'object' && 
-      'id' in assignment.slot
-    );
-    
-    return validAssignments as ProducerAssignment[];
+    return processAssignments(data || []);
   } catch (error) {
     console.error('Error fetching producer assignments:', error);
     return [];
@@ -349,14 +354,7 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
       
     if (error) throw error;
     
-    // Filter out any assignments with invalid slots
-    const validAssignments = (data || []).filter(assignment => 
-      assignment.slot && 
-      typeof assignment.slot === 'object' && 
-      'id' in assignment.slot
-    );
-    
-    return validAssignments as ProducerAssignment[];
+    return processAssignments(data || []);
   } catch (error) {
     console.error('Error fetching monthly producer assignments:', error);
     return [];
@@ -383,14 +381,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
       
     if (error) throw error;
     
-    // Filter out any assignments with invalid slots
-    const validAssignments = (data || []).filter(assignment => 
-      assignment.slot && 
-      typeof assignment.slot === 'object' && 
-      'id' in assignment.slot
-    );
-    
-    return validAssignments as ProducerAssignment[];
+    return processAssignments(data || []);
   } catch (error) {
     console.error('Error fetching all monthly assignments:', error);
     return [];
