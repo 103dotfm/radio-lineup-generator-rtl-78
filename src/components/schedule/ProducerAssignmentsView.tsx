@@ -40,16 +40,6 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     }
   };
   
-  // Group slots by day
-  const slotsByDay: { [key: number]: ScheduleSlot[] } = scheduleSlots.reduce((acc, slot) => {
-    const day = slot.day_of_week;
-    if (!acc[day]) {
-      acc[day] = [];
-    }
-    acc[day].push(slot);
-    return acc;
-  }, {} as { [key: number]: ScheduleSlot[] });
-  
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
   
   // Get assignments for a slot
@@ -60,7 +50,34 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   if (isLoading || slotsLoading) {
     return <div className="text-center py-4">טוען...</div>;
   }
+
+  // Generate all days of the week based on selectedDate
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
+  // Get time slots from scheduleSlots - extract unique start_time values and sort them
+  const timeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
+    .sort((a, b) => a.localeCompare(b));
+
+  // Check if there are any assignments
+  const hasAnyAssignments = assignments.length > 0;
+  
+  if (!hasAnyAssignments) {
+    return (
+      <div className="space-y-6 print:space-y-2">
+        <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
+          סידור עבודה - הפקה ועריכה
+          <div className="text-base font-normal print:text-sm">
+            לשבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
+          </div>
+        </h2>
+        
+        <div className="text-center py-8">
+          אין שיבוצים לשבוע זה
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 print:space-y-2">
       <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
@@ -70,75 +87,67 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
         </div>
       </h2>
       
-      {dayNames.map((dayName, dayIndex) => {
-        const daySlotsData = slotsByDay[dayIndex] || [];
-        if (daySlotsData.length === 0) return null;
-        
-        // Check if there are any assignments for this day
-        const hasAssignments = daySlotsData.some((slot) => {
-          // Verify the slot exists before checking assignments
-          if (!slot || !slot.id) return false;
-          return getAssignmentsForSlot(slot.id).length > 0;
-        });
-        
-        if (!hasAssignments) return null;
-        
-        return (
-          <Card key={dayIndex} className="mb-4 print:mb-2 print:shadow-none print:border">
-            <div className="bg-slate-100 p-2 font-bold border-b print:text-sm">
-              {dayName} - {format(addDays(selectedDate, dayIndex), 'dd/MM/yyyy', { locale: he })}
-            </div>
-            <Table className="print:text-xs">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="print:py-1">שעות</TableHead>
-                  <TableHead className="print:py-1">שם התוכנית</TableHead>
-                  <TableHead className="print:py-1">עריכה</TableHead>
-                  <TableHead className="print:py-1">הפקה</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {daySlotsData
-                  .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                  .map((slot) => {
-                    // Skip slots that don't have a valid ID
-                    if (!slot || !slot.id) return null;
-                    
-                    const slotAssignments = getAssignmentsForSlot(slot.id);
-                    if (slotAssignments.length === 0) return null;
-                    
-                    // Group assignments by role
-                    const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
-                    const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
-                    
-                    return (
-                      <TableRow key={slot.id}>
-                        <TableCell className="print:py-1">
-                          {slot.start_time} - {slot.end_time}
-                        </TableCell>
-                        <TableCell className="print:py-1">
-                          {slot.show_name}
-                        </TableCell>
-                        <TableCell className="print:py-1">
-                          {editingAssignments.map(a => a.worker?.name).join(", ") || "-"}
-                        </TableCell>
-                        <TableCell className="print:py-1">
-                          {producingAssignments.map(a => a.worker?.name).join(", ") || "-"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </Card>
-        );
-      })}
-      
-      {assignments.length === 0 && (
-        <div className="text-center py-8">
-          אין שיבוצים לשבוע זה
-        </div>
-      )}
+      <Card className="mb-4 print:mb-2 print:shadow-none print:border">
+        <Table className="print:text-xs">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="print:py-1">משבצת</TableHead>
+              {dayNames.map((day, index) => (
+                <TableHead key={index} className="print:py-1 text-center">
+                  {day} - {format(addDays(selectedDate, index), 'dd/MM', { locale: he })}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {timeSlots.map((timeSlot) => (
+              <TableRow key={timeSlot}>
+                <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
+                {weekDays.map((day, dayIndex) => {
+                  // Find slots for this day at this time
+                  const daySlots = scheduleSlots.filter(slot => 
+                    slot.day_of_week === dayIndex && 
+                    slot.start_time === timeSlot
+                  );
+                  
+                  return (
+                    <TableCell key={dayIndex} className="print:py-1">
+                      {daySlots.map(slot => {
+                        if (!slot || !slot.id) return null;
+                        
+                        const slotAssignments = getAssignmentsForSlot(slot.id);
+                        if (slotAssignments.length === 0) return null;
+                        
+                        // Group assignments by role
+                        const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
+                        const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
+                        
+                        return (
+                          <div key={slot.id} className="p-1 text-sm">
+                            <div className="font-medium">{slot.show_name}</div>
+                            {producingAssignments.length > 0 && (
+                              <div className="mt-1">
+                                <span className="font-medium text-xs">הפקה: </span>
+                                {producingAssignments.map(a => a.worker?.name).join(", ")}
+                              </div>
+                            )}
+                            {editingAssignments.length > 0 && (
+                              <div className="mt-1">
+                                <span className="font-medium text-xs">עריכה: </span>
+                                {editingAssignments.map(a => a.worker?.name).join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 };
