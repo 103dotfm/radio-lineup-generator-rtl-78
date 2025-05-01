@@ -85,7 +85,7 @@ const MobileTabs: React.FC<MobileTabsProps> = ({
             filename={arrangements.digital.filename}
           />
         ) : (
-          <DigitalWorkArrangementView weekStart={currentWeek} />
+          <DigitalWorkArrangementView selectedDate={currentWeek} />
         )
       )}
     </div>
