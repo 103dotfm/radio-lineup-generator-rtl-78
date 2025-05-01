@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 
@@ -25,7 +26,7 @@ export interface ProducerAssignment {
     start_time: string;
     end_time: string;
     show_name: string;
-  };
+  } | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -97,12 +98,20 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('week_start', formattedDate);
       
     if (error) throw error;
-    return data || [];
+    
+    // Filter out any assignments with invalid slots
+    const validAssignments = (data || []).filter(assignment => 
+      assignment.slot && 
+      typeof assignment.slot === 'object' && 
+      'id' in assignment.slot
+    );
+    
+    return validAssignments as ProducerAssignment[];
   } catch (error) {
     console.error('Error fetching producer assignments:', error);
     return [];
@@ -141,7 +150,7 @@ export const createRecurringProducerAssignment = async (
   try {
     // First get the slot details to find day and time
     const { data: slotData, error: slotError } = await supabase
-      .from('schedule_slots_old')
+      .from('schedule_slots')
       .select('day_of_week, start_time, end_time, show_name')
       .eq('id', slotId)
       .single();
@@ -154,13 +163,12 @@ export const createRecurringProducerAssignment = async (
     
     // Now find all slots with matching day, time and show name
     const { data: matchingSlots, error: matchingSlotsError } = await supabase
-      .from('schedule_slots_old')
+      .from('schedule_slots')
       .select('id')
       .eq('day_of_week', slotData.day_of_week)
       .eq('start_time', slotData.start_time)
       .eq('end_time', slotData.end_time)
-      .eq('show_name', slotData.show_name)
-      .eq('is_deleted', false);
+      .eq('show_name', slotData.show_name);
       
     if (matchingSlotsError) throw matchingSlotsError;
     
@@ -301,14 +309,22 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('worker_id', workerId)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
       .lte('week_start', format(endDate, 'yyyy-MM-dd'));
       
     if (error) throw error;
-    return data || [];
+    
+    // Filter out any assignments with invalid slots
+    const validAssignments = (data || []).filter(assignment => 
+      assignment.slot && 
+      typeof assignment.slot === 'object' && 
+      'id' in assignment.slot
+    );
+    
+    return validAssignments as ProducerAssignment[];
   } catch (error) {
     console.error('Error fetching monthly producer assignments:', error);
     return [];
@@ -327,14 +343,22 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
       `)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
       .lte('week_start', format(endDate, 'yyyy-MM-dd'))
       .order('worker_id');
       
     if (error) throw error;
-    return data || [];
+    
+    // Filter out any assignments with invalid slots
+    const validAssignments = (data || []).filter(assignment => 
+      assignment.slot && 
+      typeof assignment.slot === 'object' && 
+      'id' in assignment.slot
+    );
+    
+    return validAssignments as ProducerAssignment[];
   } catch (error) {
     console.error('Error fetching all monthly assignments:', error);
     return [];

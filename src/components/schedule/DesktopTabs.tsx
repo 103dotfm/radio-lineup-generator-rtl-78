@@ -71,7 +71,7 @@ const DesktopTabs: React.FC<DesktopTabsProps> = ({
               filename={arrangements.digital.filename}
             />
           ) : (
-            <DigitalWorkArrangementView weekStart={currentWeek} />
+            <DigitalWorkArrangementView selectedDate={currentWeek} />
           )}
         </TabsContent>
       </Tabs>
