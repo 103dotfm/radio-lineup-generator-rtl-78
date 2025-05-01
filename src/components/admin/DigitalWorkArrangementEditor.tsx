@@ -21,6 +21,7 @@ import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+
 interface Shift {
   id: string;
   section_name: string;
@@ -684,7 +685,8 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
   };
-  return <div className="space-y-6" dir="rtl">
+  return (
+    <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">עורך סידור עבודה דיגיטל</h2>
         <div className="flex items-center gap-2">
@@ -709,11 +711,13 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         </div>
       </div>
 
-      {loading ? <div className="flex justify-center my-8">
+      {loading ? (
+        <div className="flex justify-center my-8">
           <p>טוען נתונים...</p>
-        </div> : previewMode ? <div className="space-y-4">
+        </div>
+      ) : previewMode ? (
+        <div className="space-y-4">
           <div className="flex justify-end space-x-2 space-x-reverse">
-            
             <Button variant="outline" size="sm" onClick={handleExportPdf}>
               <Download className="h-4 w-4 ml-1" />
               ייצוא PDF
@@ -726,11 +730,20 @@ const DigitalWorkArrangementEditor: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div> : <>
+        </div>
+      ) : (
+        <>
           <div className="flex flex-wrap space-x-2 space-x-reverse mb-4">
-            {Object.entries(SECTION_TITLES).map(([key, title]) => <Button key={key} variant={currentSection === key ? "default" : "outline"} onClick={() => setCurrentSection(key)} className="mb-2">
+            {Object.entries(SECTION_TITLES).map(([key, title]) => (
+              <Button 
+                key={key} 
+                variant={currentSection === key ? "default" : "outline"} 
+                onClick={() => setCurrentSection(key)} 
+                className="mb-2"
+              >
                 {title}
-              </Button>)}
+              </Button>
+            ))}
           </div>
 
           <div className="flex flex-wrap space-x-2 space-x-reverse mb-4">
@@ -744,17 +757,23 @@ const DigitalWorkArrangementEditor: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {DAYS_OF_WEEK.map((day, index) => <TableHead key={day} className="text-center">
+                    {DAYS_OF_WEEK.map((day, index) => (
+                      <TableHead key={day} className="text-center">
                         {day}
-                      </TableHead>)}
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => <TableRow key={type}>
-                      {[0, 1, 2, 3, 4, 5].map(day => <React.Fragment key={`${type}-${day}`}>
+                  {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => (
+                    <TableRow key={type}>
+                      {[0, 1, 2, 3, 4, 5].map(day => (
+                        <React.Fragment key={`${type}-${day}`}>
                           {renderShiftCell(currentSection, day, type)}
-                        </React.Fragment>)}
-                    </TableRow>)}
+                        </React.Fragment>
+                      ))}
+                    </TableRow>
+                  ))}
                   
                   {renderCustomRows(currentSection)}
                 </TableBody>
@@ -928,6 +947,9 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             </DialogContent>
           </Dialog>
         </>
-    </div>;
+      )}
+    </div>
+  );
 };
+
 export default DigitalWorkArrangementEditor;
