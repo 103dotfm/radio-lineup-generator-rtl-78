@@ -34,11 +34,13 @@ const SHIFT_TYPE_LABELS = {
 };
 
 interface DigitalWorkArrangementViewProps {
+  selectedDate: Date;
   weekDate?: string;
   isEditable?: boolean;
 }
 
 const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
+  selectedDate,
   weekDate,
   isEditable = false
 }) => {
@@ -60,8 +62,8 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
         console.error("Error parsing date:", error);
       }
     }
-    return new Date();
-  }, [weekDate]);
+    return selectedDate || new Date();
+  }, [weekDate, selectedDate]);
 
   useEffect(() => {
     fetchArrangement();
