@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 
@@ -123,6 +122,18 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
   try {
     console.log("Creating assignment:", assignment);
     
+    // First check if the slot exists
+    const { data: slotExists, error: slotCheckError } = await supabase
+      .from('schedule_slots')
+      .select('id')
+      .eq('id', assignment.slot_id)
+      .single();
+      
+    if (slotCheckError || !slotExists) {
+      console.error("Error: Schedule slot not found:", assignment.slot_id);
+      throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
+    }
+    
     const { data, error } = await supabase
       .from('producer_assignments')
       .insert(assignment)
@@ -153,12 +164,13 @@ export const createRecurringProducerAssignment = async (
       .from('schedule_slots')
       .select('day_of_week, start_time, end_time, show_name')
       .eq('id', slotId)
-      .single();
+      .maybeSingle();  // Use maybeSingle instead of single to avoid PGRST116 error
       
     if (slotError) throw slotError;
     
     if (!slotData) {
-      throw new Error("Slot not found");
+      console.error("Slot not found for ID:", slotId);
+      throw new Error(`Slot with ID ${slotId} not found`);
     }
     
     // Now find all slots with matching day, time and show name
@@ -173,6 +185,12 @@ export const createRecurringProducerAssignment = async (
     if (matchingSlotsError) throw matchingSlotsError;
     
     if (!matchingSlots || matchingSlots.length === 0) {
+      console.error("No matching slots found for pattern:", {
+        day_of_week: slotData.day_of_week,
+        start_time: slotData.start_time,
+        end_time: slotData.end_time,
+        show_name: slotData.show_name
+      });
       throw new Error("No matching slots found");
     }
     
