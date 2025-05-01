@@ -9,6 +9,12 @@ export interface DigitalWorkArrangement {
   footer_image_url: string | null;
 }
 
+export interface DigitalWorkArrangementViewProps {
+  selectedDate: Date;
+  weekDate?: string;
+  isEditable?: boolean;
+}
+
 export interface ShiftWorker {
   id: string;
   name: string;
