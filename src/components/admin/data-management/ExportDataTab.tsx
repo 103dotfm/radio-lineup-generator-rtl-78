@@ -18,7 +18,9 @@ type ValidTableName =
   "schedule_slots" |
   "day_notes" | 
   "email_settings" | 
-  "email_recipients" | 
+  "email_recipients" |
+  "whatsapp_settings" |
+  "show_whatsapp_logs" |
   "work_arrangements" |
   "digital_work_arrangements" |
   "digital_shifts" |
@@ -41,16 +43,19 @@ const ExportDataTab = () => {
     show_items: true,
     interviewees: true,
     schedule_slots_old: true,
-    schedule_slots: true, // Added new schedule slots table
+    schedule_slots: true, 
     day_notes: true,
-    workers: true, // Added workers table
+    workers: true, 
     email_settings: false,
     email_recipients: false,
+    whatsapp_settings: false,
+    show_email_logs: false,
+    show_whatsapp_logs: false,
     work_arrangements: false,
-    digital_work_arrangements: false, // Added digital work arrangements
-    digital_shifts: false, // Added digital shifts
-    digital_shift_custom_rows: false, // Added digital shift custom rows
-    digital_employees: false, // Added digital employees
+    digital_work_arrangements: false,
+    digital_shifts: false,
+    digital_shift_custom_rows: false,
+    digital_employees: false,
     system_settings: false,
   });
 
@@ -143,7 +148,7 @@ const ExportDataTab = () => {
               query = query.lte('week_start', formattedEndDate);
             }
           }
-          else if (tableName === 'show_items' && filteredShowIds.length > 0) {
+          else if ((tableName === 'show_items' || tableName === 'show_email_logs' || tableName === 'show_whatsapp_logs') && filteredShowIds.length > 0) {
             // Cast query to any before calling .in()
             query = (query as any).in('show_id', filteredShowIds);
           }

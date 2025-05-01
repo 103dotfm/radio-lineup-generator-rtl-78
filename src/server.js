@@ -26,6 +26,69 @@ app.use((req, res, next) => {
 
 // *** API ROUTES *** - Define API routes first to ensure they take precedence
 
+// API endpoint for WhatsApp messaging (as a fallback if Supabase functions are not working)
+app.post('/api/send-whatsapp', async (req, res) => {
+  console.log('WhatsApp message requested', JSON.stringify(req.body));
+  try {
+    const { message, recipientNumber, twilioAccountSid, twilioAuthToken, twilioPhoneNumber } = req.body;
+    
+    // Validate required parameters
+    if (!message || !recipientNumber || !twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
+      console.log('Missing WhatsApp parameters');
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required WhatsApp parameters' 
+      });
+    }
+    
+    console.log(`Attempting to send WhatsApp message to ${recipientNumber}`);
+    
+    // Format the message for Twilio WhatsApp API
+    const formData = new URLSearchParams();
+    formData.append('To', `whatsapp:${recipientNumber}`);
+    formData.append('From', `whatsapp:${twilioPhoneNumber}`);
+    formData.append('Body', message);
+    
+    // Call Twilio API
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`, 
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + Buffer.from(`${twilioAccountSid}:${twilioAuthToken}`).toString('base64')
+        },
+        body: formData.toString()
+      }
+    );
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      console.error('WhatsApp message sending error:', responseData);
+      return res.status(response.status).json({ 
+        success: false, 
+        message: 'Failed to send WhatsApp message',
+        error: responseData
+      });
+    }
+    
+    console.log('WhatsApp message sent successfully');
+    return res.json({ 
+      success: true, 
+      message: 'WhatsApp message sent successfully',
+      messageId: responseData.sid
+    });
+  } catch (error) {
+    console.error('Server error sending WhatsApp message:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error processing WhatsApp message request',
+      error: error.message
+    });
+  }
+});
+
 // API endpoint to test FTP connection
 app.post('/api/test-ftp-connection', async (req, res) => {
   console.log('FTP connection test requested', JSON.stringify(req.body));
@@ -337,6 +400,7 @@ app.listen(PORT, () => {
   console.log(`API endpoints available at:`);
   console.log(`- POST /api/test-ftp-connection`);
   console.log(`- POST /api/upload-xml-ftp`);
+  console.log(`- POST /api/send-whatsapp`);
   console.log(`- GET /schedule.xml`);
   console.log(`- GET /schedule.json`);
 });
