@@ -1,3 +1,4 @@
+
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
 export const supabase = supabaseClient;
@@ -40,3 +41,13 @@ export const checkFileExists = async (path: string) => {
     return false;
   }
 };
+
+// Helper to get WhatsApp number formatting
+export const formatWhatsAppNumber = (phoneNumber: string): string => {
+  // Remove any non-numeric characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Ensure the number starts with a plus if it doesn't already
+  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+};
+
