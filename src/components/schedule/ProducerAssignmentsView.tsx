@@ -20,7 +20,8 @@ interface ProducerAssignmentsViewProps {
 }
 
 const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selectedDate }) => {
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate);
+  // Important: Use false for the second parameter to get weekly schedule instead of master
+  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate, false);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   

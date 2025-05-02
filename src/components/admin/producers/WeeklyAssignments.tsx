@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -45,7 +44,8 @@ interface WeeklyAssignmentsProps {
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, true);
+  // Important: use false for isMasterSchedule to get the weekly schedule instead of master
+  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, false);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -155,6 +155,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         }
       } else {
         // Create a single assignment
+        console.log("Creating assignment:", {
+          slot_id: currentSlot.id,
+          worker_id: formData.workerId,
+          role: selectedRole ? selectedRole.name : '',
+          week_start: format(currentWeek, 'yyyy-MM-dd'),
+          is_recurring: false
+        });
+        
         const assignment = {
           slot_id: currentSlot.id,
           worker_id: formData.workerId,

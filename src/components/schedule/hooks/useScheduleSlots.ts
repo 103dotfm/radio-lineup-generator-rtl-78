@@ -17,6 +17,7 @@ export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean =
     queryKey: ['scheduleSlots', weekStartDate.toISOString(), isMasterSchedule],
     queryFn: async () => {
       try {
+        console.log('Fetching schedule slots with params:', { selectedDate, isMasterSchedule });
         const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
         return slots;
       } catch (err) {

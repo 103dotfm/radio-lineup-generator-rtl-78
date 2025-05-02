@@ -148,9 +148,13 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     console.log("Creating assignment:", assignment);
     
     // First check if the slot exists
-    const slotExists = await verifySlotExists(assignment.slot_id);
+    const { data: slotExists, error: slotError } = await supabase
+      .from('schedule_slots_old')  // Use schedule_slots_old table
+      .select('id')
+      .eq('id', assignment.slot_id)
+      .single();
     
-    if (!slotExists) {
+    if (slotError || !slotExists) {
       console.error("Error: Schedule slot not found:", assignment.slot_id);
       throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
     }
