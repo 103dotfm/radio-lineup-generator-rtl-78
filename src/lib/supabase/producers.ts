@@ -69,6 +69,7 @@ const processAssignments = (data: any[]): ProducerAssignment[] => {
   return (data || []).filter(assignment => {
     // Only include assignments with valid slot data
     return assignment && 
+           assignment.worker && 
            assignment.slot && 
            typeof assignment.slot === 'object' && 
            assignment.slot !== null &&
@@ -132,11 +133,17 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
       .from('schedule_slots_old')
       .select('id')
       .eq('id', assignment.slot_id)
-      .maybeSingle();
+      .single();
       
     if (slotCheckError) {
-      console.error("Error checking slot existence:", slotCheckError);
-      throw new Error(`Error checking slot existence: ${slotCheckError.message}`);
+      // If error is not "No rows found" then it's a real error
+      if (!slotCheckError.message.includes("No rows found")) {
+        console.error("Error checking slot existence:", slotCheckError);
+        throw new Error(`Error checking slot existence: ${slotCheckError.message}`);
+      }
+      
+      console.error("Error: Schedule slot not found:", assignment.slot_id);
+      throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
     }
     
     if (!slotExists) {
@@ -176,14 +183,9 @@ export const createRecurringProducerAssignment = async (
       .eq('id', slotId)
       .maybeSingle();
       
-    if (slotError) {
-      console.error("Error fetching slot details:", slotError);
-      throw slotError;
-    }
-    
-    if (!slotData) {
-      console.error("Slot not found for ID:", slotId);
-      throw new Error(`Slot with ID ${slotId} not found`);
+    if (slotError || !slotData) {
+      console.error("Error fetching slot details:", slotError || "Slot not found");
+      throw slotError || new Error(`Slot with ID ${slotId} not found`);
     }
     
     // Now find all slots with matching day, time and show name
