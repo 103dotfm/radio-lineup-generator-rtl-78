@@ -80,6 +80,12 @@ export const ScheduleView = ({
     }
   }, [selectedDate, selectedDateState, setSelectedDate]);
 
+  // Creating a dummy deleteSlot function that returns a Promise to match the expected signature
+  const deleteSlotFunction = async (id: string): Promise<void> => {
+    console.log("Delete slot functionality needs implementation for ID:", id);
+    return Promise.resolve();
+  };
+
   const {
     handleAddSlot,
     handleDeleteSlot,
@@ -93,7 +99,7 @@ export const ScheduleView = ({
     setEditingSlot,
     setShowEditModeDialog,
     isAuthenticated,
-    () => {} // Placeholder for deleteSlot since we don't have it anymore
+    deleteSlotFunction // Pass the function that matches the expected signature
   );
 
   const handleSaveSlot = async (slotData: any) => {
@@ -109,7 +115,7 @@ export const ScheduleView = ({
 
   // Wrap the edit slot handler to include isMasterSchedule
   const wrappedEditSlotHandler = (slot: ScheduleSlot, e: React.MouseEvent) => 
-    handleEditSlot(slot, e);
+    handleEditSlot(slot, e, isMasterSchedule);
 
   return (
     <div className="space-y-4">
