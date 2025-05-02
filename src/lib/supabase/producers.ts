@@ -25,6 +25,7 @@ export interface ProducerAssignment {
     start_time: string;
     end_time: string;
     show_name: string;
+    host_name?: string;
   } | null;
   created_at?: string;
   updated_at?: string;
@@ -87,6 +88,15 @@ export const deleteProducerRole = async (id: string): Promise<boolean> => {
   }
 };
 
+// Process assignments to handle potential null values in slot property
+const processAssignments = (data: any[]): ProducerAssignment[] => {
+  return data.filter(assignment => {
+    // Filter out assignments without a valid slot
+    if (!assignment.slot) return false;
+    return true;
+  }) as ProducerAssignment[];
+};
+
 // Fetch producer assignments for a specific week
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
@@ -97,23 +107,38 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name, host_name)
       `)
       .eq('week_start', formattedDate);
       
     if (error) throw error;
     
     // Filter out any assignments with invalid slots
-    const validAssignments = (data || []).filter(assignment => 
-      assignment.slot && 
-      typeof assignment.slot === 'object' && 
-      'id' in assignment.slot
-    );
-    
-    return validAssignments as ProducerAssignment[];
+    return processAssignments(data || []);
   } catch (error) {
     console.error('Error fetching producer assignments:', error);
     return [];
+  }
+};
+
+// Check if a slot exists before creating an assignment
+const verifySlotExists = async (slotId: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('schedule_slots')
+      .select('id')
+      .eq('id', slotId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error("Error checking slot existence:", error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error("Error in verifySlotExists:", error);
+    return false;
   }
 };
 
@@ -123,13 +148,9 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     console.log("Creating assignment:", assignment);
     
     // First check if the slot exists
-    const { data: slotExists, error: slotCheckError } = await supabase
-      .from('schedule_slots')
-      .select('id')
-      .eq('id', assignment.slot_id)
-      .single();
-      
-    if (slotCheckError || !slotExists) {
+    const slotExists = await verifySlotExists(assignment.slot_id);
+    
+    if (!slotExists) {
       console.error("Error: Schedule slot not found:", assignment.slot_id);
       throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
     }
@@ -159,12 +180,20 @@ export const createRecurringProducerAssignment = async (
   weekStart: string
 ): Promise<boolean> => {
   try {
-    // First get the slot details to find day and time
+    // First verify the slot exists
+    const slotExists = await verifySlotExists(slotId);
+    
+    if (!slotExists) {
+      console.error("Slot not found for ID:", slotId);
+      throw new Error(`Slot with ID ${slotId} not found`);
+    }
+    
+    // Get the slot details to find day and time
     const { data: slotData, error: slotError } = await supabase
       .from('schedule_slots')
       .select('day_of_week, start_time, end_time, show_name')
       .eq('id', slotId)
-      .maybeSingle();  // Use maybeSingle instead of single to avoid PGRST116 error
+      .maybeSingle();
       
     if (slotError) throw slotError;
     
@@ -336,13 +365,7 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
     if (error) throw error;
     
     // Filter out any assignments with invalid slots
-    const validAssignments = (data || []).filter(assignment => 
-      assignment.slot && 
-      typeof assignment.slot === 'object' && 
-      'id' in assignment.slot
-    );
-    
-    return validAssignments as ProducerAssignment[];
+    return processAssignments(data || []);
   } catch (error) {
     console.error('Error fetching monthly producer assignments:', error);
     return [];
@@ -370,13 +393,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
     if (error) throw error;
     
     // Filter out any assignments with invalid slots
-    const validAssignments = (data || []).filter(assignment => 
-      assignment.slot && 
-      typeof assignment.slot === 'object' && 
-      'id' in assignment.slot
-    );
-    
-    return validAssignments as ProducerAssignment[];
+    return processAssignments(data || []);
   } catch (error) {
     console.error('Error fetching all monthly assignments:', error);
     return [];

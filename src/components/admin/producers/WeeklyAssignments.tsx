@@ -104,7 +104,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   
   // Get assignments for a slot
   const getAssignmentsForSlot = (slotId: string) => {
-    return assignments.filter(assignment => assignment.slot_id === slotId);
+    return assignments.filter((assignment) => assignment.slot_id === slotId);
   };
   
   const handleAssignProducer = (slot: any) => {
@@ -144,7 +144,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             title: "נוסף בהצלחה",
             description: "העובד נוסף לכל התוכניות המתאימות בסידור העבודה בהצלחה"
           });
-          loadData(); // Refresh the assignments
+          await loadData(); // Refresh the assignments
           setIsDialogOpen(false);
         } else {
           toast({
@@ -163,18 +163,27 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           is_recurring: false
         };
         
-        const result = await createProducerAssignment(assignment);
-        if (result) {
-          toast({
-            title: "נוסף בהצלחה",
-            description: "העובד נוסף לסידור העבודה בהצלחה"
-          });
-          loadData(); // Refresh the assignments
-          setIsDialogOpen(false);
-        } else {
+        try {
+          const result = await createProducerAssignment(assignment);
+          if (result) {
+            toast({
+              title: "נוסף בהצלחה",
+              description: "העובד נוסף לסידור העבודה בהצלחה"
+            });
+            await loadData(); // Refresh the assignments
+            setIsDialogOpen(false);
+          } else {
+            toast({
+              title: "שגיאה",
+              description: "לא ניתן להוסיף את העובד לסידור",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error("Error creating producer assignment:", error);
           toast({
             title: "שגיאה",
-            description: "לא ניתן להוסיף את העובד לסידור. יתכן כי התוכנית אינה קיימת.",
+            description: "שגיאה ביצירת שיבוץ חדש",
             variant: "destructive"
           });
         }
@@ -198,7 +207,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             title: "נמחק בהצלחה",
             description: "השיבוץ נמחק בהצלחה"
           });
-          loadData(); // Refresh the assignments
+          await loadData(); // Refresh the assignments
         } else {
           throw new Error("Failed to delete assignment");
         }
@@ -267,6 +276,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                   <div className="flex justify-between items-center">
                                     <div className="font-medium text-sm">
                                       {slot.show_name}
+                                      {slot.host_name && (
+                                        <span className="text-xs text-gray-500"> ({slot.host_name})</span>
+                                      )}
                                       <div className="text-xs text-gray-500">
                                         {slot.start_time} - {slot.end_time}
                                       </div>
