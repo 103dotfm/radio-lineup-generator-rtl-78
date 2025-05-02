@@ -307,7 +307,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                           <span className="font-medium">עריכה: </span>
                                           <div className="space-y-1">
                                             {editingAssignments.map((assignment, aIndex) => (
-                                              <div key={`editing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
+                                              <div key={`editing-${assignment.id}-${slotIndex}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
@@ -328,7 +328,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                           <span className="font-medium">הפקה: </span>
                                           <div className="space-y-1">
                                             {producingAssignments.map((assignment, aIndex) => (
-                                              <div key={`producing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
+                                              <div key={`producing-${assignment.id}-${slotIndex}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
