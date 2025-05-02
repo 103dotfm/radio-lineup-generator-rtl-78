@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays, parseISO } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -251,7 +252,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               <TableRow>
                 <TableHead className="min-w-[150px]">משבצת</TableHead>
                 {dayNames.slice(0, 7).map((day, index) => (
-                  <TableHead key={index} className="text-center min-w-[150px]">
+                  <TableHead key={`day-header-${index}`} className="text-center min-w-[150px]">
                     {day}
                     <div className="text-xs font-normal">
                       {format(addDays(currentWeek, index), 'dd/MM', { locale: he })}
@@ -261,18 +262,18 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {timeslots.map(time => (
-                <TableRow key={time}>
+              {timeslots.map((time, timeIndex) => (
+                <TableRow key={`time-row-${time}-${timeIndex}`}>
                   <TableCell className="font-medium">{time}</TableCell>
                   {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
                     const key = `${dayIndex}-${time}`;
                     const slotsForCell = slotsByDayAndTime[key] || [];
                     
                     return (
-                      <TableCell key={dayIndex} className="p-2 align-top">
+                      <TableCell key={`cell-${dayIndex}-${time}-${timeIndex}`} className="p-2 align-top">
                         {slotsForCell.length > 0 ? (
                           <div>
-                            {slotsForCell.map(slot => {
+                            {slotsForCell.map((slot, slotIndex) => {
                               const slotAssignments = getAssignmentsForSlot(slot.id);
                               
                               // Group assignments by role
@@ -280,7 +281,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                               const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
                               
                               return (
-                                <div key={slot.id} className="mb-3 border rounded p-2 bg-gray-50">
+                                <div key={`slot-${slot.id}-${slotIndex}`} className="mb-3 border rounded p-2 bg-gray-50">
                                   <div className="flex justify-between items-center">
                                     <div className="font-medium text-sm">
                                       {slot.show_name}
@@ -306,8 +307,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                         <div className="mb-1">
                                           <span className="font-medium">עריכה: </span>
                                           <div className="space-y-1">
-                                            {editingAssignments.map(assignment => (
-                                              <div key={assignment.id} className="flex justify-between items-center bg-white p-1 rounded">
+                                            {editingAssignments.map((assignment, aIndex) => (
+                                              <div key={`editing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
@@ -327,8 +328,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                         <div>
                                           <span className="font-medium">הפקה: </span>
                                           <div className="space-y-1">
-                                            {producingAssignments.map(assignment => (
-                                              <div key={assignment.id} className="flex justify-between items-center bg-white p-1 rounded">
+                                            {producingAssignments.map((assignment, aIndex) => (
+                                              <div key={`producing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
@@ -388,8 +389,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     <SelectValue placeholder="בחר עובד" />
                   </SelectTrigger>
                   <SelectContent>
-                    {producers.map(producer => (
-                      <SelectItem key={producer.id} value={producer.id}>
+                    {producers.map((producer, pIndex) => (
+                      <SelectItem key={`producer-${producer.id}-${pIndex}`} value={producer.id}>
                         {producer.name} {producer.position && `(${producer.position})`}
                       </SelectItem>
                     ))}
@@ -404,8 +405,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     <SelectValue placeholder="בחר תפקיד" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map(role => (
-                      <SelectItem key={role.id} value={role.id}>
+                    {roles.map((role, rIndex) => (
+                      <SelectItem key={`role-${role.id}-${rIndex}`} value={role.id}>
                         {role.name}
                       </SelectItem>
                     ))}
