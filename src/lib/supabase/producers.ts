@@ -1,10 +1,33 @@
 import { supabase } from "@/lib/supabase";
-import { ProducerAssignment } from "@/types/schedule";
 import { format } from "date-fns";
 
 export interface ProducerRole {
   id: string;
   name: string;
+}
+
+export interface ProducerAssignment {
+  id: string;
+  slot_id: string;
+  worker_id: string;
+  role: string;
+  notes?: string;
+  is_recurring: boolean;
+  week_start: string;
+  worker?: {
+    id: string;
+    name: string;
+    position?: string;
+  };
+  slot?: {
+    id: string;
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    show_name: string;
+  } | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProducerWorkArrangement {
@@ -64,42 +87,6 @@ export const deleteProducerRole = async (id: string): Promise<boolean> => {
   }
 };
 
-// Helper function to safely handle assignments with possibly null slots
-const processAssignments = (data: any[]): ProducerAssignment[] => {
-  return (data || []).filter(assignment => {
-    // Only include assignments with valid slot data
-    return assignment && 
-           assignment.worker && 
-           assignment.slot && 
-           typeof assignment.slot === 'object' && 
-           assignment.slot !== null &&
-           'id' in assignment.slot;
-  }).map(assignment => ({
-    id: assignment.id,
-    slot_id: assignment.slot_id,
-    worker_id: assignment.worker_id,
-    role: assignment.role,
-    notes: assignment.notes,
-    is_recurring: assignment.is_recurring,
-    week_start: assignment.week_start,
-    worker: assignment.worker ? {
-      id: assignment.worker.id,
-      name: assignment.worker.name,
-      position: assignment.worker.position
-    } : undefined,
-    slot: assignment.slot ? {
-      id: assignment.slot.id,
-      day_of_week: assignment.slot.day_of_week,
-      start_time: assignment.slot.start_time,
-      end_time: assignment.slot.end_time,
-      show_name: assignment.slot.show_name,
-      host_name: assignment.slot.host_name
-    } : null,
-    created_at: assignment.created_at,
-    updated_at: assignment.updated_at
-  }));
-};
-
 // Fetch producer assignments for a specific week
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
@@ -110,13 +97,20 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name, host_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('week_start', formattedDate);
       
     if (error) throw error;
     
-    return processAssignments(data || []);
+    // Filter out any assignments with invalid slots
+    const validAssignments = (data || []).filter(assignment => 
+      assignment.slot && 
+      typeof assignment.slot === 'object' && 
+      'id' in assignment.slot
+    );
+    
+    return validAssignments as ProducerAssignment[];
   } catch (error) {
     console.error('Error fetching producer assignments:', error);
     return [];
@@ -128,25 +122,14 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
   try {
     console.log("Creating assignment:", assignment);
     
-    // First check if the slot exists in schedule_slots_old table
+    // First check if the slot exists
     const { data: slotExists, error: slotCheckError } = await supabase
-      .from('schedule_slots_old')
+      .from('schedule_slots')
       .select('id')
       .eq('id', assignment.slot_id)
       .single();
       
-    if (slotCheckError) {
-      // If error is not "No rows found" then it's a real error
-      if (!slotCheckError.message.includes("No rows found")) {
-        console.error("Error checking slot existence:", slotCheckError);
-        throw new Error(`Error checking slot existence: ${slotCheckError.message}`);
-      }
-      
-      console.error("Error: Schedule slot not found:", assignment.slot_id);
-      throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
-    }
-    
-    if (!slotExists) {
+    if (slotCheckError || !slotExists) {
       console.error("Error: Schedule slot not found:", assignment.slot_id);
       throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
     }
@@ -164,7 +147,7 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     return data;
   } catch (error) {
     console.error('Error creating producer assignment:', error);
-    throw error;
+    return null;
   }
 };
 
@@ -178,29 +161,28 @@ export const createRecurringProducerAssignment = async (
   try {
     // First get the slot details to find day and time
     const { data: slotData, error: slotError } = await supabase
-      .from('schedule_slots_old')
+      .from('schedule_slots')
       .select('day_of_week, start_time, end_time, show_name')
       .eq('id', slotId)
-      .maybeSingle();
+      .maybeSingle();  // Use maybeSingle instead of single to avoid PGRST116 error
       
-    if (slotError || !slotData) {
-      console.error("Error fetching slot details:", slotError || "Slot not found");
-      throw slotError || new Error(`Slot with ID ${slotId} not found`);
+    if (slotError) throw slotError;
+    
+    if (!slotData) {
+      console.error("Slot not found for ID:", slotId);
+      throw new Error(`Slot with ID ${slotId} not found`);
     }
     
     // Now find all slots with matching day, time and show name
     const { data: matchingSlots, error: matchingSlotsError } = await supabase
-      .from('schedule_slots_old')
+      .from('schedule_slots')
       .select('id')
       .eq('day_of_week', slotData.day_of_week)
       .eq('start_time', slotData.start_time)
       .eq('end_time', slotData.end_time)
       .eq('show_name', slotData.show_name);
       
-    if (matchingSlotsError) {
-      console.error("Error finding matching slots:", matchingSlotsError);
-      throw matchingSlotsError;
-    }
+    if (matchingSlotsError) throw matchingSlotsError;
     
     if (!matchingSlots || matchingSlots.length === 0) {
       console.error("No matching slots found for pattern:", {
@@ -225,15 +207,12 @@ export const createRecurringProducerAssignment = async (
       .from('producer_assignments')
       .insert(assignments);
       
-    if (insertError) {
-      console.error("Error inserting assignments:", insertError);
-      throw insertError;
-    }
+    if (insertError) throw insertError;
     
     return true;
   } catch (error) {
     console.error('Error creating recurring producer assignments:', error);
-    throw error;
+    return false;
   }
 };
 
@@ -348,7 +327,7 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name, host_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('worker_id', workerId)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
@@ -356,7 +335,14 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
       
     if (error) throw error;
     
-    return processAssignments(data || []);
+    // Filter out any assignments with invalid slots
+    const validAssignments = (data || []).filter(assignment => 
+      assignment.slot && 
+      typeof assignment.slot === 'object' && 
+      'id' in assignment.slot
+    );
+    
+    return validAssignments as ProducerAssignment[];
   } catch (error) {
     console.error('Error fetching monthly producer assignments:', error);
     return [];
@@ -375,7 +361,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name, host_name)
+        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
       `)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
       .lte('week_start', format(endDate, 'yyyy-MM-dd'))
@@ -383,7 +369,14 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
       
     if (error) throw error;
     
-    return processAssignments(data || []);
+    // Filter out any assignments with invalid slots
+    const validAssignments = (data || []).filter(assignment => 
+      assignment.slot && 
+      typeof assignment.slot === 'object' && 
+      'id' in assignment.slot
+    );
+    
+    return validAssignments as ProducerAssignment[];
   } catch (error) {
     console.error('Error fetching all monthly assignments:', error);
     return [];

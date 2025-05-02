@@ -60,14 +60,7 @@ export interface ProducerAssignment {
     name: string;
     position?: string;
   };
-  slot?: {
-    id: string;
-    day_of_week: number;
-    start_time: string;
-    end_time: string;
-    show_name: string;
-    host_name?: string;
-  } | null;
+  slot?: ScheduleSlot | null;
   created_at?: string;
   updated_at?: string;
 }

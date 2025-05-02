@@ -52,7 +52,6 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   }
 
   // Generate all days of the week based on selectedDate
-  // Order is for RTL (Sunday first)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
   // Get time slots from scheduleSlots - extract unique start_time values and sort them
@@ -80,7 +79,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   }
 
   return (
-    <div className="space-y-6 print:space-y-2" dir="rtl">
+    <div className="space-y-6 print:space-y-2">
       <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
         סידור עבודה - הפקה ועריכה
         <div className="text-base font-normal print:text-sm">
@@ -93,7 +92,6 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
           <TableHeader>
             <TableRow>
               <TableHead className="print:py-1">משבצת</TableHead>
-              {/* Right to left order - Sunday first (RTL layout) */}
               {dayNames.map((day, index) => (
                 <TableHead key={index} className="print:py-1 text-center">
                   {day} - {format(addDays(selectedDate, index), 'dd/MM', { locale: he })}
@@ -105,7 +103,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
             {timeSlots.map((timeSlot) => (
               <TableRow key={timeSlot}>
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
-                {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
+                {weekDays.map((day, dayIndex) => {
                   // Find slots for this day at this time
                   const daySlots = scheduleSlots.filter(slot => 
                     slot.day_of_week === dayIndex && 
@@ -126,10 +124,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         
                         return (
                           <div key={slot.id} className="p-1 text-sm">
-                            <div className="font-medium">
-                              {/* Show host name if available, otherwise show name */}
-                              {slot.host_name ? `${slot.show_name} - ${slot.host_name}` : slot.show_name}
-                            </div>
+                            <div className="font-medium">{slot.show_name}</div>
                             {producingAssignments.length > 0 && (
                               <div className="mt-1">
                                 <span className="font-medium text-xs">הפקה: </span>
