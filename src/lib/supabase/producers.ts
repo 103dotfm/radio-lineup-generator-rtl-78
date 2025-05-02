@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 
@@ -124,18 +125,29 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
 // Check if a slot exists before creating an assignment
 const verifySlotExists = async (slotId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    // Check in the schedule_slots table first
+    const { data: slotData, error: slotError } = await supabase
       .from('schedule_slots')
       .select('id')
       .eq('id', slotId)
       .maybeSingle();
       
-    if (error) {
-      console.error("Error checking slot existence:", error);
-      return false;
+    if (!slotError && slotData) {
+      return true;
     }
     
-    return !!data;
+    // If not found in schedule_slots, check in schedule_slots_old
+    const { data: oldSlotData, error: oldSlotError } = await supabase
+      .from('schedule_slots_old')
+      .select('id')
+      .eq('id', slotId)
+      .maybeSingle();
+      
+    if (!oldSlotError && oldSlotData) {
+      return true;
+    }
+    
+    return false;
   } catch (error) {
     console.error("Error in verifySlotExists:", error);
     return false;
@@ -147,16 +159,27 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
   try {
     console.log("Creating assignment:", assignment);
     
-    // First check if the slot exists
-    const { data: slotExists, error: slotError } = await supabase
-      .from('schedule_slots_old')  // Use schedule_slots_old table
-      .select('id')
-      .eq('id', assignment.slot_id)
-      .single();
+    // First verify the slot exists in either table
+    const slotExists = await verifySlotExists(assignment.slot_id);
     
-    if (slotError || !slotExists) {
+    if (!slotExists) {
       console.error("Error: Schedule slot not found:", assignment.slot_id);
       throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
+    }
+    
+    // Check if this assignment already exists to prevent duplicate
+    const { data: existingAssignment, error: checkError } = await supabase
+      .from('producer_assignments')
+      .select('id')
+      .eq('slot_id', assignment.slot_id)
+      .eq('worker_id', assignment.worker_id)
+      .eq('role', assignment.role)
+      .eq('week_start', assignment.week_start)
+      .maybeSingle();
+    
+    if (!checkError && existingAssignment) {
+      console.log("Assignment already exists:", existingAssignment);
+      return null; // Assignment already exists
     }
     
     const { data, error } = await supabase
