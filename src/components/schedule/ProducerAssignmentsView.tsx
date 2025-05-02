@@ -58,12 +58,22 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const timeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
     .sort((a, b) => a.localeCompare(b));
 
+  // Group slots by day and time for easier lookup
+  const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
+  scheduleSlots.forEach(slot => {
+    const key = `${slot.day_of_week}-${slot.start_time}`;
+    if (!slotsByDayAndTime[key]) {
+      slotsByDayAndTime[key] = [];
+    }
+    slotsByDayAndTime[key].push(slot);
+  });
+
   // Check if there are any assignments
   const hasAnyAssignments = assignments.length > 0;
   
   if (!hasAnyAssignments) {
     return (
-      <div className="space-y-6 print:space-y-2">
+      <div className="space-y-6 print:space-y-2" dir="rtl">
         <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
           סידור עבודה - הפקה ועריכה
           <div className="text-base font-normal print:text-sm">
@@ -79,7 +89,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   }
 
   return (
-    <div className="space-y-6 print:space-y-2">
+    <div className="space-y-6 print:space-y-2" dir="rtl">
       <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
         סידור עבודה - הפקה ועריכה
         <div className="text-base font-normal print:text-sm">
@@ -105,10 +115,8 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
                 {weekDays.map((day, dayIndex) => {
                   // Find slots for this day at this time
-                  const daySlots = scheduleSlots.filter(slot => 
-                    slot.day_of_week === dayIndex && 
-                    slot.start_time === timeSlot
-                  );
+                  const key = `${dayIndex}-${timeSlot}`;
+                  const daySlots = slotsByDayAndTime[key] || [];
                   
                   return (
                     <TableCell key={dayIndex} className="print:py-1">
@@ -124,7 +132,12 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         
                         return (
                           <div key={slot.id} className="p-1 text-sm">
-                            <div className="font-medium">{slot.show_name}</div>
+                            <div className="font-medium">
+                              {slot.show_name}
+                              {slot.host_name && (
+                                <span className="text-xs text-gray-500"> ({slot.host_name})</span>
+                              )}
+                            </div>
                             {producingAssignments.length > 0 && (
                               <div className="mt-1">
                                 <span className="font-medium text-xs">הפקה: </span>
