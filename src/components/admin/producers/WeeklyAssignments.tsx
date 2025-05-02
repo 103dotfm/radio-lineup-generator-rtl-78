@@ -45,7 +45,7 @@ interface WeeklyAssignmentsProps {
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek);
+  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, true);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);

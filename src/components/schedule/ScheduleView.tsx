@@ -70,7 +70,10 @@ export const ScheduleView = ({
   }
 
   // Use custom hooks
-  const { scheduleSlots, isLoading } = useScheduleSlots(selectedDateState);
+  const { scheduleSlots, isLoading, createSlot, updateSlot, deleteSlot } = useScheduleSlots(
+    selectedDateState, 
+    isMasterSchedule
+  );
   
   const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
 
@@ -79,12 +82,6 @@ export const ScheduleView = ({
       setSelectedDate(selectedDate);
     }
   }, [selectedDate, selectedDateState, setSelectedDate]);
-
-  // Creating a dummy deleteSlot function that returns a Promise to match the expected signature
-  const deleteSlotFunction = async (id: string): Promise<void> => {
-    console.log("Delete slot functionality needs implementation for ID:", id);
-    return Promise.resolve();
-  };
 
   const {
     handleAddSlot,
@@ -99,14 +96,25 @@ export const ScheduleView = ({
     setEditingSlot,
     setShowEditModeDialog,
     isAuthenticated,
-    deleteSlotFunction // Pass the function that matches the expected signature
+    deleteSlot
   );
 
   const handleSaveSlot = async (slotData: any) => {
     try {
-      // This functionality was previously dependent on createSlot and updateSlot
-      // Since we've removed those from the hook, we need to handle it differently
-      console.log("Save slot functionality needs implementation:", slotData);
+      if (slotData.id) {
+        console.log("Handling update for existing slot:", slotData.id);
+        const {
+          id,
+          ...updates
+        } = slotData;
+        await updateSlot({
+          id,
+          updates
+        });
+      } else {
+        console.log("Creating new slot:", slotData);
+        await createSlot(slotData);
+      }
       setShowSlotDialog(false);
     } catch (error) {
       console.error('Error saving slot:', error);

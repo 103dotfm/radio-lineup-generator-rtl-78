@@ -1,49 +1,61 @@
 
 import { useState, useEffect } from 'react';
+import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
 import { ScheduleSlot } from '@/types/schedule';
-import { supabase } from "@/lib/supabase";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { startOfWeek, format } from 'date-fns';
 
-export interface UseScheduleSlotsResult {
-  scheduleSlots: ScheduleSlot[];
-  isLoading: boolean;
-  error: Error | null;
-}
-
-export const useScheduleSlots = (selectedDate: Date): UseScheduleSlotsResult => {
-  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    const fetchScheduleSlots = async () => {
-      setIsLoading(true);
+export function useScheduleSlots(selectedDate: Date, isMasterSchedule: boolean = false) {
+  const queryClient = useQueryClient();
+  const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  
+  const {
+    data: scheduleSlots = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['scheduleSlots', weekStartDate.toISOString(), isMasterSchedule],
+    queryFn: async () => {
       try {
-        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
-        const weekStartFormatted = format(weekStart, 'yyyy-MM-dd');
-        
-        const { data, error } = await supabase
-          .from('schedule_slots_old')
-          .select('*')
-          .not('is_deleted', 'eq', true)
-          .order('day_of_week', { ascending: true })
-          .order('start_time', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        setScheduleSlots(data || []);
+        const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
+        return slots;
       } catch (err) {
         console.error('Error fetching schedule slots:', err);
-        setError(err instanceof Error ? err : new Error('Unknown error occurred'));
-      } finally {
-        setIsLoading(false);
+        throw err;
       }
-    };
+    },
+  });
 
-    fetchScheduleSlots();
-  }, [selectedDate]);
+  const createSlotMutation = useMutation({
+    mutationFn: (newSlot: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
+      createScheduleSlot(newSlot, isMasterSchedule, selectedDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+    },
+  });
 
-  return { scheduleSlots, isLoading, error };
-};
+  const updateSlotMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<ScheduleSlot> }) => 
+      updateScheduleSlot(id, updates, isMasterSchedule, selectedDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+    },
+  });
+
+  const deleteSlotMutation = useMutation({
+    mutationFn: (id: string) => 
+      deleteScheduleSlot(id, isMasterSchedule, selectedDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduleSlots'] });
+    },
+  });
+
+  return {
+    scheduleSlots,
+    isLoading,
+    error,
+    createSlot: createSlotMutation.mutateAsync,
+    updateSlot: updateSlotMutation.mutateAsync,
+    deleteSlot: deleteSlotMutation.mutateAsync,
+  };
+}
