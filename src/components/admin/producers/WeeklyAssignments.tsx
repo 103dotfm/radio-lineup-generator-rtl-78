@@ -183,9 +183,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             setIsDialogOpen(false);
           } else {
             toast({
-              title: "שגיאה",
-              description: "לא ניתן להוסיף את העובד לסידור",
-              variant: "destructive"
+              title: "מידע",
+              description: "שיבוץ זה כבר קיים או שלא ניתן להוסיף את העובד"
             });
           }
         } catch (error) {
