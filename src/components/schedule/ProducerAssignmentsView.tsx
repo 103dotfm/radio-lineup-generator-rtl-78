@@ -104,15 +104,15 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
             <TableRow>
               <TableHead className="print:py-1">משבצת</TableHead>
               {dayNames.map((day, index) => (
-                <TableHead key={index} className="print:py-1 text-center">
+                <TableHead key={`day-${index}`} className="print:py-1 text-center">
                   {day} - {format(addDays(selectedDate, index), 'dd/MM', { locale: he })}
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {timeSlots.map((timeSlot) => (
-              <TableRow key={timeSlot}>
+            {timeSlots.map((timeSlot, tsIndex) => (
+              <TableRow key={`timeslot-${timeSlot}-${tsIndex}`}>
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
                 {weekDays.map((day, dayIndex) => {
                   // Find slots for this day at this time
@@ -120,8 +120,8 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                   const daySlots = slotsByDayAndTime[key] || [];
                   
                   return (
-                    <TableCell key={dayIndex} className="print:py-1">
-                      {daySlots.map(slot => {
+                    <TableCell key={`cell-${dayIndex}-${timeSlot}-${tsIndex}`} className="print:py-1">
+                      {daySlots.map((slot, slotIndex) => {
                         if (!slot || !slot.id) return null;
                         
                         const slotAssignments = getAssignmentsForSlot(slot.id);
@@ -132,7 +132,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
                         
                         return (
-                          <div key={slot.id} className="p-1 text-sm">
+                          <div key={`slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
                             <div className="font-medium">
                               {slot.show_name}
                               {slot.host_name && (
@@ -142,13 +142,17 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                             {producingAssignments.length > 0 && (
                               <div className="mt-1">
                                 <span className="font-medium text-xs">הפקה: </span>
-                                {producingAssignments.map(a => a.worker?.name).join(", ")}
+                                {producingAssignments.map((a, idx) => 
+                                  <span key={`producer-${a.id}-${idx}`}>{a.worker?.name}{idx < producingAssignments.length - 1 ? ", " : ""}</span>
+                                )}
                               </div>
                             )}
                             {editingAssignments.length > 0 && (
                               <div className="mt-1">
                                 <span className="font-medium text-xs">עריכה: </span>
-                                {editingAssignments.map(a => a.worker?.name).join(", ")}
+                                {editingAssignments.map((a, idx) => 
+                                  <span key={`editor-${a.id}-${idx}`}>{a.worker?.name}{idx < editingAssignments.length - 1 ? ", " : ""}</span>
+                                )}
                               </div>
                             )}
                           </div>
