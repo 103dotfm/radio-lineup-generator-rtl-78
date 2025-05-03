@@ -131,6 +131,38 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
   }
 };
 
+// Check if a slot exists in either schedule_slots or schedule_slots_old
+const checkSlotExists = async (slotId: string): Promise<{ exists: boolean, table: string | null }> => {
+  try {
+    // Check schedule_slots
+    const { data: slotData, error: slotError } = await supabase
+      .from('schedule_slots')
+      .select('id')
+      .eq('id', slotId)
+      .maybeSingle();
+      
+    if (!slotError && slotData) {
+      return { exists: true, table: 'schedule_slots' };
+    }
+    
+    // Check schedule_slots_old
+    const { data: oldSlotData, error: oldSlotError } = await supabase
+      .from('schedule_slots_old')
+      .select('id')
+      .eq('id', slotId)
+      .maybeSingle();
+      
+    if (!oldSlotError && oldSlotData) {
+      return { exists: true, table: 'schedule_slots_old' };
+    }
+    
+    return { exists: false, table: null };
+  } catch (error) {
+    console.error("Error checking slot existence:", error);
+    return { exists: false, table: null };
+  }
+};
+
 // Fetch slot details from either schedule_slots or schedule_slots_old
 const fetchSlotDetails = async (slotId: string) => {
   try {
@@ -168,15 +200,7 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
   try {
     console.log("Creating assignment:", assignment);
     
-    // First, get the slot details to confirm it exists and which table it's in
-    const slotResult = await fetchSlotDetails(assignment.slot_id);
-    
-    if (!slotResult.found) {
-      console.error("Error: Schedule slot not found:", assignment.slot_id);
-      throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
-    }
-    
-    // Check if this assignment already exists to prevent duplicate
+    // First check if this assignment already exists to prevent duplicate
     const { data: existingAssignment, error: checkError } = await supabase
       .from('producer_assignments')
       .select('id')
@@ -191,7 +215,15 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
       return null; // Assignment already exists
     }
     
-    if (slotResult.table === 'schedule_slots') {
+    // Then, check if the slot exists and where
+    const slotCheck = await checkSlotExists(assignment.slot_id);
+    
+    if (!slotCheck.exists) {
+      console.error("Error: Schedule slot not found:", assignment.slot_id);
+      throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
+    }
+    
+    if (slotCheck.table === 'schedule_slots') {
       // If the slot is in schedule_slots, we can directly insert
       const { data, error } = await supabase
         .from('producer_assignments')
@@ -205,12 +237,16 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
       }
       return data;
     } else {
-      // If the slot is in schedule_slots_old, we need to create a duplicate in schedule_slots
-      // and then create the assignment
+      // If the slot is in schedule_slots_old, first get the details
+      const slotResult = await fetchSlotDetails(assignment.slot_id);
       
-      // First, copy the slot to schedule_slots
+      if (!slotResult.found) {
+        throw new Error(`Could not fetch details for slot ${assignment.slot_id}`);
+      }
+      
+      // Copy the slot to schedule_slots but with the original ID
       const slotToInsert = {
-        id: assignment.slot_id, // Keep the same ID
+        id: assignment.slot_id, // Keep the same ID to maintain relationship
         day_of_week: slotResult.data.day_of_week,
         start_time: slotResult.data.start_time,
         end_time: slotResult.data.end_time,
@@ -218,11 +254,9 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
         host_name: slotResult.data.host_name,
       };
       
-      const { data: insertedSlot, error: insertSlotError } = await supabase
+      const { error: insertSlotError } = await supabase
         .from('schedule_slots')
-        .upsert(slotToInsert)
-        .select()
-        .maybeSingle();
+        .upsert(slotToInsert, { onConflict: 'id' });
       
       if (insertSlotError) {
         console.error("Error copying slot to schedule_slots:", insertSlotError);
@@ -267,37 +301,13 @@ export const createRecurringProducerAssignment = async (
     
     const slotData = slotResult.data;
     
-    // Now find all slots with matching day, time and show name
-    // Check in both schedule_slots and schedule_slots_old
-    
-    // First check in schedule_slots
-    const { data: slotsFromMain, error: slotsMainError } = await supabase
-      .from('schedule_slots')
-      .select('id')
-      .eq('day_of_week', slotData.day_of_week)
-      .eq('start_time', slotData.start_time)
-      .eq('end_time', slotData.end_time)
-      .eq('show_name', slotData.show_name);
-    
-    if (slotsMainError) throw slotsMainError;
-    
-    // Next check in schedule_slots_old
-    const { data: slotsFromOld, error: slotsOldError } = await supabase
-      .from('schedule_slots_old')
-      .select('id')
-      .eq('day_of_week', slotData.day_of_week)
-      .eq('start_time', slotData.start_time)
-      .eq('end_time', slotData.end_time)
-      .eq('show_name', slotData.show_name);
-    
-    if (slotsOldError) throw slotsOldError;
-    
-    // Combine results and deduplicate by ID
-    const slotMap = new Map();
-    (slotsFromMain || []).forEach(slot => slotMap.set(slot.id, slot));
-    (slotsFromOld || []).forEach(slot => slotMap.set(slot.id, slot));
-    
-    const matchingSlots = Array.from(slotMap.values());
+    // Find all slots with matching day, time and show name in both tables
+    const matchingSlots = await findMatchingSlots(
+      slotData.day_of_week,
+      slotData.start_time,
+      slotData.end_time,
+      slotData.show_name
+    );
     
     if (!matchingSlots || matchingSlots.length === 0) {
       console.error("No matching slots found for pattern:", {
@@ -309,61 +319,130 @@ export const createRecurringProducerAssignment = async (
       throw new Error("No matching slots found");
     }
     
-    // For each slot in schedule_slots_old, ensure it also exists in schedule_slots
+    // Ensure all slots exist in schedule_slots for foreign key constraint
     for (const slot of matchingSlots) {
-      // Check if this slot is from schedule_slots_old and not already in schedule_slots
-      const slotDetails = await fetchSlotDetails(slot.id);
-      if (slotDetails.table === 'schedule_slots_old') {
-        // Copy it to schedule_slots
-        const slotToInsert = {
-          id: slot.id, // Keep the same ID
-          day_of_week: slotData.day_of_week,
-          start_time: slotData.start_time,
-          end_time: slotData.end_time,
-          show_name: slotData.show_name,
-          host_name: slotData.host_name,
-        };
-        
-        await supabase
-          .from('schedule_slots')
-          .upsert(slotToInsert);
-      }
+      await ensureSlotInScheduleSlots(slot.id);
     }
     
     // Create assignments for each matching slot
-    const assignments = matchingSlots.map(slot => ({
-      slot_id: slot.id,
-      worker_id: workerId,
-      role,
-      week_start: weekStart,
-      is_recurring: true
-    }));
+    let successCount = 0;
     
-    // Use individual inserts to handle potential conflicts better
-    for (const assignment of assignments) {
+    for (const slot of matchingSlots) {
       // Check if this assignment already exists
       const { data: existingAssignment } = await supabase
         .from('producer_assignments')
         .select('id')
-        .eq('slot_id', assignment.slot_id)
-        .eq('worker_id', assignment.worker_id)
-        .eq('role', assignment.role)
-        .eq('week_start', assignment.week_start)
+        .eq('slot_id', slot.id)
+        .eq('worker_id', workerId)
+        .eq('role', role)
+        .eq('week_start', weekStart)
         .maybeSingle();
         
       if (!existingAssignment) {
         // Only insert if not exists
-        await supabase
+        const { data, error } = await supabase
           .from('producer_assignments')
-          .insert(assignment);
+          .insert({
+            slot_id: slot.id,
+            worker_id: workerId,
+            role,
+            week_start: weekStart,
+            is_recurring: true
+          });
+          
+        if (!error) {
+          successCount++;
+        }
       }
     }
     
-    return true;
+    return successCount > 0;
   } catch (error) {
     console.error('Error creating recurring producer assignments:', error);
     return false;
   }
+};
+
+// Helper function to find matching slots in both tables
+const findMatchingSlots = async (
+  dayOfWeek: number,
+  startTime: string,
+  endTime: string,
+  showName: string
+): Promise<any[]> => {
+  // Find in schedule_slots
+  const { data: slotsFromMain, error: slotsMainError } = await supabase
+    .from('schedule_slots')
+    .select('id')
+    .eq('day_of_week', dayOfWeek)
+    .eq('start_time', startTime)
+    .eq('end_time', endTime)
+    .eq('show_name', showName);
+  
+  if (slotsMainError) throw slotsMainError;
+  
+  // Find in schedule_slots_old
+  const { data: slotsFromOld, error: slotsOldError } = await supabase
+    .from('schedule_slots_old')
+    .select('id')
+    .eq('day_of_week', dayOfWeek)
+    .eq('start_time', startTime)
+    .eq('end_time', endTime)
+    .eq('show_name', showName);
+  
+  if (slotsOldError) throw slotsOldError;
+  
+  // Combine and deduplicate
+  const allSlots = [...(slotsFromMain || []), ...(slotsFromOld || [])];
+  const uniqueSlots = Array.from(
+    new Map(allSlots.map(item => [item.id, item])).values()
+  );
+  
+  return uniqueSlots;
+};
+
+// Helper function to ensure a slot exists in schedule_slots
+const ensureSlotInScheduleSlots = async (slotId: string): Promise<boolean> => {
+  // Check if slot exists in schedule_slots
+  const { data: existingSlot } = await supabase
+    .from('schedule_slots')
+    .select('id')
+    .eq('id', slotId)
+    .maybeSingle();
+  
+  if (existingSlot) {
+    return true; // Already exists
+  }
+  
+  // If not, copy it from schedule_slots_old
+  const { data: oldSlot } = await supabase
+    .from('schedule_slots_old')
+    .select('*')
+    .eq('id', slotId)
+    .maybeSingle();
+  
+  if (!oldSlot) {
+    return false; // Slot doesn't exist in either table
+  }
+  
+  // Copy to schedule_slots
+  const { error } = await supabase
+    .from('schedule_slots')
+    .upsert({
+      id: oldSlot.id,
+      day_of_week: oldSlot.day_of_week,
+      start_time: oldSlot.start_time,
+      end_time: oldSlot.end_time,
+      show_name: oldSlot.show_name,
+      host_name: oldSlot.host_name,
+      color: oldSlot.color,
+      is_prerecorded: oldSlot.is_prerecorded,
+      is_collection: oldSlot.is_collection,
+      is_modified: oldSlot.is_modified,
+      has_lineup: oldSlot.has_lineup
+    }, { onConflict: 'id' });
+  
+  return !error;
 };
 
 // Update a producer assignment

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { format, addDays, parseISO } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
   Table, 
@@ -57,7 +57,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   const [formData, setFormData] = useState({
     workerId: '',
     role: '',
-    isRecurring: false
+    isWeekdays: false,
+    isPermanent: false
   });
   
   const { toast } = useToast();
@@ -114,7 +115,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     setFormData({
       workerId: '',
       role: roles.length > 0 ? roles[0].id : '',
-      isRecurring: false
+      isWeekdays: false,
+      isPermanent: false
     });
     setIsDialogOpen(true);
   };
@@ -132,8 +134,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     try {
       const selectedRole = roles.find(r => r.id === formData.role);
       
-      if (formData.isRecurring) {
-        // Create assignments for all matching slots
+      if (formData.isPermanent) {
+        // Create recurring assignments for all matching shows (current and future)
         const success = await createRecurringProducerAssignment(
           currentSlot.id,
           formData.workerId,
@@ -144,7 +146,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         if (success) {
           toast({
             title: "נוסף בהצלחה",
-            description: "העובד נוסף לכל התוכניות המתאימות בסידור העבודה בהצלחה"
+            description: "העובד נוסף לסידור העבודה הקבוע בהצלחה"
           });
           await loadData(); // Refresh the assignments
           setIsDialogOpen(false);
@@ -155,16 +157,58 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             variant: "destructive"
           });
         }
+      } else if (formData.isWeekdays) {
+        // Create assignments for all weekdays (Sunday-Thursday) at that time
+        let successCount = 0;
+        const weekdaysIds = [];
+
+        // Filter slots with the same start time for weekdays (0-4)
+        for (let dayIndex = 0; dayIndex <= 4; dayIndex++) {
+          const key = `${dayIndex}-${currentSlot.start_time}`;
+          const slotsForDay = slotsByDayAndTime[key] || [];
+          
+          for (const slot of slotsForDay) {
+            if (slot.show_name === currentSlot.show_name || slot.id === currentSlot.id) {
+              weekdaysIds.push(slot.id);
+            }
+          }
+        }
+        
+        // Create assignment for each weekday slot
+        for (const slotId of weekdaysIds) {
+          const assignment = {
+            slot_id: slotId,
+            worker_id: formData.workerId,
+            role: selectedRole ? selectedRole.name : '',
+            week_start: format(currentWeek, 'yyyy-MM-dd'),
+            is_recurring: false
+          };
+          
+          try {
+            const result = await createProducerAssignment(assignment);
+            if (result) {
+              successCount++;
+            }
+          } catch (error) {
+            console.error("Error creating assignment:", error);
+          }
+        }
+        
+        if (successCount > 0) {
+          toast({
+            title: "נוסף בהצלחה",
+            description: `העובד נוסף ל-${successCount} משבצות בסידור העבודה`
+          });
+          await loadData(); // Refresh the assignments
+          setIsDialogOpen(false);
+        } else {
+          toast({
+            title: "מידע",
+            description: "לא נמצאו תוכניות נוספות לשיבוץ או שכל השיבוצים כבר קיימים"
+          });
+        }
       } else {
         // Create a single assignment
-        console.log("Creating assignment:", {
-          slot_id: currentSlot.id,
-          worker_id: formData.workerId,
-          role: selectedRole ? selectedRole.name : '',
-          week_start: format(currentWeek, 'yyyy-MM-dd'),
-          is_recurring: false
-        });
-        
         const assignment = {
           slot_id: currentSlot.id,
           worker_id: formData.workerId,
@@ -252,12 +296,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[150px]">משבצת</TableHead>
-                {/* Reverse the order of days to have Sunday on the right */}
-                {[...dayNames].reverse().map((day, index) => (
-                  <TableHead key={`day-header-${index}`} className="text-center min-w-[150px]">
-                    {day}
+                {/* Order days from right to left (Sunday to Saturday) */}
+                {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => (
+                  <TableHead key={`day-header-${dayIndex}`} className="text-center min-w-[150px]">
+                    {dayNames[dayIndex]}
                     <div className="text-xs font-normal">
-                      {format(addDays(currentWeek, 6-index), 'dd/MM', { locale: he })}
+                      {format(addDays(currentWeek, dayIndex), 'dd/MM', { locale: he })}
                     </div>
                   </TableHead>
                 ))}
@@ -267,8 +311,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               {timeslots.map((time, timeIndex) => (
                 <TableRow key={`time-row-${time}-${timeIndex}`}>
                   <TableCell className="font-medium">{time}</TableCell>
-                  {/* Reverse the order of days to have Sunday on the right */}
-                  {[6, 5, 4, 3, 2, 1, 0].map(dayIndex => {
+                  {/* Days in RTL order (Sunday to Saturday) */}
+                  {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
                     const key = `${dayIndex}-${time}`;
                     const slotsForCell = slotsByDayAndTime[key] || [];
                     
@@ -370,7 +414,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           <DialogHeader>
             <DialogTitle>הוספת עובד לתוכנית</DialogTitle>
             <DialogDescription>
-              שבץ עובד לתפקיד בתוכנית. ניתן לבחור האם לשבץ לכל התוכניות המתאימות.
+              שבץ עובד לתפקיד בתוכנית. ניתן לבחור אפשרויות שיבוץ נוספות.
             </DialogDescription>
           </DialogHeader>
           {currentSlot && (
@@ -414,15 +458,28 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                 </Select>
               </div>
               
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Switch 
-                  id="recurring"
-                  checked={formData.isRecurring}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
-                />
-                <Label htmlFor="recurring" className="mr-2">
-                  שבץ לכל התוכניות המתאימות (יום, שעה, שם)
-                </Label>
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Switch 
+                    id="weekdays"
+                    checked={formData.isWeekdays}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked })}
+                  />
+                  <Label htmlFor="weekdays" className="mr-2">
+                    שיבוץ כל השבוע (ראשון-חמישי)
+                  </Label>
+                </div>
+                
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Switch 
+                    id="permanent"
+                    checked={formData.isPermanent}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isPermanent: checked })}
+                  />
+                  <Label htmlFor="permanent" className="mr-2">
+                    צוות תוכנית קבוע
+                  </Label>
+                </div>
               </div>
             </div>
           )}
