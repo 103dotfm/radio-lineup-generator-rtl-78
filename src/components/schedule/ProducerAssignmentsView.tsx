@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -67,7 +66,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   }
 
   // Generate all days of the week based on selectedDate
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i)).reverse();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
   // Get time slots from scheduleSlots - extract unique start_time values and sort them
   const timeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
@@ -117,10 +116,10 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
           <TableHeader>
             <TableRow>
               <TableHead className="print:py-1">משבצת</TableHead>
-              {/* Reverse the days so Sunday is on the right */}
-              {dayNames.map((day, index) => (
-                <TableHead key={`day-${index}`} className="print:py-1 text-center">
-                  {day} - {format(addDays(selectedDate, 6-index), 'dd/MM', { locale: he })}
+              {/* Keep days in the correct order for RTL layout */}
+              {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => (
+                <TableHead key={`day-${dayIndex}`} className="print:py-1 text-center">
+                  {dayNames[dayIndex]} - {format(addDays(selectedDate, dayIndex), 'dd/MM', { locale: he })}
                 </TableHead>
               ))}
             </TableRow>
@@ -129,8 +128,8 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
             {timeSlots.map((timeSlot, tsIndex) => (
               <TableRow key={`timeslot-${timeSlot}-${tsIndex}`}>
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
-                {/* Reverse days order for RTL */}
-                {[6, 5, 4, 3, 2, 1, 0].map((dayIndex) => {
+                {/* Days in correct order for RTL */}
+                {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
                   // Find slots for this day at this time
                   const key = `${dayIndex}-${timeSlot}`;
                   const daySlots = slotsByDayAndTime[key] || [];
