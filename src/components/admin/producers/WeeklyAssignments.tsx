@@ -142,13 +142,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     
     try {
       const selectedRole = roles.find(r => r.id === formData.role);
+      const roleName = selectedRole ? selectedRole.name : '';
       
+      // Check if we're creating a permanent assignment
       if (formData.isPermanent) {
+        console.log("Creating permanent assignment for slot:", currentSlot);
         // Create recurring assignments for all matching shows (current and future)
         const success = await createRecurringProducerAssignment(
           currentSlot.id,
           formData.workerId,
-          selectedRole ? selectedRole.name : '',
+          roleName,
           format(currentWeek, 'yyyy-MM-dd')
         );
         
@@ -166,10 +169,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             variant: "destructive"
           });
         }
-      } else if (formData.isWeekdays) {
+      } 
+      // Check if we're creating assignments for all weekdays
+      else if (formData.isWeekdays) {
+        console.log("Creating assignments for all weekdays with slot:", currentSlot);
         // Create assignments for Sunday-Wednesday (0-3) at that time
         let successCount = 0;
-        const weekdaysIds = [];
+        const weekdaySlots = [];
 
         // Filter slots with the same start time for weekdays (0-3)
         for (let dayIndex = 0; dayIndex <= 3; dayIndex++) {
@@ -177,30 +183,52 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           const slotsForDay = slotsByDayAndTime[key] || [];
           
           for (const slot of slotsForDay) {
-            if (slot.show_name === currentSlot.show_name || slot.id === currentSlot.id) {
-              weekdaysIds.push(slot.id);
-            }
+            weekdaySlots.push(slot);
           }
         }
         
+        console.log("Found weekday slots:", weekdaySlots.length);
+        
         // Create assignment for each weekday slot
-        for (const slotId of weekdaysIds) {
+        for (const slot of weekdaySlots) {
+          // Skip if it's the same slot as the current one (we'll add it later)
+          if (slot.id === currentSlot.id) continue;
+          
           const assignment = {
-            slot_id: slotId,
+            slot_id: slot.id,
             worker_id: formData.workerId,
-            role: selectedRole ? selectedRole.name : '',
+            role: roleName,
             week_start: format(currentWeek, 'yyyy-MM-dd'),
             is_recurring: false
           };
           
           try {
+            console.log("Creating assignment for weekday slot:", slot.day_of_week, slot.show_name);
             const result = await createProducerAssignment(assignment);
             if (result) {
               successCount++;
             }
           } catch (error) {
-            console.error("Error creating assignment:", error);
+            console.error("Error creating assignment for weekday slot:", error);
           }
+        }
+        
+        // Also create assignment for the current slot
+        const currentAssignment = {
+          slot_id: currentSlot.id,
+          worker_id: formData.workerId,
+          role: roleName,
+          week_start: format(currentWeek, 'yyyy-MM-dd'),
+          is_recurring: false
+        };
+        
+        try {
+          const result = await createProducerAssignment(currentAssignment);
+          if (result) {
+            successCount++;
+          }
+        } catch (error) {
+          console.error("Error creating assignment for current slot:", error);
         }
         
         if (successCount > 0) {
@@ -221,12 +249,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         const assignment = {
           slot_id: currentSlot.id,
           worker_id: formData.workerId,
-          role: selectedRole ? selectedRole.name : '',
+          role: roleName,
           week_start: format(currentWeek, 'yyyy-MM-dd'),
           is_recurring: false
         };
         
         try {
+          console.log("Creating single assignment for slot:", currentSlot);
           const result = await createProducerAssignment(assignment);
           if (result) {
             toast({
@@ -334,11 +363,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                           <div>
                             {slotsForCell.map((slot, slotIndex) => {
                               const slotAssignments = getAssignmentsForSlot(slot.id);
-                              
-                              // Group assignments by role
-                              const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
-                              const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
-                              
                               const combinedShowName = getCombinedShowDisplay(slot.show_name, slot.host_name);
                               
                               return (
@@ -351,14 +375,22 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                     {combinedShowName}
                                   </div>
                                   
-                                  {(editingAssignments.length > 0 || producingAssignments.length > 0) && (
+                                  {slotAssignments.length > 0 && (
                                     <div className="mt-2 text-sm border-t pt-2">
-                                      {editingAssignments.length > 0 && (
-                                        <div className="mb-1">
-                                          <span className="font-medium">עריכה: </span>
+                                      {/* Group assignments by role */}
+                                      {Object.entries(
+                                        slotAssignments.reduce((acc, assignment) => {
+                                          const role = assignment.role || 'ללא תפקיד';
+                                          if (!acc[role]) acc[role] = [];
+                                          acc[role].push(assignment);
+                                          return acc;
+                                        }, {} as Record<string, any[]>)
+                                      ).map(([role, roleAssignments]) => (
+                                        <div key={`role-${role}-${slot.id}`} className="mb-1">
+                                          <span className="font-medium">{role}: </span>
                                           <div className="space-y-1">
-                                            {editingAssignments.map((assignment, aIndex) => (
-                                              <div key={`editing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
+                                            {roleAssignments.map((assignment) => (
+                                              <div key={`assignment-${assignment.id}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
@@ -375,31 +407,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                             ))}
                                           </div>
                                         </div>
-                                      )}
-                                      
-                                      {producingAssignments.length > 0 && (
-                                        <div>
-                                          <span className="font-medium">הפקה: </span>
-                                          <div className="space-y-1">
-                                            {producingAssignments.map((assignment, aIndex) => (
-                                              <div key={`producing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
-                                                <span>{assignment.worker?.name}</span>
-                                                <Button 
-                                                  variant="ghost" 
-                                                  size="sm" 
-                                                  className="h-6 w-6 p-0"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteAssignment(assignment.id);
-                                                  }}
-                                                >
-                                                  ✕
-                                                </Button>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
+                                      ))}
                                     </div>
                                   )}
                                 </div>
