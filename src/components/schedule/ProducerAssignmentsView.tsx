@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { getProducerAssignments } from '@/lib/supabase/producers';
-import { ScheduleSlot } from '@/types/schedule';
+import { ScheduleSlot, ProducerAssignment } from '@/types/schedule';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 
@@ -22,7 +23,7 @@ interface ProducerAssignmentsViewProps {
 const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selectedDate }) => {
   // Important: Use false for the second parameter to get weekly schedule instead of master
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate, false);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
@@ -138,12 +139,12 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         if (slotAssignments.length === 0) return null;
                         
                         // Group assignments by role
-                        const assignmentsByRole = slotAssignments.reduce((acc, assignment) => {
+                        const assignmentsByRole: Record<string, ProducerAssignment[]> = slotAssignments.reduce((acc, assignment) => {
                           const role = assignment.role || 'ללא תפקיד';
                           if (!acc[role]) acc[role] = [];
                           acc[role].push(assignment);
                           return acc;
-                        }, {} as Record<string, any[]>);
+                        }, {} as Record<string, ProducerAssignment[]>);
                         
                         return (
                           <div key={`assignment-slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
