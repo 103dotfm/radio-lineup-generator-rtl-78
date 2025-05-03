@@ -35,11 +35,13 @@ import {
   deleteProducerAssignment,
   getProducerAssignments,
   getProducerRoles,
-  getProducers 
+  getProducers,
+  ProducerAssignment
 } from '@/lib/supabase/producers';
 import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
 import { Label } from '@/components/ui/label';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
+import { ScheduleSlot } from '@/types/schedule';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -48,12 +50,12 @@ interface WeeklyAssignmentsProps {
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
   // Important: use false for isMasterSchedule to get the weekly schedule instead of master
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, false);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentSlot, setCurrentSlot] = useState<any>(null);
+  const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
   const [formData, setFormData] = useState({
     workerId: '',
     role: '',
@@ -92,7 +94,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   };
   
   // Group slots by day and time for a more organized display
-  const slotsByDayAndTime: { [key: string]: any[] } = {};
+  const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
   
   // Create a map of unique slots to prevent duplicates
   const uniqueSlotsMap: { [key: string]: boolean } = {};
@@ -119,7 +121,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     return assignments.filter((assignment) => assignment.slot_id === slotId);
   };
   
-  const handleAssignProducer = (slot: any) => {
+  const handleAssignProducer = (slot: ScheduleSlot) => {
     setCurrentSlot(slot);
     setFormData({
       workerId: '',
@@ -175,7 +177,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         console.log("Creating assignments for all weekdays with slot:", currentSlot);
         // Create assignments for Sunday-Wednesday (0-3) at that time
         let successCount = 0;
-        const weekdaySlots = [];
+        const weekdaySlots: ScheduleSlot[] = [];
 
         // Filter slots with the same start time for weekdays (0-3)
         for (let dayIndex = 0; dayIndex <= 3; dayIndex++) {
@@ -384,7 +386,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                           if (!acc[role]) acc[role] = [];
                                           acc[role].push(assignment);
                                           return acc;
-                                        }, {} as Record<string, any[]>)
+                                        }, {} as Record<string, ProducerAssignment[]>)
                                       ).map(([role, roleAssignments]) => (
                                         <div key={`role-${role}-${slot.id}`} className="mb-1">
                                           <span className="font-medium">{role}: </span>
