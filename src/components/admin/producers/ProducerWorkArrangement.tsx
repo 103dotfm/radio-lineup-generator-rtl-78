@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 const ProducerWorkArrangement = () => {
   const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
-  const [activeTab, setActiveTab] = useState<string>("producers");
+  const [activeTab, setActiveTab] = useState<string>("weekly");
   const [notes, setNotes] = useState<string>("");
   const [arrangementId, setArrangementId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -99,20 +99,16 @@ const ProducerWorkArrangement = () => {
         </CardHeader>
         <CardContent>
           <Tabs
-            defaultValue="producers"
+            defaultValue="weekly"
             value={activeTab}
             onValueChange={setActiveTab}
             className="space-y-4"
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="producers">עובדי הפקה</TabsTrigger>
               <TabsTrigger value="weekly">סידור שבועי</TabsTrigger>
+              <TabsTrigger value="producers">עובדי הפקה</TabsTrigger>
               <TabsTrigger value="monthly">סיכום חודשי</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="producers">
-              <ProducersTable />
-            </TabsContent>
             
             <TabsContent value="weekly">
               <div className="space-y-4">
@@ -130,6 +126,10 @@ const ProducerWorkArrangement = () => {
                 </div>
                 <WeeklyAssignments currentWeek={currentWeek} />
               </div>
+            </TabsContent>
+            
+            <TabsContent value="producers">
+              <ProducersTable />
             </TabsContent>
             
             <TabsContent value="monthly">

@@ -163,10 +163,10 @@ export default function WorkArrangements() {
       </div>
 
       <div className="py-6">
-        <Tabs defaultValue="file-upload">
+        <Tabs defaultValue="producers">
           <TabsList className="w-full grid grid-cols-3">
+            <TabsTrigger value="producers" className="direction-rtl">עורך סידור הפקה</TabsTrigger>
             <TabsTrigger value="file-upload" className="direction-rtl">העלאת קובץ PDF</TabsTrigger>
-            <TabsTrigger value="producers">עורך סידור הפקה</TabsTrigger>
             <TabsTrigger value="digital-editor">עורך סידור דיגיטל</TabsTrigger>
           </TabsList>
           

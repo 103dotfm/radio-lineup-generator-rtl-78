@@ -91,11 +91,20 @@ export const deleteProducerRole = async (id: string): Promise<boolean> => {
 
 // Process assignments to handle potential null values in slot property
 const processAssignments = (data: any[]): ProducerAssignment[] => {
-  return data.filter(assignment => {
-    // Filter out assignments without a valid slot
+  // First, deduplicate assignments based on slot_id, worker_id, role
+  const uniqueMap = new Map();
+  const uniqueAssignments = data.filter(assignment => {
     if (!assignment.slot) return false;
+    
+    const key = `${assignment.slot_id}-${assignment.worker_id}-${assignment.role}`;
+    if (uniqueMap.has(key)) {
+      return false;
+    }
+    uniqueMap.set(key, true);
     return true;
-  }) as ProducerAssignment[];
+  });
+  
+  return uniqueAssignments as ProducerAssignment[];
 };
 
 // Fetch producer assignments for a specific week
@@ -128,7 +137,7 @@ const fetchSlotDetails = async (slotId: string) => {
     // Try schedule_slots first
     const { data: slotData, error: slotError } = await supabase
       .from('schedule_slots')
-      .select('day_of_week, start_time, end_time, show_name')
+      .select('day_of_week, start_time, end_time, show_name, host_name')
       .eq('id', slotId)
       .maybeSingle();
       
@@ -139,7 +148,7 @@ const fetchSlotDetails = async (slotId: string) => {
     // Try schedule_slots_old if not found in schedule_slots
     const { data: oldSlotData, error: oldSlotError } = await supabase
       .from('schedule_slots_old')
-      .select('day_of_week, start_time, end_time, show_name')
+      .select('day_of_week, start_time, end_time, show_name, host_name')
       .eq('id', slotId)
       .maybeSingle();
       
@@ -206,6 +215,7 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
         start_time: slotResult.data.start_time,
         end_time: slotResult.data.end_time,
         show_name: slotResult.data.show_name,
+        host_name: slotResult.data.host_name,
       };
       
       const { data: insertedSlot, error: insertSlotError } = await supabase
@@ -282,11 +292,12 @@ export const createRecurringProducerAssignment = async (
     
     if (slotsOldError) throw slotsOldError;
     
-    // Combine results
-    const matchingSlots = [
-      ...(slotsFromMain || []),
-      ...(slotsFromOld || [])
-    ];
+    // Combine results and deduplicate by ID
+    const slotMap = new Map();
+    (slotsFromMain || []).forEach(slot => slotMap.set(slot.id, slot));
+    (slotsFromOld || []).forEach(slot => slotMap.set(slot.id, slot));
+    
+    const matchingSlots = Array.from(slotMap.values());
     
     if (!matchingSlots || matchingSlots.length === 0) {
       console.error("No matching slots found for pattern:", {
@@ -310,6 +321,7 @@ export const createRecurringProducerAssignment = async (
           start_time: slotData.start_time,
           end_time: slotData.end_time,
           show_name: slotData.show_name,
+          host_name: slotData.host_name,
         };
         
         await supabase

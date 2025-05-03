@@ -39,6 +39,7 @@ import {
 } from '@/lib/supabase/producers';
 import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
 import { Label } from '@/components/ui/label';
+import { getCombinedShowDisplay } from '@/utils/showDisplay';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -231,6 +232,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   };
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+  // Sort timeslots to display them in chronological order
   const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
   
   if (isLoading || slotsLoading) {
@@ -246,15 +248,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           שבוע {format(currentWeek, 'dd/MM/yyyy', { locale: he })} - {format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}
         </div>
         <div className="overflow-x-auto">
-          <Table>
+          <Table dir="rtl">
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[150px]">משבצת</TableHead>
-                {dayNames.slice(0, 7).map((day, index) => (
+                {/* Reverse the order of days to have Sunday on the right */}
+                {[...dayNames].reverse().map((day, index) => (
                   <TableHead key={`day-header-${index}`} className="text-center min-w-[150px]">
                     {day}
                     <div className="text-xs font-normal">
-                      {format(addDays(currentWeek, index), 'dd/MM', { locale: he })}
+                      {format(addDays(currentWeek, 6-index), 'dd/MM', { locale: he })}
                     </div>
                   </TableHead>
                 ))}
@@ -264,12 +267,17 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               {timeslots.map((time, timeIndex) => (
                 <TableRow key={`time-row-${time}-${timeIndex}`}>
                   <TableCell className="font-medium">{time}</TableCell>
-                  {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
+                  {/* Reverse the order of days to have Sunday on the right */}
+                  {[6, 5, 4, 3, 2, 1, 0].map(dayIndex => {
                     const key = `${dayIndex}-${time}`;
                     const slotsForCell = slotsByDayAndTime[key] || [];
                     
                     return (
-                      <TableCell key={`cell-${dayIndex}-${time}-${timeIndex}`} className="p-2 align-top">
+                      <TableCell 
+                        key={`cell-${dayIndex}-${time}-${timeIndex}`} 
+                        className="p-2 align-top cursor-pointer hover:bg-gray-50"
+                        onClick={() => slotsForCell.length > 0 && handleAssignProducer(slotsForCell[0])}
+                      >
                         {slotsForCell.length > 0 ? (
                           <div>
                             {slotsForCell.map((slot, slotIndex) => {
@@ -279,25 +287,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                               const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
                               const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
                               
+                              const combinedShowName = getCombinedShowDisplay(slot.show_name, slot.host_name);
+                              
                               return (
                                 <div key={`slot-${slot.id}-${slotIndex}`} className="mb-3 border rounded p-2 bg-gray-50">
-                                  <div className="flex justify-between items-center">
-                                    <div className="font-medium text-sm">
-                                      {slot.show_name}
-                                      {slot.host_name && (
-                                        <span className="text-xs text-gray-500"> ({slot.host_name})</span>
-                                      )}
-                                      <div className="text-xs text-gray-500">
-                                        {slot.start_time} - {slot.end_time}
-                                      </div>
-                                    </div>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
-                                      onClick={() => handleAssignProducer(slot)}
-                                    >
-                                      הוסף
-                                    </Button>
+                                  <div className="font-medium text-sm">
+                                    {combinedShowName}
                                   </div>
                                   
                                   {(editingAssignments.length > 0 || producingAssignments.length > 0) && (
@@ -307,13 +302,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                           <span className="font-medium">עריכה: </span>
                                           <div className="space-y-1">
                                             {editingAssignments.map((assignment, aIndex) => (
-                                              <div key={`editing-${assignment.id}-${slotIndex}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
+                                              <div key={`editing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
                                                   size="sm" 
                                                   className="h-6 w-6 p-0"
-                                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteAssignment(assignment.id);
+                                                  }}
                                                 >
                                                   ✕
                                                 </Button>
@@ -328,13 +326,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                           <span className="font-medium">הפקה: </span>
                                           <div className="space-y-1">
                                             {producingAssignments.map((assignment, aIndex) => (
-                                              <div key={`producing-${assignment.id}-${slotIndex}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
+                                              <div key={`producing-${assignment.id}-${aIndex}`} className="flex justify-between items-center bg-white p-1 rounded">
                                                 <span>{assignment.worker?.name}</span>
                                                 <Button 
                                                   variant="ghost" 
                                                   size="sm" 
                                                   className="h-6 w-6 p-0"
-                                                  onClick={() => handleDeleteAssignment(assignment.id)}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteAssignment(assignment.id);
+                                                  }}
                                                 >
                                                   ✕
                                                 </Button>
@@ -375,7 +376,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           {currentSlot && (
             <div className="space-y-4 py-4">
               <div>
-                <p className="font-medium">{currentSlot.show_name}</p>
+                <p className="font-medium">{getCombinedShowDisplay(currentSlot.show_name, currentSlot.host_name)}</p>
                 <p className="text-sm text-muted-foreground">
                   {dayNames[currentSlot.day_of_week]} {format(addDays(currentWeek, currentSlot.day_of_week), 'dd/MM/yyyy', { locale: he })}, {currentSlot.start_time} - {currentSlot.end_time}
                 </p>
@@ -388,8 +389,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     <SelectValue placeholder="בחר עובד" />
                   </SelectTrigger>
                   <SelectContent>
-                    {producers.map((producer, pIndex) => (
-                      <SelectItem key={`producer-${producer.id}-${pIndex}`} value={producer.id}>
+                    {producers.map((producer) => (
+                      <SelectItem key={`producer-select-${producer.id}`} value={producer.id}>
                         {producer.name} {producer.position && `(${producer.position})`}
                       </SelectItem>
                     ))}
@@ -404,8 +405,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     <SelectValue placeholder="בחר תפקיד" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((role, rIndex) => (
-                      <SelectItem key={`role-${role.id}-${rIndex}`} value={role.id}>
+                    {roles.map((role) => (
+                      <SelectItem key={`role-select-${role.id}`} value={role.id}>
                         {role.name}
                       </SelectItem>
                     ))}
