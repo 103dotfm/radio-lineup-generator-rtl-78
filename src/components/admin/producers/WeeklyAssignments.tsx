@@ -94,15 +94,24 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   // Group slots by day and time for a more organized display
   const slotsByDayAndTime: { [key: string]: any[] } = {};
   
+  // Create a map of unique slots to prevent duplicates
+  const uniqueSlotsMap: { [key: string]: boolean } = {};
+  
   scheduleSlots.forEach(slot => {
     const day = slot.day_of_week;
     const time = slot.start_time;
     const key = `${day}-${time}`;
+    const uniqueKey = `${day}-${time}-${slot.show_name}-${slot.host_name}`;
     
-    if (!slotsByDayAndTime[key]) {
-      slotsByDayAndTime[key] = [];
+    // Only process this slot if we haven't seen a duplicate already
+    if (!uniqueSlotsMap[uniqueKey]) {
+      uniqueSlotsMap[uniqueKey] = true;
+      
+      if (!slotsByDayAndTime[key]) {
+        slotsByDayAndTime[key] = [];
+      }
+      slotsByDayAndTime[key].push(slot);
     }
-    slotsByDayAndTime[key].push(slot);
   });
   
   // Get assignments for a slot
@@ -158,12 +167,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           });
         }
       } else if (formData.isWeekdays) {
-        // Create assignments for all weekdays (Sunday-Thursday) at that time
+        // Create assignments for Sunday-Wednesday (0-3) at that time
         let successCount = 0;
         const weekdaysIds = [];
 
-        // Filter slots with the same start time for weekdays (0-4)
-        for (let dayIndex = 0; dayIndex <= 4; dayIndex++) {
+        // Filter slots with the same start time for weekdays (0-3)
+        for (let dayIndex = 0; dayIndex <= 3; dayIndex++) {
           const key = `${dayIndex}-${currentSlot.start_time}`;
           const slotsForDay = slotsByDayAndTime[key] || [];
           
@@ -320,7 +329,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                       <TableCell 
                         key={`cell-${dayIndex}-${time}-${timeIndex}`} 
                         className="p-2 align-top cursor-pointer hover:bg-gray-50"
-                        onClick={() => slotsForCell.length > 0 && handleAssignProducer(slotsForCell[0])}
                       >
                         {slotsForCell.length > 0 ? (
                           <div>
@@ -334,7 +342,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                               const combinedShowName = getCombinedShowDisplay(slot.show_name, slot.host_name);
                               
                               return (
-                                <div key={`slot-${slot.id}-${slotIndex}`} className="mb-3 border rounded p-2 bg-gray-50">
+                                <div 
+                                  key={`slot-${slot.id}-${slotIndex}`} 
+                                  className="mb-3 border rounded p-2 bg-gray-50"
+                                  onClick={() => handleAssignProducer(slot)}
+                                >
                                   <div className="font-medium text-sm">
                                     {combinedShowName}
                                   </div>
@@ -422,7 +434,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               <div>
                 <p className="font-medium">{getCombinedShowDisplay(currentSlot.show_name, currentSlot.host_name)}</p>
                 <p className="text-sm text-muted-foreground">
-                  {dayNames[currentSlot.day_of_week]} {format(addDays(currentWeek, currentSlot.day_of_week), 'dd/MM/yyyy', { locale: he })}, {currentSlot.start_time} - {currentSlot.end_time}
+                  {dayNames[currentSlot.day_of_week]} {format(addDays(currentWeek, currentSlot.day_of_week), 'dd/MM/yyyy', { locale: he })}, {currentSlot.start_time}
                 </p>
               </div>
               
@@ -466,7 +478,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked })}
                   />
                   <Label htmlFor="weekdays" className="mr-2">
-                    שיבוץ כל השבוע (ראשון-חמישי)
+                    שיבוץ כל השבוע (ראשון-רביעי)
                   </Label>
                 </div>
                 
