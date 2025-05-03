@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { getProducerAssignments } from '@/lib/supabase/producers';
 import { ScheduleSlot } from '@/types/schedule';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
+import { getCombinedShowDisplay } from '@/utils/showDisplay';
 
 interface ProducerAssignmentsViewProps {
   selectedDate: Date;
@@ -33,7 +34,20 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     setIsLoading(true);
     try {
       const assignmentsData = await getProducerAssignments(selectedDate);
-      setAssignments(assignmentsData);
+      
+      // Deduplicate assignments based on slot_id, worker_id, and role
+      // This prevents showing the same worker multiple times for the same slot and role
+      const uniqueKeyMap = new Map();
+      const uniqueAssignments = assignmentsData.filter(assignment => {
+        const key = `${assignment.slot_id}-${assignment.worker_id}-${assignment.role}`;
+        if (uniqueKeyMap.has(key)) {
+          return false;
+        }
+        uniqueKeyMap.set(key, true);
+        return true;
+      });
+      
+      setAssignments(uniqueAssignments);
     } catch (error) {
       console.error("Error loading assignments:", error);
     } finally {
@@ -53,7 +67,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   }
 
   // Generate all days of the week based on selectedDate
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i)).reverse();
   
   // Get time slots from scheduleSlots - extract unique start_time values and sort them
   const timeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
@@ -103,9 +117,10 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
           <TableHeader>
             <TableRow>
               <TableHead className="print:py-1">משבצת</TableHead>
+              {/* Reverse the days so Sunday is on the right */}
               {dayNames.map((day, index) => (
                 <TableHead key={`day-${index}`} className="print:py-1 text-center">
-                  {day} - {format(addDays(selectedDate, index), 'dd/MM', { locale: he })}
+                  {day} - {format(addDays(selectedDate, 6-index), 'dd/MM', { locale: he })}
                 </TableHead>
               ))}
             </TableRow>
@@ -114,7 +129,8 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
             {timeSlots.map((timeSlot, tsIndex) => (
               <TableRow key={`timeslot-${timeSlot}-${tsIndex}`}>
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
-                {weekDays.map((day, dayIndex) => {
+                {/* Reverse days order for RTL */}
+                {[6, 5, 4, 3, 2, 1, 0].map((dayIndex) => {
                   // Find slots for this day at this time
                   const key = `${dayIndex}-${timeSlot}`;
                   const daySlots = slotsByDayAndTime[key] || [];
@@ -132,12 +148,9 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
                         
                         return (
-                          <div key={`slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
+                          <div key={`assignment-slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
                             <div className="font-medium">
-                              {slot.show_name}
-                              {slot.host_name && (
-                                <span className="text-xs text-gray-500"> ({slot.host_name})</span>
-                              )}
+                              {getCombinedShowDisplay(slot.show_name, slot.host_name)}
                             </div>
                             {producingAssignments.length > 0 && (
                               <div className="mt-1">
