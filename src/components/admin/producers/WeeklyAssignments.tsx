@@ -177,25 +177,23 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         console.log("Creating assignments for all weekdays with slot:", currentSlot);
         // Create assignments for Sunday-Wednesday (0-3) at that time
         let successCount = 0;
+        
+        // Get only the slots with matching start_time for days 0-3 (Sunday-Wednesday)
         const weekdaySlots: ScheduleSlot[] = [];
-
-        // Filter slots with the same start time for weekdays (0-3)
+        const currentTime = currentSlot.start_time;
+        
+        // Collect all slots with the same start_time for weekdays (Sun-Wed)
         for (let dayIndex = 0; dayIndex <= 3; dayIndex++) {
-          const key = `${dayIndex}-${currentSlot.start_time}`;
+          const key = `${dayIndex}-${currentTime}`;
           const slotsForDay = slotsByDayAndTime[key] || [];
           
-          for (const slot of slotsForDay) {
-            weekdaySlots.push(slot);
-          }
+          weekdaySlots.push(...slotsForDay);
         }
         
-        console.log("Found weekday slots:", weekdaySlots.length);
+        console.log("Found weekday slots:", weekdaySlots.length, weekdaySlots);
         
         // Create assignment for each weekday slot
         for (const slot of weekdaySlots) {
-          // Skip if it's the same slot as the current one (we'll add it later)
-          if (slot.id === currentSlot.id) continue;
-          
           const assignment = {
             slot_id: slot.id,
             worker_id: formData.workerId,
@@ -213,24 +211,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           } catch (error) {
             console.error("Error creating assignment for weekday slot:", error);
           }
-        }
-        
-        // Also create assignment for the current slot
-        const currentAssignment = {
-          slot_id: currentSlot.id,
-          worker_id: formData.workerId,
-          role: roleName,
-          week_start: format(currentWeek, 'yyyy-MM-dd'),
-          is_recurring: false
-        };
-        
-        try {
-          const result = await createProducerAssignment(currentAssignment);
-          if (result) {
-            successCount++;
-          }
-        } catch (error) {
-          console.error("Error creating assignment for current slot:", error);
         }
         
         if (successCount > 0) {
@@ -381,12 +361,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                     <div className="mt-2 text-sm border-t pt-2">
                                       {/* Group assignments by role */}
                                       {Object.entries(
-                                        slotAssignments.reduce((acc, assignment) => {
+                                        slotAssignments.reduce<Record<string, ProducerAssignment[]>>((acc, assignment) => {
                                           const role = assignment.role || 'ללא תפקיד';
                                           if (!acc[role]) acc[role] = [];
                                           acc[role].push(assignment);
                                           return acc;
-                                        }, {} as Record<string, ProducerAssignment[]>)
+                                        }, {})
                                       ).map(([role, roleAssignments]) => (
                                         <div key={`role-${role}-${slot.id}`} className="mb-1">
                                           <span className="font-medium">{role}: </span>
