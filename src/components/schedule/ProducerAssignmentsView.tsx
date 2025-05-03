@@ -139,12 +139,16 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         if (slotAssignments.length === 0) return null;
                         
                         // Group assignments by role
-                        const assignmentsByRole: Record<string, ProducerAssignment[]> = slotAssignments.reduce((acc, assignment) => {
+                        const assignmentsByRole: Record<string, ProducerAssignment[]> = {};
+                        
+                        // Make sure we properly handle the grouping by role
+                        slotAssignments.forEach(assignment => {
                           const role = assignment.role || 'ללא תפקיד';
-                          if (!acc[role]) acc[role] = [];
-                          acc[role].push(assignment);
-                          return acc;
-                        }, {} as Record<string, ProducerAssignment[]>);
+                          if (!assignmentsByRole[role]) {
+                            assignmentsByRole[role] = [];
+                          }
+                          assignmentsByRole[role].push(assignment);
+                        });
                         
                         return (
                           <div key={`assignment-slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
