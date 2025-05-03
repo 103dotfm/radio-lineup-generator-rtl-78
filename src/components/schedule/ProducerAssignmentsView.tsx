@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -73,13 +74,13 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     .sort((a, b) => a.localeCompare(b));
 
   // Group slots by day and time for easier lookup
-  const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
+  const slotsByDayAndTime: { [key: string]: ScheduleSlot } = {};
   scheduleSlots.forEach(slot => {
-    const key = `${slot.day_of_week}-${slot.start_time}`;
+    const key = `${slot.day_of_week}-${slot.start_time}-${slot.show_name}`;
+    // Only store one slot per day-time-show combination to prevent duplicates
     if (!slotsByDayAndTime[key]) {
-      slotsByDayAndTime[key] = [];
+      slotsByDayAndTime[key] = slot;
     }
-    slotsByDayAndTime[key].push(slot);
   });
 
   // Check if there are any assignments
@@ -130,46 +131,45 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
                 {/* Days in correct order for RTL */}
                 {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
-                  // Find slots for this day at this time
-                  const key = `${dayIndex}-${timeSlot}`;
-                  const daySlots = slotsByDayAndTime[key] || [];
-                  
                   return (
                     <TableCell key={`cell-${dayIndex}-${timeSlot}-${tsIndex}`} className="print:py-1">
-                      {daySlots.map((slot, slotIndex) => {
-                        if (!slot || !slot.id) return null;
-                        
-                        const slotAssignments = getAssignmentsForSlot(slot.id);
-                        if (slotAssignments.length === 0) return null;
-                        
-                        // Group assignments by role
-                        const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
-                        const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
-                        
-                        return (
-                          <div key={`assignment-slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
-                            <div className="font-medium">
-                              {getCombinedShowDisplay(slot.show_name, slot.host_name)}
+                      {/* For each day and time, find unique shows */}
+                      {Object.values(slotsByDayAndTime)
+                        .filter(slot => slot.day_of_week === dayIndex && slot.start_time === timeSlot)
+                        .map((slot, slotIndex) => {
+                          if (!slot || !slot.id) return null;
+                          
+                          const slotAssignments = getAssignmentsForSlot(slot.id);
+                          if (slotAssignments.length === 0) return null;
+                          
+                          // Group assignments by role
+                          const editingAssignments = slotAssignments.filter(a => a.role === "עריכה");
+                          const producingAssignments = slotAssignments.filter(a => a.role === "הפקה");
+                          
+                          return (
+                            <div key={`assignment-slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
+                              <div className="font-medium">
+                                {getCombinedShowDisplay(slot.show_name, slot.host_name)}
+                              </div>
+                              {producingAssignments.length > 0 && (
+                                <div className="mt-1">
+                                  <span className="font-medium text-xs">הפקה: </span>
+                                  {producingAssignments.map((a, idx) => 
+                                    <span key={`producer-${a.id}-${idx}`}>{a.worker?.name}{idx < producingAssignments.length - 1 ? ", " : ""}</span>
+                                  )}
+                                </div>
+                              )}
+                              {editingAssignments.length > 0 && (
+                                <div className="mt-1">
+                                  <span className="font-medium text-xs">עריכה: </span>
+                                  {editingAssignments.map((a, idx) => 
+                                    <span key={`editor-${a.id}-${idx}`}>{a.worker?.name}{idx < editingAssignments.length - 1 ? ", " : ""}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            {producingAssignments.length > 0 && (
-                              <div className="mt-1">
-                                <span className="font-medium text-xs">הפקה: </span>
-                                {producingAssignments.map((a, idx) => 
-                                  <span key={`producer-${a.id}-${idx}`}>{a.worker?.name}{idx < producingAssignments.length - 1 ? ", " : ""}</span>
-                                )}
-                              </div>
-                            )}
-                            {editingAssignments.length > 0 && (
-                              <div className="mt-1">
-                                <span className="font-medium text-xs">עריכה: </span>
-                                {editingAssignments.map((a, idx) => 
-                                  <span key={`editor-${a.id}-${idx}`}>{a.worker?.name}{idx < editingAssignments.length - 1 ? ", " : ""}</span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </TableCell>
                   );
                 })}
