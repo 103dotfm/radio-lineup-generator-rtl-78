@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -32,10 +33,33 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const loadAssignments = async () => {
     setIsLoading(true);
     try {
+      // Get assignments data
       const assignmentsData = await getProducerAssignments(selectedDate);
-      setAssignments(assignmentsData || []);
+      
+      // Process assignments to work with schedule slots
+      if (assignmentsData && assignmentsData.length > 0) {
+        // For each assignment, match it with its corresponding slot in scheduleSlots
+        const processedAssignments = assignmentsData.map(assignment => {
+          if (!assignment.slot) {
+            // Find matching slot in scheduleSlots by slot_id
+            const matchingSlot = scheduleSlots.find(slot => slot.id === assignment.slot_id);
+            if (matchingSlot) {
+              return {
+                ...assignment,
+                slot: matchingSlot
+              };
+            }
+          }
+          return assignment;
+        });
+        
+        setAssignments(processedAssignments || []);
+      } else {
+        setAssignments([]);
+      }
     } catch (error) {
       console.error("Error loading assignments:", error);
+      setAssignments([]);
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +105,9 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   });
 
   // Check if there are any assignments - use valid assignments
-  const validAssignments = assignments.filter(assignment => assignment.slot);
+  const validAssignments = assignments.filter(assignment => 
+    assignment.slot || scheduleSlots.some(slot => slot.id === assignment.slot_id)
+  );
   const hasAnyAssignments = validAssignments.length > 0;
   
   if (!hasAnyAssignments) {
