@@ -10,6 +10,8 @@ export interface Worker {
   position?: string;
   email?: string;
   phone?: string;
+  user_id?: string;
+  password_readable?: string;
 }
 
 export interface ProducerWorkArrangement {
@@ -125,6 +127,163 @@ export const deleteWorker = async (id: string): Promise<boolean> => {
   }
 };
 
+// Create a system user for a producer
+export const createProducerUser = async (workerId: string, email: string): Promise<{
+  success: boolean;
+  password?: string;
+  message?: string;
+  error?: any;
+}> => {
+  try {
+    // Check if the worker already has a user
+    const { data: worker } = await supabase
+      .from('workers')
+      .select('*')
+      .eq('id', workerId)
+      .single();
+    
+    if (worker?.user_id) {
+      return {
+        success: false,
+        message: 'המשתמש כבר קיים במערכת'
+      };
+    }
+    
+    // Generate random password
+    const randomPassword = generateStrongPassword(12);
+    
+    // Create user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email,
+      password: randomPassword,
+      email_confirm: true
+    });
+    
+    if (authError) {
+      console.error('Error creating user:', authError);
+      return {
+        success: false,
+        error: authError,
+        message: authError.message
+      };
+    }
+    
+    // Add user to regular users table
+    const userId = authData.user.id;
+    await supabase.from('users').insert({
+      id: userId,
+      email: email,
+      username: email.split('@')[0],
+      full_name: worker.name,
+      is_admin: false
+    });
+    
+    // Update worker record with user_id
+    const { error: updateError } = await supabase
+      .from('workers')
+      .update({ 
+        user_id: userId, 
+        email: email,
+        password_readable: randomPassword 
+      })
+      .eq('id', workerId);
+    
+    if (updateError) {
+      console.error('Error updating worker with user_id:', updateError);
+      return {
+        success: false,
+        error: updateError,
+        message: updateError.message
+      };
+    }
+    
+    return {
+      success: true,
+      password: randomPassword
+    };
+  } catch (error: any) {
+    console.error('Error in createProducerUser:', error);
+    return {
+      success: false,
+      error,
+      message: error.message
+    };
+  }
+};
+
+// Reset producer password
+export const resetProducerPassword = async (workerId: string): Promise<{
+  success: boolean;
+  password?: string;
+  message?: string;
+  error?: any;
+}> => {
+  try {
+    // Get the worker
+    const { data: worker, error: workerError } = await supabase
+      .from('workers')
+      .select('*')
+      .eq('id', workerId)
+      .single();
+    
+    if (workerError || !worker.user_id) {
+      return {
+        success: false,
+        message: 'לא נמצא משתמש'
+      };
+    }
+    
+    // Generate new password
+    const newPassword = generateStrongPassword(12);
+    
+    // Update user password
+    const { error: updateError } = await supabase.auth.admin.updateUserById(
+      worker.user_id,
+      { password: newPassword }
+    );
+    
+    if (updateError) {
+      console.error('Error resetting password:', updateError);
+      return {
+        success: false,
+        error: updateError,
+        message: updateError.message
+      };
+    }
+    
+    // Update worker record with new readable password
+    await supabase
+      .from('workers')
+      .update({ password_readable: newPassword })
+      .eq('id', workerId);
+    
+    return {
+      success: true,
+      password: newPassword
+    };
+  } catch (error: any) {
+    console.error('Error in resetProducerPassword:', error);
+    return {
+      success: false,
+      error,
+      message: error.message
+    };
+  }
+};
+
+// Helper function to generate a strong random password
+const generateStrongPassword = (length: number): string => {
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+';
+  let password = '';
+  
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  
+  return password;
+};
+
 // Get producer roles
 export const getProducerRoles = async (): Promise<any[]> => {
   try {
@@ -228,6 +387,26 @@ export const createProducerAssignment = async (assignment: {
       console.error(`Slot with ID ${assignment.slot_id} does not exist in schedule_slots_old table`);
       throw new Error(`Slot with ID ${assignment.slot_id} not found`);
     }
+    
+    // Check if an assignment with the same slot, worker, and role already exists
+    const { data: existingAssignment, error: checkError } = await supabase
+      .from('producer_assignments')
+      .select('*')
+      .eq('slot_id', assignment.slot_id)
+      .eq('worker_id', assignment.worker_id)
+      .eq('role', assignment.role)
+      .eq('week_start', assignment.week_start)
+      .maybeSingle();
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking for existing assignment:', checkError);
+      throw checkError;
+    }
+    
+    if (existingAssignment) {
+      console.log('Assignment already exists:', existingAssignment);
+      return existingAssignment;
+    }
 
     console.log("Creating producer assignment:", assignment);
     const { data, error } = await supabase
@@ -271,6 +450,26 @@ export const createRecurringProducerAssignment = async (
     if (!slotExists) {
       console.error(`Slot with ID ${slotId} does not exist in schedule_slots_old table`);
       throw new Error(`Slot with ID ${slotId} not found`);
+    }
+    
+    // Check if this recurring assignment already exists
+    const { data: existingAssignment, error: checkError } = await supabase
+      .from('producer_assignments')
+      .select('*')
+      .eq('slot_id', slotId)
+      .eq('worker_id', workerId)
+      .eq('role', role)
+      .eq('is_recurring', true)
+      .maybeSingle();
+    
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking for existing recurring assignment:', checkError);
+      throw checkError;
+    }
+    
+    if (existingAssignment) {
+      console.log('Recurring assignment already exists:', existingAssignment);
+      return true;
     }
 
     // Create a recurring assignment
