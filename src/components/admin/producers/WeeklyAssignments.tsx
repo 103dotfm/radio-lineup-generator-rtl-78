@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -169,93 +168,126 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               ...formData,
               workerId: ''
             });
-          } else {
-            toast({
-              title: "שגיאה",
-              description: "לא ניתן להוסיף את העובד לסידור הקבוע",
-              variant: "destructive"
-            });
-          }
-        } catch (error: any) {
-          console.error("Error creating permanent assignment:", error);
+        } else {
           toast({
             title: "שגיאה",
-            description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
+            description: "לא ניתן להוסיף את העובד לסידור הקבוע",
             variant: "destructive"
           });
         }
-      } 
-      // Check if we're creating assignments for all weekdays
-      else if (formData.isWeekdays) {
-        console.log("Creating assignments for all weekdays with slot:", currentSlot);
+      } catch (error: any) {
+        console.error("Error creating permanent assignment:", error);
+        toast({
+          title: "שגיאה",
+          description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
+          variant: "destructive"
+        });
+      }
+    } 
+    // Check if we're creating assignments for all weekdays
+    else if (formData.isWeekdays) {
+      console.log("Creating assignments for all weekdays with slot:", currentSlot);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      // First create assignment for current slot
+      try {
+        const currentSlotAssignment = {
+          slot_id: currentSlot.id,
+          worker_id: formData.workerId,
+          role: roleName,
+          week_start: format(currentWeek, 'yyyy-MM-dd'),
+          is_recurring: false
+        };
         
-        let successCount = 0;
-        let errorCount = 0;
-        
-        // First create assignment for current slot
-        try {
-          const currentSlotAssignment = {
-            slot_id: currentSlot.id,
-            worker_id: formData.workerId,
-            role: roleName,
-            week_start: format(currentWeek, 'yyyy-MM-dd'),
-            is_recurring: false
-          };
-          
-          const result = await createProducerAssignment(currentSlotAssignment);
-          if (result) {
-            successCount++;
-          }
-        } catch (error: any) {
-          console.error("Error creating assignment for current slot:", error);
-          errorCount++;
+        const result = await createProducerAssignment(currentSlotAssignment);
+        if (result) {
+          successCount++;
         }
+      } catch (error: any) {
+        console.error("Error creating assignment for current slot:", error);
+        errorCount++;
+      }
+      
+      // Then find all other weekday slots with the same time
+      const currentTime = currentSlot.start_time;
+      const currentDay = currentSlot.day_of_week;
+      
+      // Get applicable days (0-3, excluding the current day)
+      const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
+      
+      for (const dayIndex of applicableDays) {
+        const key = `${dayIndex}-${currentTime}`;
+        const slotsForDay = slotsByDayAndTime[key] || [];
         
-        // Then find all other weekday slots with the same time
-        const currentTime = currentSlot.start_time;
-        const currentDay = currentSlot.day_of_week;
-        
-        // Get applicable days (0-3, excluding the current day)
-        const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
-        
-        for (const dayIndex of applicableDays) {
-          const key = `${dayIndex}-${currentTime}`;
-          const slotsForDay = slotsByDayAndTime[key] || [];
-          
-          // Check if we have slots for this day and time
-          if (slotsForDay.length > 0) {
-            for (const slot of slotsForDay) {
-              // Make sure slot exists and is valid
-              if (!slot || !slot.id) continue;
+        // Check if we have slots for this day and time
+        if (slotsForDay.length > 0) {
+          for (const slot of slotsForDay) {
+            // Make sure slot exists and is valid
+            if (!slot || !slot.id) continue;
+            
+            try {
+              const assignment = {
+                slot_id: slot.id,
+                worker_id: formData.workerId,
+                role: roleName,
+                week_start: format(currentWeek, 'yyyy-MM-dd'),
+                is_recurring: false
+              };
               
-              try {
-                const assignment = {
-                  slot_id: slot.id,
-                  worker_id: formData.workerId,
-                  role: roleName,
-                  week_start: format(currentWeek, 'yyyy-MM-dd'),
-                  is_recurring: false
-                };
-                
-                console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
-                const result = await createProducerAssignment(assignment);
-                if (result) {
-                  successCount++;
-                }
-              } catch (error: any) {
-                console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
-                errorCount++;
+              console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
+              const result = await createProducerAssignment(assignment);
+              if (result) {
+                successCount++;
               }
+            } catch (error: any) {
+              console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
+              errorCount++;
             }
-          } else {
-            console.log(`No slots found for day ${dayIndex} at time ${currentTime}`);
           }
+        } else {
+          console.log(`No slots found for day ${dayIndex} at time ${currentTime}`);
         }
+      }
+      
+      if (successCount > 0) {
+        toast({
+          title: "נוסף בהצלחה",
+          description: `העובד נוסף ל-${successCount} משבצות בסידור העבודה`
+        });
+        await loadData(); // Refresh the assignments
+        // Don't close dialog, allow adding more producers
+        // Reset producer selection for next addition
+        setFormData({
+          ...formData,
+          workerId: ''
+        });
+      } else {
+        toast({
+          title: "מידע",
+          description: errorCount > 0 
+            ? "אירעו שגיאות בהוספת השיבוצים. בדוק את הלוג לפרטים נוספים." 
+            : "לא נמצאו תוכניות נוספות לשיבוץ או שכל השיבוצים כבר קיימים"
+        });
+      }
+    } else {
+      // Create a single assignment
+      try {
+        const assignment = {
+          slot_id: currentSlot.id,
+          worker_id: formData.workerId,
+          role: roleName,
+          week_start: format(currentWeek, 'yyyy-MM-dd'),
+          is_recurring: false
+        };
         
-        if (successCount > 0) {
+        console.log("Creating single assignment for slot:", currentSlot);
+        const result = await createProducerAssignment(assignment);
+        if (result) {
           toast({
             title: "נוסף בהצלחה",
-            description: `העובד נוסף ל-${successCount} משבצות בסידור העבודה`
+            description: "העובד נוסף לסידור העבודה בהצלחה"
           });
           await loadData(); // Refresh the assignments
           // Don't close dialog, allow adding more producers
@@ -267,60 +299,27 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         } else {
           toast({
             title: "מידע",
-            description: errorCount > 0 
-              ? "אירעו שגיאות בהוספת השיבוצים. בדוק את הלוג לפרטים נוספים." 
-              : "לא נמצאו תוכניות נוספות לשיבוץ או שכל השיבוצים כבר קיימים"
+            description: "שיבוץ זה כבר קיים או שלא ניתן להוסיף את העובד"
           });
         }
-      } else {
-        // Create a single assignment
-        try {
-          const assignment = {
-            slot_id: currentSlot.id,
-            worker_id: formData.workerId,
-            role: roleName,
-            week_start: format(currentWeek, 'yyyy-MM-dd'),
-            is_recurring: false
-          };
-          
-          console.log("Creating single assignment for slot:", currentSlot);
-          const result = await createProducerAssignment(assignment);
-          if (result) {
-            toast({
-              title: "נוסף בהצלחה",
-              description: "העובד נוסף לסידור העבודה בהצלחה"
-            });
-            await loadData(); // Refresh the assignments
-            // Don't close dialog, allow adding more producers
-            // Reset producer selection for next addition
-            setFormData({
-              ...formData,
-              workerId: ''
-            });
-          } else {
-            toast({
-              title: "מידע",
-              description: "שיבוץ זה כבר קיים או שלא ניתן להוסיף את העובד"
-            });
-          }
-        } catch (error: any) {
-          console.error("Error creating producer assignment:", error);
-          toast({
-            title: "שגיאה",
-            description: error.message || "שגיאה ביצירת שיבוץ חדש",
-            variant: "destructive"
-          });
-        }
+      } catch (error: any) {
+        console.error("Error creating producer assignment:", error);
+        toast({
+          title: "שגיאה",
+          description: error.message || "שגיאה ביצירת שיבוץ חדש",
+          variant: "destructive"
+        });
       }
-    } catch (error: any) {
-      console.error("Error assigning producer:", error);
-      toast({
-        title: "שגיאה",
-        description: error.message || "אירעה שגיאה בהוספת העובד לסידור",
-        variant: "destructive"
-      });
     }
-  };
+  } catch (error: any) {
+    console.error("Error assigning producer:", error);
+    toast({
+      title: "שגיאה",
+      description: error.message || "אירעה שגיאה בהוספת העובד לסידור",
+      variant: "destructive"
+    });
+  }
+};
   
   const handleDeleteAssignment = async (assignmentId: string) => {
     if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
@@ -444,7 +443,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                         }, {})
                                       ).map(([role, roleAssignments]) => (
                                         <div key={`role-${role}-${slot.id}`} className="mb-1">
-                                          <span className="font-medium">{role}: </span>
+                                          <span className="font-medium">{role}: </span> 
                                           <div className="space-y-1">
                                             {roleAssignments.map((assignment) => (
                                               <div key={`assignment-${assignment.id}`} className="flex justify-between items-center bg-white p-1 rounded">

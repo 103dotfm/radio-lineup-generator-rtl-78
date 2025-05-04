@@ -77,8 +77,10 @@ export const ScheduleView = ({
   
   const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
 
+  // Important: Update the selectedDate when the prop changes
   React.useEffect(() => {
     if (selectedDate && selectedDate !== selectedDateState && isValid(selectedDate)) {
+      console.log("ScheduleView: selectedDate changed, updating to:", selectedDate);
       setSelectedDate(selectedDate);
     }
   }, [selectedDate, selectedDateState, setSelectedDate]);

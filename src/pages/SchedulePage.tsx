@@ -54,6 +54,7 @@ const SchedulePage = () => {
   useEffect(() => {
     const formattedDate = format(currentWeek, 'yyyy-MM-dd');
     if (weekDate !== formattedDate) {
+      console.log("Updating URL to match currentWeek:", formattedDate);
       navigate(`/schedule/${formattedDate}`, {
         replace: true
       });
@@ -96,7 +97,10 @@ const SchedulePage = () => {
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
-    setCurrentWeek(prev => direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1));
+    console.log(`Navigating ${direction}...`);
+    const newDate = direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1);
+    console.log("New week date:", format(newDate, 'yyyy-MM-dd'));
+    setCurrentWeek(newDate);
   };
 
   const weekStart = format(currentWeek, 'dd/MM/yyyy', { locale: he });

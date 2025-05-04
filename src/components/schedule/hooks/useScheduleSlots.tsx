@@ -1,129 +1,87 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { getScheduleSlots, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from '@/lib/supabase/schedule';
-import { useToast } from '@/hooks/use-toast';
 import { ScheduleSlot } from '@/types/schedule';
 import { format } from 'date-fns';
 
-export const useScheduleSlots = (selectedDate: Date, isMasterSchedule: boolean = false) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+interface UpdateSlotParams {
+  id: string;
+  updates: Partial<ScheduleSlot>;
+}
 
-  const {
-    data: scheduleSlots = [],
-    isLoading
-  } = useQuery({
-    queryKey: ['scheduleSlots', selectedDate, isMasterSchedule],
-    queryFn: () => {
-      console.log('Fetching slots with params:', {
-        selectedDate,
-        isMasterSchedule
-      });
-      return getScheduleSlots(selectedDate, isMasterSchedule);
-    },
-    meta: {
-      onSuccess: (data: ScheduleSlot[]) => {
-        console.log('Successfully fetched slots:', data);
-      },
-      onError: (error: Error) => {
-        console.error('Error fetching slots:', error);
+export const useScheduleSlots = (selectedDate?: Date, isMasterSchedule: boolean = false) => {
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Add a key to track when to refresh data
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+
+  // Create a formatted date string for dependency tracking
+  const dateString = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+
+  // Fetch schedule slots when the component mounts or the date changes
+  useEffect(() => {
+    const fetchScheduleSlots = async () => {
+      console.log('Fetching schedule slots...', { selectedDate, dateString, isMasterSchedule });
+      setIsLoading(true);
+      try {
+        const slots = await getScheduleSlots(selectedDate, isMasterSchedule);
+        setScheduleSlots(slots);
+      } catch (error) {
+        console.error('Error fetching schedule slots:', error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  });
+    };
 
-  const createSlotMutation = useMutation({
-    mutationFn: (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => 
-      createScheduleSlot(slotData, isMasterSchedule, selectedDate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      queryClient.invalidateQueries({
-        queryKey: ['shows', dateString]
-      });
-      
-      toast({
-        title: 'משבצת שידור נוספה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error creating slot:', error);
-      toast({
-        title: 'שגיאה בהוספת משבצת שידור',
-        variant: 'destructive'
-      });
-    }
-  });
+    fetchScheduleSlots();
+  }, [dateString, isMasterSchedule, refreshKey]);
 
-  const updateSlotMutation = useMutation({
-    mutationFn: ({
-      id,
-      updates
-    }: {
-      id: string;
-      updates: Partial<ScheduleSlot>;
-    }) => {
-      console.log("Mutation updating slot:", {
-        id,
-        updates
-      });
-      return updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
-      
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      queryClient.invalidateQueries({
-        queryKey: ['shows', dateString]
-      });
-      
-      toast({
-        title: 'משבצת שידור עודכנה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error updating slot:', error);
-      toast({
-        title: 'שגיאה בעדכון משבצת שידור',
-        variant: 'destructive'
-      });
+  // Create a new slot
+  const createSlot = async (slotData: Omit<ScheduleSlot, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const newSlot = await createScheduleSlot(slotData, isMasterSchedule, selectedDate);
+      setScheduleSlots((prev) => [...prev, newSlot]);
+      return newSlot;
+    } catch (error) {
+      console.error('Error creating schedule slot:', error);
+      throw error;
     }
-  });
+  };
 
-  const deleteSlotMutation = useMutation({
-    mutationFn: (id: string) => deleteScheduleSlot(id, isMasterSchedule, selectedDate),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['scheduleSlots']
-      });
+  // Update an existing slot
+  const updateSlot = async ({ id, updates }: UpdateSlotParams) => {
+    try {
+      const updatedSlot = await updateScheduleSlot(id, updates, isMasterSchedule, selectedDate);
       
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      queryClient.invalidateQueries({
-        queryKey: ['shows', dateString]
-      });
+      // Force a full data refresh instead of trying to update the local state
+      setRefreshKey(prev => prev + 1);
       
-      toast({
-        title: 'משבצת שידור נמחקה בהצלחה'
-      });
-    },
-    onError: error => {
-      console.error('Error deleting slot:', error);
-      toast({
-        title: 'שגיאה במחיקת משבצת שידור',
-        variant: 'destructive'
-      });
+      return updatedSlot;
+    } catch (error) {
+      console.error('Error updating schedule slot:', error);
+      throw error;
     }
-  });
+  };
+
+  // Delete a slot
+  const deleteSlot = async (id: string) => {
+    try {
+      await deleteScheduleSlot(id, isMasterSchedule, selectedDate);
+      // Force a full data refresh instead of trying to update the local state
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Error deleting schedule slot:', error);
+      throw error;
+    }
+  };
 
   return {
     scheduleSlots,
     isLoading,
-    createSlot: createSlotMutation.mutateAsync,
-    updateSlot: updateSlotMutation.mutateAsync,
-    deleteSlot: deleteSlotMutation.mutateAsync
+    createSlot,
+    updateSlot,
+    deleteSlot,
+    refreshData: () => setRefreshKey(prev => prev + 1)
   };
 };
