@@ -38,8 +38,29 @@ export const getWorkers = async (): Promise<Worker[]> => {
   }
 };
 
+// This function is needed by ProducersTable.tsx and MonthlySummary.tsx
+export const getProducers = async (): Promise<Worker[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('workers')
+      .select('*')
+      .eq('department', 'producers')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching producers:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getProducers:', error);
+    throw error;
+  }
+};
+
 // Create a new worker
-export const createWorker = async (workerData: Partial<Worker>): Promise<Worker | null> => {
+export const createWorker = async (workerData: { name: string } & Partial<Worker>): Promise<Worker | null> => {
   try {
     const { data, error } = await supabase
       .from('workers')
@@ -102,11 +123,11 @@ export const deleteWorker = async (id: string): Promise<boolean> => {
 };
 
 // Get producer roles
-export const getProducerRoles = async (): Promise<string[]> => {
+export const getProducerRoles = async (): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('producer_roles')
-      .select('name')
+      .select('*')
       .order('name');
 
     if (error) {
@@ -114,10 +135,10 @@ export const getProducerRoles = async (): Promise<string[]> => {
       throw error;
     }
 
-    return (data || []).map(role => role.name);
+    return data || [];
   } catch (error) {
     console.error('Error in getProducerRoles:', error);
-    return ['עורך', 'מפיק'];
+    return [];
   }
 };
 
@@ -180,7 +201,13 @@ export const updateProducerWorkArrangementNotes = async (id: string, notes: stri
 };
 
 // Create a producer assignment
-export const createProducerAssignment = async (assignment: Partial<ProducerAssignment>): Promise<ProducerAssignment | null> => {
+export const createProducerAssignment = async (assignment: {
+  slot_id: string;
+  worker_id: string;
+  role: string;
+  week_start: string;
+  is_recurring?: boolean;
+}): Promise<ProducerAssignment | null> => {
   try {
     console.log("Creating producer assignment:", assignment);
     const { data, error } = await supabase
@@ -198,6 +225,41 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
   } catch (error) {
     console.error('Error in createProducerAssignment:', error);
     throw error;
+  }
+};
+
+// Create recurring producer assignment
+export const createRecurringProducerAssignment = async (
+  slotId: string, 
+  workerId: string, 
+  role: string, 
+  weekStart: string
+): Promise<boolean> => {
+  try {
+    // Create a recurring assignment
+    const assignment = {
+      slot_id: slotId,
+      worker_id: workerId,
+      role: role,
+      week_start: weekStart,
+      is_recurring: true
+    };
+    
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .insert(assignment)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error creating recurring producer assignment:', error);
+      throw error;
+    }
+
+    return data !== null;
+  } catch (error) {
+    console.error('Error in createRecurringProducerAssignment:', error);
+    return false;
   }
 };
 
@@ -241,7 +303,6 @@ export const getProducerAssignments = async (date: Date): Promise<ProducerAssign
     }
     
     // Then get recurring assignments that should apply to this week
-    // These are assignments marked as recurring but don't have an entry for this specific week
     const { data: recurringAssignments, error: recurringError } = await supabase
       .from('producer_assignments')
       .select(`
@@ -283,5 +344,32 @@ export const getProducerAssignments = async (date: Date): Promise<ProducerAssign
   } catch (error) {
     console.error('Error in getProducerAssignments:', error);
     throw error;
+  }
+};
+
+// Get all monthly assignments for the monthly summary
+export const getAllMonthlyAssignments = async (year: number, month: number): Promise<ProducerAssignment[]> => {
+  try {
+    // Format month with leading zero if needed
+    const monthStr = month.toString().padStart(2, '0');
+    
+    // Find all assignments for the given month
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .select(`
+        *,
+        worker:workers(id, name, position)
+      `)
+      .like('week_start', `${year}-${monthStr}-%`);
+      
+    if (error) {
+      console.error('Error fetching monthly producer assignments:', error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in getAllMonthlyAssignments:', error);
+    return [];
   }
 };
