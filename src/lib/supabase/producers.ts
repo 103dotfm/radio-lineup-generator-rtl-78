@@ -217,11 +217,16 @@ export const createProducerAssignment = async (assignment: {
       .from('schedule_slots_old')
       .select('id')
       .eq('id', assignment.slot_id)
-      .single();
+      .maybeSingle();
 
     if (slotCheckError) {
       console.error('Failed to find slot in schedule_slots_old:', slotCheckError);
-      throw new Error(`Slot with ID ${assignment.slot_id} does not exist in schedule_slots_old table`);
+      throw new Error(`Failed to verify slot existence: ${slotCheckError.message}`);
+    }
+    
+    if (!slotExists) {
+      console.error(`Slot with ID ${assignment.slot_id} does not exist in schedule_slots_old table`);
+      throw new Error(`Slot with ID ${assignment.slot_id} not found`);
     }
 
     console.log("Creating producer assignment:", assignment);
@@ -256,11 +261,16 @@ export const createRecurringProducerAssignment = async (
       .from('schedule_slots_old')
       .select('id')
       .eq('id', slotId)
-      .single();
+      .maybeSingle();
 
     if (slotCheckError) {
       console.error('Failed to find slot in schedule_slots_old:', slotCheckError);
-      throw new Error(`Slot with ID ${slotId} does not exist in schedule_slots_old table`);
+      throw new Error(`Failed to verify slot existence: ${slotCheckError.message}`);
+    }
+    
+    if (!slotExists) {
+      console.error(`Slot with ID ${slotId} does not exist in schedule_slots_old table`);
+      throw new Error(`Slot with ID ${slotId} not found`);
     }
 
     // Create a recurring assignment

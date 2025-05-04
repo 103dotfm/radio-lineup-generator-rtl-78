@@ -366,7 +366,7 @@ export type Database = {
             foreignKeyName: "producer_assignments_slot_id_fkey"
             columns: ["slot_id"]
             isOneToOne: false
-            referencedRelation: "schedule_slots"
+            referencedRelation: "schedule_slots_old"
             referencedColumns: ["id"]
           },
           {
