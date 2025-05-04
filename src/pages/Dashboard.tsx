@@ -28,6 +28,7 @@ const Dashboard = () => {
   const { data: shows, isLoading } = useQuery({
     queryKey: ['shows', searchQuery],
     queryFn: () => searchQuery ? searchShows(searchQuery) : getShows(),
+    staleTime: 30000, // 30 seconds stale time to reduce frequent refetches
     refetchOnWindowFocus: true
   });
   
