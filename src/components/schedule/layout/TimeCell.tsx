@@ -29,15 +29,25 @@ const TimeCell: React.FC<TimeCellProps> = ({
   isAdmin,
   isAuthenticated
 }) => {
-  const relevantSlots = scheduleSlots.filter(
-    slot => slot.day_of_week === dayIndex && isSlotStartTime(slot.start_time, time)
-  );
+  // Filter to find the correct slots for this cell and remove duplicates
+  const slotsMap = new Map<string, ScheduleSlot>();
+  
+  scheduleSlots.forEach(slot => {
+    if (slot.day_of_week === dayIndex && isSlotStartTime(slot.start_time, time)) {
+      const uniqueKey = `${slot.id}-${slot.show_name}-${slot.host_name}`;
+      if (!slotsMap.has(uniqueKey)) {
+        slotsMap.set(uniqueKey, slot);
+      }
+    }
+  });
+  
+  const relevantSlots = Array.from(slotsMap.values());
   
   return (
     <div key={cellKey} className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
       {isCurrentMonth && relevantSlots.map((slot, index) => (
         <ScheduleGridCell 
-          key={`schedule-slot-${slot.id}-${time}-${dayIndex}-${index}`}
+          key={`schedule-slot-${slot.id}-${time}-${dayIndex}-${index}-${Date.now()}`}
           slot={slot}
           handleSlotClick={handleSlotClick}
           handleEditSlot={handleEditSlot}

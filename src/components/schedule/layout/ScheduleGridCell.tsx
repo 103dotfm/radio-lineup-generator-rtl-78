@@ -24,6 +24,9 @@ export default function ScheduleGridCell({
 }: ScheduleGridCellProps) {
   const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
 
+  // Generate a stable key for this cell
+  const cellKey = `slot-${slot.id}-${slot.day_of_week}-${slot.start_time}`;
+
   return (
     <div 
       onClick={slotClickHandler} 
@@ -37,6 +40,7 @@ export default function ScheduleGridCell({
         zIndex: 10
       }}
       data-slot-id={slot.id}
+      data-cell-key={cellKey}
     >
       <SlotContent slot={slot} />
       
