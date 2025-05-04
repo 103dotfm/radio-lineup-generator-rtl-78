@@ -1,5 +1,3 @@
-
-
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -25,7 +23,7 @@ export const getWorkers = async (): Promise<Worker[]> => {
       }, 10000); // 10 second timeout
     });
     
-    // The actual data fetch - update to include user_id and password_readable
+    // The actual data fetch - include user_id and password_readable
     const fetchPromise = supabase
       .from('workers')
       .select('id, name, department, position, email, phone, user_id, password_readable')

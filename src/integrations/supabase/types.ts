@@ -943,9 +943,11 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          password_readable: string | null
           phone: string | null
           position: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -953,9 +955,11 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          password_readable?: string | null
           phone?: string | null
           position?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -963,9 +967,11 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          password_readable?: string | null
           phone?: string | null
           position?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
