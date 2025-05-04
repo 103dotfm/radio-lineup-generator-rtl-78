@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -162,7 +163,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               description: "העובד נוסף לסידור העבודה הקבוע בהצלחה"
             });
             await loadData(); // Refresh the assignments
-            setIsDialogOpen(false);
+            // Don't close dialog, allow adding more producers
+            // Reset producer selection for next addition
+            setFormData({
+              ...formData,
+              workerId: ''
+            });
           } else {
             toast({
               title: "שגיאה",
@@ -252,7 +258,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             description: `העובד נוסף ל-${successCount} משבצות בסידור העבודה`
           });
           await loadData(); // Refresh the assignments
-          setIsDialogOpen(false);
+          // Don't close dialog, allow adding more producers
+          // Reset producer selection for next addition
+          setFormData({
+            ...formData,
+            workerId: ''
+          });
         } else {
           toast({
             title: "מידע",
@@ -280,7 +291,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               description: "העובד נוסף לסידור העבודה בהצלחה"
             });
             await loadData(); // Refresh the assignments
-            setIsDialogOpen(false);
+            // Don't close dialog, allow adding more producers
+            // Reset producer selection for next addition
+            setFormData({
+              ...formData,
+              workerId: ''
+            });
           } else {
             toast({
               title: "מידע",
@@ -330,6 +346,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     }
   };
   
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+  };
+  
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
   // Sort timeslots to display them in chronological order
   const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
@@ -337,6 +357,26 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   if (isLoading || slotsLoading) {
     return <div className="text-center py-4">טוען...</div>;
   }
+  
+  // Filter out producers that are already assigned with this role to this slot
+  const getAvailableProducers = () => {
+    if (!currentSlot) return producers;
+    
+    const existingAssignments = assignments.filter(
+      assignment => assignment.slot_id === currentSlot.id
+    );
+    
+    // Get producers who are already assigned with the selected role
+    const producersWithSelectedRole = existingAssignments
+      .filter(assignment => {
+        const selectedRole = roles.find(r => r.id === formData.role);
+        return assignment.role === (selectedRole ? selectedRole.name : '');
+      })
+      .map(assignment => assignment.worker_id);
+    
+    // Return producers who aren't already assigned with this role
+    return producers.filter(producer => !producersWithSelectedRole.includes(producer.id));
+  };
   
   return (
     <div className="space-y-6">
@@ -470,7 +510,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                     <SelectValue placeholder="בחר עובד" />
                   </SelectTrigger>
                   <SelectContent>
-                    {producers.map((producer) => (
+                    {getAvailableProducers().map((producer) => (
                       <SelectItem key={`producer-select-${producer.id}`} value={producer.id}>
                         {producer.name} {producer.position && `(${producer.position})`}
                       </SelectItem>
@@ -520,8 +560,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={handleSubmit}>הוסף לסידור</Button>
+          <DialogFooter className="flex justify-between">
+            <Button variant="outline" onClick={handleCloseDialog}>סגור</Button>
+            <Button onClick={handleSubmit} disabled={!formData.workerId || !formData.role}>הוסף לסידור</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
