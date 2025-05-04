@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 
@@ -99,19 +98,49 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
   try {
     const formattedDate = format(weekStart, 'yyyy-MM-dd');
     
-    const { data, error } = await supabase
+    // First try using separate queries for schedule_slots_old
+    const { data: assignmentsData, error: assignmentsError } = await supabase
       .from('producer_assignments')
       .select(`
         *,
-        worker:workers (id, name, position),
-        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name, host_name)
+        worker:workers (id, name, position)
       `)
       .eq('week_start', formattedDate);
-      
-    if (error) throw error;
     
-    // Filter out any assignments with invalid slots
-    return processAssignments(data || []);
+    if (assignmentsError) throw assignmentsError;
+    
+    // Now fetch the slot data separately
+    const assignments = assignmentsData || [];
+    const slotIds = assignments.map(a => a.slot_id).filter(Boolean);
+    
+    if (slotIds.length === 0) {
+      return [];
+    }
+    
+    const { data: slotsData, error: slotsError } = await supabase
+      .from('schedule_slots_old')
+      .select('id, day_of_week, start_time, end_time, show_name, host_name')
+      .in('id', slotIds);
+      
+    if (slotsError) {
+      console.error("Error fetching slots:", slotsError);
+      // Return assignments without slot data rather than failing completely
+      return assignments.map(a => ({ ...a, slot: null }));
+    }
+    
+    // Create a lookup map for slots
+    const slotMap: Record<string, any> = {};
+    (slotsData || []).forEach(slot => {
+      slotMap[slot.id] = slot;
+    });
+    
+    // Attach the slot data to each assignment
+    const enrichedAssignments = assignments.map(assignment => ({
+      ...assignment,
+      slot: slotMap[assignment.slot_id] || null
+    }));
+    
+    return processAssignments(enrichedAssignments);
   } catch (error) {
     console.error('Error fetching producer assignments:', error);
     return [];
