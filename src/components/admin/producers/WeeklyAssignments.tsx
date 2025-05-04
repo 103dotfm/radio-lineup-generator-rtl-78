@@ -36,7 +36,7 @@ import {
   getProducerAssignments,
   getProducerRoles,
   getProducers,
-  ProducerAssignment
+  type ProducerAssignment
 } from '@/lib/supabase/producers';
 import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
 import { Label } from '@/components/ui/label';
