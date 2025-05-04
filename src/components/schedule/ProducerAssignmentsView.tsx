@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -81,8 +80,9 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     }
   });
 
-  // Check if there are any assignments
-  const hasAnyAssignments = assignments.length > 0;
+  // Check if there are any assignments - use valid assignments
+  const validAssignments = assignments.filter(assignment => assignment.slot);
+  const hasAnyAssignments = validAssignments.length > 0;
   
   if (!hasAnyAssignments) {
     return (
@@ -124,8 +124,8 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
             </TableRow>
           </TableHeader>
           <TableBody>
-            {timeSlots.map((timeSlot, tsIndex) => (
-              <TableRow key={`timeslot-${timeSlot}-${tsIndex}`}>
+            {timeSlots.map((timeSlot) => (
+              <TableRow key={`timeslot-${timeSlot}`}>
                 <TableCell className="print:py-1 font-medium">{timeSlot}</TableCell>
                 {/* Days in correct order for RTL */}
                 {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
@@ -133,8 +133,8 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                   const slotsForCell = slotsByDayAndTime[key] || [];
                   
                   return (
-                    <TableCell key={`cell-${dayIndex}-${timeSlot}-${tsIndex}`} className="print:py-1">
-                      {slotsForCell.map((slot, slotIndex) => {
+                    <TableCell key={`cell-${dayIndex}-${timeSlot}`} className="print:py-1">
+                      {slotsForCell.map((slot) => {
                         const slotAssignments = getAssignmentsForSlot(slot.id);
                         if (slotAssignments.length === 0) return null;
                         
@@ -151,13 +151,13 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         });
                         
                         return (
-                          <div key={`assignment-slot-${slot.id}-${slotIndex}-${timeSlot}`} className="p-1 text-sm">
+                          <div key={`assignment-slot-${slot.id}-${timeSlot}`} className="p-1 text-sm">
                             <div className="font-medium">
                               {getCombinedShowDisplay(slot.show_name, slot.host_name)}
                             </div>
                             
                             {Object.entries(assignmentsByRole).map(([role, roleAssignments]) => (
-                              <div key={`role-${role}-${slot.id}-${role}`} className="mt-1">
+                              <div key={`role-${role}-${slot.id}`} className="mt-1">
                                 <span className="font-medium text-xs">{role}: </span>
                                 {roleAssignments.map((a, idx) => (
                                   <span key={`worker-${a.id}-${idx}`}>
