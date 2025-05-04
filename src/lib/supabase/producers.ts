@@ -18,6 +18,9 @@ export interface ProducerWorkArrangement {
   notes: string;
 }
 
+// Re-export the ProducerAssignment type so it can be imported from this file
+export type { ProducerAssignment };
+
 // Get workers (for producer assignments)
 export const getWorkers = async (): Promise<Worker[]> => {
   try {
