@@ -126,7 +126,7 @@ export const deleteWorker = async (id: string): Promise<boolean> => {
   }
 };
 
-// Create a system user for a producer
+// Create a system user for a producer using an edge function
 export const createProducerUser = async (workerId: string, email: string): Promise<{
   success: boolean;
   password?: string;
@@ -148,57 +148,33 @@ export const createProducerUser = async (workerId: string, email: string): Promi
       };
     }
     
-    // Generate random password
-    const randomPassword = generateStrongPassword(12);
-    
-    // Create user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: email,
-      password: randomPassword,
-      email_confirm: true
-    });
-    
-    if (authError) {
-      console.error('Error creating user:', authError);
-      return {
-        success: false,
-        error: authError,
-        message: authError.message
-      };
-    }
-    
-    // Add user to regular users table
-    const userId = authData.user.id;
-    await supabase.from('users').insert({
-      id: userId,
-      email: email,
-      username: email.split('@')[0],
-      full_name: worker.name,
-      is_admin: false
-    });
-    
-    // Update worker record with user_id
-    const { error: updateError } = await supabase
-      .from('workers')
-      .update({ 
-        user_id: userId, 
-        email: email,
-        password_readable: randomPassword 
+    // Call the edge function to create the user
+    const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-producer-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabase.supabaseKey}`
+      },
+      body: JSON.stringify({ 
+        workerId, 
+        email 
       })
-      .eq('id', workerId);
+    });
     
-    if (updateError) {
-      console.error('Error updating worker with user_id:', updateError);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('Error from edge function:', result);
       return {
         success: false,
-        error: updateError,
-        message: updateError.message
+        message: result.message || 'שגיאה ביצירת משתמש',
+        error: result.error
       };
     }
     
     return {
       success: true,
-      password: randomPassword
+      password: result.password
     };
   } catch (error: any) {
     console.error('Error in createProducerUser:', error);
@@ -210,7 +186,7 @@ export const createProducerUser = async (workerId: string, email: string): Promi
   }
 };
 
-// Reset producer password
+// Reset producer password using an edge function
 export const resetProducerPassword = async (workerId: string): Promise<{
   success: boolean;
   password?: string;
@@ -218,47 +194,30 @@ export const resetProducerPassword = async (workerId: string): Promise<{
   error?: any;
 }> => {
   try {
-    // Get the worker
-    const { data: worker, error: workerError } = await supabase
-      .from('workers')
-      .select('*')
-      .eq('id', workerId)
-      .single();
+    // Call the edge function to reset the password
+    const response = await fetch(`${supabase.supabaseUrl}/functions/v1/reset-producer-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabase.supabaseKey}`
+      },
+      body: JSON.stringify({ workerId })
+    });
     
-    if (workerError || !worker.user_id) {
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('Error from edge function:', result);
       return {
         success: false,
-        message: 'לא נמצא משתמש'
+        message: result.message || 'שגיאה באיפוס סיסמה',
+        error: result.error
       };
     }
-    
-    // Generate new password
-    const newPassword = generateStrongPassword(12);
-    
-    // Update user password
-    const { error: updateError } = await supabase.auth.admin.updateUserById(
-      worker.user_id,
-      { password: newPassword }
-    );
-    
-    if (updateError) {
-      console.error('Error resetting password:', updateError);
-      return {
-        success: false,
-        error: updateError,
-        message: updateError.message
-      };
-    }
-    
-    // Update worker record with new readable password
-    await supabase
-      .from('workers')
-      .update({ password_readable: newPassword })
-      .eq('id', workerId);
     
     return {
       success: true,
-      password: newPassword
+      password: result.password
     };
   } catch (error: any) {
     console.error('Error in resetProducerPassword:', error);
