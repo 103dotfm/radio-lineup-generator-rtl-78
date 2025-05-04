@@ -159,12 +159,12 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                             {Object.entries(assignmentsByRole).map(([role, roleAssignments]) => (
                               <div key={`role-${role}-${slot.id}`} className="mt-1">
                                 <span className="font-medium text-xs">{role}: </span>
-                                {roleAssignments.map((a, idx) => 
+                                {roleAssignments.map((a, idx) => (
                                   <span key={`worker-${a.id}-${idx}`}>
                                     {a.worker?.name}
                                     {idx < roleAssignments.length - 1 ? ", " : ""}
                                   </span>
-                                )}
+                                ))}
                               </div>
                             ))}
                           </div>

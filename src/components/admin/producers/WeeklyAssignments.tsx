@@ -178,38 +178,53 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         // Create assignments for Sunday-Wednesday (0-3) at that time
         let successCount = 0;
         
-        // Get only the slots with matching start_time for days 0-3 (Sunday-Wednesday)
-        const weekdaySlots: ScheduleSlot[] = [];
-        const currentTime = currentSlot.start_time;
+        // First create assignment for current slot
+        const currentSlotAssignment = {
+          slot_id: currentSlot.id,
+          worker_id: formData.workerId,
+          role: roleName,
+          week_start: format(currentWeek, 'yyyy-MM-dd'),
+          is_recurring: false
+        };
         
-        // Collect all slots with the same start_time for weekdays (Sun-Wed)
-        for (let dayIndex = 0; dayIndex <= 3; dayIndex++) {
+        try {
+          const result = await createProducerAssignment(currentSlotAssignment);
+          if (result) {
+            successCount++;
+          }
+        } catch (error) {
+          console.error("Error creating assignment for current slot:", error);
+        }
+        
+        // Then find all other weekday slots with the same time
+        const currentTime = currentSlot.start_time;
+        const currentDay = currentSlot.day_of_week;
+        
+        // Get applicable days (0-3, excluding the current day)
+        const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
+        
+        for (const dayIndex of applicableDays) {
           const key = `${dayIndex}-${currentTime}`;
           const slotsForDay = slotsByDayAndTime[key] || [];
           
-          weekdaySlots.push(...slotsForDay);
-        }
-        
-        console.log("Found weekday slots:", weekdaySlots.length, weekdaySlots);
-        
-        // Create assignment for each weekday slot
-        for (const slot of weekdaySlots) {
-          const assignment = {
-            slot_id: slot.id,
-            worker_id: formData.workerId,
-            role: roleName,
-            week_start: format(currentWeek, 'yyyy-MM-dd'),
-            is_recurring: false
-          };
-          
-          try {
-            console.log("Creating assignment for weekday slot:", slot.day_of_week, slot.show_name);
-            const result = await createProducerAssignment(assignment);
-            if (result) {
-              successCount++;
+          for (const slot of slotsForDay) {
+            const assignment = {
+              slot_id: slot.id,
+              worker_id: formData.workerId,
+              role: roleName,
+              week_start: format(currentWeek, 'yyyy-MM-dd'),
+              is_recurring: false
+            };
+            
+            try {
+              console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
+              const result = await createProducerAssignment(assignment);
+              if (result) {
+                successCount++;
+              }
+            } catch (error) {
+              console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
             }
-          } catch (error) {
-            console.error("Error creating assignment for weekday slot:", error);
           }
         }
         
@@ -465,7 +480,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                   <Switch 
                     id="weekdays"
                     checked={formData.isWeekdays}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked, isPermanent: false })}
                   />
                   <Label htmlFor="weekdays" className="mr-2">
                     שיבוץ כל השבוע (ראשון-רביעי)
@@ -476,7 +491,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                   <Switch 
                     id="permanent"
                     checked={formData.isPermanent}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isPermanent: checked })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isPermanent: checked, isWeekdays: false })}
                   />
                   <Label htmlFor="permanent" className="mr-2">
                     צוות תוכנית קבוע

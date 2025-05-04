@@ -103,7 +103,7 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name, host_name)
+        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name, host_name)
       `)
       .eq('week_start', formattedDate);
       
@@ -117,67 +117,45 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
   }
 };
 
-// Check if a slot exists in either schedule_slots or schedule_slots_old
-const checkSlotExists = async (slotId: string): Promise<{ exists: boolean, table: string | null }> => {
+// Check if a slot exists in schedule_slots_old
+const checkSlotExists = async (slotId: string): Promise<boolean> => {
   try {
-    // Check schedule_slots
-    const { data: slotData, error: slotError } = await supabase
-      .from('schedule_slots')
-      .select('id')
-      .eq('id', slotId)
-      .maybeSingle();
-      
-    if (!slotError && slotData) {
-      return { exists: true, table: 'schedule_slots' };
-    }
-    
     // Check schedule_slots_old
-    const { data: oldSlotData, error: oldSlotError } = await supabase
+    const { data, error } = await supabase
       .from('schedule_slots_old')
       .select('id')
       .eq('id', slotId)
       .maybeSingle();
       
-    if (!oldSlotError && oldSlotData) {
-      return { exists: true, table: 'schedule_slots_old' };
+    if (!error && data) {
+      return true;
     }
     
-    return { exists: false, table: null };
+    return false;
   } catch (error) {
     console.error("Error checking slot existence:", error);
-    return { exists: false, table: null };
+    return false;
   }
 };
 
-// Fetch slot details from either schedule_slots or schedule_slots_old
+// Fetch slot details from schedule_slots_old
 const fetchSlotDetails = async (slotId: string) => {
   try {
-    // Try schedule_slots first
-    const { data: slotData, error: slotError } = await supabase
-      .from('schedule_slots')
-      .select('day_of_week, start_time, end_time, show_name, host_name')
-      .eq('id', slotId)
-      .maybeSingle();
-      
-    if (!slotError && slotData) {
-      return { found: true, data: slotData, table: 'schedule_slots' };
-    }
-    
-    // Try schedule_slots_old if not found in schedule_slots
-    const { data: oldSlotData, error: oldSlotError } = await supabase
+    // Try schedule_slots_old
+    const { data, error } = await supabase
       .from('schedule_slots_old')
       .select('day_of_week, start_time, end_time, show_name, host_name')
       .eq('id', slotId)
       .maybeSingle();
       
-    if (!oldSlotError && oldSlotData) {
-      return { found: true, data: oldSlotData, table: 'schedule_slots_old' };
+    if (!error && data) {
+      return { found: true, data };
     }
     
-    return { found: false, data: null, table: null };
+    return { found: false, data: null };
   } catch (error) {
     console.error("Error in fetchSlotDetails:", error);
-    return { found: false, data: null, table: null, error };
+    return { found: false, data: null, error };
   }
 };
 
@@ -201,10 +179,10 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
       return null; // Assignment already exists
     }
     
-    // Then, check if the slot exists and where
-    const slotCheck = await checkSlotExists(assignment.slot_id);
+    // Then, check if the slot exists
+    const slotExists = await checkSlotExists(assignment.slot_id);
     
-    if (!slotCheck.exists) {
+    if (!slotExists) {
       console.error("Error: Schedule slot not found:", assignment.slot_id);
       throw new Error(`Schedule slot with ID ${assignment.slot_id} not found`);
     }
@@ -247,15 +225,22 @@ export const createRecurringProducerAssignment = async (
     
     console.log("Creating recurring assignment with slot data:", slotData);
     
-    // Find all slots with matching day, time and show name in both tables
-    const matchingSlots = await findMatchingSlots(
-      slotData.day_of_week,
-      slotData.start_time,
-      slotData.end_time,
-      slotData.show_name
-    );
+    // Find all slots with matching day, time and show name
+    const { data: matchingSlots, error: slotsError } = await supabase
+      .from('schedule_slots_old')
+      .select('id')
+      .eq('day_of_week', slotData.day_of_week)
+      .eq('start_time', slotData.start_time)
+      .eq('end_time', slotData.end_time)
+      .eq('show_name', slotData.show_name)
+      .or('is_recurring.eq.true,is_recurring.is.null');
     
-    console.log("Found matching slots:", matchingSlots.length);
+    if (slotsError) {
+      console.error("Error finding matching slots:", slotsError);
+      throw slotsError;
+    }
+    
+    console.log("Found matching slots:", matchingSlots?.length);
     
     if (!matchingSlots || matchingSlots.length === 0) {
       console.error("No matching slots found for pattern:", {
@@ -307,64 +292,6 @@ export const createRecurringProducerAssignment = async (
     console.error('Error creating recurring producer assignments:', error);
     return false;
   }
-};
-
-// Helper function to find matching slots in both tables
-const findMatchingSlots = async (
-  dayOfWeek: number,
-  startTime: string,
-  endTime: string,
-  showName: string
-): Promise<any[]> => {
-  console.log("Finding matching slots with params:", { dayOfWeek, startTime, endTime, showName });
-  
-  // Find in schedule_slots
-  const { data: slotsFromMain, error: slotsMainError } = await supabase
-    .from('schedule_slots')
-    .select('id')
-    .eq('day_of_week', dayOfWeek)
-    .eq('start_time', startTime)
-    .eq('end_time', endTime)
-    .eq('show_name', showName);
-  
-  if (slotsMainError) {
-    console.error("Error finding matching slots in schedule_slots:", slotsMainError);
-    throw slotsMainError;
-  }
-  
-  console.log("Matching slots from schedule_slots:", slotsFromMain?.length || 0);
-  
-  // Find in schedule_slots_old
-  const { data: slotsFromOld, error: slotsOldError } = await supabase
-    .from('schedule_slots_old')
-    .select('id')
-    .eq('day_of_week', dayOfWeek)
-    .eq('start_time', startTime)
-    .eq('end_time', endTime)
-    .eq('show_name', showName);
-  
-  if (slotsOldError) {
-    console.error("Error finding matching slots in schedule_slots_old:", slotsOldError);
-    throw slotsOldError;
-  }
-  
-  console.log("Matching slots from schedule_slots_old:", slotsFromOld?.length || 0);
-  
-  // Combine and deduplicate
-  const allSlots = [...(slotsFromMain || []), ...(slotsFromOld || [])];
-  const uniqueSlotIds = new Set();
-  const uniqueSlots = [];
-  
-  for (const slot of allSlots) {
-    if (!uniqueSlotIds.has(slot.id)) {
-      uniqueSlotIds.add(slot.id);
-      uniqueSlots.push(slot);
-    }
-  }
-  
-  console.log("Total unique matching slots:", uniqueSlots.length);
-  
-  return uniqueSlots;
 };
 
 // Update a producer assignment
@@ -478,7 +405,7 @@ export const getProducerMonthlyAssignments = async (workerId: string, year: numb
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
       `)
       .eq('worker_id', workerId)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
@@ -506,7 +433,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number): Pro
       .select(`
         *,
         worker:workers (id, name, position),
-        slot:schedule_slots (id, day_of_week, start_time, end_time, show_name)
+        slot:schedule_slots_old (id, day_of_week, start_time, end_time, show_name)
       `)
       .gte('week_start', format(startDate, 'yyyy-MM-dd'))
       .lte('week_start', format(endDate, 'yyyy-MM-dd'))
