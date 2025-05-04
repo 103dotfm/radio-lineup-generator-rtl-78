@@ -36,6 +36,7 @@ export default function ScheduleGridCell({
         right: '0',
         zIndex: 10
       }}
+      data-slot-id={slot.id}
     >
       <SlotContent slot={slot} />
       
