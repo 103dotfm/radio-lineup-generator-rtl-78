@@ -23,22 +23,15 @@ serve(async (req) => {
 
     const { workerId, email } = await req.json();
     
-    // Generate a random password
-    const randomPassword = generateStrongPassword(12);
+    // Check if email already registered
+    const { data: existingUser, error: existingUserError } = await supabaseClient.auth.admin.listUsers();
+    const userExists = existingUser?.users.some(user => user.email === email);
     
-    // Create user with Supabase Auth using the admin API
-    const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
-      email: email,
-      password: randomPassword,
-      email_confirm: true
-    });
-    
-    if (authError) {
+    if (userExists) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: authError, 
-          message: authError.message 
+          message: 'האימייל כבר רשום במערכת'
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -47,44 +40,50 @@ serve(async (req) => {
       );
     }
     
-    // Add user to regular users table
-    const userId = authData.user.id;
-    await supabaseClient.from('users').insert({
-      id: userId,
-      email: email,
-      username: email.split('@')[0],
-      full_name: (await supabaseClient.from('workers').select('name').eq('id', workerId).single()).data?.name,
-      is_admin: false
+    // Generate new password
+    const newPassword = generateStrongPassword(12);
+    
+    // Create the user using admin API
+    const { data, error } = await supabaseClient.auth.admin.createUser({
+      email,
+      password: newPassword,
+      email_confirm: true
     });
     
-    // Update worker record with user_id
-    const { error: updateError } = await supabaseClient
-      .from('workers')
-      .update({ 
-        user_id: userId, 
-        email: email,
-        password_readable: randomPassword 
-      })
-      .eq('id', workerId);
-    
-    if (updateError) {
+    if (error) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: updateError, 
-          message: updateError.message 
+          error: error, 
+          message: error.message 
         }),
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400 
         }
       );
+    }
+    
+    // Update worker record with user_id and password
+    const { error: updateError } = await supabaseClient
+      .from('workers')
+      .update({ 
+        user_id: data.user.id,
+        password_readable: newPassword,
+        email: email  // Ensure the email is stored in the worker record as well
+      })
+      .eq('id', workerId);
+    
+    if (updateError) {
+      console.error("Error updating worker record:", updateError);
+      // User was created but worker record wasn't updated.
+      // Consider handling this case, possibly by deleting the created user.
     }
     
     return new Response(
       JSON.stringify({
         success: true,
-        password: randomPassword
+        password: newPassword
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
