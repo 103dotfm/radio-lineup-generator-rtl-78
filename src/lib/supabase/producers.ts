@@ -1,4 +1,3 @@
-
 import { format, startOfWeek } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { ProducerAssignment } from '@/types/schedule';
