@@ -58,17 +58,17 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
           onDeleteDayNote={handleDeleteDayNote}
         />
       ))}
-      {timeSlots.map((time, timeIndex) => (
-        <React.Fragment key={`weekly-${time}-${timeIndex}`}>
+      {timeSlots.map((time) => (
+        <React.Fragment key={`weekly-time-${time}`}>
           <div className="p-2 text-center border-b border-r bg-gray-50">
             {time}
           </div>
           {dates.map((date, dayIndex) => (
             <TimeCell
-              key={`weekly-cell-${time}-${dayIndex}-${timeIndex}`}
+              key={`weekly-cell-${date.toISOString()}-${time}`}
               dayIndex={date.getDay()}
               time={time}
-              cellKey={`weekly-cell-${time}-${dayIndex}-${timeIndex}`}
+              cellKey={`weekly-cell-${date.toISOString()}-${time}`}
               scheduleSlots={scheduleSlots}
               handleSlotClick={handleSlotClick}
               handleEditSlot={handleEditSlot}
