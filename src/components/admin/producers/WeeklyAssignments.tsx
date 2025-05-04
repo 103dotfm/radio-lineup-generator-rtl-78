@@ -78,9 +78,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         getProducerRoles()
       ]);
       
-      setAssignments(assignmentsData);
-      setProducers(producersData);
-      setRoles(rolesData);
+      setAssignments(assignmentsData || []);
+      setProducers(producersData || []);
+      setRoles(rolesData || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -117,7 +117,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   });
   
   // Get assignments for a slot
-  const getAssignmentsForSlot = (slotId: string) => {
+  const getAssignmentsForSlot = (slotId: string): ProducerAssignment[] => {
     return assignments.filter((assignment) => assignment.slot_id === slotId);
   };
   
@@ -175,8 +175,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
       // Check if we're creating assignments for all weekdays
       else if (formData.isWeekdays) {
         console.log("Creating assignments for all weekdays with slot:", currentSlot);
-        // Create assignments for Sunday-Wednesday (0-3) at that time
-        let successCount = 0;
         
         // First create assignment for current slot
         const currentSlotAssignment = {
@@ -187,6 +185,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           is_recurring: false
         };
         
+        let successCount = 0;
+        let errorCount = 0;
+        
         try {
           const result = await createProducerAssignment(currentSlotAssignment);
           if (result) {
@@ -194,6 +195,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           }
         } catch (error) {
           console.error("Error creating assignment for current slot:", error);
+          errorCount++;
         }
         
         // Then find all other weekday slots with the same time
@@ -207,24 +209,33 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           const key = `${dayIndex}-${currentTime}`;
           const slotsForDay = slotsByDayAndTime[key] || [];
           
-          for (const slot of slotsForDay) {
-            const assignment = {
-              slot_id: slot.id,
-              worker_id: formData.workerId,
-              role: roleName,
-              week_start: format(currentWeek, 'yyyy-MM-dd'),
-              is_recurring: false
-            };
-            
-            try {
-              console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
-              const result = await createProducerAssignment(assignment);
-              if (result) {
-                successCount++;
+          // Check if we have slots for this day and time
+          if (slotsForDay.length > 0) {
+            for (const slot of slotsForDay) {
+              // Make sure slot exists and is valid
+              if (!slot || !slot.id) continue;
+              
+              const assignment = {
+                slot_id: slot.id,
+                worker_id: formData.workerId,
+                role: roleName,
+                week_start: format(currentWeek, 'yyyy-MM-dd'),
+                is_recurring: false
+              };
+              
+              try {
+                console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
+                const result = await createProducerAssignment(assignment);
+                if (result) {
+                  successCount++;
+                }
+              } catch (error: any) {
+                console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
+                errorCount++;
               }
-            } catch (error) {
-              console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
             }
+          } else {
+            console.log(`No slots found for day ${dayIndex} at time ${currentTime}`);
           }
         }
         
@@ -238,7 +249,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         } else {
           toast({
             title: "מידע",
-            description: "לא נמצאו תוכניות נוספות לשיבוץ או שכל השיבוצים כבר קיימים"
+            description: errorCount > 0 
+              ? "אירעו שגיאות בהוספת השיבוצים. בדוק את הלוג לפרטים נוספים." 
+              : "לא נמצאו תוכניות נוספות לשיבוץ או שכל השיבוצים כבר קיימים"
           });
         }
       } else {
@@ -364,7 +377,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                               
                               return (
                                 <div 
-                                  key={`slot-${slot.id}-${slotIndex}`} 
+                                  key={`slot-${slot.id}-${time}-${slotIndex}`}
                                   className="mb-3 border rounded p-2 bg-gray-50"
                                   onClick={() => handleAssignProducer(slot)}
                                 >
@@ -480,7 +493,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                   <Switch 
                     id="weekdays"
                     checked={formData.isWeekdays}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked, isPermanent: false })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked, isPermanent: checked ? false : formData.isPermanent })}
                   />
                   <Label htmlFor="weekdays" className="mr-2">
                     שיבוץ כל השבוע (ראשון-רביעי)
@@ -491,7 +504,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                   <Switch 
                     id="permanent"
                     checked={formData.isPermanent}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isPermanent: checked, isWeekdays: false })}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isPermanent: checked, isWeekdays: checked ? false : formData.isWeekdays })}
                   />
                   <Label htmlFor="permanent" className="mr-2">
                     צוות תוכנית קבוע
