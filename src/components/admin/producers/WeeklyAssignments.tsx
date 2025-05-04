@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -149,25 +148,33 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
       // Check if we're creating a permanent assignment
       if (formData.isPermanent) {
         console.log("Creating permanent assignment for slot:", currentSlot);
-        // Create recurring assignments for all matching shows (current and future)
-        const success = await createRecurringProducerAssignment(
-          currentSlot.id,
-          formData.workerId,
-          roleName,
-          format(currentWeek, 'yyyy-MM-dd')
-        );
-        
-        if (success) {
-          toast({
-            title: "נוסף בהצלחה",
-            description: "העובד נוסף לסידור העבודה הקבוע בהצלחה"
-          });
-          await loadData(); // Refresh the assignments
-          setIsDialogOpen(false);
-        } else {
+        try {
+          const success = await createRecurringProducerAssignment(
+            currentSlot.id,
+            formData.workerId,
+            roleName,
+            format(currentWeek, 'yyyy-MM-dd')
+          );
+          
+          if (success) {
+            toast({
+              title: "נוסף בהצלחה",
+              description: "העובד נוסף לסידור העבודה הקבוע בהצלחה"
+            });
+            await loadData(); // Refresh the assignments
+            setIsDialogOpen(false);
+          } else {
+            toast({
+              title: "שגיאה",
+              description: "לא ניתן להוסיף את העובד לסידור הקבוע",
+              variant: "destructive"
+            });
+          }
+        } catch (error: any) {
+          console.error("Error creating permanent assignment:", error);
           toast({
             title: "שגיאה",
-            description: "לא נמצאו תוכניות מתאימות בסידור העבודה",
+            description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
             variant: "destructive"
           });
         }
@@ -176,24 +183,24 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
       else if (formData.isWeekdays) {
         console.log("Creating assignments for all weekdays with slot:", currentSlot);
         
-        // First create assignment for current slot
-        const currentSlotAssignment = {
-          slot_id: currentSlot.id,
-          worker_id: formData.workerId,
-          role: roleName,
-          week_start: format(currentWeek, 'yyyy-MM-dd'),
-          is_recurring: false
-        };
-        
         let successCount = 0;
         let errorCount = 0;
         
+        // First create assignment for current slot
         try {
+          const currentSlotAssignment = {
+            slot_id: currentSlot.id,
+            worker_id: formData.workerId,
+            role: roleName,
+            week_start: format(currentWeek, 'yyyy-MM-dd'),
+            is_recurring: false
+          };
+          
           const result = await createProducerAssignment(currentSlotAssignment);
           if (result) {
             successCount++;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error creating assignment for current slot:", error);
           errorCount++;
         }
@@ -215,15 +222,15 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               // Make sure slot exists and is valid
               if (!slot || !slot.id) continue;
               
-              const assignment = {
-                slot_id: slot.id,
-                worker_id: formData.workerId,
-                role: roleName,
-                week_start: format(currentWeek, 'yyyy-MM-dd'),
-                is_recurring: false
-              };
-              
               try {
+                const assignment = {
+                  slot_id: slot.id,
+                  worker_id: formData.workerId,
+                  role: roleName,
+                  week_start: format(currentWeek, 'yyyy-MM-dd'),
+                  is_recurring: false
+                };
+                
                 console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
                 const result = await createProducerAssignment(assignment);
                 if (result) {
@@ -256,15 +263,15 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         }
       } else {
         // Create a single assignment
-        const assignment = {
-          slot_id: currentSlot.id,
-          worker_id: formData.workerId,
-          role: roleName,
-          week_start: format(currentWeek, 'yyyy-MM-dd'),
-          is_recurring: false
-        };
-        
         try {
+          const assignment = {
+            slot_id: currentSlot.id,
+            worker_id: formData.workerId,
+            role: roleName,
+            week_start: format(currentWeek, 'yyyy-MM-dd'),
+            is_recurring: false
+          };
+          
           console.log("Creating single assignment for slot:", currentSlot);
           const result = await createProducerAssignment(assignment);
           if (result) {
@@ -280,20 +287,20 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               description: "שיבוץ זה כבר קיים או שלא ניתן להוסיף את העובד"
             });
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error creating producer assignment:", error);
           toast({
             title: "שגיאה",
-            description: "שגיאה ביצירת שיבוץ חדש",
+            description: error.message || "שגיאה ביצירת שיבוץ חדש",
             variant: "destructive"
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error assigning producer:", error);
       toast({
         title: "שגיאה",
-        description: "אירעה שגיאה בהוספת העובד לסידור",
+        description: error.message || "אירעה שגיאה בהוספת העובד לסידור",
         variant: "destructive"
       });
     }
