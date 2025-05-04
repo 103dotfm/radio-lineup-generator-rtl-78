@@ -1,6 +1,8 @@
+
 import { format, startOfWeek } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { ProducerAssignment } from '@/types/schedule';
+import { getAppDomain } from '@/integrations/supabase/client';
 
 export interface Worker {
   id: string;
@@ -148,12 +150,16 @@ export const createProducerUser = async (workerId: string, email: string): Promi
       };
     }
     
+    // Get the base URL for the Supabase project
+    const appDomain = await getAppDomain();
+    const supabaseUrl = new URL(appDomain).origin;
+    
     // Call the edge function to create the user
-    const response = await fetch(`${supabase.supabaseUrl}/functions/v1/create-producer-user`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-producer-user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.supabaseKey}`
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`
       },
       body: JSON.stringify({ 
         workerId, 
@@ -194,12 +200,16 @@ export const resetProducerPassword = async (workerId: string): Promise<{
   error?: any;
 }> => {
   try {
+    // Get the base URL for the Supabase project
+    const appDomain = await getAppDomain();
+    const supabaseUrl = new URL(appDomain).origin;
+    
     // Call the edge function to reset the password
-    const response = await fetch(`${supabase.supabaseUrl}/functions/v1/reset-producer-password`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/reset-producer-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.supabaseKey}`
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`
       },
       body: JSON.stringify({ workerId })
     });

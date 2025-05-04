@@ -37,7 +37,7 @@ const TimeCell: React.FC<TimeCellProps> = ({
     <div key={cellKey} className={`relative p-2 border-b border-r last:border-r-0 min-h-[60px] ${!isCurrentMonth ? 'bg-gray-50' : ''}`}>
       {isCurrentMonth && relevantSlots.map((slot) => (
         <ScheduleGridCell 
-          key={`schedule-slot-${slot.id}-${time}`}
+          key={`schedule-slot-${slot.id}-${time}-${dayIndex}`}
           slot={slot}
           handleSlotClick={handleSlotClick}
           handleEditSlot={handleEditSlot}
