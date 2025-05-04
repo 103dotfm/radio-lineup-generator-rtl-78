@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 
@@ -201,7 +202,7 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     return data;
   } catch (error) {
     console.error('Error creating producer assignment:', error);
-    return null;
+    throw error; // Throw the error so it can be caught by the caller
   }
 };
 

@@ -34,7 +34,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     setIsLoading(true);
     try {
       const assignmentsData = await getProducerAssignments(selectedDate);
-      setAssignments(assignmentsData);
+      setAssignments(assignmentsData || []);
     } catch (error) {
       console.error("Error loading assignments:", error);
     } finally {
@@ -45,7 +45,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
   
   // Get assignments for a slot
-  const getAssignmentsForSlot = (slotId: string) => {
+  const getAssignmentsForSlot = (slotId: string): ProducerAssignment[] => {
     return assignments.filter((assignment) => assignment.slot_id === slotId);
   };
   
@@ -151,13 +151,13 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         });
                         
                         return (
-                          <div key={`assignment-slot-${slot.id}-${slotIndex}`} className="p-1 text-sm">
+                          <div key={`assignment-slot-${slot.id}-${slotIndex}-${timeSlot}`} className="p-1 text-sm">
                             <div className="font-medium">
                               {getCombinedShowDisplay(slot.show_name, slot.host_name)}
                             </div>
                             
                             {Object.entries(assignmentsByRole).map(([role, roleAssignments]) => (
-                              <div key={`role-${role}-${slot.id}`} className="mt-1">
+                              <div key={`role-${role}-${slot.id}-${role}`} className="mt-1">
                                 <span className="font-medium text-xs">{role}: </span>
                                 {roleAssignments.map((a, idx) => (
                                   <span key={`worker-${a.id}-${idx}`}>
