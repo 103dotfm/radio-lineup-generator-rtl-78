@@ -25,10 +25,10 @@ export const getWorkers = async (): Promise<Worker[]> => {
       }, 10000); // 10 second timeout
     });
     
-    // The actual data fetch
+    // The actual data fetch - update to include user_id and password_readable
     const fetchPromise = supabase
       .from('workers')
-      .select('id, name, department, position, email, phone')
+      .select('id, name, department, position, email, phone, user_id, password_readable')
       .order('name');
     
     // Race the fetch against the timeout
@@ -56,7 +56,9 @@ export const getWorkers = async (): Promise<Worker[]> => {
       department: worker.department || '',
       position: worker.position || '',
       email: worker.email || '',
-      phone: worker.phone || ''
+      phone: worker.phone || '',
+      user_id: worker.user_id || undefined,
+      password_readable: worker.password_readable || undefined
     }));
   } catch (error) {
     console.error('Error fetching workers:', error);
