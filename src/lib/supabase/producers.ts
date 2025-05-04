@@ -41,7 +41,7 @@ export const getWorkers = async (): Promise<Worker[]> => {
   }
 };
 
-// This function is needed by ProducersTable.tsx and MonthlySummary.tsx
+// Get producers (needed by ProducersTable.tsx and MonthlySummary.tsx)
 export const getProducers = async (): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
@@ -212,6 +212,18 @@ export const createProducerAssignment = async (assignment: {
   is_recurring?: boolean;
 }): Promise<ProducerAssignment | null> => {
   try {
+    // First, verify that slot exists in schedule_slots_old table
+    const { data: slotExists, error: slotCheckError } = await supabase
+      .from('schedule_slots_old')
+      .select('id')
+      .eq('id', assignment.slot_id)
+      .single();
+
+    if (slotCheckError) {
+      console.error('Failed to find slot in schedule_slots_old:', slotCheckError);
+      throw new Error(`Slot with ID ${assignment.slot_id} does not exist in schedule_slots_old table`);
+    }
+
     console.log("Creating producer assignment:", assignment);
     const { data, error } = await supabase
       .from('producer_assignments')
@@ -239,6 +251,18 @@ export const createRecurringProducerAssignment = async (
   weekStart: string
 ): Promise<boolean> => {
   try {
+    // First, verify that slot exists in schedule_slots_old table
+    const { data: slotExists, error: slotCheckError } = await supabase
+      .from('schedule_slots_old')
+      .select('id')
+      .eq('id', slotId)
+      .single();
+
+    if (slotCheckError) {
+      console.error('Failed to find slot in schedule_slots_old:', slotCheckError);
+      throw new Error(`Slot with ID ${slotId} does not exist in schedule_slots_old table`);
+    }
+
     // Create a recurring assignment
     const assignment = {
       slot_id: slotId,
@@ -247,6 +271,8 @@ export const createRecurringProducerAssignment = async (
       week_start: weekStart,
       is_recurring: true
     };
+    
+    console.log("Creating recurring producer assignment with data:", assignment);
     
     const { data, error } = await supabase
       .from('producer_assignments')
