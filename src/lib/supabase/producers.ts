@@ -185,51 +185,38 @@ export const createProducerUser = async (workerId: string, email: string): Promi
     console.log("Edge function status:", response.status, response.statusText);
     console.log("Response headers:", Object.fromEntries([...response.headers.entries()]));
     
-    // Check if response is ok before trying to parse JSON
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      console.error('Error response from edge function:', response.status, response.statusText);
-      console.error('Content-Type:', contentType);
-      
-      let errorMessage;
-      // Handle different response types
-      if (contentType && contentType.includes('application/json')) {
-        const errorData = await response.json();
-        console.error('Error JSON:', errorData);
-        errorMessage = errorData.message || errorData.error || 'שגיאה ביצירת משתמש';
+    // Check if response is ok and has the correct content type
+    const contentType = response.headers.get('content-type');
+    console.log("Content-Type:", contentType);
+    
+    if (contentType && contentType.includes('application/json')) {
+      // If it's JSON, parse it normally
+      try {
+        const result = await response.json();
+        console.log("Successful JSON response:", result);
+        
         return {
-          success: false,
-          message: errorMessage,
-          error: errorData
+          success: result.success === true,
+          password: result.password,
+          message: result.message
         };
-      } else {
-        // For non-JSON responses (like HTML error pages)
-        const errorText = await response.text();
-        console.error('Error response body (non-JSON):', errorText.substring(0, 500)); // Log first 500 chars
-        errorMessage = 'שגיאה בתקשורת עם שרת - אנא נסה שנית';
+      } catch (jsonError) {
+        console.error("Error parsing JSON response:", jsonError);
         return {
           success: false,
-          message: errorMessage,
-          error: `Non-JSON response: ${response.status} ${response.statusText}`
+          message: 'שגיאה בפענוח תשובת השרת',
+          error: jsonError
         };
       }
-    }
-    
-    // Parse JSON response for successful requests
-    try {
-      const result = await response.json();
-      console.log("Successful response:", result);
+    } else {
+      // For non-JSON responses, return a more descriptive error
+      const responseText = await response.text();
+      console.error("Non-JSON response received:", responseText.substring(0, 500)); // Log first 500 chars
       
       return {
-        success: true,
-        password: result.password
-      };
-    } catch (jsonError) {
-      console.error("Error parsing JSON response:", jsonError);
-      return {
         success: false,
-        message: 'שגיאה בפענוח תשובת השרת',
-        error: jsonError
+        message: 'השרת החזיר תשובה לא תקינה, אנא נסה שנית מאוחר יותר',
+        error: `Non-JSON response: ${responseText.substring(0, 100)}...`
       };
     }
   } catch (error: any) {
