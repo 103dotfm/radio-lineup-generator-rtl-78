@@ -94,3 +94,6 @@ verify_jwt = false
 verify_jwt = false
 [functions.schedule-xml-refresh]
 verify_jwt = false
+[functions.create-producer-user]
+verify_jwt = true
+

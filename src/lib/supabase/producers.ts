@@ -154,12 +154,16 @@ export const createProducerUser = async (workerId: string, email: string): Promi
     const appDomain = await getAppDomain();
     const supabaseUrl = new URL(appDomain).origin;
     
+    // Get the anon key from the client
+    const { data: anonKeyData } = await supabase.auth.getSession();
+    const anonKey = anonKeyData?.session?.access_token || '';
+    
     // Call the edge function to create the user
     const response = await fetch(`${supabaseUrl}/functions/v1/create-producer-user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`
+        'Authorization': `Bearer ${anonKey}`
       },
       body: JSON.stringify({ 
         workerId, 
@@ -204,12 +208,16 @@ export const resetProducerPassword = async (workerId: string): Promise<{
     const appDomain = await getAppDomain();
     const supabaseUrl = new URL(appDomain).origin;
     
+    // Get the anon key from the client
+    const { data: anonKeyData } = await supabase.auth.getSession();
+    const anonKey = anonKeyData?.session?.access_token || '';
+    
     // Call the edge function to reset the password
     const response = await fetch(`${supabaseUrl}/functions/v1/reset-producer-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`
+        'Authorization': `Bearer ${anonKey}`
       },
       body: JSON.stringify({ workerId })
     });
