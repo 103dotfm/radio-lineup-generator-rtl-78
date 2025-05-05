@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -131,7 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // If worker data exists, prioritize those fields
           full_name: workerData?.name || userData.full_name || '',
           title: workerData?.position || userData.title || '',
-        };
+        } as User; // Cast to User type to ensure TypeScript recognizes all properties
         
         setUser(combinedUserData);
         setIsAdmin(userData.is_admin || false);
