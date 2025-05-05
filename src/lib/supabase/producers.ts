@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -29,6 +30,29 @@ export interface ResetPasswordResult {
   password?: string;
   message?: string;
   error?: any;
+}
+
+// Define the ProducerAssignment interface
+export interface ProducerAssignment {
+  id: string;
+  slot_id: string;
+  worker_id: string;
+  role: string;
+  notes?: string;
+  week_start: string;
+  is_recurring: boolean;
+  created_at?: string;
+  updated_at?: string;
+  worker?: Worker;
+}
+
+// Define the interface for ProducerWorkArrangement
+export interface ProducerWorkArrangement {
+  id: string;
+  week_start: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const getProducers = async (): Promise<Worker[]> => {
@@ -192,6 +216,241 @@ export const getProducerRoles = async (): Promise<ProducerRole[]> => {
     return data || [];
   } catch (error) {
     console.error('Error in getProducerRoles:', error);
+    throw error;
+  }
+};
+
+// Implement the missing functions to resolve the import errors
+
+// Get producer assignments for a specific week
+export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
+  try {
+    console.log(`Getting producer assignments for week starting ${weekStart.toISOString().split('T')[0]}`);
+    const formattedDate = weekStart.toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .select(`
+        *,
+        worker:worker_id(id, name, email, phone, department, position)
+      `)
+      .eq('week_start', formattedDate);
+    
+    if (error) {
+      console.error('Error fetching producer assignments:', error);
+      throw new Error(`Failed to fetch producer assignments: ${error.message}`);
+    }
+    
+    if (!data) {
+      return [];
+    }
+    
+    return data as ProducerAssignment[];
+  } catch (error) {
+    console.error('Error in getProducerAssignments:', error);
+    throw error;
+  }
+};
+
+// Create a new producer assignment
+export const createProducerAssignment = async (assignment: Partial<ProducerAssignment>): Promise<ProducerAssignment | null> => {
+  try {
+    if (!assignment.slot_id || !assignment.worker_id || !assignment.role || !assignment.week_start) {
+      throw new Error("Missing required fields for producer assignment");
+    }
+
+    // Check if an assignment with this slot, worker, role already exists
+    const { data: existingData, error: checkError } = await supabase
+      .from('producer_assignments')
+      .select('*')
+      .eq('slot_id', assignment.slot_id)
+      .eq('worker_id', assignment.worker_id)
+      .eq('role', assignment.role)
+      .eq('week_start', assignment.week_start);
+
+    if (checkError) {
+      console.error('Error checking existing assignments:', checkError);
+      throw new Error(`Failed to check existing assignments: ${checkError.message}`);
+    }
+
+    // If assignment already exists, don't create a duplicate
+    if (existingData && existingData.length > 0) {
+      console.log('Assignment already exists, not creating duplicate');
+      return existingData[0] as ProducerAssignment;
+    }
+
+    // Insert the new assignment
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .insert([assignment])
+      .select('*, worker:worker_id(id, name, email, phone, department, position)')
+      .single();
+
+    if (error) {
+      console.error('Error creating producer assignment:', error);
+      throw new Error(`Failed to create producer assignment: ${error.message}`);
+    }
+
+    return data as ProducerAssignment;
+  } catch (error) {
+    console.error('Error in createProducerAssignment:', error);
+    throw error;
+  }
+};
+
+// Create a recurring producer assignment
+export const createRecurringProducerAssignment = async (
+  slotId: string,
+  workerId: string,
+  role: string,
+  weekStart: string
+): Promise<boolean> => {
+  try {
+    if (!slotId || !workerId || !role || !weekStart) {
+      throw new Error("Missing required fields for recurring producer assignment");
+    }
+
+    // Create the recurring assignment
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .insert([{
+        slot_id: slotId,
+        worker_id: workerId,
+        role: role,
+        week_start: weekStart,
+        is_recurring: true
+      }]);
+
+    if (error) {
+      console.error('Error creating recurring producer assignment:', error);
+      throw new Error(`Failed to create recurring producer assignment: ${error.message}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in createRecurringProducerAssignment:', error);
+    return false;
+  }
+};
+
+// Delete a producer assignment
+export const deleteProducerAssignment = async (assignmentId: string): Promise<boolean> => {
+  try {
+    if (!assignmentId) {
+      throw new Error("Missing assignment ID");
+    }
+
+    const { error } = await supabase
+      .from('producer_assignments')
+      .delete()
+      .eq('id', assignmentId);
+
+    if (error) {
+      console.error('Error deleting producer assignment:', error);
+      throw new Error(`Failed to delete producer assignment: ${error.message}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteProducerAssignment:', error);
+    return false;
+  }
+};
+
+// Get or create a producer work arrangement for a specific week
+export const getOrCreateProducerWorkArrangement = async (weekStart: Date): Promise<ProducerWorkArrangement | null> => {
+  try {
+    const formattedDate = weekStart.toISOString().split('T')[0];
+    
+    // First try to get an existing arrangement
+    const { data: existingData, error: fetchError } = await supabase
+      .from('producer_work_arrangements')
+      .select('*')
+      .eq('week_start', formattedDate)
+      .single();
+    
+    if (!fetchError && existingData) {
+      return existingData as ProducerWorkArrangement;
+    }
+    
+    // If it doesn't exist or there was an error, create a new one
+    const { data: newData, error: createError } = await supabase
+      .from('producer_work_arrangements')
+      .insert([{ week_start: formattedDate, notes: '' }])
+      .select('*')
+      .single();
+    
+    if (createError) {
+      console.error('Error creating producer work arrangement:', createError);
+      throw new Error(`Failed to create producer work arrangement: ${createError.message}`);
+    }
+    
+    return newData as ProducerWorkArrangement;
+  } catch (error) {
+    console.error('Error in getOrCreateProducerWorkArrangement:', error);
+    throw error;
+  }
+};
+
+// Update notes for a producer work arrangement
+export const updateProducerWorkArrangementNotes = async (
+  arrangementId: string,
+  notes: string
+): Promise<boolean> => {
+  try {
+    if (!arrangementId) {
+      throw new Error("Missing arrangement ID");
+    }
+    
+    const { error } = await supabase
+      .from('producer_work_arrangements')
+      .update({ notes })
+      .eq('id', arrangementId);
+    
+    if (error) {
+      console.error('Error updating producer work arrangement notes:', error);
+      throw new Error(`Failed to update notes: ${error.message}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in updateProducerWorkArrangementNotes:', error);
+    throw error;
+  }
+};
+
+// Get all monthly assignments for reporting
+export const getAllMonthlyAssignments = async (
+  month: number,
+  year: number
+): Promise<ProducerAssignment[]> => {
+  try {
+    // Create date range for the month
+    const startDate = new Date(year, month - 1, 1); // Month is 0-indexed in JS Date
+    const endDate = new Date(year, month, 0); // Last day of the month
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    console.log(`Fetching assignments from ${startDateStr} to ${endDateStr}`);
+    
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .select(`
+        *,
+        worker:worker_id(id, name, email, phone, department, position)
+      `)
+      .gte('week_start', startDateStr)
+      .lte('week_start', endDateStr);
+    
+    if (error) {
+      console.error('Error fetching monthly assignments:', error);
+      throw new Error(`Failed to fetch monthly assignments: ${error.message}`);
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in getAllMonthlyAssignments:', error);
     throw error;
   }
 };
