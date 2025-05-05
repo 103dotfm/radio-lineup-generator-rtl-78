@@ -138,16 +138,48 @@ serve(async (req) => {
     
     if (updateError) {
       console.error("Error updating worker record:", updateError);
-      // User was created but worker record wasn't updated.
-      // We should handle this case by sending a useful response
+      // We should handle this case by ensuring the user is properly deleted
+      await supabaseClient.auth.admin.deleteUser(data.user.id);
+      
       return new Response(
         JSON.stringify({
-          success: true,
-          password: newPassword,
-          warning: "User created but worker record not updated"
+          success: false,
+          message: "נוצר משתמש אך אירעה שגיאה בקישור למפיק",
+          error: updateError.message
         }),
-        { headers: corsHeaders, status: 207 } // Partial success
+        { headers: corsHeaders, status: 500 }
       );
+    }
+    
+    // Create an entry in the users table for the new user
+    console.log("Creating users table entry for ID:", data.user.id);
+    
+    // Fetch worker details to get the name and other info
+    const { data: workerData, error: workerError } = await supabaseClient
+      .from('workers')
+      .select('name, position')
+      .eq('id', workerId)
+      .single();
+    
+    if (workerError) {
+      console.error("Error fetching worker details:", workerError);
+      // Continue despite the error, we'll use basic data
+    }
+    
+    // Create the users table entry
+    const { error: usersTableError } = await supabaseClient
+      .from('users')
+      .insert({
+        id: data.user.id,
+        email: email,
+        full_name: workerData?.name || email,
+        username: email,
+        is_admin: false // producers are not admins by default
+      });
+    
+    if (usersTableError) {
+      console.error("Error creating users table entry:", usersTableError);
+      // Log the error but still return success since the authentication user was created
     }
     
     console.log("Successfully created user and updated worker record");

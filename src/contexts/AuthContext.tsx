@@ -1,11 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { toast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
   email: string;
-  username: string;
+  username?: string;
   full_name?: string;
   title?: string;
   avatar_url?: string;
@@ -51,10 +52,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
-
-      if (userError) {
+        .maybeSingle(); // Use maybeSingle instead of single to prevent errors when no record is found
+      
+      if (userError && userError.code !== 'PGRST116') {
         console.error('Error fetching user data:', userError);
+        return;
+      }
+      
+      if (!userData) {
+        console.warn('No user data found for ID:', userId);
+        // Try to get user details from auth metadata as fallback
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser) {
+          // Create basic user object from auth data
+          const basicUser = {
+            id: authUser.id,
+            email: authUser.email || '',
+            username: authUser.email?.split('@')[0] || '',
+            full_name: authUser.user_metadata?.full_name || authUser.email,
+            is_admin: false
+          };
+          
+          setUser(basicUser);
+          setIsAdmin(false);
+          
+          // Attempt to create user record
+          try {
+            await supabase.from('users').insert([basicUser]);
+            console.log('Created missing user record');
+          } catch (createError) {
+            console.error('Failed to create missing user record:', createError);
+          }
+        }
         return;
       }
       
@@ -63,7 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile data:', profileError);
@@ -77,11 +107,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
         
         setUser(combinedUserData);
-        setIsAdmin(userData.is_admin);
+        setIsAdmin(userData.is_admin || false);
         lastUserCheckRef.current = now;
       }
     } catch (error) {
       console.error('Error in checkUserRole:', error);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בטעינת פרטי המשתמש",
+        variant: "destructive"
+      });
     }
   };
 
