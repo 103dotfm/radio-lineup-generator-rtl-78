@@ -22,7 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { AlertTriangle } from "lucide-react";
 import { 
   Worker,
   getProducers, 
@@ -268,7 +268,7 @@ const ProducerUsers: React.FC = () => {
               
               {errorMessage && (
                 <Alert variant="destructive">
-                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>שגיאה</AlertTitle>
                   <AlertDescription>
                     {errorMessage}
