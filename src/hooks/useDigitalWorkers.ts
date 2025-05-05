@@ -21,6 +21,7 @@ export const useDigitalWorkers = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('useDigitalWorkers: Fetching digital workers...');
       const { data, error } = await supabase
         .from('digital_employees')
         .select('*')
@@ -31,6 +32,7 @@ export const useDigitalWorkers = () => {
       }
 
       if (data) {
+        console.log(`useDigitalWorkers: Fetched ${data.length} digital workers`);
         setDigitalWorkers(data);
       }
     } catch (err) {

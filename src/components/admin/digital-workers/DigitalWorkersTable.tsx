@@ -33,7 +33,7 @@ const DigitalWorkersTable: React.FC<DigitalWorkersTableProps> = ({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">עובדים דיגיטליים</h3>
+      <h3 className="text-lg font-medium">עובדים דיגיטליים ({digitalWorkers.length})</h3>
       
       <Table>
         <TableHeader>

@@ -7,7 +7,7 @@ interface User {
   email: string;
   username?: string;
   full_name?: string;
-  title?: string; // Added the missing title property
+  title?: string; // Added the title property to fix the TypeScript error
   avatar_url?: string;
   is_admin: boolean;
 }

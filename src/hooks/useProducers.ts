@@ -12,6 +12,7 @@ export const useProducers = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('useProducers: Fetching producers...');
       const { data, error } = await supabase
         .from('workers')
         .select('*')
@@ -22,6 +23,7 @@ export const useProducers = () => {
       }
 
       if (data) {
+        console.log(`useProducers: Fetched ${data.length} producers`);
         setProducers(data);
       }
     } catch (err) {
