@@ -21,6 +21,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { 
   Worker,
   getProducers, 
@@ -74,6 +76,7 @@ const ProducerUsers: React.FC = () => {
     setErrorMessage(null);
     
     try {
+      console.log("Creating user for producer:", selectedProducer.id, "with email:", email);
       const result = await createProducerUser(selectedProducer.id, email);
       
       if (result.success && result.password) {
@@ -264,9 +267,13 @@ const ProducerUsers: React.FC = () => {
               </div>
               
               {errorMessage && (
-                <div className="bg-red-50 border border-red-300 rounded p-3 text-red-600">
-                  {errorMessage}
-                </div>
+                <Alert variant="destructive">
+                  <ExclamationTriangleIcon className="h-4 w-4" />
+                  <AlertTitle>שגיאה</AlertTitle>
+                  <AlertDescription>
+                    {errorMessage}
+                  </AlertDescription>
+                </Alert>
               )}
               
               {!generatedPassword ? (
