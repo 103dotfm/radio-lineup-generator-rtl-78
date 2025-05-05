@@ -171,16 +171,30 @@ export const createProducerUser = async (workerId: string, email: string): Promi
       })
     });
     
-    const result = await response.json();
-    
     if (!response.ok) {
-      console.error('Error from edge function:', result);
-      return {
-        success: false,
-        message: result.message || 'שגיאה ביצירת משתמש',
-        error: result.error
-      };
+      console.error('Error response from edge function:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      
+      try {
+        // Try to parse the error as JSON if possible
+        const errorJson = JSON.parse(errorText);
+        return {
+          success: false,
+          message: errorJson.message || 'שגיאה ביצירת משתמש',
+          error: errorJson.error
+        };
+      } catch (e) {
+        // If it's not valid JSON, return the text
+        return {
+          success: false,
+          message: 'שגיאה ביצירת משתמש',
+          error: errorText
+        };
+      }
     }
+    
+    const result = await response.json();
     
     return {
       success: true,
@@ -222,16 +236,30 @@ export const resetProducerPassword = async (workerId: string): Promise<{
       body: JSON.stringify({ workerId })
     });
     
-    const result = await response.json();
-    
     if (!response.ok) {
-      console.error('Error from edge function:', result);
-      return {
-        success: false,
-        message: result.message || 'שגיאה באיפוס סיסמה',
-        error: result.error
-      };
+      console.error('Error response from edge function:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      
+      try {
+        // Try to parse the error as JSON if possible
+        const errorJson = JSON.parse(errorText);
+        return {
+          success: false,
+          message: errorJson.message || 'שגיאה באיפוס סיסמה',
+          error: errorJson.error
+        };
+      } catch (e) {
+        // If it's not valid JSON, return the text
+        return {
+          success: false,
+          message: 'שגיאה באיפוס סיסמה',
+          error: errorText
+        };
+      }
     }
+    
+    const result = await response.json();
     
     return {
       success: true,

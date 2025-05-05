@@ -36,6 +36,7 @@ const ProducerUsers: React.FC = () => {
   const [email, setEmail] = useState('');
   const [generatedPassword, setGeneratedPassword] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,6 +71,8 @@ const ProducerUsers: React.FC = () => {
     }
 
     setIsCreating(true);
+    setErrorMessage(null);
+    
     try {
       const result = await createProducerUser(selectedProducer.id, email);
       
@@ -81,14 +84,16 @@ const ProducerUsers: React.FC = () => {
           description: "המשתמש נוצר בהצלחה עם סיסמה זמנית"
         });
       } else {
+        setErrorMessage(result.message || "שגיאה ביצירת משתמש");
         toast({
           title: "שגיאה",
           description: result.message || "שגיאה ביצירת משתמש",
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating user:", error);
+      setErrorMessage(error.message || "שגיאה לא ידועה ביצירת משתמש");
       toast({
         title: "שגיאה",
         description: "שגיאה ביצירת משתמש",
@@ -111,6 +116,8 @@ const ProducerUsers: React.FC = () => {
       }
 
       setIsCreating(true);
+      setErrorMessage(null);
+      
       const result = await resetProducerPassword(producer.id);
       
       if (result.success && result.password) {
@@ -123,14 +130,16 @@ const ProducerUsers: React.FC = () => {
           description: "הסיסמה אופסה בהצלחה"
         });
       } else {
+        setErrorMessage(result.message || "שגיאה באיפוס סיסמה");
         toast({
           title: "שגיאה",
           description: result.message || "שגיאה באיפוס סיסמה",
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error resetting password:", error);
+      setErrorMessage(error.message || "שגיאה לא ידועה באיפוס סיסמה");
       toast({
         title: "שגיאה",
         description: "שגיאה באיפוס סיסמה",
@@ -145,6 +154,7 @@ const ProducerUsers: React.FC = () => {
     setSelectedProducer(producer);
     setEmail(producer.email || '');
     setGeneratedPassword('');
+    setErrorMessage(null);
     setIsDialogOpen(true);
   };
 
@@ -153,6 +163,7 @@ const ProducerUsers: React.FC = () => {
     setSelectedProducer(null);
     setEmail('');
     setGeneratedPassword('');
+    setErrorMessage(null);
   };
 
   if (isLoading) {
@@ -251,6 +262,12 @@ const ProducerUsers: React.FC = () => {
                   <p className="text-sm text-muted-foreground">{selectedProducer.position}</p>
                 )}
               </div>
+              
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-300 rounded p-3 text-red-600">
+                  {errorMessage}
+                </div>
+              )}
               
               {!generatedPassword ? (
                 <div className="space-y-2">
