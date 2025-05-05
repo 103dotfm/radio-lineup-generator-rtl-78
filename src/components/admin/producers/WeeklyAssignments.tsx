@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -46,6 +47,11 @@ interface WeeklyAssignmentsProps {
   currentWeek: Date;
 }
 
+interface ProducerFormItem {
+  workerId: string;
+  role: string;
+}
+
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
   // Important: use false for isMasterSchedule to get the weekly schedule instead of master
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, false);
@@ -55,12 +61,17 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
-  const [formData, setFormData] = useState({
-    workerId: '',
-    role: '',
-    isWeekdays: false,
-    isPermanent: false
-  });
+  
+  // Multi-producer form state
+  const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
+    { workerId: '', role: '' },
+    { workerId: '', role: '' },
+    { workerId: '', role: '' },
+    { workerId: '', role: '' }
+  ]);
+  
+  const [isWeekdays, setIsWeekdays] = useState(false);
+  const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
   
@@ -122,204 +133,183 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   
   const handleAssignProducer = (slot: ScheduleSlot) => {
     setCurrentSlot(slot);
-    setFormData({
-      workerId: '',
-      role: roles.length > 0 ? roles[0].id : '',
-      isWeekdays: false,
-      isPermanent: false
-    });
+    
+    // Reset form when opening dialog
+    setProducerForms([
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '' }
+    ]);
+    setIsWeekdays(false);
+    setIsPermanent(false);
+    
     setIsDialogOpen(true);
   };
   
+  const updateProducerForm = (index: number, field: 'workerId' | 'role', value: string) => {
+    setProducerForms(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+  
   const handleSubmit = async () => {
-    if (!formData.workerId || !formData.role || !currentSlot) {
+    if (!currentSlot) {
       toast({
         title: "שגיאה",
-        description: "יש למלא את כל השדות",
+        description: "לא נמצאה תוכנית",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Filter out empty rows
+    const validForms = producerForms.filter(form => form.workerId && form.role);
+    
+    if (validForms.length === 0) {
+      toast({
+        title: "שגיאה",
+        description: "יש לבחור לפחות מפיק אחד",
         variant: "destructive"
       });
       return;
     }
     
     try {
-      const selectedRole = roles.find(r => r.id === formData.role);
-      const roleName = selectedRole ? selectedRole.name : '';
-      
-      // Check if we're creating a permanent assignment
-      if (formData.isPermanent) {
-        console.log("Creating permanent assignment for slot:", currentSlot);
-        try {
-          const success = await createRecurringProducerAssignment(
-            currentSlot.id,
-            formData.workerId,
-            roleName,
-            format(currentWeek, 'yyyy-MM-dd')
-          );
-          
-          if (success) {
-            toast({
-              title: "נוסף בהצלחה",
-              description: "העובד נוסף לסידור העבודה הקבוע בהצלחה"
-            });
-            await loadData(); // Refresh the assignments
-            // Don't close dialog, allow adding more producers
-            // Reset producer selection for next addition
-            setFormData({
-              ...formData,
-              workerId: ''
-            });
-        } else {
-          toast({
-            title: "שגיאה",
-            description: "לא ניתן להוסיף את העובד לסידור הקבוע",
-            variant: "destructive"
-          });
-        }
-      } catch (error: any) {
-        console.error("Error creating permanent assignment:", error);
-        toast({
-          title: "שגיאה",
-          description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
-          variant: "destructive"
-        });
-      }
-    } 
-    // Check if we're creating assignments for all weekdays
-    else if (formData.isWeekdays) {
-      console.log("Creating assignments for all weekdays with slot:", currentSlot);
-      
       let successCount = 0;
-      let errorCount = 0;
       
-      // First create assignment for current slot
-      try {
-        const currentSlotAssignment = {
-          slot_id: currentSlot.id,
-          worker_id: formData.workerId,
-          role: roleName,
-          week_start: format(currentWeek, 'yyyy-MM-dd'),
-          is_recurring: false
-        };
+      for (const form of validForms) {
+        const selectedRole = roles.find(r => r.id === form.role);
+        const roleName = selectedRole ? selectedRole.name : '';
         
-        const result = await createProducerAssignment(currentSlotAssignment);
-        if (result) {
-          successCount++;
-        }
-      } catch (error: any) {
-        console.error("Error creating assignment for current slot:", error);
-        errorCount++;
-      }
-      
-      // Then find all other weekday slots with the same time
-      const currentTime = currentSlot.start_time;
-      const currentDay = currentSlot.day_of_week;
-      
-      // Get applicable days (0-3, excluding the current day)
-      const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
-      
-      for (const dayIndex of applicableDays) {
-        const key = `${dayIndex}-${currentTime}`;
-        const slotsForDay = slotsByDayAndTime[key] || [];
-        
-        // Check if we have slots for this day and time
-        if (slotsForDay.length > 0) {
-          for (const slot of slotsForDay) {
-            // Make sure slot exists and is valid
-            if (!slot || !slot.id) continue;
+        // Check if we're creating a permanent assignment
+        if (isPermanent) {
+          console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName}`);
+          try {
+            const success = await createRecurringProducerAssignment(
+              currentSlot.id,
+              form.workerId,
+              roleName,
+              format(currentWeek, 'yyyy-MM-dd')
+            );
             
-            try {
-              const assignment = {
-                slot_id: slot.id,
-                worker_id: formData.workerId,
-                role: roleName,
-                week_start: format(currentWeek, 'yyyy-MM-dd'),
-                is_recurring: false
-              };
-              
-              console.log(`Creating assignment for day ${dayIndex} slot:`, slot);
-              const result = await createProducerAssignment(assignment);
-              if (result) {
-                successCount++;
+            if (success) {
+              successCount++;
+            }
+          } catch (error: any) {
+            console.error("Error creating permanent assignment:", error);
+            toast({
+              title: "שגיאה",
+              description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
+              variant: "destructive"
+            });
+          }
+        } 
+        // Check if we're creating assignments for all weekdays
+        else if (isWeekdays) {
+          console.log(`Creating weekday assignments for worker ${form.workerId} with role ${roleName}`);
+          
+          // First create assignment for current slot
+          try {
+            const currentSlotAssignment = {
+              slot_id: currentSlot.id,
+              worker_id: form.workerId,
+              role: roleName,
+              week_start: format(currentWeek, 'yyyy-MM-dd'),
+              is_recurring: false
+            };
+            
+            const result = await createProducerAssignment(currentSlotAssignment);
+            if (result) {
+              successCount++;
+            }
+          } catch (error: any) {
+            console.error("Error creating assignment for current slot:", error);
+          }
+          
+          // Then find all other weekday slots with the same time
+          const currentTime = currentSlot.start_time;
+          const currentDay = currentSlot.day_of_week;
+          
+          // Get applicable days (0-3, excluding the current day)
+          const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
+          
+          for (const dayIndex of applicableDays) {
+            const key = `${dayIndex}-${currentTime}`;
+            const slotsForDay = slotsByDayAndTime[key] || [];
+            
+            // Check if we have slots for this day and time
+            if (slotsForDay.length > 0) {
+              for (const slot of slotsForDay) {
+                // Make sure slot exists and is valid
+                if (!slot || !slot.id) continue;
+                
+                try {
+                  const assignment = {
+                    slot_id: slot.id,
+                    worker_id: form.workerId,
+                    role: roleName,
+                    week_start: format(currentWeek, 'yyyy-MM-dd'),
+                    is_recurring: false
+                  };
+                  
+                  console.log(`Creating assignment for day ${dayIndex} slot for worker ${form.workerId}`);
+                  const result = await createProducerAssignment(assignment);
+                  if (result) {
+                    successCount++;
+                  }
+                } catch (error: any) {
+                  console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
+                }
               }
-            } catch (error: any) {
-              console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
-              errorCount++;
             }
           }
         } else {
-          console.log(`No slots found for day ${dayIndex} at time ${currentTime}`);
+          // Create a single assignment
+          try {
+            const assignment = {
+              slot_id: currentSlot.id,
+              worker_id: form.workerId,
+              role: roleName,
+              week_start: format(currentWeek, 'yyyy-MM-dd'),
+              is_recurring: false
+            };
+            
+            console.log(`Creating single assignment for worker ${form.workerId} with role ${roleName}`);
+            const result = await createProducerAssignment(assignment);
+            if (result) {
+              successCount++;
+            }
+          } catch (error: any) {
+            console.error("Error creating producer assignment:", error);
+          }
         }
       }
       
       if (successCount > 0) {
         toast({
           title: "נוסף בהצלחה",
-          description: `העובד נוסף ל-${successCount} משבצות בסידור העבודה`
+          description: `נוספו ${successCount} שיבוצים לסידור העבודה`
         });
         await loadData(); // Refresh the assignments
-        // Don't close dialog, allow adding more producers
-        // Reset producer selection for next addition
-        setFormData({
-          ...formData,
-          workerId: ''
-        });
+        setIsDialogOpen(false);
       } else {
         toast({
           title: "מידע",
-          description: errorCount > 0 
-            ? "אירעו שגיאות בהוספת השיבוצים. בדוק את הלוג לפרטים נוספים." 
-            : "לא נמצאו תוכניות נוספות לשיבוץ או שכל השיבוצים כבר קיימים"
+          description: "לא נוספו שיבוצים חדשים. ייתכן שהם כבר קיימים במערכת."
         });
       }
-    } else {
-      // Create a single assignment
-      try {
-        const assignment = {
-          slot_id: currentSlot.id,
-          worker_id: formData.workerId,
-          role: roleName,
-          week_start: format(currentWeek, 'yyyy-MM-dd'),
-          is_recurring: false
-        };
-        
-        console.log("Creating single assignment for slot:", currentSlot);
-        const result = await createProducerAssignment(assignment);
-        if (result) {
-          toast({
-            title: "נוסף בהצלחה",
-            description: "העובד נוסף לסידור העבודה בהצלחה"
-          });
-          await loadData(); // Refresh the assignments
-          // Don't close dialog, allow adding more producers
-          // Reset producer selection for next addition
-          setFormData({
-            ...formData,
-            workerId: ''
-          });
-        } else {
-          toast({
-            title: "מידע",
-            description: "שיבוץ זה כבר קיים או שלא ניתן להוסיף את העובד"
-          });
-        }
-      } catch (error: any) {
-        console.error("Error creating producer assignment:", error);
-        toast({
-          title: "שגיאה",
-          description: error.message || "שגיאה ביצירת שיבוץ חדש",
-          variant: "destructive"
-        });
-      }
+    } catch (error: any) {
+      console.error("Error assigning producers:", error);
+      toast({
+        title: "שגיאה",
+        description: error.message || "אירעה שגיאה בהוספת העובדים לסידור",
+        variant: "destructive"
+      });
     }
-  } catch (error: any) {
-    console.error("Error assigning producer:", error);
-    toast({
-      title: "שגיאה",
-      description: error.message || "אירעה שגיאה בהוספת העובד לסידור",
-      variant: "destructive"
-    });
-  }
-};
+  };
   
   const handleDeleteAssignment = async (assignmentId: string) => {
     if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
@@ -358,23 +348,35 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   }
   
   // Filter out producers that are already assigned with this role to this slot
-  const getAvailableProducers = () => {
+  const getAvailableProducers = (producerFormIndex: number) => {
     if (!currentSlot) return producers;
     
     const existingAssignments = assignments.filter(
       assignment => assignment.slot_id === currentSlot.id
     );
     
+    // Get current form data
+    const currentForm = producerForms[producerFormIndex];
+    
     // Get producers who are already assigned with the selected role
+    // excluding the currently selected workerId in this form row
     const producersWithSelectedRole = existingAssignments
       .filter(assignment => {
-        const selectedRole = roles.find(r => r.id === formData.role);
-        return assignment.role === (selectedRole ? selectedRole.name : '');
+        const selectedRole = roles.find(r => r.id === currentForm.role);
+        return assignment.role === (selectedRole ? selectedRole.name : '') && 
+               assignment.worker_id !== currentForm.workerId;
       })
       .map(assignment => assignment.worker_id);
     
-    // Return producers who aren't already assigned with this role
-    return producers.filter(producer => !producersWithSelectedRole.includes(producer.id));
+    // Also exclude other selected workers in other form rows
+    const currentlySelectedWorkers = producerForms
+      .filter((f, idx) => idx !== producerFormIndex && f.workerId)
+      .map(f => f.workerId);
+    
+    const excludedWorkers = [...producersWithSelectedRole, ...currentlySelectedWorkers];
+    
+    // Return producers who aren't already assigned with this role or selected in other rows
+    return producers.filter(producer => !excludedWorkers.includes(producer.id));
   };
   
   return (
@@ -486,11 +488,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
       </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>הוספת עובד לתוכנית</DialogTitle>
+            <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
             <DialogDescription>
-              שבץ עובד לתפקיד בתוכנית. ניתן לבחור אפשרויות שיבוץ נוספות.
+              שבץ עד 4 עובדים לתפקידים שונים בתוכנית
             </DialogDescription>
           </DialogHeader>
           {currentSlot && (
@@ -502,44 +504,59 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                 </p>
               </div>
               
-              <div className="space-y-2">
-                <label htmlFor="worker">בחר עובד:</label>
-                <Select value={formData.workerId} onValueChange={(value) => setFormData({ ...formData, workerId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="בחר עובד" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableProducers().map((producer) => (
-                      <SelectItem key={`producer-select-${producer.id}`} value={producer.id}>
-                        {producer.name} {producer.position && `(${producer.position})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="role">בחר תפקיד:</label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="בחר תפקיד" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={`role-select-${role.id}`} value={role.id}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="border rounded-md p-3 bg-slate-50">
+                {producerForms.map((form, index) => (
+                  <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <Label htmlFor={`worker-${index}`} className="mb-1 block">עובד {index + 1}</Label>
+                      <Select 
+                        value={form.workerId} 
+                        onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
+                      >
+                        <SelectTrigger id={`worker-${index}`}>
+                          <SelectValue placeholder="בחר עובד" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableProducers(index).map((producer) => (
+                            <SelectItem key={`producer-select-${producer.id}-${index}`} value={producer.id}>
+                              {producer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor={`role-${index}`} className="mb-1 block">תפקיד</Label>
+                      <Select 
+                        value={form.role} 
+                        onValueChange={(value) => updateProducerForm(index, 'role', value)}
+                      >
+                        <SelectTrigger id={`role-${index}`}>
+                          <SelectValue placeholder="בחר תפקיד" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={`role-select-${role.id}-${index}`} value={role.id}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
               </div>
               
               <div className="space-y-4 pt-2">
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Switch 
                     id="weekdays"
-                    checked={formData.isWeekdays}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isWeekdays: checked, isPermanent: checked ? false : formData.isPermanent })}
+                    checked={isWeekdays}
+                    onCheckedChange={(checked) => {
+                      setIsWeekdays(checked);
+                      if (checked) setIsPermanent(false);
+                    }}
                   />
                   <Label htmlFor="weekdays" className="mr-2">
                     שיבוץ כל השבוע (ראשון-רביעי)
@@ -549,8 +566,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Switch 
                     id="permanent"
-                    checked={formData.isPermanent}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isPermanent: checked, isWeekdays: checked ? false : formData.isWeekdays })}
+                    checked={isPermanent}
+                    onCheckedChange={(checked) => {
+                      setIsPermanent(checked);
+                      if (checked) setIsWeekdays(false);
+                    }}
                   />
                   <Label htmlFor="permanent" className="mr-2">
                     צוות תוכנית קבוע
@@ -561,7 +581,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           )}
           <DialogFooter className="flex justify-between">
             <Button variant="outline" onClick={handleCloseDialog}>סגור</Button>
-            <Button onClick={handleSubmit} disabled={!formData.workerId || !formData.role}>הוסף לסידור</Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!producerForms.some(form => form.workerId && form.role)}
+            >
+              הוסף לסידור
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
