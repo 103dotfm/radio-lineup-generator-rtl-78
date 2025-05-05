@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -7,7 +8,7 @@ interface User {
   email: string;
   username?: string;
   full_name?: string;
-  title?: string; // Added the title property to fix the TypeScript error
+  title?: string;
   avatar_url?: string;
   is_admin: boolean;
 }
@@ -124,13 +125,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (userData) {
         // Combine user data with profile data and worker data if available
-        const combinedUserData: User = {
+        const combinedUserData = {
           ...userData,
           ...(profileData || {}),
           // If worker data exists, prioritize those fields
           full_name: workerData?.name || userData.full_name || '',
           title: workerData?.position || userData.title || '',
-          is_admin: userData.is_admin || false
         };
         
         setUser(combinedUserData);

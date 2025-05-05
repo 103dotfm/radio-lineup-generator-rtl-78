@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MasterSchedule from '@/components/schedule/MasterSchedule';
@@ -9,11 +8,9 @@ import DataManagement from '@/components/admin/data-management/DataManagement';
 import DatabaseSettings from '@/components/admin/database-settings/DatabaseSettings';
 import ScheduleExportSettings from '@/components/admin/ScheduleExportSettings';
 import { Calendar, Briefcase, Users, Mail, Database, HardDrive, FileCode } from "lucide-react";
-
 interface AdminTabsProps {
   defaultTab: string;
 }
-
 const AdminTabs = ({
   defaultTab
 }: AdminTabsProps) => {
@@ -98,5 +95,4 @@ const AdminTabs = ({
       </TabsContent>
     </Tabs>;
 };
-
 export default AdminTabs;

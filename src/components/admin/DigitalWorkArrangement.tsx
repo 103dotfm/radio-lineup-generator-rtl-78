@@ -1,41 +1,38 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DigitalWorkersTable from './digital-workers/DigitalWorkersTable';
+import DigitalWorkArrangementEditor from './DigitalWorkArrangementEditor';
+import WorkerManagementTab from './workers/WorkerManagementTab';
 
-const DigitalWorkArrangement = () => {
-  const [activeTab, setActiveTab] = useState('workers');
+const DigitalWorkArrangement: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>("schedule");
+
+  useEffect(() => {
+    return () => {
+      if (document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = '';
+      }
+    };
+  }, []);
 
   return (
-    <div className="space-y-4" dir="rtl">
-      <Card>
-        <CardHeader>
-          <CardTitle>סידור עבודה - דיגיטל</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-4"
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="workers">עובדי דיגיטל</TabsTrigger>
-              <TabsTrigger value="schedule">לוח משמרות</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="workers">
-              <DigitalWorkersTable />
-            </TabsContent>
-            
-            <TabsContent value="schedule">
-              <div className="text-center py-8">
-                תכנון לוח משמרות יופיע כאן
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+    <div className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-6">ניהול סידורי עבודה דיגיטל</h1>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="schedule">עריכת סידור עבודה</TabsTrigger>
+          <TabsTrigger value="workers">צוות עובדים</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="schedule">
+          <DigitalWorkArrangementEditor />
+        </TabsContent>
+        
+        <TabsContent value="workers">
+          <WorkerManagementTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
