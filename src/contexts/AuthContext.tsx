@@ -61,29 +61,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (!userData) {
         console.warn('No user data found for ID:', userId);
-        
-        // Check if this user is a producer by looking up in workers table
-        const { data: workerData, error: workerError } = await supabase
-          .from('workers')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
-          
-        if (workerError) {
-          console.error('Error checking worker data:', workerError);
-        }
-        
         // Try to get user details from auth metadata as fallback
         const { data: { user: authUser } } = await supabase.auth.getUser();
         
         if (authUser) {
-          // Create basic user object from auth data, enhanced with worker data if available
+          // Create basic user object from auth data
           const basicUser = {
             id: authUser.id,
             email: authUser.email || '',
-            username: workerData?.name || authUser.email?.split('@')[0] || '',
-            full_name: workerData?.name || authUser.user_metadata?.full_name || authUser.email,
-            title: workerData?.position || '',
+            username: authUser.email?.split('@')[0] || '',
+            full_name: authUser.user_metadata?.full_name || authUser.email,
             is_admin: false
           };
           
@@ -111,26 +98,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Error fetching profile data:', profileError);
       }
-      
-      // Check if this user is a producer and get additional details
-      const { data: workerData, error: workerError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-        
-      if (workerError && workerError.code !== 'PGRST116') {
-        console.error('Error fetching worker data:', workerError);
-      }
 
       if (userData) {
-        // Combine user data with profile data and worker data if available
+        // Combine user data with profile data
         const combinedUserData = {
           ...userData,
           ...(profileData || {}),
-          // If worker data exists, prioritize those fields
-          full_name: workerData?.name || userData.full_name || '',
-          title: workerData?.position || userData.title || '',
         };
         
         setUser(combinedUserData);
