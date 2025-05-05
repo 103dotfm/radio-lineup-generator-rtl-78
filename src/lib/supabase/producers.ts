@@ -1,8 +1,6 @@
-import { format, startOfWeek } from 'date-fns';
-import { supabase } from '@/lib/supabase';
-import { ProducerAssignment } from '@/types/schedule';
-import { getAppDomain } from '@/integrations/supabase/client';
+import { supabase } from "@/lib/supabase";
 
+// Export the Worker interface so it can be imported by other modules
 export interface Worker {
   id: string;
   name: string;
@@ -14,138 +12,88 @@ export interface Worker {
   password_readable?: string;
 }
 
-export interface ProducerWorkArrangement {
+export interface ProducerRole {
   id: string;
-  week_start: string;
-  notes: string;
+  name: string;
 }
 
-// Re-export the ProducerAssignment type so it can be imported from this file
-export type { ProducerAssignment };
-
-// Get workers (for producer assignments)
-export const getWorkers = async (): Promise<Worker[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('workers')
-      .select('*')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching workers:', error);
-      throw error;
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error in getWorkers:', error);
-    throw error;
-  }
-};
-
-// Get producers (needed by ProducersTable.tsx and MonthlySummary.tsx)
-export const getProducers = async (): Promise<Worker[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('workers')
-      .select('*')
-      .eq('department', 'producers')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching producers:', error);
-      throw error;
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error in getProducers:', error);
-    throw error;
-  }
-};
-
-// Create a new worker
-export const createWorker = async (workerData: { name: string } & Partial<Worker>): Promise<Worker | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('workers')
-      .insert(workerData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating worker:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in createWorker:', error);
-    throw error;
-  }
-};
-
-// Update a worker
-export const updateWorker = async (id: string, workerData: Partial<Worker>): Promise<Worker | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('workers')
-      .update(workerData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating worker:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in updateWorker:', error);
-    throw error;
-  }
-};
-
-// Delete a worker
-export const deleteWorker = async (id: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('workers')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error deleting worker:', error);
-      throw error;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error in deleteWorker:', error);
-    return false;
-  }
-};
-
-// Create a system user for a producer using an edge function
-export const createProducerUser = async (workerId: string, email: string): Promise<{
+export interface CreateProducerUserResult {
   success: boolean;
   password?: string;
   message?: string;
   error?: any;
-}> => {
+}
+
+export interface ResetPasswordResult {
+  success: boolean;
+  password?: string;
+  message?: string;
+  error?: any;
+}
+
+export const getProducers = async (): Promise<Worker[]> => {
   try {
-    // Check if the worker already has a user
-    const { data: worker } = await supabase
-      .from('workers')
-      .select('*')
-      .eq('id', workerId)
-      .single();
+    console.log('producers.ts: Fetching workers from Supabase...');
     
-    if (worker?.user_id) {
+    // Add a timeout to detect if the request is hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Request timeout: Supabase query took too long'));
+      }, 10000); // 10 second timeout
+    });
+    
+    // The actual data fetch - include user_id and password_readable
+    const fetchPromise = supabase
+      .from('workers')
+      .select('id, name, department, position, email, phone, user_id, password_readable')
+      .order('name');
+    
+    // Race the fetch against the timeout
+    const { data, error } = await Promise.race([
+      fetchPromise,
+      timeoutPromise.then(() => { throw new Error('Timeout'); })
+    ]);
+    
+    if (error) {
+      console.error('Error in getWorkers query:', error);
+      throw new Error(`Failed to fetch workers: ${error.message}`);
+    }
+    
+    if (!data || !Array.isArray(data)) {
+      console.error('No valid data returned from workers query');
+      return [];
+    }
+    
+    console.log(`Workers data fetched successfully: ${data.length} workers`);
+    
+    // Ensure we're returning an array of workers with valid properties
+    return data.map(worker => ({
+      id: worker.id || '',
+      name: worker.name || '',
+      department: worker.department || '',
+      position: worker.position || '',
+      email: worker.email || '',
+      phone: worker.phone || '',
+      user_id: worker.user_id || undefined,
+      password_readable: worker.password_readable || undefined
+    }));
+  } catch (error) {
+    console.error('Error fetching workers:', error);
+    throw error; // Re-throw to allow components to handle the error
+  }
+};
+
+// Function to create a user for a producer
+export const createProducerUser = async (
+  workerId: string,
+  email: string
+): Promise<CreateProducerUserResult> => {
+  try {
+    if (!workerId || !email) {
+      console.error('Missing required parameters for createProducerUser');
       return {
         success: false,
-        message: 'המשתמש כבר קיים במערכת'
+        message: 'Missing required parameters'
       };
     }
     
@@ -176,414 +124,263 @@ export const createProducerUser = async (workerId: string, email: string): Promi
     console.error('Error in createProducerUser:', error);
     return {
       success: false,
-      error,
-      message: error.message || 'שגיאה לא צפויה'
+      message: error.message || 'An unexpected error occurred',
+      error
     };
   }
 };
 
-// Reset producer password using an edge function
-export const resetProducerPassword = async (workerId: string): Promise<{
-  success: boolean;
-  password?: string;
-  message?: string;
-  error?: any;
-}> => {
+// Function to reset a producer's password
+export const resetProducerPassword = async (
+  workerId: string
+): Promise<ResetPasswordResult> => {
   try {
-    // Get the base URL for the Supabase project
-    const appDomain = await getAppDomain();
-    const supabaseUrl = new URL(appDomain).origin;
-    
-    // Get the anon key from the client
-    const { data: anonKeyData } = await supabase.auth.getSession();
-    const anonKey = anonKeyData?.session?.access_token || '';
-    
-    // Call the edge function to reset the password
-    const response = await fetch(`${supabaseUrl}/functions/v1/reset-producer-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anonKey}`
-      },
-      body: JSON.stringify({ workerId })
-    });
-    
-    if (!response.ok) {
-      console.error('Error response from edge function:', response.status, response.statusText);
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      
-      try {
-        // Try to parse the error as JSON if possible
-        const errorJson = JSON.parse(errorText);
-        return {
-          success: false,
-          message: errorJson.message || 'שגיאה באיפוס סיסמה',
-          error: errorJson.error
-        };
-      } catch (e) {
-        // If it's not valid JSON, return the text
-        return {
-          success: false,
-          message: 'שגיאה באיפוס סיסמה',
-          error: errorText
-        };
-      }
+    if (!workerId) {
+      console.error('Missing required workerId for resetProducerPassword');
+      return {
+        success: false,
+        message: 'Missing worker ID'
+      };
     }
     
-    const result = await response.json();
+    // Call the edge function using supabase.functions.invoke
+    console.log("Invoking reset-producer-password edge function");
+    
+    const { data, error } = await supabase.functions.invoke('reset-producer-password', {
+      body: { workerId }
+    });
+    
+    if (error) {
+      console.error("Error calling edge function:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message || 'Unknown error'}`,
+        error
+      };
+    }
+    
+    console.log("Edge function response:", data);
     
     return {
-      success: true,
-      password: result.password
+      success: data?.success === true,
+      password: data?.password,
+      message: data?.message || 'Operation completed'
     };
   } catch (error: any) {
     console.error('Error in resetProducerPassword:', error);
     return {
       success: false,
-      error,
-      message: error.message
+      message: error.message || 'An unexpected error occurred',
+      error
     };
   }
 };
 
-// Helper function to generate a strong random password
-const generateStrongPassword = (length: number): string => {
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+';
-  let password = '';
-  
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    password += charset[randomIndex];
-  }
-  
-  return password;
-};
-
 // Get producer roles
-export const getProducerRoles = async (): Promise<any[]> => {
+export const getProducerRoles = async (): Promise<ProducerRole[]> => {
   try {
     const { data, error } = await supabase
       .from('producer_roles')
-      .select('*')
+      .select('id, name')
       .order('name');
-
+    
     if (error) {
       console.error('Error fetching producer roles:', error);
       throw error;
     }
-
+    
     return data || [];
   } catch (error) {
     console.error('Error in getProducerRoles:', error);
-    return [];
+    throw error;
   }
 };
 
-// Get or create producer work arrangement
-export const getOrCreateProducerWorkArrangement = async (date: Date): Promise<ProducerWorkArrangement | null> => {
-  const weekStart = format(startOfWeek(date, { weekStartsOn: 0 }), 'yyyy-MM-dd');
-  
+// Other worker-related functions
+
+export const createWorker = async (worker: Partial<Worker>): Promise<Worker | null> => {
   try {
-    // Try to fetch existing arrangement
-    const { data, error } = await supabase
-      .from('producer_work_arrangements')
-      .select('*')
-      .eq('week_start', weekStart)
-      .single();
-      
-    if (!error && data) {
-      return data;
+    if (!worker.name) {
+      throw new Error('Worker name is required');
     }
-    
-    // If not found, create a new one
-    const { data: newData, error: createError } = await supabase
-      .from('producer_work_arrangements')
+
+    const { data, error } = await supabase
+      .from('workers')
       .insert({
-        week_start: weekStart,
-        notes: ''
+        name: worker.name,
+        department: worker.department || null,
+        position: worker.position || null,
+        email: worker.email || null,
+        phone: worker.phone || null
       })
       .select()
       .single();
-      
-    if (createError) {
-      console.error('Error creating producer work arrangement:', createError);
-      throw createError;
-    }
     
-    return newData;
-  } catch (error) {
-    console.error('Error in getOrCreateProducerWorkArrangement:', error);
-    throw error;
-  }
-};
-
-// Update producer work arrangement notes
-export const updateProducerWorkArrangementNotes = async (id: string, notes: string): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('producer_work_arrangements')
-      .update({
-        notes
-      })
-      .eq('id', id);
-      
     if (error) {
-      console.error('Error updating producer work arrangement notes:', error);
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error in updateProducerWorkArrangementNotes:', error);
-    throw error;
-  }
-};
-
-// Create a producer assignment
-export const createProducerAssignment = async (assignment: {
-  slot_id: string;
-  worker_id: string;
-  role: string;
-  week_start: string;
-  is_recurring?: boolean;
-}): Promise<ProducerAssignment | null> => {
-  try {
-    // First, verify that slot exists in schedule_slots_old table
-    const { data: slotExists, error: slotCheckError } = await supabase
-      .from('schedule_slots_old')
-      .select('id')
-      .eq('id', assignment.slot_id)
-      .maybeSingle();
-
-    if (slotCheckError) {
-      console.error('Failed to find slot in schedule_slots_old:', slotCheckError);
-      throw new Error(`Failed to verify slot existence: ${slotCheckError.message}`);
+      console.error('Error creating worker:', error);
+      return null;
     }
     
-    if (!slotExists) {
-      console.error(`Slot with ID ${assignment.slot_id} does not exist in schedule_slots_old table`);
-      throw new Error(`Slot with ID ${assignment.slot_id} not found`);
+    if (!data) {
+      console.error('No data returned after creating worker');
+      return null;
     }
     
-    // Check if an assignment with the same slot, worker, and role already exists
-    const { data: existingAssignment, error: checkError } = await supabase
-      .from('producer_assignments')
-      .select('*')
-      .eq('slot_id', assignment.slot_id)
-      .eq('worker_id', assignment.worker_id)
-      .eq('role', assignment.role)
-      .eq('week_start', assignment.week_start)
-      .maybeSingle();
-    
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking for existing assignment:', checkError);
-      throw checkError;
-    }
-    
-    if (existingAssignment) {
-      console.log('Assignment already exists:', existingAssignment);
-      return existingAssignment;
-    }
-
-    console.log("Creating producer assignment:", assignment);
-    const { data, error } = await supabase
-      .from('producer_assignments')
-      .insert(assignment)
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error('Error creating producer assignment:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in createProducerAssignment:', error);
-    throw error;
-  }
-};
-
-// Create recurring producer assignment
-export const createRecurringProducerAssignment = async (
-  slotId: string, 
-  workerId: string, 
-  role: string, 
-  weekStart: string
-): Promise<boolean> => {
-  try {
-    // First, verify that slot exists in schedule_slots_old table
-    const { data: slotExists, error: slotCheckError } = await supabase
-      .from('schedule_slots_old')
-      .select('id')
-      .eq('id', slotId)
-      .maybeSingle();
-
-    if (slotCheckError) {
-      console.error('Failed to find slot in schedule_slots_old:', slotCheckError);
-      throw new Error(`Failed to verify slot existence: ${slotCheckError.message}`);
-    }
-    
-    if (!slotExists) {
-      console.error(`Slot with ID ${slotId} does not exist in schedule_slots_old table`);
-      throw new Error(`Slot with ID ${slotId} not found`);
-    }
-    
-    // Check if this recurring assignment already exists
-    const { data: existingAssignment, error: checkError } = await supabase
-      .from('producer_assignments')
-      .select('*')
-      .eq('slot_id', slotId)
-      .eq('worker_id', workerId)
-      .eq('role', role)
-      .eq('is_recurring', true)
-      .maybeSingle();
-    
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking for existing recurring assignment:', checkError);
-      throw checkError;
-    }
-    
-    if (existingAssignment) {
-      console.log('Recurring assignment already exists:', existingAssignment);
-      return true;
-    }
-
-    // Create a recurring assignment
-    const assignment = {
-      slot_id: slotId,
-      worker_id: workerId,
-      role: role,
-      week_start: weekStart,
-      is_recurring: true
+    return {
+      id: data.id,
+      name: data.name,
+      department: data.department || '',
+      position: data.position || '',
+      email: data.email || '',
+      phone: data.phone || ''
     };
-    
-    console.log("Creating recurring producer assignment with data:", assignment);
-    
-    const { data, error } = await supabase
-      .from('producer_assignments')
-      .insert(assignment)
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error('Error creating recurring producer assignment:', error);
-      throw error;
-    }
-
-    return data !== null;
   } catch (error) {
-    console.error('Error in createRecurringProducerAssignment:', error);
-    return false;
+    console.error('Error creating worker:', error);
+    return null;
   }
 };
 
-// Delete a producer assignment
-export const deleteProducerAssignment = async (id: string): Promise<boolean> => {
+export const updateWorker = async (id: string, worker: Partial<Worker>): Promise<Worker | null> => {
   try {
+    const updateData: any = {};
+    
+    if (worker.name) updateData.name = worker.name;
+    if (worker.department !== undefined) updateData.department = worker.department;
+    if (worker.position !== undefined) updateData.position = worker.position;
+    if (worker.email !== undefined) updateData.email = worker.email;
+    if (worker.phone !== undefined) updateData.phone = worker.phone;
+    
+    if (Object.keys(updateData).length === 0) {
+      throw new Error('No fields to update');
+    }
+    
+    console.log(`Updating worker ${id} with data:`, updateData);
+    
+    const { data, error } = await supabase
+      .from('workers')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating worker:', error);
+      return null;
+    }
+    
+    if (!data) {
+      console.error('No data returned after updating worker');
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      name: data.name,
+      department: data.department || '',
+      position: data.position || '',
+      email: data.email || '',
+      phone: data.phone || ''
+    };
+  } catch (error) {
+    console.error('Error updating worker:', error);
+    return null;
+  }
+};
+
+export const deleteWorker = async (id: string): Promise<boolean> => {
+  try {
+    console.log(`Deleting worker with ID: ${id}`);
     const { error } = await supabase
-      .from('producer_assignments')
+      .from('workers')
       .delete()
       .eq('id', id);
-
+    
     if (error) {
-      console.error('Error deleting producer assignment:', error);
-      throw error;
+      console.error('Error deleting worker:', error);
+      return false;
     }
-
+    
+    console.log(`Worker ${id} deleted successfully`);
     return true;
   } catch (error) {
-    console.error('Error in deleteProducerAssignment:', error);
+    console.error('Error deleting worker:', error);
     return false;
   }
 };
 
-// Get producer assignments for a specific week
-export const getProducerAssignments = async (date: Date): Promise<ProducerAssignment[]> => {
-  const weekStart = format(startOfWeek(date, { weekStartsOn: 0 }), 'yyyy-MM-dd');
-  
+export const getWorkerById = async (id: string): Promise<Worker | null> => {
   try {
-    // First get assignments for this week
-    const { data: weeklyAssignments, error: weeklyError } = await supabase
-      .from('producer_assignments')
-      .select(`
-        *,
-        worker:workers(id, name, position)
-      `)
-      .eq('week_start', weekStart);
-      
-    if (weeklyError) {
-      console.error('Error fetching weekly producer assignments:', weeklyError);
-      throw weeklyError;
+    if (!id) {
+      console.warn('getWorkerById called with empty id');
+      return null;
     }
     
-    // Then get recurring assignments that should apply to this week
-    const { data: recurringAssignments, error: recurringError } = await supabase
-      .from('producer_assignments')
-      .select(`
-        *,
-        worker:workers(id, name, position)
-      `)
-      .eq('is_recurring', true);
-      
-    if (recurringError) {
-      console.error('Error fetching recurring producer assignments:', recurringError);
-      throw recurringError;
+    console.log(`Fetching worker with ID: ${id}`);
+    const { data, error } = await supabase
+      .from('workers')
+      .select('id, name, department, position, email, phone')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`Error fetching worker with ID ${id}:`, error);
+      return null;
     }
     
-    // Combine both types of assignments
-    // Weekly assignments take precedence over recurring ones for the same slot and worker
-    const assignments = [...(weeklyAssignments || [])];
-    
-    // Add recurring assignments that don't conflict with weekly assignments
-    if (recurringAssignments) {
-      for (const recurringAssignment of recurringAssignments) {
-        // Check if we already have a weekly assignment for this slot and worker
-        const hasWeeklyAssignment = assignments.some(
-          a => a.slot_id === recurringAssignment.slot_id && 
-               a.worker_id === recurringAssignment.worker_id &&
-               a.role === recurringAssignment.role
-        );
-        
-        if (!hasWeeklyAssignment) {
-          // Add this recurring assignment to the list
-          assignments.push({
-            ...recurringAssignment,
-            week_start: weekStart // Override with current week
-          });
-        }
-      }
+    if (!data) {
+      console.warn(`No worker found with ID ${id}`);
+      return null;
     }
     
-    return assignments;
+    return {
+      id: data.id,
+      name: data.name,
+      department: data.department || '',
+      position: data.position || '',
+      email: data.email || '',
+      phone: data.phone || ''
+    };
   } catch (error) {
-    console.error('Error in getProducerAssignments:', error);
-    throw error;
+    console.error(`Error fetching worker with ID ${id}:`, error);
+    return null;
   }
 };
 
-// Get all monthly assignments for the monthly summary
-export const getAllMonthlyAssignments = async (year: number, month: number): Promise<ProducerAssignment[]> => {
+export const getWorkersByIds = async (ids: string[]): Promise<Worker[]> => {
   try {
-    // Format month with leading zero if needed
-    const monthStr = month.toString().padStart(2, '0');
-    
-    // Find all assignments for the given month
-    const { data, error } = await supabase
-      .from('producer_assignments')
-      .select(`
-        *,
-        worker:workers(id, name, position)
-      `)
-      .like('week_start', `${year}-${monthStr}-%`);
-      
-    if (error) {
-      console.error('Error fetching monthly producer assignments:', error);
-      throw error;
+    if (!ids || ids.length === 0) {
+      console.warn('getWorkersByIds called with empty ids array');
+      return [];
     }
     
-    return data || [];
+    console.log(`Fetching workers with IDs: ${ids.join(', ')}`);
+    const { data, error } = await supabase
+      .from('workers')
+      .select('id, name, department, position, email, phone')
+      .in('id', ids);
+    
+    if (error) {
+      console.error('Error fetching workers by IDs:', error);
+      return [];
+    }
+    
+    if (!data || !Array.isArray(data)) {
+      console.warn('No workers found for the provided IDs');
+      return [];
+    }
+    
+    console.log(`Found ${data.length} workers for ${ids.length} requested IDs`);
+    
+    return data.map(worker => ({
+      id: worker.id,
+      name: worker.name,
+      department: worker.department || '',
+      position: worker.position || '',
+      email: worker.email || '',
+      phone: worker.phone || ''
+    }));
   } catch (error) {
-    console.error('Error in getAllMonthlyAssignments:', error);
+    console.error('Error fetching workers by IDs:', error);
     return [];
   }
 };

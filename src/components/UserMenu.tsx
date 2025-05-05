@@ -25,11 +25,13 @@ const UserMenu = () => {
           <Avatar className="h-8 w-8 mr-2">
             <AvatarImage 
               src={user.avatar_url || defaultAvatarUrl} 
-              alt={user.full_name || ""} 
+              alt={user.full_name || user.email || ""} 
             />
-            <AvatarFallback>{user.full_name?.charAt(0) || "U"}</AvatarFallback>
+            <AvatarFallback>
+              {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
-          <span>{user.full_name || "אזור אישי"}</span>
+          <span>{user.full_name || user.email || "אזור אישי"}</span>
         </Link>
       </Button>
       <Button variant="ghost" size="sm" onClick={() => logout()} className="flex items-center gap-2">
