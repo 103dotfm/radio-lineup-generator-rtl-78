@@ -1,4 +1,3 @@
-
 import { format, startOfWeek } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { ProducerAssignment } from '@/types/schedule';
@@ -154,16 +153,27 @@ export const createProducerUser = async (workerId: string, email: string): Promi
     const appDomain = await getAppDomain();
     const supabaseUrl = new URL(appDomain).origin;
     
-    // Get the anon key from the client
-    const { data: anonKeyData } = await supabase.auth.getSession();
-    const anonKey = anonKeyData?.session?.access_token || '';
+    console.log("Calling edge function with URL:", `${supabaseUrl}/functions/v1/create-producer-user`);
+    
+    // Get the session for authentication
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    
+    if (!accessToken) {
+      console.error("No access token available");
+      return {
+        success: false,
+        message: 'נדרשת התחברות למערכת',
+        error: 'No authentication token'
+      };
+    }
     
     // Call the edge function to create the user
     const response = await fetch(`${supabaseUrl}/functions/v1/create-producer-user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anonKey}`
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({ 
         workerId, 
@@ -171,41 +181,63 @@ export const createProducerUser = async (workerId: string, email: string): Promi
       })
     });
     
+    // Debug response
+    console.log("Edge function status:", response.status, response.statusText);
+    console.log("Response headers:", Object.fromEntries([...response.headers.entries()]));
+    
+    // Check if response is ok before trying to parse JSON
     if (!response.ok) {
+      const contentType = response.headers.get('content-type');
       console.error('Error response from edge function:', response.status, response.statusText);
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
+      console.error('Content-Type:', contentType);
       
-      try {
-        // Try to parse the error as JSON if possible
-        const errorJson = JSON.parse(errorText);
+      let errorMessage;
+      // Handle different response types
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        console.error('Error JSON:', errorData);
+        errorMessage = errorData.message || errorData.error || 'שגיאה ביצירת משתמש';
         return {
           success: false,
-          message: errorJson.message || 'שגיאה ביצירת משתמש',
-          error: errorJson.error
+          message: errorMessage,
+          error: errorData
         };
-      } catch (e) {
-        // If it's not valid JSON, return the text
+      } else {
+        // For non-JSON responses (like HTML error pages)
+        const errorText = await response.text();
+        console.error('Error response body (non-JSON):', errorText.substring(0, 500)); // Log first 500 chars
+        errorMessage = 'שגיאה בתקשורת עם שרת - אנא נסה שנית';
         return {
           success: false,
-          message: 'שגיאה ביצירת משתמש',
-          error: errorText
+          message: errorMessage,
+          error: `Non-JSON response: ${response.status} ${response.statusText}`
         };
       }
     }
     
-    const result = await response.json();
-    
-    return {
-      success: true,
-      password: result.password
-    };
+    // Parse JSON response for successful requests
+    try {
+      const result = await response.json();
+      console.log("Successful response:", result);
+      
+      return {
+        success: true,
+        password: result.password
+      };
+    } catch (jsonError) {
+      console.error("Error parsing JSON response:", jsonError);
+      return {
+        success: false,
+        message: 'שגיאה בפענוח תשובת השרת',
+        error: jsonError
+      };
+    }
   } catch (error: any) {
     console.error('Error in createProducerUser:', error);
     return {
       success: false,
       error,
-      message: error.message
+      message: error.message || 'שגיאה לא צפויה'
     };
   }
 };
