@@ -77,7 +77,9 @@ const ProducerUsers: React.FC = () => {
     
     try {
       console.log("Creating user for producer:", selectedProducer.id, "with email:", email);
+      
       const result = await createProducerUser(selectedProducer.id, email);
+      console.log("Create producer user result:", result);
       
       if (result.success && result.password) {
         setGeneratedPassword(result.password);

@@ -14,7 +14,10 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     console.log("Handling OPTIONS request");
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(JSON.stringify({ success: true }), { 
+      headers: corsHeaders,
+      status: 200 
+    });
   }
   
   try {
@@ -78,7 +81,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Error checking existing users'
+          message: 'Error checking existing users',
+          error: existingUserError.message
         }),
         { headers: corsHeaders, status: 500 }
       );

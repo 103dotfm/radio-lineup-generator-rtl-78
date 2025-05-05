@@ -149,76 +149,29 @@ export const createProducerUser = async (workerId: string, email: string): Promi
       };
     }
     
-    // Get the base URL for the Supabase project
-    const appDomain = await getAppDomain();
-    const supabaseUrl = new URL(appDomain).origin;
+    // Call the edge function directly using supabase.functions.invoke
+    console.log("Invoking create-producer-user edge function");
     
-    console.log("Calling edge function with URL:", `${supabaseUrl}/functions/v1/create-producer-user`);
-    
-    // Get the session for authentication
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData?.session?.access_token;
-    
-    if (!accessToken) {
-      console.error("No access token available");
-      return {
-        success: false,
-        message: 'נדרשת התחברות למערכת',
-        error: 'No authentication token'
-      };
-    }
-    
-    // Call the edge function to create the user
-    const response = await fetch(`${supabaseUrl}/functions/v1/create-producer-user`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({ 
-        workerId, 
-        email 
-      })
+    const { data, error } = await supabase.functions.invoke('create-producer-user', {
+      body: { workerId, email }
     });
     
-    // Debug response
-    console.log("Edge function status:", response.status, response.statusText);
-    console.log("Response headers:", Object.fromEntries([...response.headers.entries()]));
-    
-    // Check if response is ok and has the correct content type
-    const contentType = response.headers.get('content-type');
-    console.log("Content-Type:", contentType);
-    
-    if (contentType && contentType.includes('application/json')) {
-      // If it's JSON, parse it normally
-      try {
-        const result = await response.json();
-        console.log("Successful JSON response:", result);
-        
-        return {
-          success: result.success === true,
-          password: result.password,
-          message: result.message
-        };
-      } catch (jsonError) {
-        console.error("Error parsing JSON response:", jsonError);
-        return {
-          success: false,
-          message: 'שגיאה בפענוח תשובת השרת',
-          error: jsonError
-        };
-      }
-    } else {
-      // For non-JSON responses, return a more descriptive error
-      const responseText = await response.text();
-      console.error("Non-JSON response received:", responseText.substring(0, 500)); // Log first 500 chars
-      
+    if (error) {
+      console.error("Error calling edge function:", error);
       return {
         success: false,
-        message: 'השרת החזיר תשובה לא תקינה, אנא נסה שנית מאוחר יותר',
-        error: `Non-JSON response: ${responseText.substring(0, 100)}...`
+        message: `Error: ${error.message || 'Unknown error'}`,
+        error
       };
     }
+    
+    console.log("Edge function response:", data);
+    
+    return {
+      success: data?.success === true,
+      password: data?.password,
+      message: data?.message || 'Operation completed'
+    };
   } catch (error: any) {
     console.error('Error in createProducerUser:', error);
     return {
