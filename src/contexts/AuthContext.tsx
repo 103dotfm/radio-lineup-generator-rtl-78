@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -123,14 +124,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (userData) {
+        // Create a type that includes all possible fields from userData and profileData
+        type CombinedUserData = User & {
+          // Add any additional fields that might be present but not in User interface
+          created_at?: string;
+          updated_at?: string;
+          google_id?: string;
+          [key: string]: any; // Allow any other properties
+        };
+        
         // Combine user data with profile data and worker data if available
-        const combinedUserData = {
+        const combinedUserData: CombinedUserData = {
           ...userData,
           ...(profileData || {}),
           // If worker data exists, prioritize those fields
           full_name: workerData?.name || userData.full_name || '',
           title: workerData?.position || userData.title || '',
-        } as User; // Cast to User type to ensure TypeScript recognizes all properties
+          is_admin: userData.is_admin || false
+        };
         
         setUser(combinedUserData);
         setIsAdmin(userData.is_admin || false);
