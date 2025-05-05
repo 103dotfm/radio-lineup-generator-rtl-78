@@ -1,6 +1,5 @@
-
 import { supabase } from "@/lib/supabase";
-import { getWorkersByIds } from "@/lib/supabase/workers";
+import { DigitalWorker } from "@/hooks/useDigitalWorkers";
 
 const formatTime = (timeString: string): string => {
   try {
@@ -172,20 +171,30 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
       return null;
     }
     
-    // Look up worker names from the workers table
+    // Look up worker names from the digital_employees table
     try {
-      console.log('Looking up worker names from IDs:', finalWorkerIds);
-      const workers = await getWorkersByIds(finalWorkerIds);
+      console.log('Looking up digital worker names from IDs:', finalWorkerIds);
       
-      if (!workers || workers.length === 0) {
-        console.log('No workers found by IDs');
+      // Get digital workers from digital_employees table
+      const { data: digitalWorkersData, error: workerError } = await supabase
+        .from('digital_employees')
+        .select('id, full_name')
+        .in('id', finalWorkerIds);
+      
+      if (workerError) {
+        console.error('Error fetching digital workers:', workerError);
+        return null;
+      }
+      
+      if (!digitalWorkersData || digitalWorkersData.length === 0) {
+        console.log('No digital workers found by IDs');
         return null;
       }
       
       // Map worker IDs to their names
       const workerNameMap: { [key: string]: string } = {};
-      workers.forEach(worker => {
-        workerNameMap[worker.id] = worker.name;
+      digitalWorkersData.forEach((worker: DigitalWorker) => {
+        workerNameMap[worker.id] = worker.full_name;
       });
       
       // Get actual names using the map
