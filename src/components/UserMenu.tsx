@@ -18,6 +18,11 @@ const UserMenu = () => {
     );
   }
 
+  // Prepare display name with title if available
+  const displayName = user.full_name || user.email || "אזור אישי";
+  const displayTitle = user.title ? ` - ${user.title}` : '';
+  const displayText = `${displayName}${displayTitle}`;
+
   return (
     <div className="flex items-center gap-2">
       <Button variant="ghost" size="sm" asChild className="flex items-center gap-2">
@@ -25,13 +30,13 @@ const UserMenu = () => {
           <Avatar className="h-8 w-8 mr-2">
             <AvatarImage 
               src={user.avatar_url || defaultAvatarUrl} 
-              alt={user.full_name || user.email || ""} 
+              alt={displayName} 
             />
             <AvatarFallback>
               {(user.full_name || user.email || "U").charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span>{user.full_name || user.email || "אזור אישי"}</span>
+          <span className="max-w-[200px] truncate">{displayText}</span>
         </Link>
       </Button>
       <Button variant="ghost" size="sm" onClick={() => logout()} className="flex items-center gap-2">
