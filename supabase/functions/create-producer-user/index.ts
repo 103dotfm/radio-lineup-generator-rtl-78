@@ -101,6 +101,35 @@ serve(async (req) => {
       );
     }
     
+    // Fetch worker details to get the name and other info first
+    const { data: workerData, error: workerError } = await supabaseClient
+      .from('workers')
+      .select('name, position, department')
+      .eq('id', workerId)
+      .single();
+    
+    if (workerError) {
+      console.error("Error fetching worker details:", workerError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "שגיאה בקבלת פרטי המפיק",
+          error: workerError.message
+        }),
+        { headers: corsHeaders, status: 500 }
+      );
+    }
+    
+    if (!workerData) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "לא נמצאו פרטי מפיק"
+        }),
+        { headers: corsHeaders, status: 404 }
+      );
+    }
+    
     // Generate new password
     const newPassword = generateStrongPassword(12);
     console.log("Generated password for new user");
@@ -151,29 +180,18 @@ serve(async (req) => {
       );
     }
     
-    // Create an entry in the users table for the new user
+    // Create an entry in the users table for the new user with producer info
     console.log("Creating users table entry for ID:", data.user.id);
     
-    // Fetch worker details to get the name and other info
-    const { data: workerData, error: workerError } = await supabaseClient
-      .from('workers')
-      .select('name, position')
-      .eq('id', workerId)
-      .single();
-    
-    if (workerError) {
-      console.error("Error fetching worker details:", workerError);
-      // Continue despite the error, we'll use basic data
-    }
-    
-    // Create the users table entry
+    // Create the users table entry with worker name and position
     const { error: usersTableError } = await supabaseClient
       .from('users')
       .insert({
         id: data.user.id,
         email: email,
-        full_name: workerData?.name || email,
-        username: email,
+        full_name: workerData.name || email,
+        username: `${workerData.name} (${email})`,
+        title: workerData.position || workerData.department || '',
         is_admin: false // producers are not admins by default
       });
     
