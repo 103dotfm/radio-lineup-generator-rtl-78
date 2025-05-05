@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -40,15 +39,13 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
       if (assignmentsData && assignmentsData.length > 0) {
         // For each assignment, match it with its corresponding slot in scheduleSlots
         const processedAssignments = assignmentsData.map(assignment => {
-          if (!assignment.slot) {
-            // Find matching slot in scheduleSlots by slot_id
-            const matchingSlot = scheduleSlots.find(slot => slot.id === assignment.slot_id);
-            if (matchingSlot) {
-              return {
-                ...assignment,
-                slot: matchingSlot
-              };
-            }
+          // Find matching slot in scheduleSlots by slot_id
+          const matchingSlot = scheduleSlots.find(slot => slot.id === assignment.slot_id);
+          if (matchingSlot) {
+            return {
+              ...assignment,
+              slot: matchingSlot
+            };
           }
           return assignment;
         });

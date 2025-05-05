@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -44,6 +43,15 @@ export interface ProducerAssignment {
   created_at?: string;
   updated_at?: string;
   worker?: Worker;
+  slot?: {
+    id: string;
+    show_name: string;
+    host_name?: string;
+    start_time: string;
+    end_time: string;
+    day_of_week: number;
+    // Add any other properties that might be needed
+  };
 }
 
 // Define the interface for ProducerWorkArrangement
@@ -220,8 +228,6 @@ export const getProducerRoles = async (): Promise<ProducerRole[]> => {
   }
 };
 
-// Implement the missing functions to resolve the import errors
-
 // Get producer assignments for a specific week
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
@@ -279,10 +285,20 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
       return existingData[0] as ProducerAssignment;
     }
 
+    // Create a properly-typed object for insertion
+    const insertData = {
+      slot_id: assignment.slot_id,
+      worker_id: assignment.worker_id,
+      role: assignment.role,
+      week_start: assignment.week_start,
+      is_recurring: assignment.is_recurring || false,
+      notes: assignment.notes
+    };
+
     // Insert the new assignment
     const { data, error } = await supabase
       .from('producer_assignments')
-      .insert([assignment])
+      .insert([insertData])
       .select('*, worker:worker_id(id, name, email, phone, department, position)')
       .single();
 
@@ -310,16 +326,19 @@ export const createRecurringProducerAssignment = async (
       throw new Error("Missing required fields for recurring producer assignment");
     }
 
-    // Create the recurring assignment
-    const { data, error } = await supabase
+    // Create the recurring assignment with proper typing
+    const insertData = {
+      slot_id: slotId,
+      worker_id: workerId,
+      role: role,
+      week_start: weekStart,
+      is_recurring: true
+    };
+
+    // Insert the data
+    const { error } = await supabase
       .from('producer_assignments')
-      .insert([{
-        slot_id: slotId,
-        worker_id: workerId,
-        role: role,
-        week_start: weekStart,
-        is_recurring: true
-      }]);
+      .insert([insertData]);
 
     if (error) {
       console.error('Error creating recurring producer assignment:', error);
