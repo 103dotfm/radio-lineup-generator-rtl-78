@@ -7,10 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import ProducersTable from './ProducersTable';
 import WeeklyAssignments from './WeeklyAssignments';
 import MonthlySummary from './MonthlySummary';
-import ProducerUsers from './ProducerUsers';
 import { getOrCreateProducerWorkArrangement, updateProducerWorkArrangementNotes } from '@/lib/supabase/producers';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -105,11 +103,9 @@ const ProducerWorkArrangement = () => {
             onValueChange={setActiveTab}
             className="space-y-4"
           >
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="weekly">סידור שבועי</TabsTrigger>
-              <TabsTrigger value="producers">עובדי הפקה</TabsTrigger>
               <TabsTrigger value="monthly">סיכום חודשי</TabsTrigger>
-              <TabsTrigger value="users">משתמשי מערכת</TabsTrigger>
             </TabsList>
             
             <TabsContent value="weekly">
@@ -130,16 +126,8 @@ const ProducerWorkArrangement = () => {
               </div>
             </TabsContent>
             
-            <TabsContent value="producers">
-              <ProducersTable />
-            </TabsContent>
-            
             <TabsContent value="monthly">
               <MonthlySummary />
-            </TabsContent>
-            
-            <TabsContent value="users">
-              <ProducerUsers />
             </TabsContent>
           </Tabs>
         </CardContent>

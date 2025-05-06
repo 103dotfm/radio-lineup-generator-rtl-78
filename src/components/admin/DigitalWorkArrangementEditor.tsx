@@ -95,8 +95,8 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [customRows, setCustomRows] = useState<CustomRow[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredWorkers, setFilteredWorkers] = useState<Worker[]>([]);
+  const [workersLoading, setWorkersLoading] = useState(true);
   const [weekDate, setWeekDate] = useState<Date>(() => {
     return startOfWeek(new Date(), {
       weekStartsOn: 0
