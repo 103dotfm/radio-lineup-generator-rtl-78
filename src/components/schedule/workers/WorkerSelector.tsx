@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ interface WorkerSelectorProps {
   additionalText?: string;
   placeholder?: string;
   className?: string;
+  workers?: Worker[]; // Allow passing pre-filtered workers
 }
 
 export const WorkerSelector = ({ 
@@ -21,12 +22,13 @@ export const WorkerSelector = ({
   onChange, 
   additionalText = "", 
   placeholder = "בחר עובד...", 
-  className 
+  className,
+  workers: providedWorkers // Renamed to avoid conflict with the state variable
 }: WorkerSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(additionalText || "");
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [workers, setWorkers] = useState<Worker[]>(providedWorkers || []);
+  const [loading, setLoading] = useState(!providedWorkers);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -36,8 +38,14 @@ export const WorkerSelector = ({
   const selectedWorker = workers.find(worker => worker.id === value);
   const displayValue = selectedWorker ? selectedWorker.name : "";
   
-  // Fetch workers from database
+  // Fetch workers from database if not provided
   useEffect(() => {
+    if (providedWorkers) {
+      setWorkers(providedWorkers);
+      setLoading(false);
+      return;
+    }
+
     const fetchWorkers = async () => {
       setLoading(true);
       setError(null);
@@ -75,7 +83,14 @@ export const WorkerSelector = ({
     };
     
     fetchWorkers();
-  }, [toast]);
+  }, [toast, providedWorkers]);
+  
+  // Update workers when providedWorkers changes
+  useEffect(() => {
+    if (providedWorkers) {
+      setWorkers(providedWorkers);
+    }
+  }, [providedWorkers]);
   
   const handleSelect = (workerId: string) => {
     // Toggle selection if clicking the same item

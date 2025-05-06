@@ -1,595 +1,307 @@
-
 import React, { useState, useEffect } from 'react';
-import { format, addDays } from 'date-fns';
+import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-  DialogDescription
-} from "@/components/ui/dialog";
-import { 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { ChevronLeft, ChevronRight, Calendar, Trash2, Loader2 } from 'lucide-react';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Card } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  createProducerAssignment,
-  createRecurringProducerAssignment,
-  deleteProducerAssignment,
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   getProducerAssignments,
+  createProducerAssignment,
+  deleteProducerAssignment,
   getProducerRoles,
-  getProducers,
-  type ProducerAssignment
+  ProducerRole,
+  ProducerAssignment,
+  Worker
 } from '@/lib/supabase/producers';
-import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
-import { Label } from '@/components/ui/label';
-import { getCombinedShowDisplay } from '@/utils/showDisplay';
-import { ScheduleSlot } from '@/types/schedule';
+import { ScheduleSlot, fetchScheduleSlots } from '@/lib/supabase/schedule-slots';
+import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
+import { getWorkersByDivisionId } from '@/lib/supabase/divisions';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
 }
 
-interface ProducerFormItem {
-  workerId: string;
-  role: string;
+interface RoleSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
-  // Important: use false for isMasterSchedule to get the weekly schedule instead of master
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, false);
+const WeeklyAssignments = ({ currentWeek }: WeeklyAssignmentsProps) => {
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([]);
+  const [producerRoles, setProducerRoles] = useState<ProducerRole[]>([]);
+  const [producers, setProducers] = useState<Worker[]>([]);
   const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
-  const [producers, setProducers] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
-  
-  // Multi-producer form state
-  const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
-    { workerId: '', role: '' },
-    { workerId: '', role: '' },
-    { workerId: '', role: '' },
-    { workerId: '', role: '' }
-  ]);
-  
-  const [isWeekdays, setIsWeekdays] = useState(false);
-  const [isPermanent, setIsPermanent] = useState(false);
-  
+  const [newAssignments, setNewAssignments] = useState<{
+    [slotId: string]: { role: string; worker_id: string | null; notes: string };
+  }>({});
+  const [loading, setLoading] = useState(true);
+  const [assigningRoles, setAssigningRoles] = useState<{ [slotId: string]: boolean }>({});
   const { toast } = useToast();
   
+  // Define the producers division ID - replace this with your actual division ID
+  const PRODUCERS_DIVISION_ID = '4b221a12-b4e5-4e40-8f44-c38ba85f6d96'; // Replace with your actual Producers division ID
+
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load slots
+        const slots = await fetchScheduleSlots();
+        setScheduleSlots(slots);
+        
+        // Load producer roles
+        const roles = await getProducerRoles();
+        setProducerRoles(roles);
+        
+        // Load workers specifically from the producers division
+        const producersWorkers = await getWorkersByDivisionId(PRODUCERS_DIVISION_ID);
+        setProducers(producersWorkers);
+        
+        // Load assignments for the current week
+        await loadAssignments();
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בטעינת הנתונים",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     loadData();
-  }, [currentWeek]);
+  }, [currentWeek, toast]);
   
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadAssignments = async () => {
     try {
-      const [assignmentsData, producersData, rolesData] = await Promise.all([
-        getProducerAssignments(currentWeek),
-        getProducers(),
-        getProducerRoles()
-      ]);
+      const assignmentsData = await getProducerAssignments(currentWeek);
+      setAssignments(assignmentsData);
       
-      setAssignments(assignmentsData || []);
-      setProducers(producersData || []);
-      setRoles(rolesData || []);
+      // Pre-populate assignments into schedule slots
+      const updatedSlots = scheduleSlots.map(slot => ({
+        ...slot,
+        assignments: assignmentsData.filter(assignment => assignment.slot_id === slot.id)
+      }));
+      setScheduleSlots(updatedSlots);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading assignments:", error);
       toast({
         title: "שגיאה",
-        description: "שגיאה בטעינת נתוני הסידור",
-        variant: "destructive"
+        description: "אירעה שגיאה בטעינת מטלות",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleRoleChange = (slotId: string, role: string) => {
+    setNewAssignments(prev => ({
+      ...prev,
+      [slotId]: { ...prev[slotId], role }
+    }));
+  };
+  
+  const handleWorkerChange = (slotId: string, worker_id: string | null, notes: string) => {
+    setNewAssignments(prev => ({
+      ...prev,
+      [slotId]: { ...prev[slotId], worker_id, notes }
+    }));
+  };
+  
+  const handleAddAssignment = async (slotId: string) => {
+    setAssigningRoles(prev => ({ ...prev, [slotId]: true }));
+    
+    try {
+      if (!newAssignments[slotId]?.role || !newAssignments[slotId]?.worker_id) {
+        throw new Error("תפקיד ועובד נדרשים");
+      }
+      
+      const weekStart = format(currentWeek, 'yyyy-MM-dd');
+      
+      const newAssignment = {
+        slot_id: slotId,
+        worker_id: newAssignments[slotId].worker_id,
+        role: newAssignments[slotId].role,
+        week_start: weekStart,
+        notes: newAssignments[slotId].notes,
+        is_recurring: false
+      };
+      
+      await createProducerAssignment(newAssignment);
+      
+      // Refresh assignments after adding
+      await loadAssignments();
+      
+      // Clear the new assignment for this slot
+      setNewAssignments(prev => {
+        const { [slotId]: removedAssignment, ...rest } = prev;
+        return rest;
+      });
+      
+      toast({
+        title: "הצלחה",
+        description: "התפקיד נוסף בהצלחה",
+      });
+    } catch (error: any) {
+      console.error("Error adding assignment:", error);
+      toast({
+        title: "שגיאה",
+        description: error.message || "אירעה שגיאה בהוספת התפקיד",
+        variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Group slots by day and time for a more organized display
-  const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
-  
-  // Create a map of unique slots to prevent duplicates
-  const uniqueSlotsMap: { [key: string]: boolean } = {};
-  
-  scheduleSlots.forEach(slot => {
-    const day = slot.day_of_week;
-    const time = slot.start_time;
-    const key = `${day}-${time}`;
-    const uniqueKey = `${day}-${time}-${slot.show_name}-${slot.host_name}`;
-    
-    // Only process this slot if we haven't seen a duplicate already
-    if (!uniqueSlotsMap[uniqueKey]) {
-      uniqueSlotsMap[uniqueKey] = true;
-      
-      if (!slotsByDayAndTime[key]) {
-        slotsByDayAndTime[key] = [];
-      }
-      slotsByDayAndTime[key].push(slot);
-    }
-  });
-  
-  // Get assignments for a slot
-  const getAssignmentsForSlot = (slotId: string): ProducerAssignment[] => {
-    return assignments.filter((assignment) => assignment.slot_id === slotId);
-  };
-  
-  const handleAssignProducer = (slot: ScheduleSlot) => {
-    setCurrentSlot(slot);
-    
-    // Reset form when opening dialog
-    setProducerForms([
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' }
-    ]);
-    setIsWeekdays(false);
-    setIsPermanent(false);
-    
-    setIsDialogOpen(true);
-  };
-  
-  const updateProducerForm = (index: number, field: 'workerId' | 'role', value: string) => {
-    setProducerForms(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-  
-  const handleSubmit = async () => {
-    if (!currentSlot) {
-      toast({
-        title: "שגיאה",
-        description: "לא נמצאה תוכנית",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Filter out empty rows
-    const validForms = producerForms.filter(form => form.workerId && form.role);
-    
-    if (validForms.length === 0) {
-      toast({
-        title: "שגיאה",
-        description: "יש לבחור לפחות מפיק אחד",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      let successCount = 0;
-      
-      for (const form of validForms) {
-        const selectedRole = roles.find(r => r.id === form.role);
-        const roleName = selectedRole ? selectedRole.name : '';
-        
-        // Check if we're creating a permanent assignment
-        if (isPermanent) {
-          console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName}`);
-          try {
-            const success = await createRecurringProducerAssignment(
-              currentSlot.id,
-              form.workerId,
-              roleName,
-              format(currentWeek, 'yyyy-MM-dd')
-            );
-            
-            if (success) {
-              successCount++;
-            }
-          } catch (error: any) {
-            console.error("Error creating permanent assignment:", error);
-            toast({
-              title: "שגיאה",
-              description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
-              variant: "destructive"
-            });
-          }
-        } 
-        // Check if we're creating assignments for all weekdays
-        else if (isWeekdays) {
-          console.log(`Creating weekday assignments for worker ${form.workerId} with role ${roleName}`);
-          
-          // First create assignment for current slot
-          try {
-            const currentSlotAssignment = {
-              slot_id: currentSlot.id,
-              worker_id: form.workerId,
-              role: roleName,
-              week_start: format(currentWeek, 'yyyy-MM-dd'),
-              is_recurring: false
-            };
-            
-            const result = await createProducerAssignment(currentSlotAssignment);
-            if (result) {
-              successCount++;
-            }
-          } catch (error: any) {
-            console.error("Error creating assignment for current slot:", error);
-          }
-          
-          // Then find all other weekday slots with the same time
-          const currentTime = currentSlot.start_time;
-          const currentDay = currentSlot.day_of_week;
-          
-          // Get applicable days (0-3, excluding the current day)
-          const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
-          
-          for (const dayIndex of applicableDays) {
-            const key = `${dayIndex}-${currentTime}`;
-            const slotsForDay = slotsByDayAndTime[key] || [];
-            
-            // Check if we have slots for this day and time
-            if (slotsForDay.length > 0) {
-              for (const slot of slotsForDay) {
-                // Make sure slot exists and is valid
-                if (!slot || !slot.id) continue;
-                
-                try {
-                  const assignment = {
-                    slot_id: slot.id,
-                    worker_id: form.workerId,
-                    role: roleName,
-                    week_start: format(currentWeek, 'yyyy-MM-dd'),
-                    is_recurring: false
-                  };
-                  
-                  console.log(`Creating assignment for day ${dayIndex} slot for worker ${form.workerId}`);
-                  const result = await createProducerAssignment(assignment);
-                  if (result) {
-                    successCount++;
-                  }
-                } catch (error: any) {
-                  console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
-                }
-              }
-            }
-          }
-        } else {
-          // Create a single assignment
-          try {
-            const assignment = {
-              slot_id: currentSlot.id,
-              worker_id: form.workerId,
-              role: roleName,
-              week_start: format(currentWeek, 'yyyy-MM-dd'),
-              is_recurring: false
-            };
-            
-            console.log(`Creating single assignment for worker ${form.workerId} with role ${roleName}`);
-            const result = await createProducerAssignment(assignment);
-            if (result) {
-              successCount++;
-            }
-          } catch (error: any) {
-            console.error("Error creating producer assignment:", error);
-          }
-        }
-      }
-      
-      if (successCount > 0) {
-        toast({
-          title: "נוסף בהצלחה",
-          description: `נוספו ${successCount} שיבוצים לסידור העבודה`
-        });
-        await loadData(); // Refresh the assignments
-        setIsDialogOpen(false);
-      } else {
-        toast({
-          title: "מידע",
-          description: "לא נוספו שיבוצים חדשים. ייתכן שהם כבר קיימים במערכת."
-        });
-      }
-    } catch (error: any) {
-      console.error("Error assigning producers:", error);
-      toast({
-        title: "שגיאה",
-        description: error.message || "אירעה שגיאה בהוספת העובדים לסידור",
-        variant: "destructive"
-      });
+      setAssigningRoles(prev => ({ ...prev, [slotId]: false }));
     }
   };
   
   const handleDeleteAssignment = async (assignmentId: string) => {
-    if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
+    if (window.confirm("האם אתה בטוח שברצונך למחוק את התפקיד הזה?")) {
       try {
-        const success = await deleteProducerAssignment(assignmentId);
-        if (success) {
-          toast({
-            title: "נמחק בהצלחה",
-            description: "השיבוץ נמחק בהצלחה"
-          });
-          await loadData(); // Refresh the assignments
-        } else {
-          throw new Error("Failed to delete assignment");
-        }
+        await deleteProducerAssignment(assignmentId);
+        
+        // Refresh assignments after deleting
+        await loadAssignments();
+        
+        toast({
+          title: "הצלחה",
+          description: "התפקיד נמחק בהצלחה",
+        });
       } catch (error) {
         console.error("Error deleting assignment:", error);
         toast({
           title: "שגיאה",
-          description: "אירעה שגיאה במחיקת השיבוץ",
-          variant: "destructive"
+          description: "אירעה שגיאה במחיקת התפקיד",
+          variant: "destructive",
         });
       }
     }
   };
-  
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-  };
-  
-  const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  // Sort timeslots to display them in chronological order
-  const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
-  
-  if (isLoading || slotsLoading) {
-    return <div className="text-center py-4">טוען...</div>;
-  }
-  
-  // Filter out producers that are already assigned with this role to this slot
-  const getAvailableProducers = (producerFormIndex: number) => {
-    if (!currentSlot) return producers;
-    
-    const existingAssignments = assignments.filter(
-      assignment => assignment.slot_id === currentSlot.id
+
+  // In the RoleSelect component, make sure the Select.Item has a non-empty value
+  const RoleSelect = ({ value, onChange, disabled }: RoleSelectProps) => {
+    return (
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className="w-full bg-background">
+          <SelectValue placeholder="בחר תפקיד" />
+        </SelectTrigger>
+        <SelectContent dir="rtl" className="bg-background">
+          {producerRoles.length > 0 ? (
+            producerRoles.map((role) => (
+              <SelectItem key={role.id} value={role.name || "no-name"}>
+                {role.name}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="loading">טוען תפקידים...</SelectItem>
+          )}
+        </SelectContent>
+      </Select>
     );
-    
-    // Get current form data
-    const currentForm = producerForms[producerFormIndex];
-    
-    // Get producers who are already assigned with the selected role
-    // excluding the currently selected workerId in this form row
-    const producersWithSelectedRole = existingAssignments
-      .filter(assignment => {
-        const selectedRole = roles.find(r => r.id === currentForm.role);
-        return assignment.role === (selectedRole ? selectedRole.name : '') && 
-               assignment.worker_id !== currentForm.workerId;
-      })
-      .map(assignment => assignment.worker_id);
-    
-    // Also exclude other selected workers in other form rows
-    const currentlySelectedWorkers = producerForms
-      .filter((f, idx) => idx !== producerFormIndex && f.workerId)
-      .map(f => f.workerId);
-    
-    const excludedWorkers = [...producersWithSelectedRole, ...currentlySelectedWorkers];
-    
-    // Return producers who aren't already assigned with this role or selected in other rows
-    return producers.filter(producer => !excludedWorkers.includes(producer.id));
   };
   
-  return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium">סידור שבועי</h3>
-      
-      <Card className="mb-4">
-        <div className="p-2 font-bold border-b bg-slate-100">
-          שבוע {format(currentWeek, 'dd/MM/yyyy', { locale: he })} - {format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}
-        </div>
-        <div className="overflow-x-auto">
-          <Table dir="rtl">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[150px]">משבצת</TableHead>
-                {/* Order days from right to left (Sunday to Saturday) */}
-                {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => (
-                  <TableHead key={`day-header-${dayIndex}`} className="text-center min-w-[150px]">
-                    {dayNames[dayIndex]}
-                    <div className="text-xs font-normal">
-                      {format(addDays(currentWeek, dayIndex), 'dd/MM', { locale: he })}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {timeslots.map((time, timeIndex) => (
-                <TableRow key={`time-row-${time}-${timeIndex}`}>
-                  <TableCell className="font-medium">{time}</TableCell>
-                  {/* Days in RTL order (Sunday to Saturday) */}
-                  {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
-                    const key = `${dayIndex}-${time}`;
-                    const slotsForCell = slotsByDayAndTime[key] || [];
-                    
-                    return (
-                      <TableCell 
-                        key={`cell-${dayIndex}-${time}-${timeIndex}`} 
-                        className="p-2 align-top cursor-pointer hover:bg-gray-50"
-                      >
-                        {slotsForCell.length > 0 ? (
-                          <div>
-                            {slotsForCell.map((slot, slotIndex) => {
-                              const slotAssignments = getAssignmentsForSlot(slot.id);
-                              const combinedShowName = getCombinedShowDisplay(slot.show_name, slot.host_name);
-                              
-                              return (
-                                <div 
-                                  key={`slot-${slot.id}-${time}-${slotIndex}`}
-                                  className="mb-3 border rounded p-2 bg-gray-50"
-                                  onClick={() => handleAssignProducer(slot)}
-                                >
-                                  <div className="font-medium text-sm">
-                                    {combinedShowName}
-                                  </div>
-                                  
-                                  {slotAssignments.length > 0 && (
-                                    <div className="mt-2 text-sm border-t pt-2">
-                                      {/* Group assignments by role */}
-                                      {Object.entries(
-                                        slotAssignments.reduce<Record<string, ProducerAssignment[]>>((acc, assignment) => {
-                                          const role = assignment.role || 'ללא תפקיד';
-                                          if (!acc[role]) acc[role] = [];
-                                          acc[role].push(assignment);
-                                          return acc;
-                                        }, {})
-                                      ).map(([role, roleAssignments]) => (
-                                        <div key={`role-${role}-${slot.id}`} className="mb-1">
-                                          <span className="font-medium">{role}: </span> 
-                                          <div className="space-y-1">
-                                            {roleAssignments.map((assignment) => (
-                                              <div key={`assignment-${assignment.id}`} className="flex justify-between items-center bg-white p-1 rounded">
-                                                <span>{assignment.worker?.name}</span>
-                                                <Button 
-                                                  variant="ghost" 
-                                                  size="sm" 
-                                                  className="h-6 w-6 p-0"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteAssignment(assignment.id);
-                                                  }}
-                                                >
-                                                  ✕
-                                                </Button>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-center text-gray-400 text-xs">
-                            אין תוכניות
-                          </div>
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-      
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
-            <DialogDescription>
-              שבץ עד 4 עובדים לתפקידים שונים בתוכנית
-            </DialogDescription>
-          </DialogHeader>
-          {currentSlot && (
-            <div className="space-y-4 py-4">
-              <div>
-                <p className="font-medium">{getCombinedShowDisplay(currentSlot.show_name, currentSlot.host_name)}</p>
-                <p className="text-sm text-muted-foreground">
-                  {dayNames[currentSlot.day_of_week]} {format(addDays(currentWeek, currentSlot.day_of_week), 'dd/MM/yyyy', { locale: he })}, {currentSlot.start_time}
-                </p>
-              </div>
-              
-              <div className="border rounded-md p-3 bg-slate-50">
-                {producerForms.map((form, index) => (
-                  <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <Label htmlFor={`worker-${index}`} className="mb-1 block">עובד {index + 1}</Label>
-                      <Select 
-                        value={form.workerId} 
-                        onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
-                      >
-                        <SelectTrigger id={`worker-${index}`}>
-                          <SelectValue placeholder="בחר עובד" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableProducers(index).map((producer) => (
-                            <SelectItem key={`producer-select-${producer.id}-${index}`} value={producer.id}>
-                              {producer.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor={`role-${index}`} className="mb-1 block">תפקיד</Label>
-                      <Select 
-                        value={form.role} 
-                        onValueChange={(value) => updateProducerForm(index, 'role', value)}
-                      >
-                        <SelectTrigger id={`role-${index}`}>
-                          <SelectValue placeholder="בחר תפקיד" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={`role-select-${role.id}-${index}`} value={role.id}>
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+  const renderSlot = (slot: ScheduleSlot) => {
+    return (
+      <div key={slot.id} className="border rounded-lg p-4 mb-4 bg-background">
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">{slot.show_name}</h3>
+            <span className="text-sm text-muted-foreground">
+              {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {slot.assignments && slot.assignments.map((assignment) => (
+              <div key={assignment.id} className="border rounded p-3 relative">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="font-medium">{assignment.role}</div>
+                    {assignment.worker && (
+                      <div className="text-sm">{assignment.worker.name}</div>
+                    )}
                   </div>
-                ))}
-              </div>
-              
-              <div className="space-y-4 pt-2">
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Switch 
-                    id="weekdays"
-                    checked={isWeekdays}
-                    onCheckedChange={(checked) => {
-                      setIsWeekdays(checked);
-                      if (checked) setIsPermanent(false);
-                    }}
-                  />
-                  <Label htmlFor="weekdays" className="mr-2">
-                    שיבוץ כל השבוע (ראשון-רביעי)
-                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => handleDeleteAssignment(assignment.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Switch 
-                    id="permanent"
-                    checked={isPermanent}
-                    onCheckedChange={(checked) => {
-                      setIsPermanent(checked);
-                      if (checked) setIsWeekdays(false);
-                    }}
-                  />
-                  <Label htmlFor="permanent" className="mr-2">
-                    צוות תוכנית קבוע
-                  </Label>
+                <div className="text-xs text-muted-foreground mb-2">
+                  {assignment.notes}
                 </div>
               </div>
+            ))}
+            
+            <div className="border border-dashed rounded p-3 flex flex-col">
+              <div className="text-center text-muted-foreground mb-2">הוספת תפקיד</div>
+              <div className="space-y-2">
+                <RoleSelect
+                  value={newAssignments[slot.id]?.role || ""}
+                  onChange={(value) => handleRoleChange(slot.id, value)}
+                  disabled={assigningRoles[slot.id]}
+                />
+                <WorkerSelector
+                  value={newAssignments[slot.id]?.worker_id || null}
+                  onChange={(value, additionalText) => handleWorkerChange(slot.id, value, additionalText)}
+                  additionalText={newAssignments[slot.id]?.notes || ""}
+                  placeholder="בחר עובד..."
+                  workers={producers}
+                />
+                <Button
+                  className="w-full"
+                  disabled={
+                    !newAssignments[slot.id]?.role ||
+                    !newAssignments[slot.id]?.worker_id ||
+                    assigningRoles[slot.id]
+                  }
+                  onClick={() => handleAddAssignment(slot.id)}
+                >
+                  {assigningRoles[slot.id] ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      מוסיף...
+                    </>
+                  ) : (
+                    "הוסף"
+                  )}
+                </Button>
+              </div>
             </div>
-          )}
-          <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={handleCloseDialog}>סגור</Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={!producerForms.some(form => form.workerId && form.role)}
-            >
-              הוסף לסידור
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  if (loading) {
+    return <div>טוען נתונים...</div>;
+  }
+  
+  return (
+    <div className="space-y-4">
+      {scheduleSlots.map(slot => renderSlot(slot))}
     </div>
   );
 };

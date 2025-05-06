@@ -1,5 +1,6 @@
 
 import { supabase } from "@/lib/supabase";
+import { Worker } from "./workers";
 
 export interface Division {
   id: string;
@@ -49,6 +50,50 @@ export const getWorkerDivisions = async (workerId: string): Promise<Division[]> 
   } catch (error) {
     console.error('Error in getWorkerDivisions:', error);
     throw error;
+  }
+};
+
+export const getWorkersByDivisionId = async (divisionId: string): Promise<Worker[]> => {
+  try {
+    console.log(`Fetching workers for division ID: ${divisionId}`);
+    
+    // Get the worker IDs for the given division
+    const { data: workerDivisions, error: divisionError } = await supabase
+      .from('worker_divisions')
+      .select('worker_id')
+      .eq('division_id', divisionId);
+    
+    if (divisionError) {
+      console.error('Error fetching worker divisions:', divisionError);
+      throw new Error(`Failed to fetch worker divisions: ${divisionError.message}`);
+    }
+    
+    if (!workerDivisions || workerDivisions.length === 0) {
+      console.log(`No workers found for division ID: ${divisionId}`);
+      return [];
+    }
+    
+    // Extract worker IDs
+    const workerIds = workerDivisions.map(wd => wd.worker_id);
+    console.log(`Found ${workerIds.length} worker IDs for division ID: ${divisionId}`);
+    
+    // Fetch the worker details
+    const { data: workers, error: workersError } = await supabase
+      .from('workers')
+      .select('id, name, department, position, email, phone, user_id, password_readable, photo_url')
+      .in('id', workerIds);
+    
+    if (workersError) {
+      console.error('Error fetching workers:', workersError);
+      throw new Error(`Failed to fetch workers: ${workersError.message}`);
+    }
+    
+    console.log(`Fetched ${workers?.length || 0} workers for division ID: ${divisionId}`);
+    
+    return workers || [];
+  } catch (error) {
+    console.error(`Error in getWorkersByDivisionId for division ${divisionId}:`, error);
+    return [];
   }
 };
 
