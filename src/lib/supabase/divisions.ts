@@ -52,6 +52,27 @@ export const getWorkerDivisions = async (workerId: string): Promise<Division[]> 
   }
 };
 
+export const getWorkersByDivisionId = async (divisionId: string): Promise<string[]> => {
+  try {
+    console.log(`Fetching workers for division ID: ${divisionId}`);
+    
+    const { data, error } = await supabase
+      .from('worker_divisions')
+      .select('worker_id')
+      .eq('division_id', divisionId);
+    
+    if (error) {
+      console.error('Error fetching workers by division:', error);
+      throw new Error(`Failed to fetch workers by division: ${error.message}`);
+    }
+    
+    return data?.map(item => item.worker_id) || [];
+  } catch (error) {
+    console.error('Error in getWorkersByDivisionId:', error);
+    throw error;
+  }
+};
+
 export const assignDivisionToWorker = async (workerId: string, divisionId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
