@@ -205,7 +205,7 @@ const WeeklyAssignments = ({ currentWeek }: WeeklyAssignmentsProps) => {
         <SelectContent dir="rtl" className="bg-background">
           {producerRoles.length > 0 ? (
             producerRoles.map((role) => (
-              <SelectItem key={role.id} value={role.name || "no-name"}>
+              <SelectItem key={role.id} value={role.name || "default-role"}>
                 {role.name}
               </SelectItem>
             ))
@@ -229,7 +229,7 @@ const WeeklyAssignments = ({ currentWeek }: WeeklyAssignmentsProps) => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-            {slot.assignments && slot.assignments.map((assignment) => (
+            {slot.assignments && Array.isArray(slot.assignments) && slot.assignments.map((assignment) => (
               <div key={assignment.id} className="border rounded p-3 relative">
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -264,7 +264,7 @@ const WeeklyAssignments = ({ currentWeek }: WeeklyAssignmentsProps) => {
                 />
                 <WorkerSelector
                   value={newAssignments[slot.id]?.worker_id || null}
-                  onChange={(value, additionalText) => handleWorkerChange(slot.id, value, additionalText)}
+                  onChange={(value, additionalText) => handleWorkerChange(slot.id, value, additionalText || "")}
                   additionalText={newAssignments[slot.id]?.notes || ""}
                   placeholder="בחר עובד..."
                   workers={producers}
