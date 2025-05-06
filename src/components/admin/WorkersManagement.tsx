@@ -119,6 +119,12 @@ const WorkersManagement = () => {
       }
     }
   };
+
+  // Add a no-op select handler since we don't need worker selection in this component
+  const handleWorkerSelect = (worker: Worker) => {
+    // No action needed in this component
+    console.log("Worker selected in WorkersManagement:", worker.name);
+  };
   
   return (
     <div className="space-y-4" dir="rtl">
@@ -137,6 +143,7 @@ const WorkersManagement = () => {
             error={error}
             onEdit={handleOpenDialog}
             onDelete={handleDeleteWorker}
+            onSelect={handleWorkerSelect}
           />
         </CardContent>
       </Card>
