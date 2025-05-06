@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -7,7 +8,7 @@ interface User {
   email: string;
   username?: string;
   full_name?: string;
-  title?: string;
+  title?: string; // Add the missing title property
   avatar_url?: string;
   is_admin: boolean;
 }

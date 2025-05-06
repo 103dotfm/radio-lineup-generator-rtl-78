@@ -17,6 +17,8 @@ const Admin = () => {
   const [redirectProcessed, setRedirectProcessed] = useState(false);
   const [defaultTab, setDefaultTab] = useState("schedule");
   const [showStaffManagement, setShowStaffManagement] = useState(false);
+  // Add appDomain state to fix the missing setAppDomain error
+  const [appDomain, setAppDomain] = useState("");
 
   useEffect(() => {
     const code = searchParams.get('code');
