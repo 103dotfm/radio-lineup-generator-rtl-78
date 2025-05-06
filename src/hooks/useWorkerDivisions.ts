@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Division, 
@@ -8,6 +7,7 @@ import {
   removeDivisionFromWorker 
 } from '@/lib/supabase/divisions';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 export const useWorkerDivisions = (workerId?: string) => {
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -138,5 +138,50 @@ export const useWorkerDivisions = (workerId?: string) => {
     assignDivision,
     removeDivision,
     isDivisionAssigned,
+  };
+};
+
+// Add new hook for filtering workers by division
+export const useFilterWorkersByDivision = (divisionId?: string) => {
+  const [workers, setWorkers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadWorkersByDivision = async () => {
+      if (!divisionId) {
+        setWorkers([]);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        
+        const { data, error } = await supabase
+          .from('worker_divisions')
+          .select('worker_id')
+          .eq('division_id', divisionId);
+          
+        if (error) {
+          throw error;
+        }
+        
+        setWorkers(data.map(item => item.worker_id));
+      } catch (err: any) {
+        console.error('Error loading workers by division:', err);
+        setError(err.message || 'אירעה שגיאה בטעינת עובדים לפי מחלקה');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWorkersByDivision();
+  }, [divisionId]);
+
+  return {
+    workerIds: workers,
+    loading,
+    error
   };
 };

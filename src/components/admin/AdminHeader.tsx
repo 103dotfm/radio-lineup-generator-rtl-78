@@ -30,17 +30,10 @@ const AdminHeader = () => {
       </div>
       
       <div className="flex gap-2">
-        {isStaffPage ? (
-          <Button variant="outline" onClick={goToMainAdmin}>
-            <Settings className="mr-2 h-4 w-4" />
-            חזרה להגדרות
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={goToStaffPage}>
-            <Users className="mr-2 h-4 w-4" />
-            ניהול צוות
-          </Button>
-        )}
+        <Button variant="outline" onClick={goToStaffPage}>
+          <Users className="mr-2 h-4 w-4" />
+          ניהול עובדים
+        </Button>
         
         <Button variant="outline" onClick={() => navigate('/schedule')}>
           <Calendar className="mr-2 h-4 w-4" />

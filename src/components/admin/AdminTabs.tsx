@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MasterSchedule from '@/components/schedule/MasterSchedule';
@@ -7,15 +8,18 @@ import EmailSettings from '@/components/admin/EmailSettings';
 import DataManagement from '@/components/admin/data-management/DataManagement';
 import DatabaseSettings from '@/components/admin/database-settings/DatabaseSettings';
 import ScheduleExportSettings from '@/components/admin/ScheduleExportSettings';
+import WorkerManagement from '@/components/admin/workers/WorkerManagement';
 import { Calendar, Briefcase, Users, Mail, Database, HardDrive, FileCode } from "lucide-react";
+
 interface AdminTabsProps {
   defaultTab: string;
 }
+
 const AdminTabs = ({
   defaultTab
 }: AdminTabsProps) => {
   return <Tabs defaultValue={defaultTab} className="w-full admin-tabs">
-      <TabsList className="grid w-full grid-cols-7 md:grid-cols-4 lg:grid-cols-7 mb-4 md:mb-8 overflow-x-auto mx-px">
+      <TabsList className="grid w-full grid-cols-8 md:grid-cols-4 lg:grid-cols-8 mb-4 md:mb-8 overflow-x-auto mx-px">
         <TabsTrigger value="schedule" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm">
           <Calendar className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
           <span className="font-medium truncate">לוח שידורים</span>
@@ -29,6 +33,11 @@ const AdminTabs = ({
         <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm">
           <Users className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
           <span className="font-medium truncate">ניהול משתמשים</span>
+        </TabsTrigger>
+        
+        <TabsTrigger value="workers" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm">
+          <Users className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+          <span className="font-medium truncate">ניהול עובדים</span>
         </TabsTrigger>
         
         <TabsTrigger value="email" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 rounded-xl sm:rounded-2xl mx-0.5 sm:mx-1 bg-opacity-80 bg-emerald-200 hover:bg-emerald-300 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-xs sm:text-sm">
@@ -67,6 +76,12 @@ const AdminTabs = ({
       <TabsContent value="users" className="mt-2 md:mt-4">
         <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
           <UserManagement />
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="workers" className="mt-2 md:mt-4">
+        <div className="border-r-2 md:border-r-4 border-emerald-500 pr-2 md:pr-6 py-2 md:py-3">
+          <WorkerManagement />
         </div>
       </TabsContent>
       

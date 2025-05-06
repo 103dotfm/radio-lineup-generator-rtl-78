@@ -14,6 +14,7 @@ interface WorkerTableProps {
   error: string | null;
   onEdit: (worker: Worker) => void;
   onDelete: (id: string) => void;
+  onSelect: (worker: Worker) => void;
 }
 
 const WorkerTable: React.FC<WorkerTableProps> = ({
@@ -21,7 +22,8 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
   loading,
   error,
   onEdit,
-  onDelete
+  onDelete,
+  onSelect
 }) => {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -67,7 +69,7 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
             </TableRow>
           ) : (
             workers.map((worker) => (
-              <TableRow key={worker.id}>
+              <TableRow key={worker.id} className="cursor-pointer hover:bg-gray-50" onClick={() => onSelect(worker)}>
                 <TableCell>
                   <div className="flex items-center">
                     <Avatar className="h-8 w-8 mr-2">
@@ -93,15 +95,24 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
                     <Badge variant="outline">אין משתמש</Badge>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDetails(worker)}>
+                    <Button variant="outline" size="sm" onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDetails(worker);
+                    }}>
                       <Users className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => onEdit(worker)}>
+                    <Button variant="outline" size="sm" onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(worker);
+                    }}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => onDelete(worker.id)}>
+                    <Button variant="destructive" size="sm" onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(worker.id);
+                    }}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
