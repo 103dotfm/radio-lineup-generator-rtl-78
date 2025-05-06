@@ -24,10 +24,10 @@ export const getWorkers = async (): Promise<Worker[]> => {
       }, 10000); // 10 second timeout
     });
     
-    // The actual data fetch - include user_id and password_readable
+    // The actual data fetch - include user_id, password_readable and photo_url
     const fetchPromise = supabase
       .from('workers')
-      .select('id, name, department, position, email, phone, user_id, password_readable')
+      .select('id, name, department, position, email, phone, user_id, password_readable, photo_url')
       .order('name');
     
     // Race the fetch against the timeout
