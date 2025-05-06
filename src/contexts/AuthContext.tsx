@@ -124,11 +124,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (userData) {
-        // Ensure userData has the correct type with title property
+        // Create a User object with the correct type, explicitly including the title property
         const userWithTitle: User = {
-          ...userData,
-          title: userData.title || profileData?.title || workerData?.position || '',
-          // Include any other missing properties from User interface
+          id: userData.id,
+          email: userData.email || '',
+          username: userData.username || '',
+          full_name: userData.full_name || '',
+          is_admin: userData.is_admin || false,
+          // Add the title property safely, with fallbacks
+          title: profileData?.title || workerData?.position || '',
           avatar_url: profileData?.avatar_url || ''
         };
         
