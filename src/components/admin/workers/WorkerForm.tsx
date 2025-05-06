@@ -62,6 +62,17 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ formData, onChange }) => {
           className="col-span-3"
         />
       </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="photo_url" className="text-right">תמונה (URL)</Label>
+        <Input
+          id="photo_url"
+          name="photo_url"
+          value={formData.photo_url || ''}
+          onChange={onChange}
+          className="col-span-3"
+          placeholder="https://example.com/photo.jpg"
+        />
+      </div>
     </div>
   );
 };
