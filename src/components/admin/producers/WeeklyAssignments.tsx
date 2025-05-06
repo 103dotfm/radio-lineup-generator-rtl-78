@@ -211,11 +211,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   
   const renderWorkerOptions = () => {
     if (workersLoading) {
-      return [<SelectItem key="loading" value="">טוען עובדים...</SelectItem>];
+      return <SelectItem key="loading" value="loading">טוען עובדים...</SelectItem>;
     }
     
     return [
-      <SelectItem key="default" value="">בחר עובד</SelectItem>,
+      <SelectItem key="default" value="placeholder">בחר עובד</SelectItem>,
       ...filteredWorkers.map(worker => (
         <SelectItem key={worker.id} value={worker.id}>{worker.name}</SelectItem>
       ))
@@ -224,7 +224,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   
   const renderRoleOptions = () => {
     return [
-      <SelectItem key="default" value="">בחר תפקיד</SelectItem>,
+      <SelectItem key="default" value="placeholder">בחר תפקיד</SelectItem>,
       ...roles.map(role => (
         <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
       ))
