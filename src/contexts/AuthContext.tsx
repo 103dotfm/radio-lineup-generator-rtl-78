@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (authUser) {
           // Create basic user object from auth data, enhanced with worker data if available
-          const basicUser = {
+          const basicUser: User = {
             id: authUser.id,
             email: authUser.email || '',
             username: workerData?.name || authUser.email?.split('@')[0] || '',
@@ -124,13 +124,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (userData) {
+        // Ensure userData has the correct type with title property
+        const userWithTitle: User = {
+          ...userData,
+          title: userData.title || profileData?.title || workerData?.position || '',
+          // Include any other missing properties from User interface
+          avatar_url: profileData?.avatar_url || ''
+        };
+        
         // Combine user data with profile data and worker data if available
         const combinedUserData = {
-          ...userData,
+          ...userWithTitle,
           ...(profileData || {}),
           // If worker data exists, prioritize those fields
-          full_name: workerData?.name || userData.full_name || '',
-          title: workerData?.position || userData.title || '',
+          full_name: workerData?.name || userWithTitle.full_name || '',
+          title: workerData?.position || userWithTitle.title || '',
         };
         
         setUser(combinedUserData);
