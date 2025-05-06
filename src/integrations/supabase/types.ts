@@ -202,6 +202,30 @@ export type Database = {
         }
         Relationships: []
       }
+      divisions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_recipients: {
         Row: {
           created_at: string
@@ -936,6 +960,42 @@ export type Database = {
         }
         Relationships: []
       }
+      worker_divisions: {
+        Row: {
+          created_at: string
+          division_id: string
+          id: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          division_id: string
+          id?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          division_id?: string
+          id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_divisions_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_divisions_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workers: {
         Row: {
           created_at: string | null
@@ -945,6 +1005,7 @@ export type Database = {
           name: string
           password_readable: string | null
           phone: string | null
+          photo_url: string | null
           position: string | null
           updated_at: string | null
           user_id: string | null
@@ -957,6 +1018,7 @@ export type Database = {
           name: string
           password_readable?: string | null
           phone?: string | null
+          photo_url?: string | null
           position?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -969,6 +1031,7 @@ export type Database = {
           name?: string
           password_readable?: string | null
           phone?: string | null
+          photo_url?: string | null
           position?: string | null
           updated_at?: string | null
           user_id?: string | null

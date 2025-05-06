@@ -10,6 +10,7 @@ export interface Worker {
   phone?: string;
   user_id?: string;
   password_readable?: string;
+  photo_url?: string;
 }
 
 export const getWorkers = async (): Promise<Worker[]> => {
@@ -56,7 +57,8 @@ export const getWorkers = async (): Promise<Worker[]> => {
       email: worker.email || '',
       phone: worker.phone || '',
       user_id: worker.user_id || undefined,
-      password_readable: worker.password_readable || undefined
+      password_readable: worker.password_readable || undefined,
+      photo_url: worker.photo_url || undefined
     }));
   } catch (error) {
     console.error('Error fetching workers:', error);
@@ -115,6 +117,7 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
     if (worker.position !== undefined) updateData.position = worker.position;
     if (worker.email !== undefined) updateData.email = worker.email;
     if (worker.phone !== undefined) updateData.phone = worker.phone;
+    if (worker.photo_url !== undefined) updateData.photo_url = worker.photo_url;
     
     if (Object.keys(updateData).length === 0) {
       throw new Error('No fields to update');

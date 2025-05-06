@@ -7,6 +7,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import TimezoneSettings from '@/components/admin/TimezoneSettings';
 import AdminTabs from '@/components/admin/AdminTabs';
 import DomainSettings from '@/components/admin/DomainSettings';
+import StaffManagement from '@/components/admin/StaffManagement';
 
 const Admin = () => {
   const { isAdmin, isAuthenticated } = useAuth();
@@ -15,7 +16,7 @@ const Admin = () => {
   const [serverTime, setServerTime] = useState<Date | null>(null);
   const [redirectProcessed, setRedirectProcessed] = useState(false);
   const [defaultTab, setDefaultTab] = useState("schedule");
-  const [appDomain, setAppDomain] = useState<string | null>(null);
+  const [showStaffManagement, setShowStaffManagement] = useState(false);
 
   useEffect(() => {
     const code = searchParams.get('code');
@@ -23,8 +24,6 @@ const Admin = () => {
       console.log("Found OAuth code in URL, setting default tab to email");
       setDefaultTab("email");
       setRedirectProcessed(true);
-      
-      // Don't modify the URL here, let EmailSettings handle it
     }
 
     // Check if we're being directed to specific tabs
@@ -34,6 +33,8 @@ const Admin = () => {
     } else if (tab === 'exports') {
       setDefaultTab("exports");
       console.log("Setting default tab to exports based on URL parameter");
+    } else if (tab === 'staff') {
+      setShowStaffManagement(true);
     }
   }, [searchParams, redirectProcessed]);
 
@@ -86,6 +87,17 @@ const Admin = () => {
 
   if (!isAdmin) {
     return <Navigate to="/" replace />;
+  }
+
+  if (showStaffManagement) {
+    return (
+      <div className="container mx-auto py-8" dir="rtl">
+        <AdminHeader />
+        <div className="mt-6">
+          <StaffManagement />
+        </div>
+      </div>
+    );
   }
 
   return (
