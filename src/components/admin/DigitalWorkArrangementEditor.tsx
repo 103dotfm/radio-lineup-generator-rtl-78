@@ -21,6 +21,7 @@ import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { useFilterWorkersByDivision } from '@/hooks/useWorkerDivisions';
 
 interface Shift {
   id: string;
@@ -91,12 +92,14 @@ const DEFAULT_SHIFT_TIMES = {
     end: '15:00'
   }
 };
+
 const DigitalWorkArrangementEditor: React.FC = () => {
   const [arrangement, setArrangement] = useState<WorkArrangement | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [customRows, setCustomRows] = useState<CustomRow[]>([]);
   const [filteredWorkers, setFilteredWorkers] = useState<Worker[]>([]);
   const [workersLoading, setWorkersLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [weekDate, setWeekDate] = useState<Date>(() => {
     return startOfWeek(new Date(), {
       weekStartsOn: 0
@@ -125,6 +128,11 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   const {
     toast
   } = useToast();
+  
+  // Digital division ID - replace with the actual division ID for digital workers
+  const digitalDivisionId = '0794299c-45cf-46a7-8ace-c778e4ca599c'; // Replace with actual digital division ID
+  const { workerIds, loading: divisionWorkersLoading } = useFilterWorkersByDivision(digitalDivisionId);
+  
   const navigateWeek = (direction: 'prev' | 'next') => {
     setWeekDate(prev => {
       const newDate = direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1);
@@ -133,6 +141,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     });
   };
+  
   useEffect(() => {
     return () => {
       if (document.body.style.pointerEvents === 'none') {
@@ -142,11 +151,20 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       strayDivs.forEach(div => div.remove());
     };
   }, []);
+  
   useEffect(() => {
     const loadWorkers = async () => {
+      setWorkersLoading(true);
       try {
         const workersList = await getWorkers();
-        setWorkers(workersList);
+        if (workerIds.length > 0) {
+          // Filter workers based on the workers in the digital division
+          const filtered = workersList.filter(worker => workerIds.includes(worker.id));
+          setFilteredWorkers(filtered);
+        } else {
+          // If no division filter is active, use all workers as fallback
+          setFilteredWorkers(workersList);
+        }
       } catch (error) {
         console.error('Error loading workers:', error);
         toast({
@@ -154,13 +172,20 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           description: "לא ניתן לטעון את רשימת העובדים",
           variant: "destructive"
         });
+      } finally {
+        setWorkersLoading(false);
       }
     };
-    loadWorkers();
-  }, [toast]);
+    
+    if (!divisionWorkersLoading) {
+      loadWorkers();
+    }
+  }, [workerIds, divisionWorkersLoading, toast]);
+  
   useEffect(() => {
     fetchArrangement();
   }, [weekDate]);
+  
   const fetchArrangement = async () => {
     setLoading(true);
     const weekStartStr = format(weekDate, 'yyyy-MM-dd');
@@ -254,6 +279,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       setLoading(false);
     }
   };
+  
   const handleSaveShift = async () => {
     if (!arrangement) return;
     try {
@@ -310,6 +336,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     }
   };
+  
   const handleSaveCustomRow = async () => {
     if (!arrangement) return;
     try {
@@ -352,6 +379,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     }
   };
+  
   const handleDeleteShift = async (id: string) => {
     try {
       const {
@@ -372,6 +400,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     }
   };
+  
   const handleDeleteCustomRow = async (id: string) => {
     try {
       const {
@@ -392,6 +421,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     }
   };
+  
   const handleSaveFooterText = async () => {
     if (!arrangement) return;
     try {
@@ -415,6 +445,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     }
   };
+  
   const openShiftDialog = (shift?: Shift) => {
     if (shift) {
       setEditingShift(shift);
@@ -445,6 +476,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
     setShiftDialogOpen(true);
   };
+  
   const openCustomRowDialog = (row?: CustomRow) => {
     if (row) {
       setEditingCustomRow(row);
@@ -459,6 +491,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     }
     setCustomRowDialogOpen(true);
   };
+  
   const updateShiftWorker = async (shift: Shift, workerId: string | null, additionalText?: string) => {
     if (!arrangement) return;
     try {
@@ -485,6 +518,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       });
     }
   };
+  
   const [pendingCustomCellUpdates, setPendingCustomCellUpdates] = useState<Record<string, any>>({});
   const [cellFocused, setCellFocused] = useState<string | null>(null);
   const updateCustomCellContent = (rowId: string, dayIndex: number, content: string) => {
@@ -510,6 +544,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       return row;
     }));
   };
+  
   const saveCustomCellContent = async (rowId: string, dayIndex: number) => {
     const key = `${rowId}-${dayIndex}`;
     setCellFocused(null);
@@ -545,12 +580,15 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       }
     }
   };
+  
   const getShiftsForCell = (section: string, day: number, shiftType: string) => {
     return shifts.filter(shift => shift.section_name === section && shift.day_of_week === day && shift.shift_type === shiftType);
   };
+  
   const getCustomRowsForSection = (section: string) => {
     return customRows.filter(row => row.section_name === section);
   };
+  
   const renderShiftCell = (section: string, day: number, shiftType: string) => {
     const cellShifts = getShiftsForCell(section, day, shiftType);
     if (cellShifts.length === 0) {
@@ -602,6 +640,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
           </div>)}
       </TableCell>;
   };
+  
   const renderCustomRows = (section: string) => {
     const rows = getCustomRowsForSection(section);
     if (rows.length === 0) {
@@ -621,6 +660,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         <CustomRowColumns rowContents={row.contents} section={section} onContentChange={(dayIndex, content) => updateCustomCellContent(row.id, dayIndex, content)} onBlur={dayIndex => saveCustomCellContent(row.id, dayIndex)} onFocus={dayIndex => setCellFocused(`${row.id}-${dayIndex}`)} editable={true} showActions={true} onEdit={() => openCustomRowDialog(row)} onDelete={() => handleDeleteCustomRow(row.id)} />
       </TableRow>);
   };
+  
   const formatDateRange = () => {
     const startDay = format(weekDate, 'dd', {
       locale: he
@@ -635,21 +675,26 @@ const DigitalWorkArrangementEditor: React.FC = () => {
     });
     return `${endDay}-${startDay} ב${month}`;
   };
+  
   const closeShiftDialog = () => {
     document.body.style.pointerEvents = '';
     setShiftDialogOpen(false);
   };
+  
   const closeCustomRowDialog = () => {
     document.body.style.pointerEvents = '';
     setCustomRowDialogOpen(false);
   };
+  
   const closeFooterTextDialog = () => {
     document.body.style.pointerEvents = '';
     setFooterTextDialogOpen(false);
   };
+  
   const handlePrint = () => {
     window.print();
   };
+  
   const handleExportPdf = async () => {
     const element = document.getElementById('digital-work-arrangement-preview');
     if (!element) return;
@@ -682,9 +727,11 @@ const DigitalWorkArrangementEditor: React.FC = () => {
       element.classList.remove('digital-export-pdf');
     }
   };
+  
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
   };
+  
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Worker } from '@/lib/supabase/workers';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -50,10 +51,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   const { toast } = useToast();
   
   // Important: Use false for the second parameter to get weekly schedule instead of master
-  const { scheduleSlots, loading: slotsLoading, error: slotsError } = useScheduleSlots(currentWeek, false);
+  const { scheduleSlots, isLoading: slotsLoading, error: slotsError } = useScheduleSlots(currentWeek, false);
   
   // Get workers in the producers division (assuming there's a division with this ID)
-  // You'll need to replace 'producers-division-id' with the actual division ID for producers
   const producersDivisionId = '0794299c-45cf-46a7-8ace-c778e4ca599c'; // Replace with actual ID
   const { workerIds, loading: divisionWorkersLoading } = useFilterWorkersByDivision(producersDivisionId);
   
@@ -102,12 +102,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
     setSelectedSlot(slot);
   };
   
-  const handleWorkerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedWorker(e.target.value);
+  const handleWorkerSelect = (value: string) => {
+    setSelectedWorker(value);
   };
   
-  const handleRoleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedRole(e.target.value);
+  const handleRoleSelect = (value: string) => {
+    setSelectedRole(value);
   };
   
   const handleNotesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,22 +211,22 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   
   const renderWorkerOptions = () => {
     if (workersLoading) {
-      return <option value="">טוען עובדים...</option>;
+      return [<SelectItem key="loading" value="">טוען עובדים...</SelectItem>];
     }
     
     return [
-      <option key="default" value="">בחר עובד</option>,
+      <SelectItem key="default" value="">בחר עובד</SelectItem>,
       ...filteredWorkers.map(worker => (
-        <option key={worker.id} value={worker.id}>{worker.name}</option>
+        <SelectItem key={worker.id} value={worker.id}>{worker.name}</SelectItem>
       ))
     ];
   };
   
   const renderRoleOptions = () => {
     return [
-      <option key="default" value="">בחר תפקיד</option>,
+      <SelectItem key="default" value="">בחר תפקיד</SelectItem>,
       ...roles.map(role => (
-        <option key={role.id} value={role.id}>{role.name}</option>
+        <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>
       ))
     ];
   };
@@ -268,28 +268,24 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="worker">עובד</Label>
-            <Select onValueChange={setSelectedWorker}>
+            <Select onValueChange={handleWorkerSelect}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="בחר עובד" />
               </SelectTrigger>
               <SelectContent>
-                {renderWorkerOptions().map(option => (
-                  <SelectItem key={option.key} value={option.props.value}>{option.props.children}</SelectItem>
-                ))}
+                {renderWorkerOptions()}
               </SelectContent>
             </Select>
           </div>
           
           <div>
             <Label htmlFor="role">תפקיד</Label>
-            <Select onValueChange={setSelectedRole}>
+            <Select onValueChange={handleRoleSelect}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="בחר תפקיד" />
               </SelectTrigger>
               <SelectContent>
-                {renderRoleOptions().map(option => (
-                  <SelectItem key={option.key} value={option.props.value}>{option.props.children}</SelectItem>
-                ))}
+                {renderRoleOptions()}
               </SelectContent>
             </Select>
           </div>
