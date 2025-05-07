@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from '@/lib/supabase';  // Add this import
+import { supabase } from '@/lib/supabase';
 
 interface WorkerSelectorProps {
   value: string | null;
@@ -15,7 +15,7 @@ interface WorkerSelectorProps {
   additionalText?: string;
   placeholder?: string;
   className?: string;
-  department?: string; // Add department prop
+  department?: string;
 }
 
 export const WorkerSelector = ({ 
@@ -24,7 +24,7 @@ export const WorkerSelector = ({
   additionalText = "", 
   placeholder = "בחר עובד...", 
   className,
-  department // Get department prop
+  department
 }: WorkerSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(additionalText || "");
@@ -50,14 +50,29 @@ export const WorkerSelector = ({
         
         // Fetch workers based on department if specified
         if (department) {
-          const { data: departmentWorkers, error } = await supabase
-            .from('workers')
-            .select('*')
-            .eq('department', department)
-            .order('name');
-            
-          if (error) throw error;
-          data = departmentWorkers;
+          console.log(`WorkerSelector: Filtering by department "${department}"`);
+          
+          // Use multiple possible department values for producers
+          if (department === 'מפיקים' || department === 'producers') {
+            const { data: departmentWorkers, error } = await supabase
+              .from('workers')
+              .select('*')
+              .or('department.eq.מפיקים,department.eq.מפיק,department.eq.הפקה,department.eq.producers,department.eq.Production staff')
+              .order('name');
+              
+            if (error) throw error;
+            data = departmentWorkers;
+          } else {
+            // For other departments, use exact matching
+            const { data: departmentWorkers, error } = await supabase
+              .from('workers')
+              .select('*')
+              .eq('department', department)
+              .order('name');
+              
+            if (error) throw error;
+            data = departmentWorkers;
+          }
         } else {
           data = await getWorkers();
         }

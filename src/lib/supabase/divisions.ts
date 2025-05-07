@@ -158,6 +158,7 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
     }
     
     // Then insert the worker-division relationship
+    console.log(`Inserting new worker_divisions record: worker_id=${workerId}, division_id=${divisionId}`);
     const { data, error } = await supabase
       .from('worker_divisions')
       .insert({ worker_id: workerId, division_id: divisionId })

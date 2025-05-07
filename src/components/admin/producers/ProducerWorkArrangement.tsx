@@ -24,12 +24,14 @@ const ProducerWorkArrangement = () => {
   const { toast } = useToast();
   
   useEffect(() => {
+    console.log("ProducerWorkArrangement component mounted");
     loadWorkArrangement();
   }, [currentWeek]);
   
   const loadWorkArrangement = async () => {
     setIsLoading(true);
     try {
+      console.log("Loading producer work arrangement...");
       const arrangement = await getOrCreateProducerWorkArrangement(currentWeek);
       if (arrangement) {
         setNotes(arrangement.notes || "");
