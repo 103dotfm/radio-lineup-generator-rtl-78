@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -6,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/lib/supabase';  // Add this import
 
 interface WorkerSelectorProps {
   value: string | null;
