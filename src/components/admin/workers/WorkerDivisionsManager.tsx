@@ -40,6 +40,7 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   // Force refresh data when component mounts or workerId changes
   useEffect(() => {
     if (workerId) {
+      console.log(`WorkerDivisionsManager: Refreshing data for worker ID ${workerId}`);
       refreshData();
     }
   }, [workerId, refreshData]);
@@ -70,8 +71,28 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
 
     try {
       setIsAssigning(true);
-      await assignDivision(selectedDivision);
-      setSelectedDivision(undefined);
+      console.log(`WorkerDivisionsManager: Assigning division ${selectedDivision} to worker ${workerId}`);
+      const success = await assignDivision(selectedDivision);
+      if (success) {
+        console.log('Division successfully assigned, refreshing data');
+        // Force refresh data after assignment
+        await refreshData();
+        setSelectedDivision(undefined);
+      } else {
+        console.error('Division assignment failed');
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בהקצאת המחלקה",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Error in handleAssignDivision:', err);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בהקצאת המחלקה",
+        variant: "destructive",
+      });
     } finally {
       setIsAssigning(false);
     }
@@ -80,7 +101,27 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   const handleRemoveDivision = async (divisionId: string) => {
     try {
       setIsRemoving(prev => ({ ...prev, [divisionId]: true }));
-      await removeDivision(divisionId);
+      console.log(`WorkerDivisionsManager: Removing division ${divisionId} from worker ${workerId}`);
+      const success = await removeDivision(divisionId);
+      if (success) {
+        console.log('Division successfully removed, refreshing data');
+        // Force refresh data after removal
+        await refreshData();
+      } else {
+        console.error('Division removal failed');
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בהסרת המחלקה",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Error in handleRemoveDivision:', err);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בהסרת המחלקה",
+        variant: "destructive",
+      });
     } finally {
       setIsRemoving(prev => ({ ...prev, [divisionId]: false }));
     }

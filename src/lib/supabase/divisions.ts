@@ -126,6 +126,19 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
   try {
     console.log(`Assigning division ${divisionId} to worker ${workerId}`);
     
+    // First, validate that the division exists
+    const { data: divisionData, error: divisionError } = await supabase
+      .from('divisions')
+      .select('id')
+      .eq('id', divisionId)
+      .maybeSingle();
+    
+    if (divisionError || !divisionData) {
+      console.error('Error validating division:', divisionError || 'Division not found');
+      return false;
+    }
+    
+    // Then insert the worker-division relationship
     const { data, error } = await supabase
       .from('worker_divisions')
       .insert({ worker_id: workerId, division_id: divisionId })
