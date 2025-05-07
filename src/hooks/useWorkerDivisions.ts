@@ -75,27 +75,11 @@ export const useWorkerDivisions = (workerId?: string) => {
         // Refresh worker divisions
         const updatedDivisions = await getWorkerDivisions(workerId);
         setWorkerDivisions(updatedDivisions);
-        
-        toast({
-          title: "הצלחה",
-          description: "המחלקה הוקצתה לעובד בהצלחה",
-        });
-      } else {
-        toast({
-          title: "שגיאה",
-          description: "אירעה שגיאה בהקצאת המחלקה",
-          variant: "destructive",
-        });
       }
       
       return success;
     } catch (err) {
       console.error('Error assigning division:', err);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה בהקצאת המחלקה",
-        variant: "destructive",
-      });
       return false;
     }
   };
@@ -109,27 +93,11 @@ export const useWorkerDivisions = (workerId?: string) => {
       if (success) {
         // Update local state by filtering out the removed division
         setWorkerDivisions(prev => prev.filter(div => div.id !== divisionId));
-        
-        toast({
-          title: "הצלחה",
-          description: "המחלקה הוסרה מהעובד בהצלחה",
-        });
-      } else {
-        toast({
-          title: "שגיאה",
-          description: "אירעה שגיאה בהסרת המחלקה",
-          variant: "destructive",
-        });
       }
       
       return success;
     } catch (err) {
       console.error('Error removing division:', err);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה בהסרת המחלקה",
-        variant: "destructive",
-      });
       return false;
     }
   };
@@ -149,7 +117,7 @@ export const useWorkerDivisions = (workerId?: string) => {
   };
 };
 
-// Add new hook for filtering workers by division
+// Hook for filtering workers by division
 export const useFilterWorkersByDivision = (divisionId?: string) => {
   const [workers, setWorkers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
