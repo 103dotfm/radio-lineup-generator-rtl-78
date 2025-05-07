@@ -26,7 +26,7 @@ export type ViewMode = 'daily' | 'weekly' | 'monthly';
 export interface ScheduleSlot {
   id: string;
   show_name: string;
-  host_name?: string;
+  host_name: string | null;
   start_time: string;
   end_time: string;
   day_of_week: number;
