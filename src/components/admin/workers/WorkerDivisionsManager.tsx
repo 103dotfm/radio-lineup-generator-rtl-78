@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useWorkerDivisions } from '@/hooks/useWorkerDivisions';
-import { X, Plus } from 'lucide-react';
+import { useWorkerDivisions, DIVISION_TRANSLATIONS } from '@/hooks/useWorkerDivisions';
+import { X, Plus, Loader2 } from 'lucide-react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Select,
@@ -13,16 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Division } from '@/lib/supabase/divisions';
 
 interface WorkerDivisionsManagerProps {
   workerId: string;
 }
-
-const DIVISION_TRANSLATIONS: Record<string, string> = {
-  'digital': 'דיגיטל',
-  'engineers': 'טכנאים',
-  'producers': 'עורכים ומפיקים'
-};
 
 const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerId }) => {
   const { toast } = useToast();
@@ -33,10 +28,21 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
     error, 
     assignDivision, 
     removeDivision, 
-    isDivisionAssigned 
+    isDivisionAssigned,
+    refreshData,
+    getDivisionTranslation
   } = useWorkerDivisions(workerId);
   
   const [selectedDivision, setSelectedDivision] = useState<string | undefined>();
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [isRemoving, setIsRemoving] = useState<Record<string, boolean>>({});
+
+  // Force refresh data when component mounts or workerId changes
+  useEffect(() => {
+    if (workerId) {
+      refreshData();
+    }
+  }, [workerId, refreshData]);
 
   if (error) {
     return <div className="text-red-500">{error}</div>;
@@ -56,62 +62,31 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   }
 
   const getLocalizedName = (name: string): string => {
-    return DIVISION_TRANSLATIONS[name.toLowerCase()] || name;
+    return getDivisionTranslation(name);
   };
 
   const handleAssignDivision = async () => {
-    if (selectedDivision) {
-      try {
-        const success = await assignDivision(selectedDivision);
-        if (success) {
-          toast({
-            title: "הצלחה",
-            description: "המחלקה הוקצתה לעובד בהצלחה",
-          });
-        } else {
-          toast({
-            title: "שגיאה",
-            description: "אירעה שגיאה בהקצאת המחלקה",
-            variant: "destructive",
-          });
-        }
-        setSelectedDivision(undefined);
-      } catch (error) {
-        console.error('Error assigning division:', error);
-        toast({
-          title: "שגיאה",
-          description: "אירעה שגיאה בהקצאת המחלקה",
-          variant: "destructive",
-        });
-      }
+    if (!selectedDivision) return;
+
+    try {
+      setIsAssigning(true);
+      await assignDivision(selectedDivision);
+      setSelectedDivision(undefined);
+    } finally {
+      setIsAssigning(false);
     }
   };
 
   const handleRemoveDivision = async (divisionId: string) => {
     try {
-      const success = await removeDivision(divisionId);
-      if (success) {
-        toast({
-          title: "הצלחה",
-          description: "המחלקה הוסרה מהעובד בהצלחה",
-        });
-      } else {
-        toast({
-          title: "שגיאה",
-          description: "אירעה שגיאה בהסרת המחלקה",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error removing division:', error);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה בהסרת המחלקה",
-        variant: "destructive",
-      });
+      setIsRemoving(prev => ({ ...prev, [divisionId]: true }));
+      await removeDivision(divisionId);
+    } finally {
+      setIsRemoving(prev => ({ ...prev, [divisionId]: false }));
     }
   };
 
+  // Filter out divisions that are already assigned
   const unassignedDivisions = divisions.filter(
     division => !isDivisionAssigned(division.id)
   );
@@ -124,7 +99,7 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
           {workerDivisions.length === 0 ? (
             <p className="text-gray-500">לא הוקצו מחלקות לעובד זה</p>
           ) : (
-            workerDivisions.map(division => (
+            workerDivisions.map((division: Division) => (
               <Badge key={division.id} variant="secondary" className="flex items-center gap-1 py-1 px-3">
                 {getLocalizedName(division.name)}
                 <Button 
@@ -132,8 +107,13 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
                   size="sm" 
                   className="h-5 w-5 p-0 mr-1"
                   onClick={() => handleRemoveDivision(division.id)}
+                  disabled={isRemoving[division.id]}
                 >
-                  <X className="h-3 w-3" />
+                  {isRemoving[division.id] ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <X className="h-3 w-3" />
+                  )}
                 </Button>
               </Badge>
             ))
@@ -148,13 +128,13 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
           <Select
             value={selectedDivision}
             onValueChange={setSelectedDivision}
-            disabled={unassignedDivisions.length === 0}
+            disabled={unassignedDivisions.length === 0 || isAssigning}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="בחר מחלקה" />
             </SelectTrigger>
             <SelectContent>
-              {unassignedDivisions.map(division => (
+              {unassignedDivisions.map((division: Division) => (
                 <SelectItem key={division.id} value={division.id}>
                   {getLocalizedName(division.name)}
                 </SelectItem>
@@ -165,10 +145,14 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
           <Button 
             variant="outline"
             onClick={handleAssignDivision}
-            disabled={!selectedDivision || unassignedDivisions.length === 0}
+            disabled={!selectedDivision || isAssigning || unassignedDivisions.length === 0}
             className="flex items-center gap-1"
           >
-            <Plus className="h-4 w-4" />
+            {isAssigning ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
             הוסף מחלקה
           </Button>
         </div>

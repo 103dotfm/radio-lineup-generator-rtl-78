@@ -65,6 +65,7 @@ export const getDivisions = async (): Promise<Division[]> => {
       throw new Error(`Failed to fetch divisions: ${error.message}`);
     }
     
+    console.log(`Retrieved ${data?.length || 0} divisions:`, data);
     return data || [];
   } catch (error) {
     console.error('Error in getDivisions:', error);
@@ -74,6 +75,8 @@ export const getDivisions = async (): Promise<Division[]> => {
 
 export const getWorkerDivisions = async (workerId: string): Promise<Division[]> => {
   try {
+    console.log(`Fetching divisions for worker ID: ${workerId}`);
+    
     const { data, error } = await supabase
       .from('worker_divisions')
       .select(`
@@ -87,7 +90,9 @@ export const getWorkerDivisions = async (workerId: string): Promise<Division[]> 
       throw new Error(`Failed to fetch worker divisions: ${error.message}`);
     }
     
-    return data?.map(item => item.divisions) || [];
+    const divisions = data?.map(item => item.divisions) || [];
+    console.log(`Retrieved ${divisions.length} divisions for worker ${workerId}:`, divisions);
+    return divisions;
   } catch (error) {
     console.error('Error in getWorkerDivisions:', error);
     throw error;
@@ -108,7 +113,9 @@ export const getWorkersByDivisionId = async (divisionId: string): Promise<string
       throw new Error(`Failed to fetch workers by division: ${error.message}`);
     }
     
-    return data?.map(item => item.worker_id) || [];
+    const workerIds = data?.map(item => item.worker_id) || [];
+    console.log(`Found ${workerIds.length} workers for division ${divisionId}`);
+    return workerIds;
   } catch (error) {
     console.error('Error in getWorkersByDivisionId:', error);
     throw error;
@@ -119,9 +126,10 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
   try {
     console.log(`Assigning division ${divisionId} to worker ${workerId}`);
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('worker_divisions')
-      .insert({ worker_id: workerId, division_id: divisionId });
+      .insert({ worker_id: workerId, division_id: divisionId })
+      .select();
     
     if (error) {
       // If the error is because the relationship already exists, return true
@@ -133,7 +141,7 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
       return false;
     }
     
-    console.log('Division assigned successfully');
+    console.log('Division assigned successfully:', data);
     return true;
   } catch (error) {
     console.error('Error in assignDivisionToWorker:', error);
@@ -145,17 +153,18 @@ export const removeDivisionFromWorker = async (workerId: string, divisionId: str
   try {
     console.log(`Removing division ${divisionId} from worker ${workerId}`);
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('worker_divisions')
       .delete()
-      .match({ worker_id: workerId, division_id: divisionId });
+      .match({ worker_id: workerId, division_id: divisionId })
+      .select();
     
     if (error) {
       console.error('Error removing division from worker:', error);
       return false;
     }
     
-    console.log('Division removed successfully');
+    console.log('Division removed successfully:', data);
     return true;
   } catch (error) {
     console.error('Error in removeDivisionFromWorker:', error);
