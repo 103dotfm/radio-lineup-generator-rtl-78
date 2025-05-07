@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,11 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, MoreHorizontal, Clock, ChevronLeft, ChevronRight, Calendar, Eye, Printer, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
-import { Worker, getWorkers } from '@/lib/supabase/workers';
+import { Worker, getWorkers, getWorkersByIds } from '@/lib/supabase/workers';
+import { getWorkersByDivisionId } from '@/lib/supabase/divisions';
 import { CustomRowColumns } from '@/components/schedule/workers/CustomRowColumns';
 import DigitalWorkArrangementView from '@/components/schedule/DigitalWorkArrangementView';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+
+// Digital department ID - replace with your actual division ID
+const DIGITAL_DIVISION_ID = "123e4567-e89b-12d3-a456-426614174000"; // Replace with actual digital division ID
 
 interface Shift {
   id: string;
@@ -145,10 +149,20 @@ const DigitalWorkArrangementEditor: React.FC = () => {
   useEffect(() => {
     const loadWorkers = async () => {
       try {
-        const workersList = await getWorkers();
-        setWorkers(workersList);
+        // First, get all worker IDs from the digital division
+        const digitalWorkerIds = await getWorkersByDivisionId(DIGITAL_DIVISION_ID);
+        
+        if (digitalWorkerIds.length > 0) {
+          // Then, get the actual worker objects for those IDs
+          const digitalWorkers = await getWorkersByIds(digitalWorkerIds);
+          setWorkers(digitalWorkers);
+          console.log(`Loaded ${digitalWorkers.length} workers from digital division`);
+        } else {
+          console.log('No workers found in digital division');
+          setWorkers([]);
+        }
       } catch (error) {
-        console.error('Error loading workers:', error);
+        console.error('Error loading workers from digital division:', error);
         toast({
           title: "שגיאה",
           description: "לא ניתן לטעון את רשימת העובדים",
@@ -156,6 +170,7 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         });
       }
     };
+    
     loadWorkers();
   }, [toast]);
   useEffect(() => {
