@@ -28,7 +28,7 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   } = useWorkerDivisions(workerId);
 
   useEffect(() => {
-    console.log('WorkerDivisionsManager mounted, refreshing data');
+    console.log(`WorkerDivisionsManager mounted for worker ID: ${workerId}, refreshing data`);
     refreshData();
   }, [workerId, refreshData]);
 

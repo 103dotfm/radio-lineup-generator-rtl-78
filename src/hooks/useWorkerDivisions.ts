@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Division, 
@@ -14,7 +13,11 @@ import { supabase } from "@/lib/supabase";
 export const DIVISION_TRANSLATIONS: Record<string, string> = {
   'digital': 'דיגיטל',
   'engineers': 'טכנאים',
-  'producers': 'עורכים ומפיקים'
+  'producers': 'עורכים ומפיקים',
+  'מפיקים': 'מפיקים',
+  'מפיק': 'מפיק',
+  'הפקה': 'הפקה',
+  'Production staff': 'צוות הפקה'
 };
 
 export const useWorkerDivisions = (workerId?: string) => {
@@ -91,12 +94,8 @@ export const useWorkerDivisions = (workerId?: string) => {
           description: "המחלקה הוקצתה לעובד בהצלחה",
         });
         
-        // Find the assigned division and add it to the worker's divisions
-        const assignedDivision = divisions.find(div => div.id === divisionId);
-        if (assignedDivision) {
-          setWorkerDivisions(prev => [...prev, assignedDivision]);
-          console.log(`Division ${divisionId} assigned to worker ${workerId} in UI state`);
-        }
+        // Refresh divisions data after assignment
+        await loadWorkerDivisions();
       } else {
         toast({
           title: "שגיאה",
@@ -130,9 +129,8 @@ export const useWorkerDivisions = (workerId?: string) => {
           description: "המחלקה הוסרה מהעובד בהצלחה",
         });
         
-        // Remove the division from the worker's divisions
-        setWorkerDivisions(prev => prev.filter(div => div.id !== divisionId));
-        console.log(`Division ${divisionId} removed from worker ${workerId} in UI state`);
+        // Refresh divisions data after removal
+        await loadWorkerDivisions();
       } else {
         toast({
           title: "שגיאה",
@@ -146,7 +144,7 @@ export const useWorkerDivisions = (workerId?: string) => {
       console.error('Error removing division:', err);
       toast({
         title: "שגיאה",
-        description: "אירעה שגיאה בהסרת המחלקה",
+        description: "אירע�� שגיאה בהסרת המחלקה",
         variant: "destructive",
       });
       return false;
@@ -166,6 +164,14 @@ export const useWorkerDivisions = (workerId?: string) => {
     }
   }, [loadDivisions, loadWorkerDivisions, workerId]);
 
+  const getDivisionTranslation = (name: string) => {
+    const translatedName = DIVISION_TRANSLATIONS[name.toLowerCase()] || 
+                          DIVISION_TRANSLATIONS[name] || 
+                          name;
+    console.log(`Translating division "${name}" to "${translatedName}"`);
+    return translatedName;
+  };
+
   return {
     divisions,
     workerDivisions,
@@ -175,7 +181,7 @@ export const useWorkerDivisions = (workerId?: string) => {
     removeDivision,
     isDivisionAssigned,
     refreshData,
-    getDivisionTranslation: (name: string) => DIVISION_TRANSLATIONS[name.toLowerCase()] || name
+    getDivisionTranslation
   };
 };
 
