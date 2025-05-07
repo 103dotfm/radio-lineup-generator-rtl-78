@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -14,6 +15,7 @@ import { getProducerAssignments } from '@/lib/supabase/producers';
 import { ScheduleSlot, ProducerAssignment } from '@/types/schedule';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
+import { Loader2 } from 'lucide-react';
 
 interface ProducerAssignmentsViewProps {
   selectedDate: Date;
@@ -32,8 +34,11 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const loadAssignments = async () => {
     setIsLoading(true);
     try {
+      console.log(`Loading producer assignments for week starting ${selectedDate.toISOString().split('T')[0]}`);
+      
       // Get assignments data
       const assignmentsData = await getProducerAssignments(selectedDate);
+      console.log(`Retrieved ${assignmentsData?.length || 0} producer assignments:`, assignmentsData);
       
       // Process assignments to work with schedule slots
       if (assignmentsData && assignmentsData.length > 0) {
@@ -70,7 +75,12 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   };
   
   if (isLoading || slotsLoading) {
-    return <div className="text-center py-4">טוען...</div>;
+    return (
+      <div className="text-center py-4">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+        <div>טוען...</div>
+      </div>
+    );
   }
 
   // Generate all days of the week based on selectedDate

@@ -65,7 +65,7 @@ export interface ProducerWorkArrangement {
 
 export const getProducers = async (): Promise<Worker[]> => {
   try {
-    console.log('producers.ts: Fetching workers from Supabase...');
+    console.log('producers.ts: Fetching producers from Supabase...');
     
     // Add a timeout to detect if the request is hanging
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -89,16 +89,16 @@ export const getProducers = async (): Promise<Worker[]> => {
     ]);
     
     if (error) {
-      console.error('Error in getWorkers query:', error);
-      throw new Error(`Failed to fetch workers: ${error.message}`);
+      console.error('Error in getProducers query:', error);
+      throw new Error(`Failed to fetch producers: ${error.message}`);
     }
     
     if (!data || !Array.isArray(data)) {
-      console.error('No valid data returned from workers query');
+      console.error('No valid data returned from producers query');
       return [];
     }
     
-    console.log(`Workers data fetched successfully: ${data.length} workers`, data);
+    console.log(`Producers data fetched successfully: ${data.length} producers`, data);
     
     // Ensure we're returning an array of workers with valid properties
     return data.map(worker => ({
@@ -112,7 +112,7 @@ export const getProducers = async (): Promise<Worker[]> => {
       password_readable: worker.password_readable || undefined
     }));
   } catch (error) {
-    console.error('Error fetching workers:', error);
+    console.error('Error fetching producers:', error);
     throw error; // Re-throw to allow components to handle the error
   }
 };
@@ -233,9 +233,10 @@ export const getProducerRoles = async (): Promise<ProducerRole[]> => {
 // Get producer assignments for a specific week
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
-    console.log(`Getting producer assignments for week starting ${weekStart.toISOString().split('T')[0]}`);
     const formattedDate = weekStart.toISOString().split('T')[0];
+    console.log(`Getting producer assignments for week starting ${formattedDate}`);
     
+    // Improved query with better logging
     const { data, error } = await supabase
       .from('producer_assignments')
       .select(`
@@ -249,7 +250,10 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       throw new Error(`Failed to fetch producer assignments: ${error.message}`);
     }
     
+    console.log(`Retrieved ${data?.length || 0} producer assignments for week ${formattedDate}:`, data);
+    
     if (!data) {
+      console.log('No assignments found for this week');
       return [];
     }
     
@@ -260,14 +264,17 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
   }
 };
 
-// Create a new producer assignment
+// Create a new producer assignment with improved logging and error handling
 export const createProducerAssignment = async (assignment: Partial<ProducerAssignment>): Promise<ProducerAssignment | null> => {
   try {
     if (!assignment.slot_id || !assignment.worker_id || !assignment.role || !assignment.week_start) {
+      console.error('Missing required fields for producer assignment:', assignment);
       throw new Error("Missing required fields for producer assignment");
     }
+    
+    console.log(`Creating single assignment for worker ${assignment.worker_id} with role ${assignment.role}`);
 
-    // Check if an assignment with this slot, worker, role already exists
+    // Check if an assignment with this slot, worker, role already exists for this week
     const { data: existingData, error: checkError } = await supabase
       .from('producer_assignments')
       .select('*')
@@ -308,7 +315,8 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
       console.error('Error creating producer assignment:', error);
       throw new Error(`Failed to create producer assignment: ${error.message}`);
     }
-
+    
+    console.log('Producer assignment created successfully:', data);
     return data as ProducerAssignment;
   } catch (error) {
     console.error('Error in createProducerAssignment:', error);
