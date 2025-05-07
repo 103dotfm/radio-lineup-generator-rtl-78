@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkerDivisionsManagerProps {
   workerId: string;
@@ -24,6 +25,7 @@ const DIVISION_TRANSLATIONS: Record<string, string> = {
 };
 
 const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerId }) => {
+  const { toast } = useToast();
   const { 
     divisions, 
     workerDivisions, 
@@ -59,8 +61,54 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
 
   const handleAssignDivision = async () => {
     if (selectedDivision) {
-      await assignDivision(selectedDivision);
-      setSelectedDivision(undefined);
+      try {
+        const success = await assignDivision(selectedDivision);
+        if (success) {
+          toast({
+            title: "הצלחה",
+            description: "המחלקה הוקצתה לעובד בהצלחה",
+          });
+        } else {
+          toast({
+            title: "שגיאה",
+            description: "אירעה שגיאה בהקצאת המחלקה",
+            variant: "destructive",
+          });
+        }
+        setSelectedDivision(undefined);
+      } catch (error) {
+        console.error('Error assigning division:', error);
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בהקצאת המחלקה",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleRemoveDivision = async (divisionId: string) => {
+    try {
+      const success = await removeDivision(divisionId);
+      if (success) {
+        toast({
+          title: "הצלחה",
+          description: "המחלקה הוסרה מהעובד בהצלחה",
+        });
+      } else {
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בהסרת המחלקה",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error removing division:', error);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בהסרת המחלקה",
+        variant: "destructive",
+      });
     }
   };
 
@@ -83,7 +131,7 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
                   variant="ghost" 
                   size="sm" 
                   className="h-5 w-5 p-0 mr-1"
-                  onClick={() => removeDivision(division.id)}
+                  onClick={() => handleRemoveDivision(division.id)}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -125,7 +173,7 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
           </Button>
         </div>
         
-        {unassignedDivisions.length === 0 && (
+        {unassignedDivisions.length === 0 && workerDivisions.length > 0 && (
           <p className="text-gray-500 mt-2">כל המחלקות הוקצו</p>
         )}
       </div>

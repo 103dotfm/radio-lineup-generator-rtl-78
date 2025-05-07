@@ -117,6 +117,8 @@ export const getWorkersByDivisionId = async (divisionId: string): Promise<string
 
 export const assignDivisionToWorker = async (workerId: string, divisionId: string): Promise<boolean> => {
   try {
+    console.log(`Assigning division ${divisionId} to worker ${workerId}`);
+    
     const { error } = await supabase
       .from('worker_divisions')
       .insert({ worker_id: workerId, division_id: divisionId });
@@ -124,12 +126,14 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
     if (error) {
       // If the error is because the relationship already exists, return true
       if (error.code === '23505') { // Unique violation
+        console.log('This division is already assigned to the worker');
         return true;
       }
       console.error('Error assigning division to worker:', error);
       return false;
     }
     
+    console.log('Division assigned successfully');
     return true;
   } catch (error) {
     console.error('Error in assignDivisionToWorker:', error);
@@ -139,6 +143,8 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
 
 export const removeDivisionFromWorker = async (workerId: string, divisionId: string): Promise<boolean> => {
   try {
+    console.log(`Removing division ${divisionId} from worker ${workerId}`);
+    
     const { error } = await supabase
       .from('worker_divisions')
       .delete()
@@ -149,6 +155,7 @@ export const removeDivisionFromWorker = async (workerId: string, divisionId: str
       return false;
     }
     
+    console.log('Division removed successfully');
     return true;
   } catch (error) {
     console.error('Error in removeDivisionFromWorker:', error);
