@@ -294,7 +294,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
                                           <SelectValue placeholder="בחר עובד" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="">ללא שיבוץ</SelectItem>
+                                          <SelectItem value="none">ללא שיבוץ</SelectItem>
                                           {workers.map((worker) => (
                                             <SelectItem key={worker.id} value={worker.id}>
                                               {worker.name}

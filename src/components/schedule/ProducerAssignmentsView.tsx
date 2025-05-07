@@ -77,7 +77,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
   
   // Get assignments for a slot
-  const getAssignmentsForSlot = (slotId: string): ProducerAssignment[] => {
+  const getAssignmentsForSlot = (slotId: string): ScheduleProducerAssignment[] => {
     return assignments.filter((assignment) => assignment.slot_id === slotId);
   };
   
