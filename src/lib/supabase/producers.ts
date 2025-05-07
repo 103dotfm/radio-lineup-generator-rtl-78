@@ -46,7 +46,7 @@ export interface ProducerAssignment {
   slot?: {
     id: string;
     show_name: string;
-    host_name?: string;
+    host_name?: string | null;
     start_time: string;
     end_time: string;
     day_of_week: number;
@@ -471,6 +471,92 @@ export const getAllMonthlyAssignments = async (
   } catch (error) {
     console.error('Error in getAllMonthlyAssignments:', error);
     throw error;
+  }
+};
+
+// Function to assign a producer to a slot
+export const assignProducerToSlot = async (
+  slotId: string,
+  workerId: string, 
+  role: string, 
+  weekStart: string
+): Promise<boolean> => {
+  try {
+    if (!slotId || !workerId || !role || !weekStart) {
+      throw new Error("Missing required fields for producer assignment");
+    }
+
+    // Check if an assignment already exists
+    const { data: existingData, error: checkError } = await supabase
+      .from('producer_assignments')
+      .select('*')
+      .eq('slot_id', slotId)
+      .eq('role', role)
+      .eq('week_start', weekStart);
+
+    if (checkError) {
+      console.error('Error checking existing assignments:', checkError);
+      return false;
+    }
+
+    // If assignment exists, update it
+    if (existingData && existingData.length > 0) {
+      const { error } = await supabase
+        .from('producer_assignments')
+        .update({ worker_id: workerId })
+        .eq('id', existingData[0].id);
+
+      if (error) {
+        console.error('Error updating producer assignment:', error);
+        return false;
+      }
+      return true;
+    }
+
+    // If not exists, create new assignment
+    const { error } = await supabase
+      .from('producer_assignments')
+      .insert([{
+        slot_id: slotId,
+        worker_id: workerId,
+        role: role,
+        week_start: weekStart,
+        is_recurring: false
+      }]);
+
+    if (error) {
+      console.error('Error creating producer assignment:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in assignProducerToSlot:', error);
+    return false;
+  }
+};
+
+// Function to remove an assignment
+export const removeAssignment = async (assignmentId: string): Promise<boolean> => {
+  try {
+    if (!assignmentId) {
+      throw new Error("Missing assignment ID");
+    }
+
+    const { error } = await supabase
+      .from('producer_assignments')
+      .delete()
+      .eq('id', assignmentId);
+
+    if (error) {
+      console.error('Error removing producer assignment:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in removeAssignment:', error);
+    return false;
   }
 };
 

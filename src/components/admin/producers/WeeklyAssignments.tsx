@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -9,10 +10,15 @@ import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { getSlots } from '@/lib/supabase/schedule';
 import { Worker, getWorkers, getWorkersByIds } from '@/lib/supabase/workers';
 import { getWorkersByDivisionId } from '@/lib/supabase/divisions';
-import { getProducerAssignments, assignProducerToSlot, removeAssignment } from '@/lib/supabase/producers';
+import { 
+  getProducerAssignments,
+  assignProducerToSlot,
+  removeAssignment,
+  ProducerAssignment
+} from '@/lib/supabase/producers';
+import { supabase } from "@/lib/supabase";
 
 // Producer department ID - replace with your actual producer division ID
 const PRODUCER_DIVISION_ID = "223e4567-e89b-12d3-a456-426614174000"; // Replace with actual producer division ID
@@ -28,17 +34,6 @@ interface ScheduleSlot {
   day_of_week: number;
   start_time: string;
   end_time: string;
-}
-
-interface ProducerAssignment {
-  id: string;
-  slot_id: string;
-  worker_id: string;
-  role: string;
-  notes?: string;
-  worker?: Worker;
-  slot?: ScheduleSlot;
-  week_start: string;
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
@@ -67,8 +62,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         setWorkers(producerWorkers);
         
         // Load schedule slots
-        const scheduleSlots = await getSlots();
-        setSlots(scheduleSlots);
+        const { data: scheduleSlots, error: slotsError } = await supabase
+          .from('schedule_slots')
+          .select('id, show_name, host_name, day_of_week, start_time, end_time')
+          .order('start_time');
+        
+        if (slotsError) {
+          throw new Error(`Error loading slots: ${slotsError.message}`);
+        }
+        
+        setSlots(scheduleSlots || []);
         
         // Load existing assignments
         const currentAssignments = await getProducerAssignments(currentWeek);
@@ -106,14 +109,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
         
         // Check if this combination already exists
         const existingIndex = updatedAssignments.findIndex(
-          a => a.slot_id === slotId && a.role === role && a.worker_id === workerId
+          a => a.slot_id === slotId && a.role === role && a.week_start === weekStartStr
         );
         
         if (existingIndex >= 0) {
           // Update existing
           updatedAssignments[existingIndex].worker_id = workerId;
-        } else {
-          // Add new assignment
+        } else if (workerId) {
+          // Add new assignment only if worker is selected
           const worker = workers.find(w => w.id === workerId);
           const slot = slots.find(s => s.id === slotId);
           
@@ -124,6 +127,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
               worker_id: workerId,
               role: role,
               week_start: weekStartStr,
+              is_recurring: false,
               worker: worker,
               slot: slot
             });
