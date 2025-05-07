@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Division, 
@@ -8,6 +9,13 @@ import {
 } from '@/lib/supabase/divisions';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+
+// Mapping of division names to their Hebrew translations
+export const DIVISION_TRANSLATIONS: Record<string, string> = {
+  'digital': 'דיגיטל',
+  'engineers': 'טכנאים',
+  'producers': 'עורכים ומפיקים'
+};
 
 export const useWorkerDivisions = (workerId?: string) => {
   const [divisions, setDivisions] = useState<Division[]>([]);
