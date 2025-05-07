@@ -62,7 +62,6 @@ export const WorkerSelector = ({
               
             if (error) throw error;
             data = departmentWorkers;
-            console.log('WorkerSelector: Fetched producers with custom filter:', data);
           } else {
             // For other departments, use exact matching
             const { data: departmentWorkers, error } = await supabase
