@@ -95,6 +95,7 @@ export const useWorkerDivisions = (workerId?: string) => {
         const assignedDivision = divisions.find(div => div.id === divisionId);
         if (assignedDivision) {
           setWorkerDivisions(prev => [...prev, assignedDivision]);
+          console.log(`Division ${divisionId} assigned to worker ${workerId} in UI state`);
         }
       } else {
         toast({
@@ -131,6 +132,7 @@ export const useWorkerDivisions = (workerId?: string) => {
         
         // Remove the division from the worker's divisions
         setWorkerDivisions(prev => prev.filter(div => div.id !== divisionId));
+        console.log(`Division ${divisionId} removed from worker ${workerId} in UI state`);
       } else {
         toast({
           title: "שגיאה",
