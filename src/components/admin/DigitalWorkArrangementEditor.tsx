@@ -597,7 +597,14 @@ const DigitalWorkArrangementEditor: React.FC = () => {
             </div>
             
             <div className="mt-2">
-              <WorkerSelector value={shift.person_name} onChange={(workerId, additionalText) => updateShiftWorker(shift, workerId, additionalText)} additionalText={shift.additional_text || ''} placeholder="בחר עובד..." className="w-full" />
+              <WorkerSelector 
+                value={shift.person_name} 
+                onChange={(workerId, additionalText) => updateShiftWorker(shift, workerId, additionalText)} 
+                additionalText={shift.additional_text || ''} 
+                placeholder="בחר עובד..." 
+                className="w-full"
+                department="digital" // Pass department prop
+              />
             </div>
           </div>)}
       </TableCell>;
@@ -787,49 +794,49 @@ const DigitalWorkArrangementEditor: React.FC = () => {
         }
         setShiftDialogOpen(open);
       }}>
-            <DialogContent className="sm:max-w-[425px] bg-background" onEscapeKeyDown={closeShiftDialog} onPointerDownOutside={closeShiftDialog} onInteractOutside={e => {
+        <DialogContent className="sm:max-w-[425px] bg-background" onEscapeKeyDown={closeShiftDialog} onPointerDownOutside={closeShiftDialog} onInteractOutside={e => {
           e.preventDefault();
           closeShiftDialog();
         }} dir="rtl">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingShift ? 'עריכת משמרת' : 'הוספת משמרת חדשה'}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="shift-section">סקשן</Label>
-                  <Select value={newShiftData.section_name} onValueChange={value => setNewShiftData({
+          <DialogHeader>
+            <DialogTitle>
+              {editingShift ? 'עריכת משמרת' : 'הוספת משמרת חדשה'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="shift-section">סקשן</Label>
+              <Select value={newShiftData.section_name} onValueChange={value => setNewShiftData({
                 ...newShiftData,
                 section_name: value
               })}>
-                    <SelectTrigger className="col-span-3 bg-background">
-                      <SelectValue placeholder="בחר סקשן" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      {Object.entries(SECTION_TITLES).map(([key, title]) => <SelectItem key={key} value={key}>{title}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="shift-day">יום</Label>
-                  <Select value={newShiftData.day_of_week.toString()} onValueChange={value => setNewShiftData({
+                <SelectTrigger className="col-span-3 bg-background">
+                  <SelectValue placeholder="בחר סקשן" />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {Object.entries(SECTION_TITLES).map(([key, title]) => <SelectItem key={key} value={key}>{title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="shift-day">יום</Label>
+              <Select value={newShiftData.day_of_week.toString()} onValueChange={value => setNewShiftData({
                 ...newShiftData,
                 day_of_week: parseInt(value)
               })}>
-                    <SelectTrigger className="col-span-3 bg-background">
-                      <SelectValue placeholder="בחר יום" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      {DAYS_OF_WEEK.map((day, index) => <SelectItem key={index} value={index.toString()}>{day}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="shift-type">סוג משמרת</Label>
-                  <Select value={newShiftData.shift_type} onValueChange={value => {
+                <SelectTrigger className="col-span-3 bg-background">
+                  <SelectValue placeholder="בחר יום" />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {DAYS_OF_WEEK.map((day, index) => <SelectItem key={index} value={index.toString()}>{day}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="shift-type">סוג משמרת</Label>
+              <Select value={newShiftData.shift_type} onValueChange={value => {
                 setNewShiftData({
                   ...newShiftData,
                   shift_type: value,
@@ -837,116 +844,123 @@ const DigitalWorkArrangementEditor: React.FC = () => {
                   end_time: DEFAULT_SHIFT_TIMES[value as keyof typeof DEFAULT_SHIFT_TIMES].end
                 });
               }}>
-                    <SelectTrigger className="col-span-3 bg-background">
-                      <SelectValue placeholder="בחר סוג משמרת" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => <SelectItem key={type} value={type}>{label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="start-time">שעת התחלה</Label>
-                  <Input id="start-time" type="time" value={newShiftData.start_time} onChange={e => setNewShiftData({
+                <SelectTrigger className="col-span-3 bg-background">
+                  <SelectValue placeholder="בחר סוג משמרת" />
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  {Object.entries(SHIFT_TYPE_LABELS).map(([type, label]) => <SelectItem key={type} value={type}>{label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="start-time">שעת התחלה</Label>
+              <Input id="start-time" type="time" value={newShiftData.start_time} onChange={e => setNewShiftData({
                 ...newShiftData,
                 start_time: e.target.value
               })} className="col-span-3 bg-background" />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="end-time">שעת סיום</Label>
-                  <Input id="end-time" type="time" value={newShiftData.end_time} onChange={e => setNewShiftData({
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="end-time">שעת סיום</Label>
+              <Input id="end-time" type="time" value={newShiftData.end_time} onChange={e => setNewShiftData({
                 ...newShiftData,
                 end_time: e.target.value
               })} className="col-span-3 bg-background" />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right" htmlFor="person-name">עובד</Label>
-                  <div className="col-span-3">
-                    <WorkerSelector value={newShiftData.person_name || null} onChange={(value, additionalText) => setNewShiftData({
-                  ...newShiftData,
-                  person_name: value || '',
-                  additional_text: additionalText || ''
-                })} additionalText={newShiftData.additional_text} placeholder="בחר עובד..." />
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox id="is-custom-time" checked={newShiftData.is_custom_time} onCheckedChange={checked => setNewShiftData({
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="person-name">עובד</Label>
+              <div className="col-span-3">
+                <WorkerSelector 
+                  value={newShiftData.person_name || null} 
+                  onChange={(value, additionalText) => setNewShiftData({
+                    ...newShiftData,
+                    person_name: value || '',
+                    additional_text: additionalText || ''
+                  })} 
+                  additionalText={newShiftData.additional_text} 
+                  placeholder="בחר עובד..." 
+                  className="w-full"
+                  department="digital" // Pass department prop
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Checkbox id="is-custom-time" checked={newShiftData.is_custom_time} onCheckedChange={checked => setNewShiftData({
                 ...newShiftData,
                 is_custom_time: checked === true
               })} />
-                  <Label htmlFor="is-custom-time">הדגש שעות מותאמות אישית</Label>
-                </div>
-                
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox id="is-hidden" checked={newShiftData.is_hidden} onCheckedChange={checked => setNewShiftData({
+              <Label htmlFor="is-custom-time">הדגש שעות מותאמות אישית</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Checkbox id="is-hidden" checked={newShiftData.is_hidden} onCheckedChange={checked => setNewShiftData({
                 ...newShiftData,
                 is_hidden: checked === true
               })} />
-                  <Label htmlFor="is-hidden">הסתר משמרת</Label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" onClick={handleSaveShift}>שמור</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <Label htmlFor="is-hidden">הסתר משמרת</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={handleSaveShift}>שמור</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <Dialog open={customRowDialogOpen} onOpenChange={open => {
+      <Dialog open={customRowDialogOpen} onOpenChange={open => {
         if (!open) {
           document.body.style.pointerEvents = '';
         }
         setCustomRowDialogOpen(open);
       }}>
-            <DialogContent className="max-w-4xl bg-background" onEscapeKeyDown={closeCustomRowDialog} onPointerDownOutside={closeCustomRowDialog} onInteractOutside={e => {
+        <DialogContent className="max-w-4xl bg-background" onEscapeKeyDown={closeCustomRowDialog} onPointerDownOutside={closeCustomRowDialog} onInteractOutside={e => {
           e.preventDefault();
           closeCustomRowDialog();
         }} dir="rtl">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCustomRow ? 'עריכת שורה מותאמת אישית' : 'הוספת שורה מותאמת אישית'}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-6 gap-4 py-4">
-                {[0, 1, 2, 3, 4, 5].map(day => <div key={day} className="flex flex-col">
-                    <Label className="mb-2 text-center">{DAYS_OF_WEEK[day]}</Label>
-                    <Textarea value={customRowContent[day] || ''} onChange={e => setCustomRowContent({
-                ...customRowContent,
-                [day]: e.target.value
-              })} className="min-h-[100px] bg-background" placeholder="הזן טקסט..." />
-                  </div>)}
-              </div>
-              <DialogFooter>
-                <Button type="button" onClick={handleSaveCustomRow}>שמור</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <DialogHeader>
+            <DialogTitle>
+              {editingCustomRow ? 'עריכת שורה מותאמת אישית' : 'הוספת שורה מותאמת אישית'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-6 gap-4 py-4">
+            {[0, 1, 2, 3, 4, 5].map(day => <div key={day} className="flex flex-col">
+                <Label className="mb-2 text-center">{DAYS_OF_WEEK[day]}</Label>
+                <Textarea value={customRowContent[day] || ''} onChange={e => setCustomRowContent({
+                  ...customRowContent,
+                  [day]: e.target.value
+                })} className="min-h-[100px] bg-background" placeholder="הזן טקסט..." />
+              </div>)}
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={handleSaveCustomRow}>שמור</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <Dialog open={footerTextDialogOpen} onOpenChange={open => {
+      <Dialog open={footerTextDialogOpen} onOpenChange={open => {
         if (!open) {
           document.body.style.pointerEvents = '';
         }
         setFooterTextDialogOpen(open);
       }}>
-            <DialogContent className="bg-background" onEscapeKeyDown={closeFooterTextDialog} onPointerDownOutside={closeFooterTextDialog} onInteractOutside={e => {
+        <DialogContent className="bg-background" onEscapeKeyDown={closeFooterTextDialog} onPointerDownOutside={closeFooterTextDialog} onInteractOutside={e => {
           e.preventDefault();
           closeFooterTextDialog();
         }} dir="rtl">
-              <DialogHeader>
-                <DialogTitle>טקסט תחתון</DialogTitle>
-              </DialogHeader>
-              <div className="py-4">
-                <Textarea placeholder="הזן טקסט תחתון..." className="min-h-[200px] bg-background" value={footerText} onChange={e => setFooterText(e.target.value)} />
-              </div>
-              <DialogFooter>
-                <Button type="button" onClick={handleSaveFooterText}>שמור</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
+          <DialogHeader>
+            <DialogTitle>טקסט תחתון</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea placeholder="הזן טקסט תחתון..." className="min-h-[200px] bg-background" value={footerText} onChange={e => setFooterText(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button type="button" onClick={handleSaveFooterText}>שמור</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
       )}
     </div>
   );

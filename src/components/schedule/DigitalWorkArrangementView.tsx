@@ -67,7 +67,7 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
 
   useEffect(() => {
     fetchArrangement();
-    fetchWorkers();
+    fetchDigitalWorkers();
 
     // Ensure pointer-events style is reset when component unmounts
     return () => {
@@ -107,18 +107,20 @@ const DigitalWorkArrangementView: React.FC<DigitalWorkArrangementViewProps> = ({
     return `${endDay}-${startDay} ב${month}`;
   }, [selectedWeekDate]);
 
-  const fetchWorkers = async () => {
+  const fetchDigitalWorkers = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('workers').select('*').order('name');
+      const { data, error } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('department', 'digital')
+        .order('name');
+      
       if (error) {
         throw error;
       }
       setWorkers(data || []);
     } catch (error) {
-      console.error('Error fetching workers:', error);
+      console.error('Error fetching digital workers:', error);
     }
   };
 

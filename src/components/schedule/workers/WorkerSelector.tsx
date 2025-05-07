@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,6 +13,7 @@ interface WorkerSelectorProps {
   additionalText?: string;
   placeholder?: string;
   className?: string;
+  department?: string; // Add department prop
 }
 
 export const WorkerSelector = ({ 
@@ -21,7 +21,8 @@ export const WorkerSelector = ({
   onChange, 
   additionalText = "", 
   placeholder = "בחר עובד...", 
-  className 
+  className,
+  department // Get department prop
 }: WorkerSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState(additionalText || "");
@@ -43,7 +44,22 @@ export const WorkerSelector = ({
       setError(null);
       try {
         console.log('WorkerSelector: Fetching workers');
-        const data = await getWorkers();
+        let data;
+        
+        // Fetch workers based on department if specified
+        if (department) {
+          const { data: departmentWorkers, error } = await supabase
+            .from('workers')
+            .select('*')
+            .eq('department', department)
+            .order('name');
+            
+          if (error) throw error;
+          data = departmentWorkers;
+        } else {
+          data = await getWorkers();
+        }
+        
         console.log(`WorkerSelector: Fetched ${data.length} workers`);
         setWorkers(data || []);
         // Reset retry count on success
@@ -75,7 +91,7 @@ export const WorkerSelector = ({
     };
     
     fetchWorkers();
-  }, [toast]);
+  }, [toast, department, retryCount]);
   
   const handleSelect = (workerId: string) => {
     // Toggle selection if clicking the same item
