@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -11,7 +12,8 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { getProducerAssignments } from '@/lib/supabase/producers';
-import { ScheduleSlot, ProducerAssignment } from '@/types/schedule';
+import { ScheduleSlot, ProducerAssignment as ScheduleProducerAssignment } from '@/types/schedule';
+import { ProducerAssignment as ApiProducerAssignment } from '@/lib/supabase/producers';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 
@@ -22,7 +24,7 @@ interface ProducerAssignmentsViewProps {
 const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selectedDate }) => {
   // Important: Use false for the second parameter to get weekly schedule instead of master
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate, false);
-  const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
+  const [assignments, setAssignments] = useState<ScheduleProducerAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
@@ -41,16 +43,26 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
         const processedAssignments = assignmentsData.map(assignment => {
           // Find matching slot in scheduleSlots by slot_id
           const matchingSlot = scheduleSlots.find(slot => slot.id === assignment.slot_id);
-          if (matchingSlot) {
-            return {
-              ...assignment,
-              slot: matchingSlot
-            };
-          }
-          return assignment;
+          
+          // Convert API ProducerAssignment to ScheduleProducerAssignment
+          const convertedAssignment: ScheduleProducerAssignment = {
+            id: assignment.id,
+            slot_id: assignment.slot_id,
+            worker_id: assignment.worker_id,
+            role: assignment.role,
+            notes: assignment.notes,
+            is_recurring: assignment.is_recurring,
+            week_start: assignment.week_start,
+            worker: assignment.worker,
+            slot: matchingSlot || null,
+            created_at: assignment.created_at,
+            updated_at: assignment.updated_at
+          };
+          
+          return convertedAssignment;
         });
         
-        setAssignments(processedAssignments || []);
+        setAssignments(processedAssignments);
       } else {
         setAssignments([]);
       }
@@ -162,7 +174,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                         if (slotAssignments.length === 0) return null;
                         
                         // Group assignments by role
-                        const assignmentsByRole: Record<string, ProducerAssignment[]> = {};
+                        const assignmentsByRole: Record<string, ScheduleProducerAssignment[]> = {};
                         
                         // Make sure we properly handle the grouping by role
                         slotAssignments.forEach(assignment => {

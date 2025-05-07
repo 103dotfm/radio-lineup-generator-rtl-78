@@ -100,6 +100,29 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
       const slotDate = addDays(currentWeek, dayIndex);
       const weekStartStr = format(startOfWeek(currentWeek), 'yyyy-MM-dd');
       
+      // Check if this is a request to remove assignment
+      if (workerId === "none") {
+        // Find the existing assignment to remove
+        const existingAssignment = assignments.find(
+          a => a.slot_id === slotId && a.role === role && a.week_start === weekStartStr
+        );
+        
+        if (existingAssignment) {
+          await removeAssignment(existingAssignment.id);
+          // Update local state by removing the assignment
+          setAssignments(prev => prev.filter(a => a.id !== existingAssignment.id));
+          
+          toast({
+            title: "בוצע",
+            description: "השיבוץ הוסר בהצלחה",
+          });
+        }
+        
+        // No need to continue further since we're removing the assignment
+        setSaving(prev => ({ ...prev, [saveKey]: false }));
+        return;
+      }
+      
       // Save the assignment to the database
       const success = await assignProducerToSlot(slotId, workerId, role, weekStartStr);
       
