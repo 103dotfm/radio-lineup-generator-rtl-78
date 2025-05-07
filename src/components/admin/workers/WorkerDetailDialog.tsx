@@ -146,7 +146,7 @@ const WorkerDetailDialog: React.FC<WorkerDetailDialogProps> = ({ worker, open, o
             <Tabs defaultValue="contact">
               <TabsList className="w-full">
                 <TabsTrigger value="contact">פרטי קשר</TabsTrigger>
-                <TabsTrigger value="divisions">מחלקות</TabsTrigger>
+                <TabsTrigger value="divisions">שיוך מחלקות</TabsTrigger>
               </TabsList>
               
               <TabsContent value="contact" className="pt-4">

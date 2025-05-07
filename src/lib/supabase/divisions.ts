@@ -9,9 +9,51 @@ export interface Division {
   updated_at?: string;
 }
 
+// Function to ensure standard divisions exist
+export const ensureStandardDivisions = async (): Promise<void> => {
+  const standardDivisions = [
+    { name: 'digital', description: 'Digital department' },
+    { name: 'engineers', description: 'Technical staff' },
+    { name: 'producers', description: 'Production and editing staff' }
+  ];
+  
+  try {
+    console.log('Checking for standard divisions...');
+    
+    for (const div of standardDivisions) {
+      // Check if division exists
+      const { data, error } = await supabase
+        .from('divisions')
+        .select('id')
+        .eq('name', div.name)
+        .maybeSingle();
+      
+      if (error) {
+        console.error(`Error checking division ${div.name}:`, error);
+        continue;
+      }
+      
+      // If division doesn't exist, create it
+      if (!data) {
+        console.log(`Creating standard division: ${div.name}`);
+        await supabase
+          .from('divisions')
+          .insert(div);
+      }
+    }
+    
+    console.log('Standard divisions check completed');
+  } catch (error) {
+    console.error('Error ensuring standard divisions:', error);
+  }
+};
+
 export const getDivisions = async (): Promise<Division[]> => {
   try {
     console.log('Fetching divisions from Supabase...');
+    
+    // Ensure standard divisions exist before fetching
+    await ensureStandardDivisions();
     
     const { data, error } = await supabase
       .from('divisions')
