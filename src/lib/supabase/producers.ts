@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 
 // Export the Worker interface so it can be imported by other modules
@@ -75,9 +76,11 @@ export const getProducers = async (): Promise<Worker[]> => {
     });
     
     // The actual data fetch - include user_id and password_readable
+    // Now filtering by department to only fetch producers
     const fetchPromise = supabase
       .from('workers')
       .select('id, name, department, position, email, phone, user_id, password_readable')
+      .eq('department', 'מפיקים') // Only fetch workers with department "מפיקים" (producers)
       .order('name');
     
     // Race the fetch against the timeout

@@ -138,6 +138,25 @@ export const assignDivisionToWorker = async (workerId: string, divisionId: strin
       return false;
     }
     
+    // Check if the assignment already exists to avoid duplicate entries
+    const { data: existingData, error: checkError } = await supabase
+      .from('worker_divisions')
+      .select('id')
+      .eq('worker_id', workerId)
+      .eq('division_id', divisionId)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error('Error checking existing assignment:', checkError);
+      return false;
+    }
+    
+    // If already assigned, return success without inserting
+    if (existingData) {
+      console.log('Division is already assigned to this worker');
+      return true;
+    }
+    
     // Then insert the worker-division relationship
     const { data, error } = await supabase
       .from('worker_divisions')

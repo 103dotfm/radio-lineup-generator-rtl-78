@@ -1,208 +1,165 @@
 
 import React, { useState, useEffect } from 'react';
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWorkerDivisions, DIVISION_TRANSLATIONS } from '@/hooks/useWorkerDivisions';
-import { X, Plus, Loader2 } from 'lucide-react';
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Division } from '@/lib/supabase/divisions';
+import { Loader2 } from 'lucide-react';
 
 interface WorkerDivisionsManagerProps {
   workerId: string;
 }
 
 const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerId }) => {
+  const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
+  const [removing, setRemoving] = useState<{ [key: string]: boolean }>({});
   const { toast } = useToast();
-  const { 
-    divisions, 
-    workerDivisions, 
-    loading, 
-    error, 
-    assignDivision, 
-    removeDivision, 
+  
+  const {
+    divisions,
+    workerDivisions,
+    loading: divisionsLoading,
+    error,
+    assignDivision,
+    removeDivision,
     isDivisionAssigned,
     refreshData,
     getDivisionTranslation
   } = useWorkerDivisions(workerId);
-  
-  const [selectedDivision, setSelectedDivision] = useState<string | undefined>();
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [isRemoving, setIsRemoving] = useState<Record<string, boolean>>({});
 
-  // Force refresh data when component mounts or workerId changes
   useEffect(() => {
-    if (workerId) {
-      console.log(`WorkerDivisionsManager: Refreshing data for worker ID ${workerId}`);
-      refreshData();
-    }
+    console.log('WorkerDivisionsManager mounted, refreshing data');
+    refreshData();
   }, [workerId, refreshData]);
 
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        <h3 className="text-lg font-medium">מחלקות</h3>
-        <div className="flex flex-wrap gap-2">
-          {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-8 w-24" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  const getLocalizedName = (name: string): string => {
-    return getDivisionTranslation(name);
-  };
-
-  const handleAssignDivision = async () => {
-    if (!selectedDivision) return;
-
+  const handleAssignDivision = async (divisionId: string) => {
+    setLoading(prev => ({ ...prev, [divisionId]: true }));
+    
     try {
-      setIsAssigning(true);
-      console.log(`WorkerDivisionsManager: Assigning division ${selectedDivision} to worker ${workerId}`);
-      const success = await assignDivision(selectedDivision);
+      console.log(`WorkerDivisionsManager: Assigning division ${divisionId} to worker ${workerId}`);
+      const success = await assignDivision(divisionId);
+      
       if (success) {
-        console.log('Division successfully assigned, refreshing data');
-        // Force refresh data after assignment
+        console.log('Division assigned successfully in the UI');
+        // Force a refresh of the worker divisions data
         await refreshData();
-        setSelectedDivision(undefined);
       } else {
-        console.error('Division assignment failed');
         toast({
           title: "שגיאה",
-          description: "אירעה שגיאה בהקצאת המחלקה",
+          description: "לא ניתן היה להקצות את המחלקה",
           variant: "destructive",
         });
       }
-    } catch (err) {
-      console.error('Error in handleAssignDivision:', err);
+    } catch (error) {
+      console.error('Error in handleAssignDivision:', error);
       toast({
         title: "שגיאה",
         description: "אירעה שגיאה בהקצאת המחלקה",
         variant: "destructive",
       });
     } finally {
-      setIsAssigning(false);
+      setLoading(prev => ({ ...prev, [divisionId]: false }));
     }
   };
 
   const handleRemoveDivision = async (divisionId: string) => {
+    setRemoving(prev => ({ ...prev, [divisionId]: true }));
+    
     try {
-      setIsRemoving(prev => ({ ...prev, [divisionId]: true }));
       console.log(`WorkerDivisionsManager: Removing division ${divisionId} from worker ${workerId}`);
       const success = await removeDivision(divisionId);
+      
       if (success) {
-        console.log('Division successfully removed, refreshing data');
-        // Force refresh data after removal
+        console.log('Division removed successfully in the UI');
+        // Force a refresh of the worker divisions data
         await refreshData();
       } else {
-        console.error('Division removal failed');
         toast({
           title: "שגיאה",
-          description: "אירעה שגיאה בהסרת המחלקה",
+          description: "לא ניתן היה להסיר את המחלקה",
           variant: "destructive",
         });
       }
-    } catch (err) {
-      console.error('Error in handleRemoveDivision:', err);
+    } catch (error) {
+      console.error('Error in handleRemoveDivision:', error);
       toast({
         title: "שגיאה",
         description: "אירעה שגיאה בהסרת המחלקה",
         variant: "destructive",
       });
     } finally {
-      setIsRemoving(prev => ({ ...prev, [divisionId]: false }));
+      setRemoving(prev => ({ ...prev, [divisionId]: false }));
     }
   };
 
-  // Filter out divisions that are already assigned
-  const unassignedDivisions = divisions.filter(
-    division => !isDivisionAssigned(division.id)
-  );
+  if (divisionsLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500 text-center">
+        שגיאה בטעינת נתוני מחלקות: {error}
+      </div>
+    );
+  }
+
+  const workerDivisionIds = workerDivisions.map(div => div.id);
+  console.log(`Worker ${workerId} has divisions: ${JSON.stringify(workerDivisionIds)}`);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-medium mb-2">מחלקות מוקצות</h3>
-        <div className="flex flex-wrap gap-2">
-          {workerDivisions.length === 0 ? (
-            <p className="text-gray-500">לא הוקצו מחלקות לעובד זה</p>
-          ) : (
-            workerDivisions.map((division: Division) => (
-              <Badge key={division.id} variant="secondary" className="flex items-center gap-1 py-1 px-3">
-                {getLocalizedName(division.name)}
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-5 w-5 p-0 mr-1"
-                  onClick={() => handleRemoveDivision(division.id)}
-                  disabled={isRemoving[division.id]}
-                >
-                  {isRemoving[division.id] ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <X className="h-3 w-3" />
+    <Card className="mt-4">
+      <CardContent className="pt-6">
+        <h3 className="text-lg font-medium mb-4">שיוך מחלקות</h3>
+        
+        <div className="grid grid-cols-1 gap-4">
+          {divisions.map((division) => {
+            const isAssigned = isDivisionAssigned(division.id);
+            const translatedName = getDivisionTranslation(division.name);
+            const isActionLoading = loading[division.id] || removing[division.id];
+            
+            return (
+              <div 
+                key={division.id} 
+                className="flex justify-between items-center p-3 border rounded-md"
+              >
+                <div>
+                  <div className="font-medium">{translatedName}</div>
+                  {division.description && (
+                    <div className="text-sm text-gray-500">{division.description}</div>
                   )}
+                </div>
+                
+                <Button
+                  variant={isAssigned ? "destructive" : "default"}
+                  size="sm"
+                  disabled={isActionLoading}
+                  onClick={() => isAssigned 
+                    ? handleRemoveDivision(division.id)
+                    : handleAssignDivision(division.id)
+                  }
+                >
+                  {isActionLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {isAssigned ? "הסר" : "הוסף"}
                 </Button>
-              </Badge>
-            ))
+              </div>
+            );
+          })}
+          
+          {divisions.length === 0 && (
+            <div className="text-center py-4 text-gray-500">
+              אין מחלקות זמינות
+            </div>
           )}
         </div>
-      </div>
-
-      <div>
-        <h3 className="text-lg font-medium mb-2">הקצאת מחלקות</h3>
-        
-        <div className="flex gap-2">
-          <Select
-            value={selectedDivision}
-            onValueChange={setSelectedDivision}
-            disabled={unassignedDivisions.length === 0 || isAssigning}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="בחר מחלקה" />
-            </SelectTrigger>
-            <SelectContent>
-              {unassignedDivisions.map((division: Division) => (
-                <SelectItem key={division.id} value={division.id}>
-                  {getLocalizedName(division.name)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Button 
-            variant="outline"
-            onClick={handleAssignDivision}
-            disabled={!selectedDivision || isAssigning || unassignedDivisions.length === 0}
-            className="flex items-center gap-1"
-          >
-            {isAssigning ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            הוסף מחלקה
-          </Button>
-        </div>
-        
-        {unassignedDivisions.length === 0 && workerDivisions.length > 0 && (
-          <p className="text-gray-500 mt-2">כל המחלקות הוקצו</p>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
