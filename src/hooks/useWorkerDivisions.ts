@@ -27,8 +27,10 @@ export const useWorkerDivisions = (workerId?: string) => {
   // Load available divisions
   const loadDivisions = useCallback(async () => {
     try {
+      console.log('useWorkerDivisions: Loading all divisions...');
       setLoading(true);
       const data = await getDivisions();
+      console.log(`useWorkerDivisions: Loaded ${data.length} divisions`);
       setDivisions(data);
       return data;
     } catch (err) {
@@ -48,9 +50,10 @@ export const useWorkerDivisions = (workerId?: string) => {
     }
     
     try {
+      console.log(`useWorkerDivisions: Loading divisions for worker ${workerId}...`);
       setLoading(true);
       const data = await getWorkerDivisions(workerId);
-      console.log(`Loaded ${data.length} divisions for worker ${workerId}:`, data);
+      console.log(`useWorkerDivisions: Loaded ${data.length} divisions for worker ${workerId}:`, data);
       setWorkerDivisions(data);
       return data;
     } catch (err) {
@@ -65,25 +68,39 @@ export const useWorkerDivisions = (workerId?: string) => {
   // Initial data loading
   useEffect(() => {
     const initData = async () => {
+      console.log(`useWorkerDivisions: Initializing data for worker ${workerId}`);
       await loadDivisions();
-      await loadWorkerDivisions();
+      if (workerId) {
+        await loadWorkerDivisions();
+      }
     };
     
     initData();
-  }, [loadDivisions, loadWorkerDivisions]);
+  }, [loadDivisions, loadWorkerDivisions, workerId]);
 
   const assignDivision = async (divisionId: string) => {
     if (!workerId) return false;
     
     try {
+      console.log(`useWorkerDivisions: Assigning division ${divisionId} to worker ${workerId}`);
       const success = await assignDivisionToWorker(workerId, divisionId);
       
       if (success) {
-        // Refresh worker divisions immediately after successful assignment
-        await loadWorkerDivisions();
         toast({
           title: "הצלחה",
           description: "המחלקה הוקצתה לעובד בהצלחה",
+        });
+        
+        // Find the assigned division and add it to the worker's divisions
+        const assignedDivision = divisions.find(div => div.id === divisionId);
+        if (assignedDivision) {
+          setWorkerDivisions(prev => [...prev, assignedDivision]);
+        }
+      } else {
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בהקצאת המחלקה",
+          variant: "destructive",
         });
       }
       
@@ -103,14 +120,22 @@ export const useWorkerDivisions = (workerId?: string) => {
     if (!workerId) return false;
     
     try {
+      console.log(`useWorkerDivisions: Removing division ${divisionId} from worker ${workerId}`);
       const success = await removeDivisionFromWorker(workerId, divisionId);
       
       if (success) {
-        // Refresh worker divisions immediately after successful removal
-        await loadWorkerDivisions();
         toast({
           title: "הצלחה",
           description: "המחלקה הוסרה מהעובד בהצלחה",
+        });
+        
+        // Remove the division from the worker's divisions
+        setWorkerDivisions(prev => prev.filter(div => div.id !== divisionId));
+      } else {
+        toast({
+          title: "שגיאה",
+          description: "אירעה שגיאה בהסרת המחלקה",
+          variant: "destructive",
         });
       }
       
@@ -131,9 +156,13 @@ export const useWorkerDivisions = (workerId?: string) => {
   };
 
   const refreshData = useCallback(async () => {
+    console.log(`useWorkerDivisions: Refreshing all data for worker ${workerId}`);
+    setError(null);
     await loadDivisions();
-    await loadWorkerDivisions();
-  }, [loadDivisions, loadWorkerDivisions]);
+    if (workerId) {
+      await loadWorkerDivisions();
+    }
+  }, [loadDivisions, loadWorkerDivisions, workerId]);
 
   return {
     divisions,
@@ -163,6 +192,7 @@ export const useFilterWorkersByDivision = (divisionId?: string) => {
       }
       
       try {
+        console.log(`useFilterWorkersByDivision: Loading workers for division ${divisionId}`);
         setLoading(true);
         
         const { data, error } = await supabase
@@ -174,7 +204,7 @@ export const useFilterWorkersByDivision = (divisionId?: string) => {
           throw error;
         }
         
-        console.log(`Found ${data.length} workers for division ${divisionId}:`, data);
+        console.log(`useFilterWorkersByDivision: Found ${data.length} workers for division ${divisionId}`);
         setWorkers(data.map(item => item.worker_id));
       } catch (err: any) {
         console.error('Error loading workers by division:', err);
