@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Plus } from 'lucide-react';
 import { 
   createProducerAssignment,
   createRecurringProducerAssignment,
@@ -72,13 +73,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
   
-  // Multi-producer form state
+  // Multi-producer form state - start with just 2 visible
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
-    { workerId: '', role: '', additionalText: '' },
-    { workerId: '', role: '', additionalText: '' },
-    { workerId: '', role: '', additionalText: '' },
-    { workerId: '', role: '', additionalText: '' }
+    { workerId: '', role: '483bd320-9935-4184-bad7-43255fbe0691', additionalText: '' }, // Default to עריכה
+    { workerId: '', role: '348cf89d-0a9b-4c2c-bb33-8b2edee4c612', additionalText: '' }, // Default to הפקה
   ]);
+  
+  // Track how many worker forms are visible (initially 2)
+  const [visibleWorkerCount, setVisibleWorkerCount] = useState(2);
   
   // Selected weekdays for assignment (Sunday-0, Monday-1, Tuesday-2, Wednesday-3)
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -151,17 +153,26 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     return assignments.filter((assignment) => assignment.slot_id === slotId);
   };
   
+  // Add another worker form field (show more)
+  const addWorkerForm = () => {
+    if (visibleWorkerCount < 4) {
+      setVisibleWorkerCount(prev => prev + 1);
+    }
+  };
+  
   const handleAssignProducer = (slot: ScheduleSlot) => {
     setCurrentSlot(slot);
     
     // Reset form when opening dialog
-    setProducerForms([
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' }
-    ]);
+    const newProducerForms = [
+      { workerId: '', role: '483bd320-9935-4184-bad7-43255fbe0691', additionalText: '' }, // Default to עריכה
+      { workerId: '', role: '348cf89d-0a9b-4c2c-bb33-8b2edee4c612', additionalText: '' }, // Default to הפקה
+      { workerId: '', role: '483bd320-9935-4184-bad7-43255fbe0691', additionalText: '' }, // Default to עריכה
+      { workerId: '', role: '348cf89d-0a9b-4c2c-bb33-8b2edee4c612', additionalText: '' }, // Default to הפקה
+    ];
     
+    setProducerForms(newProducerForms);
+    setVisibleWorkerCount(2); // Start with 2 visible
     setSelectedDays([]);
     setIsPermanent(false);
     
@@ -208,8 +219,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       return;
     }
     
-    // Filter out empty rows
-    const validForms = producerForms.filter(form => form.workerId && form.role);
+    // Only use visible worker forms, then filter out empty rows
+    const visibleForms = producerForms.slice(0, visibleWorkerCount);
+    const validForms = visibleForms.filter(form => form.workerId && form.role);
     
     if (validForms.length === 0) {
       toast({
@@ -518,7 +530,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           <DialogHeader>
             <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
             <DialogDescription>
-              שבץ עד 4 עובדים לתפקידים שונים בתוכנית
+              שבץ עובדים לתפקידים שונים בתוכנית
             </DialogDescription>
           </DialogHeader>
           {currentSlot && (
@@ -531,11 +543,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               </div>
               
               <div className="border rounded-md p-3 bg-slate-50">
-                {producerForms.map((form, index) => (
+                {/* Show only visible worker forms */}
+                {producerForms.slice(0, visibleWorkerCount).map((form, index) => (
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
                       <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
-                      <div style={{ zIndex: 50 + (4-index) }}>
+                      <div style={{ zIndex: 9990 - index }}>  {/* Higher z-index for worker selectors */}
                         <WorkerSelector
                           value={form.workerId}
                           onChange={(value, additionalText) => {
@@ -570,6 +583,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                     </div>
                   </div>
                 ))}
+
+                {/* Show "Add Worker" button only if fewer than 4 workers are visible */}
+                {visibleWorkerCount < 4 && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={addWorkerForm}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> הוספת עובד
+                  </Button>
+                )}
               </div>
               
               <div className="space-y-4 pt-2 border-t">
@@ -623,7 +649,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             <Button variant="outline" onClick={handleCloseDialog}>סגור</Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={!producerForms.some(form => form.workerId && form.role)}
+              disabled={!producerForms.slice(0, visibleWorkerCount).some(form => form.workerId && form.role)}
             >
               הוסף לסידור
             </Button>
