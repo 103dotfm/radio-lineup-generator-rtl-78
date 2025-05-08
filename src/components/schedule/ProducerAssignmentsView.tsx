@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, parseISO, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -33,26 +34,28 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     setIsLoading(true);
     try {
       console.log('ProducerAssignmentsView: Loading assignments for week starting', selectedDate);
-      // Get assignments data
-      const assignmentsData = await getProducerAssignments(selectedDate);
-      console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
-      
-      // Process assignments to work with schedule slots
-      if (assignmentsData && assignmentsData.length > 0) {
-        // Make sure each assignment has its slot information
-        const processedAssignments = assignmentsData.filter(assignment => {
-          // Filter out assignments without valid slot information
-          return assignment.slot && assignment.slot.id;
-        });
+      // Get assignments data with a small delay to ensure database is updated
+      setTimeout(async () => {
+        const assignmentsData = await getProducerAssignments(selectedDate);
+        console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
         
-        setAssignments(processedAssignments || []);
-      } else {
-        setAssignments([]);
-      }
+        // Process assignments to work with schedule slots
+        if (assignmentsData && assignmentsData.length > 0) {
+          // Make sure each assignment has its slot information
+          const processedAssignments = assignmentsData.filter(assignment => {
+            // Filter out assignments without valid slot information
+            return assignment.slot && assignment.slot.id;
+          });
+          
+          setAssignments(processedAssignments || []);
+        } else {
+          setAssignments([]);
+        }
+        setIsLoading(false);
+      }, 500);
     } catch (error) {
       console.error("Error loading assignments:", error);
       setAssignments([]);
-    } finally {
       setIsLoading(false);
     }
   };
