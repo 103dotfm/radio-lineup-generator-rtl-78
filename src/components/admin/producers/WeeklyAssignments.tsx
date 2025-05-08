@@ -59,6 +59,9 @@ interface ProducerFormItem {
   additionalText?: string;
 }
 
+const EDITING_ROLE_ID = '483bd320-9935-4184-bad7-43255fbe0691'; // עריכה
+const PRODUCTION_ROLE_ID = '348cf89d-0a9b-4c2c-bb33-8b2edee4c612'; // הפקה
+
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ 
   currentWeek, 
   onAssignmentChange,
@@ -73,10 +76,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
   
-  // Multi-producer form state - start with just 2 visible
+  // Multi-producer form state - always start with just 2 visible
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
-    { workerId: '', role: '483bd320-9935-4184-bad7-43255fbe0691', additionalText: '' }, // Default to עריכה
-    { workerId: '', role: '348cf89d-0a9b-4c2c-bb33-8b2edee4c612', additionalText: '' }, // Default to הפקה
+    { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
+    { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
+    { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
+    { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
   ]);
   
   // Track how many worker forms are visible (initially 2)
@@ -165,10 +170,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     
     // Reset form when opening dialog
     const newProducerForms = [
-      { workerId: '', role: '483bd320-9935-4184-bad7-43255fbe0691', additionalText: '' }, // Default to עריכה
-      { workerId: '', role: '348cf89d-0a9b-4c2c-bb33-8b2edee4c612', additionalText: '' }, // Default to הפקה
-      { workerId: '', role: '483bd320-9935-4184-bad7-43255fbe0691', additionalText: '' }, // Default to עריכה
-      { workerId: '', role: '348cf89d-0a9b-4c2c-bb33-8b2edee4c612', additionalText: '' }, // Default to הפקה
+      { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
+      { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
+      { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
+      { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
     ];
     
     setProducerForms(newProducerForms);
@@ -187,7 +192,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     });
   };
 
-  // Toggle day selection
+  // Toggle individual day selection
   const toggleDay = (dayId: number) => {
     setSelectedDays(prev => {
       if (prev.includes(dayId)) {
@@ -285,7 +290,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             console.error("Error creating assignment for current slot:", error);
           }
           
-          // Then find all other selected days slots with the same time
+          // Then find and create assignments for all other selected days
+          // Extract critical information from current slot
           const currentTime = currentSlot.start_time;
           const currentDay = currentSlot.day_of_week;
           
@@ -548,7 +554,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
                       <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
-                      <div style={{ zIndex: 9990 - index }}>  {/* Higher z-index for worker selectors */}
+                      <div style={{ position: 'relative', zIndex: 9990 - index }}>
                         <WorkerSelector
                           value={form.workerId}
                           onChange={(value, additionalText) => {
