@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
   Table, 
@@ -91,7 +90,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const { toast } = useToast();
   
   useEffect(() => {
-    console.log(`WeeklyAssignments: Loading data for week ${currentWeek.toISOString()}`);
+    // Convert to ISO string for consistent logging
+    const isoDate = currentWeek.toISOString();
+    console.log("WeeklyAssignments: Loading data for week", isoDate);
     loadData();
   }, [currentWeek, refreshTrigger]);
   
@@ -99,7 +100,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     setIsLoading(true);
     try {
       // Use a consistent date format for the week start
-      const weekStartDate = new Date(currentWeek);
+      const weekStartDate = startOfWeek(new Date(currentWeek), { weekStartsOn: 0 });
       console.log("WeeklyAssignments: Loading data for week", weekStartDate.toISOString());
       
       const [assignmentsData, producersData, rolesData] = await Promise.all([
@@ -251,11 +252,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         const selectedRole = roles.find(r => r.id === form.role);
         const roleName = selectedRole ? selectedRole.name : '';
         
+        // Format the week start consistently
+        const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
+        
         // Check if we're creating a permanent assignment
         if (isPermanent) {
           console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName}`);
           try {
-            const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
             const success = await createRecurringProducerAssignment(
               currentSlot.id,
               form.workerId,
@@ -278,8 +281,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         // Check if we're creating assignments for multiple selected days
         else if (selectedDays.length > 0) {
           console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
-          
-          const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
           
           // First create assignment for current slot if its day is selected
           if (selectedDays.includes(currentSlot.day_of_week)) {
@@ -306,10 +307,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           // Then find and create assignments for all other selected days
           // Extract critical information from current slot
           const currentTime = currentSlot.start_time;
-          const currentDay = currentSlot.day_of_week;
           
           // Get applicable days from selected days (excluding the current day if already processed)
-          const applicableDays = selectedDays.filter(day => day !== currentDay || !selectedDays.includes(currentDay));
+          const applicableDays = selectedDays.filter(day => day !== currentSlot.day_of_week);
           
           for (const dayIndex of applicableDays) {
             const key = `${dayIndex}-${currentTime}`;
@@ -346,10 +346,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         } else {
           // Create a single assignment
           try {
-            // Create date string in yyyy-MM-dd format consistently
-            const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
-            console.log(`Using week start date: ${formattedWeekStart} for assignment`);
-            
             const assignment = {
               slot_id: currentSlot.id,
               worker_id: form.workerId,
