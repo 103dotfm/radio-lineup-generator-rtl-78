@@ -33,8 +33,11 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const loadAssignments = async () => {
     setIsLoading(true);
     try {
-      console.log('ProducerAssignmentsView: Loading assignments for week starting', selectedDate.toISOString());
-      const assignmentsData = await getProducerAssignments(selectedDate);
+      // Use a consistent date format for the week start
+      const weekStartDate = new Date(selectedDate);
+      console.log('ProducerAssignmentsView: Loading assignments for week starting', weekStartDate.toISOString());
+      
+      const assignmentsData = await getProducerAssignments(weekStartDate);
       console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
       
       // Process assignments to work with schedule slots
