@@ -26,8 +26,8 @@ const ProducerWorkArrangement = () => {
   
   useEffect(() => {
     // Use a consistent date format for debugging
-    const isoDate = currentWeek.toISOString();
-    console.log("ProducerWorkArrangement component mounted or week changed, date:", isoDate);
+    const formattedDate = format(currentWeek, 'yyyy-MM-dd');
+    console.log("ProducerWorkArrangement component mounted or week changed, date:", formattedDate);
     loadWorkArrangement();
   }, [currentWeek]);
   
@@ -73,8 +73,8 @@ const ProducerWorkArrangement = () => {
   
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newWeek = direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1);
-    // Log using ISO format for consistency
-    console.log(`Navigating to ${direction} week:`, newWeek.toISOString());
+    // Use consistent date format for logging
+    console.log(`Navigating to ${direction} week:`, format(newWeek, 'yyyy-MM-dd'));
     setCurrentWeek(newWeek);
     // Trigger refresh when navigating to make sure assignments are properly loaded
     setRefreshTrigger(prev => prev + 1);

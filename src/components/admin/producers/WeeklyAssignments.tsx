@@ -90,9 +90,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const { toast } = useToast();
   
   useEffect(() => {
-    // Convert to ISO string for consistent logging
-    const isoDate = currentWeek.toISOString();
-    console.log("WeeklyAssignments: Loading data for week", isoDate);
+    // Format date consistently for logging
+    const formattedDate = format(currentWeek, 'yyyy-MM-dd');
+    console.log("WeeklyAssignments: Loading data for week", formattedDate);
     loadData();
   }, [currentWeek, refreshTrigger]);
   
@@ -100,8 +100,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     setIsLoading(true);
     try {
       // Use a consistent date format for the week start
-      const weekStartDate = startOfWeek(new Date(currentWeek), { weekStartsOn: 0 });
-      console.log("WeeklyAssignments: Loading data for week", weekStartDate.toISOString());
+      const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
+      const formattedDate = format(weekStartDate, 'yyyy-MM-dd');
+      console.log("WeeklyAssignments: Loading data for week", formattedDate);
       
       const [assignmentsData, producersData, rolesData] = await Promise.all([
         getProducerAssignments(weekStartDate),
@@ -252,7 +253,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         const selectedRole = roles.find(r => r.id === form.role);
         const roleName = selectedRole ? selectedRole.name : '';
         
-        // Format the week start consistently
+        // Format the week start consistently as YYYY-MM-DD
         const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
         
         // Check if we're creating a permanent assignment
