@@ -77,7 +77,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
     const formattedDate = format(weekStart, 'yyyy-MM-dd');
     console.log(`Getting producer assignments for week starting ${formattedDate}`);
     
-    const { data, error } = await supabase
+    // Fetch both regular assignments for this week AND recurring assignments
+    const { data: weekAssignments, error: weekError } = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -99,10 +100,41 @@ export const getProducerAssignments = async (weekStart: Date) => {
       `)
       .eq('week_start', formattedDate);
       
-    if (error) throw error;
+    if (weekError) throw weekError;
     
-    console.log(`Retrieved ${data?.length} producer assignments for week ${formattedDate}`, data);
-    return data;
+    // Now get recurring assignments
+    const { data: recurringAssignments, error: recurringError } = await supabase
+      .from('producer_assignments')
+      .select(`
+        *,
+        worker:worker_id (
+          id,
+          name,
+          position,
+          email,
+          phone
+        ),
+        slot:slot_id (
+          id,
+          show_name,
+          host_name,
+          start_time,
+          end_time,
+          day_of_week
+        )
+      `)
+      .eq('is_recurring', true);
+    
+    if (recurringError) throw recurringError;
+    
+    // Combine both types of assignments
+    const combinedAssignments = [
+      ...(weekAssignments || []),
+      ...(recurringAssignments || [])
+    ];
+    
+    console.log(`Retrieved ${combinedAssignments.length} producer assignments for week ${formattedDate}`, combinedAssignments);
+    return combinedAssignments;
   } catch (error) {
     console.error("Error fetching producer assignments:", error);
     throw error;
