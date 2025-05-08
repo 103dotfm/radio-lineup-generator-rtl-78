@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -304,7 +303,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           title: "נוסף בהצלחה",
           description: `נוספו ${successCount} שיבוצים לסידור העבודה`
         });
-        await loadData(); // Refresh the assignments
+        await loadData(); // Refresh the assignments immediately
         if (onAssignmentChange) {
           onAssignmentChange(); // Notify parent component
         }
@@ -334,7 +333,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             title: "נמחק בהצלחה",
             description: "השיבוץ נמחק בהצלחה"
           });
-          await loadData(); // Refresh the assignments
+          await loadData(); // Refresh the assignments immediately
           if (onAssignmentChange) {
             onAssignmentChange(); // Notify parent component
           }
