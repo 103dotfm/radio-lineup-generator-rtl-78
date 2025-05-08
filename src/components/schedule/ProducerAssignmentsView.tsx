@@ -14,7 +14,6 @@ import { getProducerAssignments } from '@/lib/supabase/producers';
 import { ScheduleSlot, ProducerAssignment } from '@/types/schedule';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
-import { useQuery } from '@tanstack/react-query';
 
 interface ProducerAssignmentsViewProps {
   selectedDate: Date;
@@ -23,46 +22,37 @@ interface ProducerAssignmentsViewProps {
 const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selectedDate }) => {
   // Important: Use false for the second parameter to get weekly schedule instead of master
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate, false);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  
-  // Use React Query for better caching and consistency
-  const {
-    data: assignments = [],
-    isLoading,
-    refetch
-  } = useQuery({
-    queryKey: ['producerAssignments', selectedDate.toISOString()],
-    queryFn: async () => {
-      console.log('ProducerAssignmentsView: Loading assignments for week starting', selectedDate.toISOString());
-      const assignmentsData = await getProducerAssignments(selectedDate);
-      console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
-      return assignmentsData;
-    }
-  });
+  const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     console.log("ProducerAssignmentsView: selectedDate changed to", selectedDate.toISOString());
-    refetch();
-    
-    // Save scroll position
-    const saveScrollPosition = () => {
-      setScrollPosition(window.scrollY);
-    };
-    window.addEventListener('scroll', saveScrollPosition);
-    
-    return () => {
-      window.removeEventListener('scroll', saveScrollPosition);
-    };
-  }, [selectedDate, refetch]);
+    loadAssignments();
+  }, [selectedDate]);
   
-  // Restore scroll position when loading completes
-  useEffect(() => {
-    if (!isLoading && !slotsLoading) {
-      setTimeout(() => {
-        window.scrollTo(0, scrollPosition);
-      }, 100);
+  const loadAssignments = async () => {
+    setIsLoading(true);
+    try {
+      // Use a consistent date format for the week start
+      const weekStartDate = new Date(selectedDate);
+      console.log('ProducerAssignmentsView: Loading assignments for week starting', weekStartDate.toISOString());
+      
+      const assignmentsData = await getProducerAssignments(weekStartDate);
+      console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
+      
+      // Process assignments to work with schedule slots
+      if (assignmentsData && assignmentsData.length > 0) {
+        setAssignments(assignmentsData);
+      } else {
+        setAssignments([]);
+      }
+    } catch (error) {
+      console.error("Error loading assignments:", error);
+      setAssignments([]);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isLoading, slotsLoading, scrollPosition]);
+  };
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
   
