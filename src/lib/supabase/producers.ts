@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO, addDays } from 'date-fns';
 
@@ -77,8 +76,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
     const formattedDate = format(weekStart, 'yyyy-MM-dd');
     console.log(`Getting producer assignments for week starting ${formattedDate}`);
     
-    // Fetch both regular assignments for this week AND recurring assignments
-    const { data: weekAssignments, error: weekError } = await supabase
+    // Create a query to fetch weekly assignments specific to this week
+    const { data: weeklyAssignments, error: weeklyError } = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -98,11 +97,17 @@ export const getProducerAssignments = async (weekStart: Date) => {
           day_of_week
         )
       `)
-      .eq('week_start', formattedDate);
+      .eq('week_start', formattedDate)
+      .eq('is_recurring', false);
       
-    if (weekError) throw weekError;
+    if (weeklyError) {
+      console.error("Error fetching weekly assignments:", weeklyError);
+      throw weeklyError;
+    }
     
-    // Now get recurring assignments
+    console.log(`Retrieved ${weeklyAssignments?.length || 0} weekly assignments for ${formattedDate}`);
+    
+    // Create a separate query to fetch recurring assignments
     const { data: recurringAssignments, error: recurringError } = await supabase
       .from('producer_assignments')
       .select(`
@@ -125,15 +130,20 @@ export const getProducerAssignments = async (weekStart: Date) => {
       `)
       .eq('is_recurring', true);
     
-    if (recurringError) throw recurringError;
+    if (recurringError) {
+      console.error("Error fetching recurring assignments:", recurringError);
+      throw recurringError;
+    }
+    
+    console.log(`Retrieved ${recurringAssignments?.length || 0} recurring assignments`);
     
     // Combine both types of assignments
     const combinedAssignments = [
-      ...(weekAssignments || []),
+      ...(weeklyAssignments || []),
       ...(recurringAssignments || [])
     ];
     
-    console.log(`Retrieved ${combinedAssignments.length} producer assignments for week ${formattedDate}`, combinedAssignments);
+    console.log(`Total combined assignments: ${combinedAssignments.length}`);
     return combinedAssignments;
   } catch (error) {
     console.error("Error fetching producer assignments:", error);
