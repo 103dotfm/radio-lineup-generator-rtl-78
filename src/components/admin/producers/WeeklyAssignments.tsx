@@ -76,12 +76,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
   
-  // Multi-producer form state - always start with just 2 visible
+  // Only show 2 producers by default, with option to add more
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
     { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
     { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
-    { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
-    { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
+    { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, 
+    { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, 
   ]);
   
   // Track how many worker forms are visible (initially 2)
@@ -168,12 +168,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const handleAssignProducer = (slot: ScheduleSlot) => {
     setCurrentSlot(slot);
     
-    // Reset form when opening dialog
+    // Reset form when opening dialog - showing only 2 workers initially
     const newProducerForms = [
       { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
       { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
-      { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
-      { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
+      { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, 
+      { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, 
     ];
     
     setProducerForms(newProducerForms);
@@ -549,26 +549,24 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               </div>
               
               <div className="border rounded-md p-3 bg-slate-50">
-                {/* Show only visible worker forms */}
+                {/* Show only visible worker forms - initially 2 */}
                 {producerForms.slice(0, visibleWorkerCount).map((form, index) => (
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
                       <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
-                      <div style={{ position: 'relative', zIndex: 9990 - index }}>
-                        <WorkerSelector
-                          value={form.workerId}
-                          onChange={(value, additionalText) => {
-                            updateProducerForm(index, 'workerId', value || '');
-                            if (additionalText) {
-                              updateProducerForm(index, 'additionalText', additionalText);
-                            }
-                          }}
-                          additionalText={form.additionalText}
-                          placeholder="בחר עובד"
-                          className="w-full mb-4"
-                          department="מפיקים"
-                        />
-                      </div>
+                      <WorkerSelector
+                        value={form.workerId}
+                        onChange={(value, additionalText) => {
+                          updateProducerForm(index, 'workerId', value || '');
+                          if (additionalText) {
+                            updateProducerForm(index, 'additionalText', additionalText);
+                          }
+                        }}
+                        additionalText={form.additionalText}
+                        placeholder="בחר עובד"
+                        className="w-full mb-4"
+                        department="מפיקים"
+                      />
                     </div>
                     <div className="pt-9">
                       <Select 
