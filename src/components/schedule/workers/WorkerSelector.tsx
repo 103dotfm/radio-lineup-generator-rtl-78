@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -188,7 +189,7 @@ export const WorkerSelector = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-background" align="start">
+        <PopoverContent className="w-full p-0 bg-background z-[100]" align="start">
           <div className="p-2">
             <Input
               placeholder="חיפוש עובדים..."
@@ -255,7 +256,7 @@ export const WorkerSelector = ({
         value={inputValue}
         onChange={handleInputChange}
         placeholder="הערות נוספות..."
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-2"
         dir="rtl"
       />
     </div>

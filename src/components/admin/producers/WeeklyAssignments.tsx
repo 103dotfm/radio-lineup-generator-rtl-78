@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 import { ScheduleSlot } from '@/types/schedule';
 import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
+import { DaySelector } from '@/components/schedule/ui/DaySelector';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -78,7 +79,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     { workerId: '', role: '', additionalText: '' }
   ]);
   
-  const [isWeekdays, setIsWeekdays] = useState(false);
+  // Selected weekdays for assignment (Sunday-0, Monday-1, Tuesday-2, Wednesday-3)
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
@@ -158,7 +160,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
       { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' }
     ]);
-    setIsWeekdays(false);
+    
+    setSelectedDays([]);
     setIsPermanent(false);
     
     setIsDialogOpen(true);
@@ -170,6 +173,29 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
+  };
+
+  // Toggle day selection
+  const toggleDay = (dayId: number) => {
+    setSelectedDays(prev => {
+      if (prev.includes(dayId)) {
+        return prev.filter(id => id !== dayId);
+      } else {
+        return [...prev, dayId];
+      }
+    });
+  };
+
+  // Handle weekday selection (toggling all weekdays Sunday-Wednesday)
+  const handleToggleWeekdays = (checked: boolean) => {
+    if (checked) {
+      // Select all weekdays (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday)
+      setSelectedDays([0, 1, 2, 3]);
+      setIsPermanent(false);
+    } else {
+      // Clear selection
+      setSelectedDays([]);
+    }
   };
   
   const handleSubmit = async () => {
@@ -224,9 +250,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             });
           }
         } 
-        // Check if we're creating assignments for all weekdays
-        else if (isWeekdays) {
-          console.log(`Creating weekday assignments for worker ${form.workerId} with role ${roleName}`);
+        // Check if we're creating assignments for multiple selected days
+        else if (selectedDays.length > 0) {
+          console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
           
           // First create assignment for current slot
           try {
@@ -247,12 +273,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             console.error("Error creating assignment for current slot:", error);
           }
           
-          // Then find all other weekday slots with the same time
+          // Then find all other selected days slots with the same time
           const currentTime = currentSlot.start_time;
           const currentDay = currentSlot.day_of_week;
           
-          // Get applicable days (0-3, excluding the current day)
-          const applicableDays = [0, 1, 2, 3].filter(day => day !== currentDay);
+          // Get applicable days from selected days (excluding the current day)
+          const applicableDays = selectedDays.filter(day => day !== currentDay);
           
           for (const dayIndex of applicableDays) {
             const key = `${dayIndex}-${currentTime}`;
@@ -506,22 +532,24 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               
               <div className="border rounded-md p-3 bg-slate-50">
                 {producerForms.map((form, index) => (
-                  <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-3">
+                  <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
                       <Label htmlFor={`worker-${index}`} className="mb-1 block">עובד {index + 1}</Label>
-                      <WorkerSelector
-                        value={form.workerId}
-                        onChange={(value, additionalText) => {
-                          updateProducerForm(index, 'workerId', value || '');
-                          if (additionalText) {
-                            updateProducerForm(index, 'additionalText', additionalText);
-                          }
-                        }}
-                        additionalText={form.additionalText}
-                        placeholder="בחר עובד"
-                        className="w-full"
-                        department="מפיקים"
-                      />
+                      <div className="relative z-[50]">
+                        <WorkerSelector
+                          value={form.workerId}
+                          onChange={(value, additionalText) => {
+                            updateProducerForm(index, 'workerId', value || '');
+                            if (additionalText) {
+                              updateProducerForm(index, 'additionalText', additionalText);
+                            }
+                          }}
+                          additionalText={form.additionalText}
+                          placeholder="בחר עובד"
+                          className="w-full"
+                          department="מפיקים"
+                        />
+                      </div>
                     </div>
                     
                     <div>
@@ -550,24 +578,29 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Switch 
                     id="weekdays"
-                    checked={isWeekdays}
-                    onCheckedChange={(checked) => {
-                      setIsWeekdays(checked);
-                      if (checked) setIsPermanent(false);
-                    }}
+                    checked={selectedDays.length === 4 && selectedDays.every(day => day <= 3)}
+                    onCheckedChange={handleToggleWeekdays}
                   />
                   <Label htmlFor="weekdays" className="mr-2">
                     שיבוץ כל השבוע (ראשון-רביעי)
                   </Label>
                 </div>
                 
-                <div className="flex items-center space-x-2 space-x-reverse">
+                <div className="mt-2">
+                  <DaySelector 
+                    selectedDays={selectedDays}
+                    toggleDay={toggleDay}
+                    disabled={isPermanent}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2 space-x-reverse mt-4">
                   <Switch 
                     id="permanent"
                     checked={isPermanent}
                     onCheckedChange={(checked) => {
                       setIsPermanent(checked);
-                      if (checked) setIsWeekdays(false);
+                      if (checked) setSelectedDays([]);
                     }}
                   />
                   <Label htmlFor="permanent" className="mr-2">
