@@ -20,11 +20,12 @@ const ProducerWorkArrangement = () => {
   const [notes, setNotes] = useState<string>("");
   const [arrangementId, setArrangementId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   
   const { toast } = useToast();
   
   useEffect(() => {
-    console.log("ProducerWorkArrangement component mounted");
+    console.log("ProducerWorkArrangement component mounted or week changed");
     loadWorkArrangement();
   }, [currentWeek]);
   
@@ -70,6 +71,10 @@ const ProducerWorkArrangement = () => {
   
   const navigateWeek = (direction: 'prev' | 'next') => {
     setCurrentWeek(prev => direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1));
+  };
+  
+  const triggerRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
   
   const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addWeeks(currentWeek, 1), 'dd/MM/yyyy', { locale: he })}`;
@@ -128,7 +133,11 @@ const ProducerWorkArrangement = () => {
                     שמור הערות
                   </Button>
                 </div>
-                <WeeklyAssignments currentWeek={currentWeek} />
+                <WeeklyAssignments 
+                  currentWeek={currentWeek} 
+                  onAssignmentChange={triggerRefresh} 
+                  refreshTrigger={refreshTrigger}
+                />
               </div>
             </TabsContent>
             

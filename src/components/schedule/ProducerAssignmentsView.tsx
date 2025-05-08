@@ -32,22 +32,17 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const loadAssignments = async () => {
     setIsLoading(true);
     try {
+      console.log('ProducerAssignmentsView: Loading assignments for week starting', selectedDate);
       // Get assignments data
       const assignmentsData = await getProducerAssignments(selectedDate);
+      console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
       
       // Process assignments to work with schedule slots
       if (assignmentsData && assignmentsData.length > 0) {
-        // For each assignment, match it with its corresponding slot in scheduleSlots
-        const processedAssignments = assignmentsData.map(assignment => {
-          // Find matching slot in scheduleSlots by slot_id
-          const matchingSlot = scheduleSlots.find(slot => slot.id === assignment.slot_id);
-          if (matchingSlot) {
-            return {
-              ...assignment,
-              slot: matchingSlot
-            };
-          }
-          return assignment;
+        // Make sure each assignment has its slot information
+        const processedAssignments = assignmentsData.filter(assignment => {
+          // Filter out assignments without valid slot information
+          return assignment.slot && assignment.slot.id;
         });
         
         setAssignments(processedAssignments || []);
@@ -158,6 +153,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                   return (
                     <TableCell key={`cell-${dayIndex}-${timeSlot}`} className="print:py-1">
                       {slotsForCell.map((slot) => {
+                        // Find assignments for this specific slot
                         const slotAssignments = getAssignmentsForSlot(slot.id);
                         if (slotAssignments.length === 0) return null;
                         
