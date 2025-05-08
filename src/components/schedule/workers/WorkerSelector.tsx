@@ -8,6 +8,13 @@ import { Worker, getWorkers } from '@/lib/supabase/workers';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/lib/supabase';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 interface WorkerSelectorProps {
   value: string | null;
@@ -33,6 +40,7 @@ export const WorkerSelector = ({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [retryCount, setRetryCount] = useState(0);
+  const [useFallbackDropdown, setUseFallbackDropdown] = useState(false); // Add a fallback option
   const { toast } = useToast();
   
   // Find the selected worker name
@@ -158,6 +166,15 @@ export const WorkerSelector = ({
     };
     fetchWorkers();
   };
+
+  const handleSelectChange = (workerId: string) => {
+    onChange(workerId, inputValue);
+  };
+
+  // Toggle between popover and simple select dropdown
+  const toggleMode = () => {
+    setUseFallbackDropdown(prev => !prev);
+  };
   
   // Filter workers based on search query
   const filteredWorkers = searchQuery 
@@ -167,6 +184,47 @@ export const WorkerSelector = ({
       )
     : workers;
   
+  // Fallback simple dropdown when popover has issues
+  if (useFallbackDropdown) {
+    return (
+      <div className={cn("flex flex-col gap-2", className)} dir="rtl">
+        <div className="relative">
+          <Select value={value || undefined} onValueChange={handleSelectChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent 
+              position="popper"
+              className="w-full max-h-80 overflow-y-auto z-[9999]"
+            >
+              {workers.map((worker) => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name}
+                  {worker.department && (
+                    <span className="text-gray-500 text-sm"> ({worker.department})</span>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          placeholder="הערות נוספות..."
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-2"
+          dir="rtl"
+        />
+        
+        <Button variant="outline" size="sm" onClick={toggleMode} className="text-xs mt-1">
+          החלף למצב חיפוש מתקדם
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col gap-2", className)} dir="rtl">
       <Popover open={open} onOpenChange={setOpen}>
@@ -177,7 +235,6 @@ export const WorkerSelector = ({
             aria-expanded={open}
             className="w-full justify-between"
             disabled={loading}
-            onClick={() => setOpen(true)} // Ensure clicking always opens the popover
           >
             {loading ? (
               <>
@@ -191,9 +248,15 @@ export const WorkerSelector = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-full p-0 bg-background" 
-          align="start" 
-          style={{ zIndex: 9999 }} // Much higher z-index to ensure it's above everything
+          className="w-full p-0 bg-white border shadow-lg" 
+          style={{ 
+            zIndex: 99999, // Much higher z-index
+            width: '100%',
+            minWidth: '280px'
+          }} 
+          align="start"
+          sideOffset={5}
+          avoidCollisions={true}
         >
           <div className="p-2">
             <Input
@@ -231,9 +294,11 @@ export const WorkerSelector = ({
                   {filteredWorkers.map((worker) => (
                     <button
                       key={worker.id}
+                      type="button"
                       className={cn(
                         "flex w-full items-center rounded-md px-2 py-1.5 text-sm",
                         "hover:bg-accent hover:text-accent-foreground",
+                        "cursor-pointer",
                         value === worker.id && "bg-accent text-accent-foreground"
                       )}
                       onClick={() => handleSelect(worker.id)}
@@ -253,6 +318,12 @@ export const WorkerSelector = ({
                 </div>
               )}
             </div>
+          </div>
+          
+          <div className="border-t p-2 text-center">
+            <Button variant="outline" size="sm" onClick={toggleMode} className="text-xs">
+              מעבר למצב בחירה פשוט
+            </Button>
           </div>
         </PopoverContent>
       </Popover>
