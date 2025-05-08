@@ -363,8 +363,6 @@ export const createRecurringProducerAssignment = async (
       is_recurring: true
     };
 
-    console.log('Creating recurring producer assignment:', insertData);
-
     // Insert the data
     const { error } = await supabase
       .from('producer_assignments')
@@ -378,7 +376,7 @@ export const createRecurringProducerAssignment = async (
     return true;
   } catch (error) {
     console.error('Error in createRecurringProducerAssignment:', error);
-    throw error;
+    return false;
   }
 };
 
