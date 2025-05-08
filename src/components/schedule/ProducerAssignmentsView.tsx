@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, parseISO, addDays } from 'date-fns';
+import { format, parseISO, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
   Table, 
@@ -34,7 +34,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     setIsLoading(true);
     try {
       // Use a consistent date format for the week start
-      const weekStartDate = new Date(selectedDate);
+      const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
       console.log('ProducerAssignmentsView: Loading assignments for week starting', weekStartDate.toISOString());
       
       const assignmentsData = await getProducerAssignments(weekStartDate);

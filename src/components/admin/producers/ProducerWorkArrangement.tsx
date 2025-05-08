@@ -40,9 +40,6 @@ const ProducerWorkArrangement = () => {
         setNotes(arrangement.notes || "");
         setArrangementId(arrangement.id);
       }
-      
-      // After loading the work arrangement, also trigger a refresh of the assignments
-      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error("Error loading work arrangement:", error);
       toast({

@@ -276,18 +276,10 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
 };
 
 // Create a new producer assignment
-export const createProducerAssignment = async (assignment: Partial<ProducerAssignment>): Promise<ProducerAssignment | null> => {
+export const createProducerAssignment = async (assignment: Omit<ProducerAssignment, 'id' | 'created_at' | 'updated_at'>): Promise<ProducerAssignment | null> => {
   try {
-    if (!assignment.slot_id || !assignment.worker_id || !assignment.role || !assignment.week_start) {
-      console.error("Missing required fields for producer assignment:", assignment);
-      throw new Error("Missing required fields for producer assignment");
-    }
-
-    // Log the value that's going to be stored in the database
-    console.log("Creating producer assignment with week_start:", assignment.week_start);
-
-    // Check if an assignment with this slot, worker, role already exists
-    const { data: existingData, error: checkError } = await supabase
+    // First check if this assignment already exists to avoid duplicates
+    const { data: existingAssignments, error: checkError } = await supabase
       .from('producer_assignments')
       .select('*')
       .eq('slot_id', assignment.slot_id)
@@ -296,48 +288,33 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
       .eq('week_start', assignment.week_start);
 
     if (checkError) {
-      console.error('Error checking existing assignments:', checkError);
-      throw new Error(`Failed to check existing assignments: ${checkError.message}`);
+      console.error("Error checking for existing assignments:", checkError);
+      throw checkError;
     }
 
-    // If assignment already exists, don't create a duplicate
-    if (existingData && existingData.length > 0) {
-      console.log('Assignment already exists, not creating duplicate:', existingData[0]);
-      return existingData[0] as ProducerAssignment;
+    // If the assignment already exists, don't create a duplicate
+    if (existingAssignments && existingAssignments.length > 0) {
+      console.log("Assignment already exists, not creating duplicate:", existingAssignments[0]);
+      return existingAssignments[0];
     }
 
-    // Create a properly-typed object for insertion
-    const insertData = {
-      slot_id: assignment.slot_id,
-      worker_id: assignment.worker_id,
-      role: assignment.role,
-      week_start: assignment.week_start,
-      is_recurring: assignment.is_recurring || false,
-      notes: assignment.notes
-    };
-
-    console.log('Creating new producer assignment:', insertData);
-
-    // Insert the new assignment
+    // Create a new assignment
+    console.log("Creating new producer assignment:", assignment);
     const { data, error } = await supabase
       .from('producer_assignments')
-      .insert([insertData])
-      .select(`
-        *,
-        worker:worker_id(id, name, email, phone, department, position),
-        slot:slot_id(id, show_name, host_name, start_time, end_time, day_of_week)
-      `)
+      .insert(assignment)
+      .select()
       .single();
 
     if (error) {
-      console.error('Error creating producer assignment:', error);
-      throw new Error(`Failed to create producer assignment: ${error.message}`);
+      console.error("Error creating producer assignment:", error);
+      throw error;
     }
 
-    console.log('Producer assignment created successfully:', data);
-    return data as ProducerAssignment;
+    console.log("Producer assignment created successfully:", data);
+    return data;
   } catch (error) {
-    console.error('Error in createProducerAssignment:', error);
+    console.error("Error in createProducerAssignment:", error);
     throw error;
   }
 };
