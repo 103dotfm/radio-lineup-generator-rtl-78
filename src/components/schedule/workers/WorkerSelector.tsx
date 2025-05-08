@@ -15,6 +15,13 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
 
 interface WorkerSelectorProps {
   value: string | null;
@@ -33,14 +40,18 @@ export const WorkerSelector = ({
   className,
   department
 }: WorkerSelectorProps) => {
-  const [open, setOpen] = useState(false);
+  // State management
   const [inputValue, setInputValue] = useState(additionalText || "");
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [retryCount, setRetryCount] = useState(0);
-  const [useFallbackDropdown, setUseFallbackDropdown] = useState(false); // Add a fallback option
+  
+  // Use a dialog instead of popover for more reliable interaction
+  const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Toast for notifications
   const { toast } = useToast();
   
   // Find the selected worker name
@@ -128,7 +139,7 @@ export const WorkerSelector = ({
     // Toggle selection if clicking the same item
     const newValue = value === workerId ? null : workerId;
     onChange(newValue, inputValue);
-    setOpen(false);
+    setDialogOpen(false);
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,13 +178,9 @@ export const WorkerSelector = ({
     fetchWorkers();
   };
 
+  // Simple Select dropdown handling
   const handleSelectChange = (workerId: string) => {
     onChange(workerId, inputValue);
-  };
-
-  // Toggle between popover and simple select dropdown
-  const toggleMode = () => {
-    setUseFallbackDropdown(prev => !prev);
   };
   
   // Filter workers based on search query
@@ -184,80 +191,43 @@ export const WorkerSelector = ({
       )
     : workers;
   
-  // Fallback simple dropdown when popover has issues
-  if (useFallbackDropdown) {
-    return (
-      <div className={cn("flex flex-col gap-2", className)} dir="rtl">
-        <div className="relative">
-          <Select value={value || undefined} onValueChange={handleSelectChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={placeholder} />
-            </SelectTrigger>
-            <SelectContent 
-              position="popper"
-              className="w-full max-h-80 overflow-y-auto z-[9999]"
-            >
-              {workers.map((worker) => (
-                <SelectItem key={worker.id} value={worker.id}>
-                  {worker.name}
-                  {worker.department && (
-                    <span className="text-gray-500 text-sm"> ({worker.department})</span>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <Input
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          placeholder="הערות נוספות..."
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-2"
-          dir="rtl"
-        />
-        
-        <Button variant="outline" size="sm" onClick={toggleMode} className="text-xs mt-1">
-          החלף למצב חיפוש מתקדם
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className={cn("flex flex-col gap-2", className)} dir="rtl">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-            disabled={loading}
+      {/* Using regular Select component for reliable interaction */}
+      <Select value={value || ""} onValueChange={handleSelectChange}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={placeholder}>
+            {displayValue || placeholder}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent position="popper">
+          {workers.map((worker) => (
+            <SelectItem key={worker.id} value={worker.id}>
+              {worker.name}
+              {worker.department && (
+                <span className="text-gray-500 text-sm"> ({worker.department})</span>
+              )}
+            </SelectItem>
+          ))}
+          
+          {/* Advanced search option */}
+          <Button 
+            variant="ghost" 
+            onClick={() => setDialogOpen(true)} 
+            className="w-full justify-start text-sm mt-2"
           >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                טוען עובדים...
-              </>
-            ) : (
-              value && displayValue ? displayValue : placeholder
-            )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            חיפוש מתקדם...
           </Button>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="w-full p-0 bg-white border shadow-lg" 
-          style={{ 
-            zIndex: 99999, // Much higher z-index
-            width: '100%',
-            minWidth: '280px'
-          }} 
-          align="start"
-          sideOffset={5}
-          avoidCollisions={true}
-        >
+        </SelectContent>
+      </Select>
+      
+      {/* Advanced search dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>חיפוש עובדים מתקדם</DialogTitle>
+          </DialogHeader>
+          
           <div className="p-2">
             <Input
               placeholder="חיפוש עובדים..."
@@ -266,6 +236,7 @@ export const WorkerSelector = ({
               className="mb-2"
               autoFocus
             />
+            
             {error && (
               <div className="p-2 text-sm text-red-500 border border-red-200 rounded mb-2 flex items-center justify-between">
                 <span>{error}</span>
@@ -279,6 +250,7 @@ export const WorkerSelector = ({
                 </Button>
               </div>
             )}
+            
             <div className="max-h-64 overflow-y-auto">
               {loading ? (
                 <div className="p-4 text-center">
@@ -320,13 +292,11 @@ export const WorkerSelector = ({
             </div>
           </div>
           
-          <div className="border-t p-2 text-center">
-            <Button variant="outline" size="sm" onClick={toggleMode} className="text-xs">
-              מעבר למצב בחירה פשוט
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>סגור</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Input
         type="text"
