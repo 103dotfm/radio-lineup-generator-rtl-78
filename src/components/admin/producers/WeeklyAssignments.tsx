@@ -88,7 +88,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [visibleWorkerCount, setVisibleWorkerCount] = useState(2);
   
   // Selected weekdays for assignment (Sunday-0, Monday-1, Tuesday-2, Wednesday-3)
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
@@ -215,9 +215,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     });
   };
 
-  // Handle weekday selection for applying assignments to multiple days
-  const handleDaySelection = (value: string[]) => {
-    setSelectedDays(value);
+  // Fixed: Handle day selection properly
+  const toggleDay = (dayId: number) => {
+    setSelectedDays(current => 
+      current.includes(dayId) 
+        ? current.filter(id => id !== dayId) 
+        : [...current, dayId]
+    );
   };
   
   const handleSubmit = async () => {
@@ -277,13 +281,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         else if (selectedDays.length > 0) {
           console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
           
-          // Convert selected day strings to numbers
-          const selectedDayNumbers = selectedDays.map(day => parseInt(day, 10));
-          
           // First create assignment for current slot
           try {
             // Only create if current day is in selected days
-            if (selectedDayNumbers.includes(currentSlot.day_of_week)) {
+            if (selectedDays.includes(currentSlot.day_of_week)) {
               const currentSlotAssignment = {
                 slot_id: currentSlot.id,
                 worker_id: form.workerId,
@@ -293,6 +294,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                 notes: form.additionalText || undefined
               };
               
+              console.log(`Creating producer assignment with week_start: ${format(currentWeek, 'yyyy-MM-dd')}`);
               const result = await createProducerAssignment(currentSlotAssignment);
               if (result) {
                 successCount++;
@@ -308,7 +310,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           const currentDay = currentSlot.day_of_week;
           
           // Get applicable days from selected days (excluding the current day if already processed)
-          const applicableDays = selectedDayNumbers.filter(day => day !== currentDay || !selectedDayNumbers.includes(currentDay));
+          const applicableDays = selectedDays.filter(day => day !== currentDay || !selectedDays.includes(currentDay));
           
           for (const dayIndex of applicableDays) {
             const key = `${dayIndex}-${currentTime}`;
@@ -331,6 +333,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                   };
                   
                   console.log(`Creating assignment for day ${dayIndex} slot for worker ${form.workerId}`);
+                  console.log(`Creating producer assignment with week_start: ${format(currentWeek, 'yyyy-MM-dd')}`);
                   const result = await createProducerAssignment(assignment);
                   if (result) {
                     successCount++;
@@ -626,55 +629,49 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                 )}
                 
                 <div className="mt-6 border-t pt-4">
-                  <h4 className="font-medium mb-2">אפשרויות מתקדמות</h4>
+                  <h4 className="font-medium mb-4">אפשרויות נוספות:</h4>
                   
-                  {/* Days selection */}
-                  <div className="mb-4">
-                    <Label htmlFor="days-selection" className="mb-2 block">
-                      הוסף לימים נוספים בשבוע הנוכחי
-                    </Label>
-                    <ToggleGroup 
-                      type="multiple" 
-                      className="flex justify-center gap-0.5 flex-wrap"
-                      onValueChange={handleDaySelection}
-                      value={selectedDays}
-                    >
-                      {[0, 1, 2, 3].map((day) => (
-                        <ToggleGroupItem
-                          key={`day-${day}`}
-                          value={day.toString()}
-                          disabled={currentSlot && currentSlot.day_of_week === day}
-                          className={currentSlot && currentSlot.day_of_week === day ? "opacity-50" : ""}
-                          aria-label={dayNames[day]}
-                        >
-                          {dayNames[day].substring(0, 1)}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                    <div className="text-xs text-gray-500 mt-1">
-                      בחר ימי א׳-ד׳ כדי להוסיף את העובד באותה שעה בימים נוספים
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <Label htmlFor="permanent-toggle">משבץ קבוע (חל על כל השבועות)</Label>
+                        <Switch 
+                          id="permanent-toggle" 
+                          checked={isPermanent}
+                          onCheckedChange={(checked) => {
+                            setIsPermanent(checked);
+                            if (checked) setSelectedDays([]); // Clear selected days when selecting permanent
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Permanent assignment option */}
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="make-permanent"
-                      checked={isPermanent}
-                      onCheckedChange={setIsPermanent}
-                    />
-                    <Label htmlFor="make-permanent" className="mr-2">הפוך לצוות קבוע</Label>
+                    
+                    {!isPermanent && (
+                      <div>
+                        <Label className="mb-2 block">הוסף לימים נוספים בשבוע זה:</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+                            <Button
+                              key={`day-toggle-${day}`}
+                              type="button"
+                              variant={selectedDays.includes(day) ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => toggleDay(day)}
+                              className={`${selectedDays.includes(day) ? 'bg-primary text-primary-foreground' : ''}`}
+                            >
+                              {dayNames[day]}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
               
-              <DialogFooter>
-                <Button variant="outline" onClick={handleCloseDialog} className="ml-2">
-                  ביטול
-                </Button>
-                <Button onClick={handleSubmit}>
-                  שמור
-                </Button>
+              <DialogFooter className="flex justify-between mt-6">
+                <Button variant="outline" onClick={handleCloseDialog}>ביטול</Button>
+                <Button onClick={handleSubmit}>שמור</Button>
               </DialogFooter>
             </div>
           )}
