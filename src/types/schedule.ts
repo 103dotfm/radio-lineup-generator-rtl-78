@@ -1,4 +1,3 @@
-
 // Type definitions for scheduling components
 
 export interface DigitalWorkArrangement {
@@ -52,17 +51,26 @@ export interface ProducerAssignment {
   slot_id: string;
   worker_id: string;
   role: string;
-  notes?: string;
-  is_recurring: boolean;
   week_start: string;
+  notes?: string | null;
+  is_recurring?: boolean;
+  created_at?: string;
+  updated_at?: string;
   worker?: {
     id: string;
     name: string;
     position?: string;
+    email?: string;
+    phone?: string;
   };
-  slot?: ScheduleSlot | null;
-  created_at?: string;
-  updated_at?: string;
+  slot?: {
+    id: string;
+    show_name: string;
+    host_name?: string;
+    start_time: string;
+    end_time: string;
+    day_of_week: number;
+  };
 }
 
 export interface DayNote {

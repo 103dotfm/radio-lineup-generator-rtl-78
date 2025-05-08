@@ -1,7 +1,42 @@
 
 import { supabase } from "@/lib/supabase";
-import { format, startOfWeek, parseISO } from 'date-fns';
-import { ProducerAssignment } from '@/types/schedule';
+import { format, startOfWeek, parseISO, addDays } from 'date-fns';
+
+// Types
+export type ProducerAssignment = {
+  id: string;
+  slot_id: string;
+  worker_id: string;
+  role: string;
+  week_start: string;
+  notes?: string | null;
+  is_recurring?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  worker?: Worker;
+  slot?: ScheduleSlot;
+};
+
+export type Worker = {
+  id: string;
+  name: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+  user_id?: string | null;
+  password_readable?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ScheduleSlot = {
+  id: string;
+  show_name: string;
+  host_name?: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+};
 
 export const getProducerRoles = async () => {
   try {
@@ -70,6 +105,45 @@ export const getProducerAssignments = async (weekStart: Date) => {
     return data;
   } catch (error) {
     console.error("Error fetching producer assignments:", error);
+    throw error;
+  }
+};
+
+export const getAllMonthlyAssignments = async (year: number, month: number) => {
+  try {
+    // Get the first and last day of the requested month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Last day of the month
+    
+    const startDateStr = format(startDate, 'yyyy-MM-dd');
+    const endDateStr = format(endDate, 'yyyy-MM-dd');
+    
+    // Find assignments where week_start is within the month
+    const { data, error } = await supabase
+      .from('producer_assignments')
+      .select(`
+        *,
+        worker:worker_id (
+          id,
+          name,
+          position,
+          email
+        ),
+        slot:slot_id (
+          id,
+          show_name,
+          host_name,
+          day_of_week
+        )
+      `)
+      .gte('week_start', startDateStr)
+      .lte('week_start', endDateStr);
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching monthly assignments:", error);
     throw error;
   }
 };
@@ -215,5 +289,42 @@ export const deleteProducerAssignment = async (id: string) => {
   } catch (error) {
     console.error("Error deleting producer assignment:", error);
     throw error;
+  }
+};
+
+// Add missing functions for ProducerUsers
+export const createProducerUser = async (workerId: string, email: string) => {
+  try {
+    // Call the edge function to create a user
+    const { data, error } = await supabase.functions.invoke('create-producer-user', {
+      body: { worker_id: workerId, email },
+    });
+    
+    if (error) throw error;
+    return data || { success: false, message: 'Unknown error' };
+  } catch (error: any) {
+    console.error("Error creating producer user:", error);
+    return { 
+      success: false, 
+      message: error.message || "Failed to create user" 
+    };
+  }
+};
+
+export const resetProducerPassword = async (workerId: string) => {
+  try {
+    // Call the edge function to reset a password
+    const { data, error } = await supabase.functions.invoke('reset-producer-password', {
+      body: { worker_id: workerId },
+    });
+    
+    if (error) throw error;
+    return data || { success: false, message: 'Unknown error' };
+  } catch (error: any) {
+    console.error("Error resetting producer password:", error);
+    return { 
+      success: false, 
+      message: error.message || "Failed to reset password" 
+    };
   }
 };
