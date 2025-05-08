@@ -90,13 +90,33 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   // Selected weekdays for assignment (Sunday-0, Monday-1, Tuesday-2, Wednesday-3)
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [isPermanent, setIsPermanent] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
   
   const { toast } = useToast();
   
   useEffect(() => {
     console.log(`WeeklyAssignments: Loading data for week ${currentWeek.toISOString()}`);
     loadData();
+    
+    // Save scroll position when component mounts
+    const saveScrollPosition = () => {
+      setScrollPosition(window.scrollY);
+    };
+    window.addEventListener('scroll', saveScrollPosition);
+    
+    return () => {
+      window.removeEventListener('scroll', saveScrollPosition);
+    };
   }, [currentWeek, refreshTrigger]);
+  
+  // Restore scroll position after data loading
+  useEffect(() => {
+    if (!isLoading && !slotsLoading) {
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 100);
+    }
+  }, [isLoading, slotsLoading, scrollPosition]);
   
   const loadData = async () => {
     setIsLoading(true);
@@ -215,7 +235,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     });
   };
 
-  // Fixed: Handle day selection properly
   const toggleDay = (dayId: number) => {
     setSelectedDays(current => 
       current.includes(dayId) 
@@ -233,6 +252,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       });
       return;
     }
+    
+    // Save current scroll position before making any changes
+    const currentScrollPos = window.scrollY;
+    setScrollPosition(currentScrollPos);
     
     // Only use visible worker forms, then filter out empty rows
     const visibleForms = producerForms.slice(0, visibleWorkerCount);
@@ -281,10 +304,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         else if (selectedDays.length > 0) {
           console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
           
-          // First create assignment for current slot
-          try {
-            // Only create if current day is in selected days
-            if (selectedDays.includes(currentSlot.day_of_week)) {
+          // If current day is in selected days, add it first
+          if (selectedDays.includes(currentSlot.day_of_week)) {
+            try {
               const currentSlotAssignment = {
                 slot_id: currentSlot.id,
                 worker_id: form.workerId,
@@ -299,18 +321,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               if (result) {
                 successCount++;
               }
+            } catch (error: any) {
+              console.error("Error creating assignment for current slot:", error);
             }
-          } catch (error: any) {
-            console.error("Error creating assignment for current slot:", error);
           }
           
-          // Then find and create assignments for all other selected days
           // Extract critical information from current slot
           const currentTime = currentSlot.start_time;
-          const currentDay = currentSlot.day_of_week;
           
           // Get applicable days from selected days (excluding the current day if already processed)
-          const applicableDays = selectedDays.filter(day => day !== currentDay || !selectedDays.includes(currentDay));
+          const applicableDays = selectedDays.filter(day => day !== currentSlot.day_of_week);
           
           for (const dayIndex of applicableDays) {
             const key = `${dayIndex}-${currentTime}`;
@@ -383,6 +403,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           onAssignmentChange(); // Notify parent component
         }
         setIsDialogOpen(false);
+        
+        // Restore scroll position after changes
+        setTimeout(() => {
+          window.scrollTo(0, currentScrollPos);
+        }, 100);
       } else {
         toast({
           title: "מידע",
@@ -400,6 +425,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   };
   
   const handleDeleteAssignment = async (assignmentId: string) => {
+    // Save current scroll position before deleting
+    const currentScrollPos = window.scrollY;
+    setScrollPosition(currentScrollPos);
+    
     if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
       try {
         const success = await deleteProducerAssignment(assignmentId);
@@ -412,6 +441,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           if (onAssignmentChange) {
             onAssignmentChange(); // Notify parent component
           }
+          
+          // Restore scroll position after deletion
+          setTimeout(() => {
+            window.scrollTo(0, currentScrollPos);
+          }, 100);
         } else {
           throw new Error("Failed to delete assignment");
         }
@@ -564,7 +598,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               </div>
               
               <div className="border rounded-md p-3 bg-slate-50">
-                {/* Show only visible worker forms - initially 2 */}
                 {producerForms.slice(0, visibleWorkerCount).map((form, index) => (
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
@@ -615,7 +648,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                   </div>
                 ))}
 
-                {/* Button to add more workers */}
                 {visibleWorkerCount < 4 && (
                   <Button
                     variant="outline"
