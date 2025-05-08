@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -45,6 +44,8 @@ import { ScheduleSlot } from '@/types/schedule';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
+  onAssignmentChange?: () => void;
+  refreshTrigger?: number;
 }
 
 interface ProducerFormItem {
@@ -52,7 +53,11 @@ interface ProducerFormItem {
   role: string;
 }
 
-const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) => {
+const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ 
+  currentWeek, 
+  onAssignmentChange,
+  refreshTrigger = 0
+}) => {
   // Important: use false for isMasterSchedule to get the weekly schedule instead of master
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, false);
   const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
@@ -77,16 +82,21 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
   
   useEffect(() => {
     loadData();
-  }, [currentWeek]);
+  }, [currentWeek, refreshTrigger]);
   
   const loadData = async () => {
     setIsLoading(true);
     try {
+      console.log("WeeklyAssignments: Loading data for week", currentWeek);
       const [assignmentsData, producersData, rolesData] = await Promise.all([
         getProducerAssignments(currentWeek),
         getProducers(),
         getProducerRoles()
       ]);
+      
+      console.log("WeeklyAssignments: Loaded assignments:", assignmentsData);
+      console.log("WeeklyAssignments: Loaded producers:", producersData);
+      console.log("WeeklyAssignments: Loaded roles:", rolesData);
       
       setAssignments(assignmentsData || []);
       setProducers(producersData || []);
@@ -294,6 +304,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
           description: `נוספו ${successCount} שיבוצים לסידור העבודה`
         });
         await loadData(); // Refresh the assignments
+        if (onAssignmentChange) {
+          onAssignmentChange(); // Notify parent component
+        }
         setIsDialogOpen(false);
       } else {
         toast({
@@ -321,6 +334,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ currentWeek }) =>
             description: "השיבוץ נמחק בהצלחה"
           });
           await loadData(); // Refresh the assignments
+          if (onAssignmentChange) {
+            onAssignmentChange(); // Notify parent component
+          }
         } else {
           throw new Error("Failed to delete assignment");
         }

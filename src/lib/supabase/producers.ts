@@ -236,11 +236,20 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
     console.log(`Getting producer assignments for week starting ${weekStart.toISOString().split('T')[0]}`);
     const formattedDate = weekStart.toISOString().split('T')[0];
     
+    // Improved query to get detailed assignment information including worker and slot details
     const { data, error } = await supabase
       .from('producer_assignments')
       .select(`
         *,
-        worker:worker_id(id, name, email, phone, department, position)
+        worker:worker_id(id, name, email, phone, department, position),
+        slot:slot_id(
+          id, 
+          show_name, 
+          host_name, 
+          start_time, 
+          end_time, 
+          day_of_week
+        )
       `)
       .eq('week_start', formattedDate);
     
@@ -248,6 +257,8 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
       console.error('Error fetching producer assignments:', error);
       throw new Error(`Failed to fetch producer assignments: ${error.message}`);
     }
+    
+    console.log(`Retrieved ${data?.length || 0} producer assignments for week ${formattedDate}`, data);
     
     if (!data) {
       return [];
@@ -264,6 +275,7 @@ export const getProducerAssignments = async (weekStart: Date): Promise<ProducerA
 export const createProducerAssignment = async (assignment: Partial<ProducerAssignment>): Promise<ProducerAssignment | null> => {
   try {
     if (!assignment.slot_id || !assignment.worker_id || !assignment.role || !assignment.week_start) {
+      console.error("Missing required fields for producer assignment:", assignment);
       throw new Error("Missing required fields for producer assignment");
     }
 
@@ -283,7 +295,7 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
 
     // If assignment already exists, don't create a duplicate
     if (existingData && existingData.length > 0) {
-      console.log('Assignment already exists, not creating duplicate');
+      console.log('Assignment already exists, not creating duplicate:', existingData[0]);
       return existingData[0] as ProducerAssignment;
     }
 
@@ -297,11 +309,17 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
       notes: assignment.notes
     };
 
+    console.log('Creating new producer assignment:', insertData);
+
     // Insert the new assignment
     const { data, error } = await supabase
       .from('producer_assignments')
       .insert([insertData])
-      .select('*, worker:worker_id(id, name, email, phone, department, position)')
+      .select(`
+        *,
+        worker:worker_id(id, name, email, phone, department, position),
+        slot:slot_id(id, show_name, host_name, start_time, end_time, day_of_week)
+      `)
       .single();
 
     if (error) {
@@ -309,6 +327,7 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
       throw new Error(`Failed to create producer assignment: ${error.message}`);
     }
 
+    console.log('Producer assignment created successfully:', data);
     return data as ProducerAssignment;
   } catch (error) {
     console.error('Error in createProducerAssignment:', error);

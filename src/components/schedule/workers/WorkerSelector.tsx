@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -54,13 +53,19 @@ export const WorkerSelector = ({
           
           // Use multiple possible department values for producers
           if (department === 'מפיקים' || department === 'producers') {
+            console.log('WorkerSelector: Using producer departments filter');
             const { data: departmentWorkers, error } = await supabase
               .from('workers')
               .select('*')
               .or('department.eq.מפיקים,department.eq.מפיק,department.eq.הפקה,department.eq.producers,department.eq.Production staff')
               .order('name');
               
-            if (error) throw error;
+            if (error) {
+              console.error('Error fetching producers:', error);
+              throw error;
+            }
+            
+            console.log(`WorkerSelector: Found ${departmentWorkers?.length || 0} producers`);
             data = departmentWorkers;
           } else {
             // For other departments, use exact matching
@@ -77,7 +82,7 @@ export const WorkerSelector = ({
           data = await getWorkers();
         }
         
-        console.log(`WorkerSelector: Fetched ${data.length} workers`);
+        console.log(`WorkerSelector: Fetched ${data?.length || 0} workers`);
         setWorkers(data || []);
         // Reset retry count on success
         setRetryCount(0);
