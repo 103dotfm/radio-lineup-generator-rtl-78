@@ -234,6 +234,8 @@ export const getProducerRoles = async (): Promise<ProducerRole[]> => {
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
     console.log(`Getting producer assignments for week starting ${weekStart.toISOString().split('T')[0]}`);
+    
+    // Format the date as YYYY-MM-DD and ensure we're working with the correct week start
     const formattedDate = weekStart.toISOString().split('T')[0];
     
     // Improved query to get detailed assignment information including worker and slot details
@@ -278,6 +280,9 @@ export const createProducerAssignment = async (assignment: Partial<ProducerAssig
       console.error("Missing required fields for producer assignment:", assignment);
       throw new Error("Missing required fields for producer assignment");
     }
+
+    // Log the value that's going to be stored in the database
+    console.log("Creating producer assignment with week_start:", assignment.week_start);
 
     // Check if an assignment with this slot, worker, role already exists
     const { data: existingData, error: checkError } = await supabase

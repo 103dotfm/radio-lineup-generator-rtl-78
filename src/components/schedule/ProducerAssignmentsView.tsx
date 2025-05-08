@@ -26,13 +26,14 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
+    console.log("ProducerAssignmentsView: selectedDate changed to", selectedDate.toISOString());
     loadAssignments();
   }, [selectedDate]);
   
   const loadAssignments = async () => {
     setIsLoading(true);
     try {
-      console.log('ProducerAssignmentsView: Loading assignments for week starting', selectedDate);
+      console.log('ProducerAssignmentsView: Loading assignments for week starting', selectedDate.toISOString());
       const assignmentsData = await getProducerAssignments(selectedDate);
       console.log('ProducerAssignmentsView: Loaded assignments:', assignmentsData);
       

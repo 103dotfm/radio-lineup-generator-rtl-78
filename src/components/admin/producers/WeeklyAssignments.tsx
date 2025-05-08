@@ -81,6 +81,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const { toast } = useToast();
   
   useEffect(() => {
+    console.log(`WeeklyAssignments: Loading data for week ${currentWeek.toISOString()}`);
     loadData();
   }, [currentWeek, refreshTrigger]);
   
@@ -279,11 +280,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         } else {
           // Create a single assignment
           try {
+            const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
+            console.log(`Using week start date: ${formattedWeekStart} for assignment`);
+            
             const assignment = {
               slot_id: currentSlot.id,
               worker_id: form.workerId,
               role: roleName,
-              week_start: format(currentWeek, 'yyyy-MM-dd'),
+              week_start: formattedWeekStart,
               is_recurring: false
             };
             
@@ -305,6 +309,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         });
         await loadData(); // Refresh the assignments immediately
         if (onAssignmentChange) {
+          console.log("Notifying parent component about assignment change");
           onAssignmentChange(); // Notify parent component
         }
         setIsDialogOpen(false);

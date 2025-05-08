@@ -25,7 +25,7 @@ const ProducerWorkArrangement = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    console.log("ProducerWorkArrangement component mounted or week changed");
+    console.log("ProducerWorkArrangement component mounted or week changed, date:", currentWeek.toISOString());
     loadWorkArrangement();
   }, [currentWeek]);
   
@@ -70,7 +70,10 @@ const ProducerWorkArrangement = () => {
   };
   
   const navigateWeek = (direction: 'prev' | 'next') => {
-    setCurrentWeek(prev => direction === 'prev' ? subWeeks(prev, 1) : addWeeks(prev, 1));
+    const newWeek = direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1);
+    console.log(`Navigating to ${direction} week:`, newWeek.toISOString());
+    setCurrentWeek(newWeek);
+    setRefreshTrigger(prev => prev + 1); // Trigger refresh when navigating
   };
   
   const triggerRefresh = () => {
