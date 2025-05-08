@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Worker, getWorkers } from '@/lib/supabase/workers';
@@ -48,7 +47,7 @@ export const WorkerSelector = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   
-  // Use a dialog instead of popover for more reliable interaction
+  // Dialog state for advanced search
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Toast for notifications
@@ -178,7 +177,7 @@ export const WorkerSelector = ({
     fetchWorkers();
   };
 
-  // Simple Select dropdown handling
+  // Select dropdown handling
   const handleSelectChange = (workerId: string) => {
     onChange(workerId, inputValue);
   };
@@ -190,10 +189,53 @@ export const WorkerSelector = ({
         (worker.department && worker.department.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : workers;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className={cn("flex flex-col gap-2", className)} dir="rtl">
+        <div className="flex items-center justify-center p-2 border rounded bg-gray-50">
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          <span>טוען עובדים...</span>
+        </div>
+        <Input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          placeholder="הערות נוספות..."
+          className="mt-2"
+        />
+      </div>
+    );
+  }
+  
+  // Error state
+  if (error) {
+    return (
+      <div className={cn("flex flex-col gap-2", className)} dir="rtl">
+        <div className="flex items-center justify-between p-2 border rounded bg-red-50 text-red-700">
+          <div className="flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <span>{error}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRetry}>
+            נסה שנית
+          </Button>
+        </div>
+        <Input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          placeholder="הערות נוספות..."
+          className="mt-2"
+        />
+      </div>
+    );
+  }
   
   return (
     <div className={cn("flex flex-col gap-2", className)} dir="rtl">
-      {/* Using regular Select component for reliable interaction */}
+      {/* Using reliable Select dropdown component */}
       <Select value={value || ""} onValueChange={handleSelectChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={placeholder}>
@@ -303,8 +345,7 @@ export const WorkerSelector = ({
         value={inputValue}
         onChange={handleInputChange}
         placeholder="הערות נוספות..."
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-2"
-        dir="rtl"
+        className="mt-2"
       />
     </div>
   );

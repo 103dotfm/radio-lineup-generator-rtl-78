@@ -88,7 +88,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [visibleWorkerCount, setVisibleWorkerCount] = useState(2);
   
   // Selected weekdays for assignment (Sunday-0, Monday-1, Tuesday-2, Wednesday-3)
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
@@ -168,6 +168,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const handleAssignProducer = (slot: ScheduleSlot) => {
     setCurrentSlot(slot);
     
+    // Get existing assignments for this slot
+    const slotAssignments = getAssignmentsForSlot(slot.id);
+    
     // Reset form when opening dialog - showing only 2 workers initially
     const newProducerForms = [
       { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
@@ -176,8 +179,28 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, 
     ];
     
+    // Pre-populate the form with existing assignments
+    if (slotAssignments.length > 0) {
+      slotAssignments.forEach((assignment, index) => {
+        // Only pre-populate up to 4 assignments
+        if (index < 4) {
+          const roleId = roles.find(r => r.name === assignment.role)?.id || EDITING_ROLE_ID;
+          newProducerForms[index] = {
+            workerId: assignment.worker_id,
+            role: roleId,
+            additionalText: assignment.notes || ''
+          };
+        }
+      });
+      
+      // Set visible workers count to at least include all existing assignments 
+      // (up to maximum of 4)
+      setVisibleWorkerCount(Math.max(2, Math.min(4, slotAssignments.length)));
+    } else {
+      setVisibleWorkerCount(2); // Start with 2 visible if no existing assignments
+    }
+    
     setProducerForms(newProducerForms);
-    setVisibleWorkerCount(2); // Start with 2 visible
     setSelectedDays([]);
     setIsPermanent(false);
     
@@ -192,26 +215,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     });
   };
 
-  // Toggle individual day selection
-  const toggleDay = (dayId: number) => {
-    setSelectedDays(prev => {
-      if (prev.includes(dayId)) {
-        return prev.filter(id => id !== dayId);
-      } else {
-        return [...prev, dayId];
-      }
-    });
-  };
-
-  // Handle weekday selection (toggling all weekdays Sunday-Wednesday)
-  const handleToggleWeekdays = (checked: boolean) => {
-    if (checked) {
-      // Select all weekdays (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday)
-      setSelectedDays([0, 1, 2, 3]);
-    } else {
-      // Clear selection
-      setSelectedDays([]);
-    }
+  // Handle weekday selection for applying assignments to multiple days
+  const handleDaySelection = (value: string[]) => {
+    setSelectedDays(value);
   };
   
   const handleSubmit = async () => {
@@ -271,20 +277,26 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         else if (selectedDays.length > 0) {
           console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
           
+          // Convert selected day strings to numbers
+          const selectedDayNumbers = selectedDays.map(day => parseInt(day, 10));
+          
           // First create assignment for current slot
           try {
-            const currentSlotAssignment = {
-              slot_id: currentSlot.id,
-              worker_id: form.workerId,
-              role: roleName,
-              week_start: format(currentWeek, 'yyyy-MM-dd'),
-              is_recurring: false,
-              notes: form.additionalText || undefined
-            };
-            
-            const result = await createProducerAssignment(currentSlotAssignment);
-            if (result) {
-              successCount++;
+            // Only create if current day is in selected days
+            if (selectedDayNumbers.includes(currentSlot.day_of_week)) {
+              const currentSlotAssignment = {
+                slot_id: currentSlot.id,
+                worker_id: form.workerId,
+                role: roleName,
+                week_start: format(currentWeek, 'yyyy-MM-dd'),
+                is_recurring: false,
+                notes: form.additionalText || undefined
+              };
+              
+              const result = await createProducerAssignment(currentSlotAssignment);
+              if (result) {
+                successCount++;
+              }
             }
           } catch (error: any) {
             console.error("Error creating assignment for current slot:", error);
@@ -295,8 +307,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           const currentTime = currentSlot.start_time;
           const currentDay = currentSlot.day_of_week;
           
-          // Get applicable days from selected days (excluding the current day)
-          const applicableDays = selectedDays.filter(day => day !== currentDay);
+          // Get applicable days from selected days (excluding the current day if already processed)
+          const applicableDays = selectedDayNumbers.filter(day => day !== currentDay || !selectedDayNumbers.includes(currentDay));
           
           for (const dayIndex of applicableDays) {
             const key = `${dayIndex}-${currentTime}`;
@@ -554,18 +566,30 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
                       <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
-                      <WorkerSelector
-                        value={form.workerId}
-                        onChange={(value, additionalText) => {
-                          updateProducerForm(index, 'workerId', value || '');
-                          if (additionalText) {
-                            updateProducerForm(index, 'additionalText', additionalText);
-                          }
-                        }}
-                        additionalText={form.additionalText}
-                        placeholder="בחר עובד"
-                        className="w-full mb-4"
-                        department="מפיקים"
+                      <Select 
+                        value={form.workerId} 
+                        onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="בחר עובד" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {producers.map((worker) => (
+                            <SelectItem key={worker.id} value={worker.id}>
+                              {worker.name} 
+                              {worker.position && (
+                                <span className="text-gray-500 text-sm"> ({worker.position})</span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        type="text"
+                        value={form.additionalText || ""}
+                        onChange={(e) => updateProducerForm(index, 'additionalText', e.target.value)}
+                        placeholder="הערות נוספות..."
+                        className="w-full mt-2 p-2 border rounded text-sm"
                       />
                     </div>
                     <div className="pt-9">
@@ -578,7 +602,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                         </SelectTrigger>
                         <SelectContent>
                           {roles.map((role) => (
-                            <SelectItem key={`role-select-${role.id}-${index}`} value={role.id}>
+                            <SelectItem key={role.id} value={role.id}>
                               {role.name}
                             </SelectItem>
                           ))}
@@ -588,76 +612,72 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                   </div>
                 ))}
 
-                {/* Show "Add Worker" button only if fewer than 4 workers are visible */}
+                {/* Button to add more workers */}
                 {visibleWorkerCount < 4 && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="w-full mt-2"
                     onClick={addWorkerForm}
                   >
-                    <Plus className="h-4 w-4 mr-2" /> הוספת עובד
+                    <Plus className="h-4 w-4 mr-2" />
+                    הוסף עובד נוסף
                   </Button>
                 )}
-              </div>
-              
-              <div className="space-y-4 pt-2 border-t">
-                <div className="flex items-center space-x-2 space-x-reverse mt-4">
-                  <Switch 
-                    id="weekdays"
-                    checked={selectedDays.length === 4 && [0,1,2,3].every(day => selectedDays.includes(day))}
-                    onCheckedChange={handleToggleWeekdays}
-                    disabled={isPermanent}
-                  />
-                  <Label htmlFor="weekdays" className="mr-2">
-                    שיבוץ כל השבוע (ראשון-רביעי)
-                  </Label>
-                </div>
                 
-                <div className="mt-4">
-                  <Label>בחר ימים לשיבוץ</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {[0, 1, 2, 3].map(day => (
-                      <Button
-                        key={`day-toggle-${day}`}
-                        type="button"
-                        variant={selectedDays.includes(day) ? "default" : "outline"}
-                        className="flex-1"
-                        onClick={() => toggleDay(day)}
-                        disabled={isPermanent}
-                      >
-                        {dayNames[day]}
-                      </Button>
-                    ))}
+                <div className="mt-6 border-t pt-4">
+                  <h4 className="font-medium mb-2">אפשרויות מתקדמות</h4>
+                  
+                  {/* Days selection */}
+                  <div className="mb-4">
+                    <Label htmlFor="days-selection" className="mb-2 block">
+                      הוסף לימים נוספים בשבוע הנוכחי
+                    </Label>
+                    <ToggleGroup 
+                      type="multiple" 
+                      className="flex justify-center gap-0.5 flex-wrap"
+                      onValueChange={handleDaySelection}
+                      value={selectedDays}
+                    >
+                      {[0, 1, 2, 3].map((day) => (
+                        <ToggleGroupItem
+                          key={`day-${day}`}
+                          value={day.toString()}
+                          disabled={currentSlot && currentSlot.day_of_week === day}
+                          className={currentSlot && currentSlot.day_of_week === day ? "opacity-50" : ""}
+                          aria-label={dayNames[day]}
+                        >
+                          {dayNames[day].substring(0, 1)}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                    <div className="text-xs text-gray-500 mt-1">
+                      בחר ימי א׳-ד׳ כדי להוסיף את העובד באותה שעה בימים נוספים
+                    </div>
+                  </div>
+
+                  {/* Permanent assignment option */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="make-permanent"
+                      checked={isPermanent}
+                      onCheckedChange={setIsPermanent}
+                    />
+                    <Label htmlFor="make-permanent" className="mr-2">הפוך לצוות קבוע</Label>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-2 space-x-reverse mt-4">
-                  <Switch 
-                    id="permanent"
-                    checked={isPermanent}
-                    onCheckedChange={(checked) => {
-                      setIsPermanent(checked);
-                      if (checked) setSelectedDays([]);
-                    }}
-                  />
-                  <Label htmlFor="permanent" className="mr-2">
-                    צוות תוכנית קבוע
-                  </Label>
-                </div>
               </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={handleCloseDialog} className="ml-2">
+                  ביטול
+                </Button>
+                <Button onClick={handleSubmit}>
+                  שמור
+                </Button>
+              </DialogFooter>
             </div>
           )}
-          <DialogFooter className="flex justify-between">
-            <Button variant="outline" onClick={handleCloseDialog}>סגור</Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={!producerForms.slice(0, visibleWorkerCount).some(form => form.workerId && form.role)}
-            >
-              הוסף לסידור
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
