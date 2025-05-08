@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -20,6 +21,7 @@ const ProducerWorkArrangement = () => {
   const [arrangementId, setArrangementId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [scrollPosition, setScrollPosition] = useState<number>(0);
   
   const { toast } = useToast();
   
@@ -28,7 +30,26 @@ const ProducerWorkArrangement = () => {
     const isoDate = currentWeek.toISOString();
     console.log("ProducerWorkArrangement component mounted or week changed, date:", isoDate);
     loadWorkArrangement();
+    
+    // Save scroll position when component mounts or updates
+    const saveScrollPosition = () => {
+      setScrollPosition(window.scrollY);
+    };
+    window.addEventListener('scroll', saveScrollPosition);
+    
+    return () => {
+      window.removeEventListener('scroll', saveScrollPosition);
+    };
   }, [currentWeek]);
+  
+  // Restore scroll position when loading completes
+  useEffect(() => {
+    if (!isLoading) {
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 100);
+    }
+  }, [isLoading, scrollPosition]);
   
   const loadWorkArrangement = async () => {
     setIsLoading(true);
@@ -57,12 +78,20 @@ const ProducerWorkArrangement = () => {
   const handleSaveNotes = async () => {
     if (!arrangementId) return;
     
+    // Save current scroll position before saving
+    const currentScrollPos = window.scrollY;
+    
     try {
       await updateProducerWorkArrangementNotes(arrangementId, notes);
       toast({
         title: "נשמר בהצלחה",
         description: "הערות סידור העבודה נשמרו בהצלחה",
       });
+      
+      // Restore scroll position after saving
+      setTimeout(() => {
+        window.scrollTo(0, currentScrollPos);
+      }, 100);
     } catch (error) {
       console.error("Error saving notes:", error);
       toast({
@@ -74,6 +103,10 @@ const ProducerWorkArrangement = () => {
   };
   
   const navigateWeek = (direction: 'prev' | 'next') => {
+    // Save current scroll position before navigating
+    const currentScrollPos = window.scrollY;
+    setScrollPosition(currentScrollPos);
+    
     const newWeek = direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1);
     // Log using ISO format for consistency
     console.log(`Navigating to ${direction} week:`, newWeek.toISOString());
@@ -83,6 +116,10 @@ const ProducerWorkArrangement = () => {
   };
   
   const triggerRefresh = () => {
+    // Save current scroll position before refresh
+    const currentScrollPos = window.scrollY;
+    setScrollPosition(currentScrollPos);
+    
     console.log("Triggering refresh of assignments");
     setRefreshTrigger(prev => prev + 1);
   };
