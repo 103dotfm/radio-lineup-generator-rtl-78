@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -41,6 +42,7 @@ import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
 import { Label } from '@/components/ui/label';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 import { ScheduleSlot } from '@/types/schedule';
+import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -51,6 +53,7 @@ interface WeeklyAssignmentsProps {
 interface ProducerFormItem {
   workerId: string;
   role: string;
+  additionalText?: string;
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ 
@@ -69,10 +72,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   
   // Multi-producer form state
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
-    { workerId: '', role: '' },
-    { workerId: '', role: '' },
-    { workerId: '', role: '' },
-    { workerId: '', role: '' }
+    { workerId: '', role: '', additionalText: '' },
+    { workerId: '', role: '', additionalText: '' },
+    { workerId: '', role: '', additionalText: '' },
+    { workerId: '', role: '', additionalText: '' }
   ]);
   
   const [isWeekdays, setIsWeekdays] = useState(false);
@@ -150,10 +153,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     
     // Reset form when opening dialog
     setProducerForms([
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' },
-      { workerId: '', role: roles.length > 0 ? roles[0].id : '' }
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' },
+      { workerId: '', role: roles.length > 0 ? roles[0].id : '', additionalText: '' }
     ]);
     setIsWeekdays(false);
     setIsPermanent(false);
@@ -161,7 +164,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     setIsDialogOpen(true);
   };
   
-  const updateProducerForm = (index: number, field: 'workerId' | 'role', value: string) => {
+  const updateProducerForm = (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => {
     setProducerForms(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -232,7 +235,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               worker_id: form.workerId,
               role: roleName,
               week_start: format(currentWeek, 'yyyy-MM-dd'),
-              is_recurring: false
+              is_recurring: false,
+              notes: form.additionalText || undefined
             };
             
             const result = await createProducerAssignment(currentSlotAssignment);
@@ -266,7 +270,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                     worker_id: form.workerId,
                     role: roleName,
                     week_start: format(currentWeek, 'yyyy-MM-dd'),
-                    is_recurring: false
+                    is_recurring: false,
+                    notes: form.additionalText || undefined
                   };
                   
                   console.log(`Creating assignment for day ${dayIndex} slot for worker ${form.workerId}`);
@@ -293,7 +298,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               worker_id: form.workerId,
               role: roleName,
               week_start: formattedWeekStart,
-              is_recurring: false
+              is_recurring: false,
+              notes: form.additionalText || undefined
             };
             
             console.log(`Creating single assignment for worker ${form.workerId} with role ${roleName}`);
@@ -372,38 +378,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   if (isLoading || slotsLoading) {
     return <div className="text-center py-4">טוען...</div>;
   }
-  
-  // Filter out producers that are already assigned with this role to this slot
-  const getAvailableProducers = (producerFormIndex: number) => {
-    if (!currentSlot) return producers;
-    
-    const existingAssignments = assignments.filter(
-      assignment => assignment.slot_id === currentSlot.id
-    );
-    
-    // Get current form data
-    const currentForm = producerForms[producerFormIndex];
-    
-    // Get producers who are already assigned with the selected role
-    // excluding the currently selected workerId in this form row
-    const producersWithSelectedRole = existingAssignments
-      .filter(assignment => {
-        const selectedRole = roles.find(r => r.id === currentForm.role);
-        return assignment.role === (selectedRole ? selectedRole.name : '') && 
-               assignment.worker_id !== currentForm.workerId;
-      })
-      .map(assignment => assignment.worker_id);
-    
-    // Also exclude other selected workers in other form rows
-    const currentlySelectedWorkers = producerForms
-      .filter((f, idx) => idx !== producerFormIndex && f.workerId)
-      .map(f => f.workerId);
-    
-    const excludedWorkers = [...producersWithSelectedRole, ...currentlySelectedWorkers];
-    
-    // Return producers who aren't already assigned with this role or selected in other rows
-    return producers.filter(producer => !excludedWorkers.includes(producer.id));
-  };
   
   return (
     <div className="space-y-6">
@@ -535,21 +509,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                       <Label htmlFor={`worker-${index}`} className="mb-1 block">עובד {index + 1}</Label>
-                      <Select 
-                        value={form.workerId} 
-                        onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
-                      >
-                        <SelectTrigger id={`worker-${index}`}>
-                          <SelectValue placeholder="בחר עובד" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableProducers(index).map((producer) => (
-                            <SelectItem key={`producer-select-${producer.id}-${index}`} value={producer.id}>
-                              {producer.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <WorkerSelector
+                        value={form.workerId}
+                        onChange={(value, additionalText) => {
+                          updateProducerForm(index, 'workerId', value || '');
+                          if (additionalText) {
+                            updateProducerForm(index, 'additionalText', additionalText);
+                          }
+                        }}
+                        additionalText={form.additionalText}
+                        placeholder="בחר עובד"
+                        className="w-full"
+                        department="מפיקים"
+                      />
                     </div>
                     
                     <div>
