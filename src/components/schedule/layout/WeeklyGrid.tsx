@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ScheduleSlot, DayNote } from '@/types/schedule';
 import TimeCell from './TimeCell';
 import DayHeader from './DayHeader';
@@ -39,27 +39,6 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   handleSaveDayNote,
   handleDeleteDayNote
 }) => {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  
-  useEffect(() => {
-    // Save scroll position
-    const saveScrollPosition = () => {
-      setScrollPosition(window.scrollY);
-    };
-    window.addEventListener('scroll', saveScrollPosition);
-    
-    return () => {
-      window.removeEventListener('scroll', saveScrollPosition);
-    };
-  }, []);
-
-  // Restore scroll position when grid is updated
-  useEffect(() => {
-    setTimeout(() => {
-      window.scrollTo(0, scrollPosition);
-    }, 100);
-  }, [scheduleSlots, scrollPosition]);
-  
   return (
     <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
       <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
