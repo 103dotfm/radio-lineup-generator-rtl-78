@@ -74,6 +74,7 @@ const ProducerWorkArrangement = () => {
   };
   
   const triggerRefresh = () => {
+    console.log("Triggering refresh of assignments");
     setRefreshTrigger(prev => prev + 1);
   };
   
