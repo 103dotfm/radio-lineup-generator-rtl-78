@@ -189,7 +189,11 @@ export const WorkerSelector = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-background z-[100]" align="start">
+        <PopoverContent 
+          className="w-full p-0 bg-background" 
+          align="start" 
+          style={{ zIndex: 100 }}
+        >
           <div className="p-2">
             <Input
               placeholder="חיפוש עובדים..."

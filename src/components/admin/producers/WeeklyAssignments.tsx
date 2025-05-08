@@ -44,6 +44,7 @@ import { getCombinedShowDisplay } from '@/utils/showDisplay';
 import { ScheduleSlot } from '@/types/schedule';
 import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
 import { DaySelector } from '@/components/schedule/ui/DaySelector';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -191,7 +192,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     if (checked) {
       // Select all weekdays (0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday)
       setSelectedDays([0, 1, 2, 3]);
-      setIsPermanent(false);
     } else {
       // Clear selection
       setSelectedDays([]);
@@ -522,7 +522,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             </DialogDescription>
           </DialogHeader>
           {currentSlot && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-6 py-4">
               <div>
                 <p className="font-medium">{getCombinedShowDisplay(currentSlot.show_name, currentSlot.host_name)}</p>
                 <p className="text-sm text-muted-foreground">
@@ -534,8 +534,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                 {producerForms.map((form, index) => (
                   <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
                     <div>
-                      <Label htmlFor={`worker-${index}`} className="mb-1 block">עובד {index + 1}</Label>
-                      <div className="relative z-[50]">
+                      <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
+                      <div style={{ zIndex: 50 + (4-index) }}>
                         <WorkerSelector
                           value={form.workerId}
                           onChange={(value, additionalText) => {
@@ -546,19 +546,17 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                           }}
                           additionalText={form.additionalText}
                           placeholder="בחר עובד"
-                          className="w-full"
+                          className="w-full mb-4"
                           department="מפיקים"
                         />
                       </div>
                     </div>
-                    
-                    <div>
-                      <Label htmlFor={`role-${index}`} className="mb-1 block">תפקיד</Label>
+                    <div className="pt-9">
                       <Select 
                         value={form.role} 
                         onValueChange={(value) => updateProducerForm(index, 'role', value)}
                       >
-                        <SelectTrigger id={`role-${index}`}>
+                        <SelectTrigger>
                           <SelectValue placeholder="בחר תפקיד" />
                         </SelectTrigger>
                         <SelectContent>
@@ -574,24 +572,35 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                 ))}
               </div>
               
-              <div className="space-y-4 pt-2">
-                <div className="flex items-center space-x-2 space-x-reverse">
+              <div className="space-y-4 pt-2 border-t">
+                <div className="flex items-center space-x-2 space-x-reverse mt-4">
                   <Switch 
                     id="weekdays"
-                    checked={selectedDays.length === 4 && selectedDays.every(day => day <= 3)}
+                    checked={selectedDays.length === 4 && [0,1,2,3].every(day => selectedDays.includes(day))}
                     onCheckedChange={handleToggleWeekdays}
+                    disabled={isPermanent}
                   />
                   <Label htmlFor="weekdays" className="mr-2">
                     שיבוץ כל השבוע (ראשון-רביעי)
                   </Label>
                 </div>
                 
-                <div className="mt-2">
-                  <DaySelector 
-                    selectedDays={selectedDays}
-                    toggleDay={toggleDay}
-                    disabled={isPermanent}
-                  />
+                <div className="mt-4">
+                  <Label>בחר ימים לשיבוץ</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {[0, 1, 2, 3].map(day => (
+                      <Button
+                        key={`day-toggle-${day}`}
+                        type="button"
+                        variant={selectedDays.includes(day) ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => toggleDay(day)}
+                        disabled={isPermanent}
+                      >
+                        {dayNames[day]}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
                 
                 <div className="flex items-center space-x-2 space-x-reverse mt-4">
