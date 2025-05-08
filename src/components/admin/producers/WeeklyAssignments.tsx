@@ -88,9 +88,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const loadData = async () => {
     setIsLoading(true);
     try {
-      console.log("WeeklyAssignments: Loading data for week", currentWeek);
+      // Use a consistent date format for the week start
+      const weekStartDate = new Date(currentWeek);
+      console.log("WeeklyAssignments: Loading data for week", weekStartDate.toISOString());
+      
       const [assignmentsData, producersData, rolesData] = await Promise.all([
-        getProducerAssignments(currentWeek),
+        getProducerAssignments(weekStartDate),
         getProducers(),
         getProducerRoles()
       ]);
@@ -280,7 +283,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         } else {
           // Create a single assignment
           try {
-            const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
+            // Create date string in yyyy-MM-dd format consistently
+            const weekStartDate = new Date(currentWeek);
+            const formattedWeekStart = weekStartDate.toISOString().split('T')[0];
             console.log(`Using week start date: ${formattedWeekStart} for assignment`);
             
             const assignment = {

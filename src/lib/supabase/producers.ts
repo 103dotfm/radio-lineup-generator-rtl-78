@@ -233,12 +233,14 @@ export const getProducerRoles = async (): Promise<ProducerRole[]> => {
 // Get producer assignments for a specific week
 export const getProducerAssignments = async (weekStart: Date): Promise<ProducerAssignment[]> => {
   try {
-    console.log(`Getting producer assignments for week starting ${weekStart.toISOString().split('T')[0]}`);
+    // Ensure we're dealing with the correct date (adjust for timezone issues)
+    const localDate = new Date(weekStart);
+    // Get the ISO date string and remove the time portion
+    const formattedDate = localDate.toISOString().split('T')[0];
     
-    // Format the date as YYYY-MM-DD and ensure we're working with the correct week start
-    const formattedDate = weekStart.toISOString().split('T')[0];
+    console.log(`Getting producer assignments for week starting ${formattedDate}`);
     
-    // Improved query to get detailed assignment information including worker and slot details
+    // Try to get both exact matches and assignments from the same week
     const { data, error } = await supabase
       .from('producer_assignments')
       .select(`
