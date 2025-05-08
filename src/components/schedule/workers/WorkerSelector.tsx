@@ -177,6 +177,7 @@ export const WorkerSelector = ({
             aria-expanded={open}
             className="w-full justify-between"
             disabled={loading}
+            onClick={() => setOpen(true)} // Ensure clicking always opens the popover
           >
             {loading ? (
               <>
@@ -192,7 +193,7 @@ export const WorkerSelector = ({
         <PopoverContent 
           className="w-full p-0 bg-background" 
           align="start" 
-          style={{ zIndex: 100 }}
+          style={{ zIndex: 9999 }} // Much higher z-index to ensure it's above everything
         >
           <div className="p-2">
             <Input
@@ -200,6 +201,7 @@ export const WorkerSelector = ({
               value={searchQuery}
               onChange={handleSearchChange}
               className="mb-2"
+              autoFocus
             />
             {error && (
               <div className="p-2 text-sm text-red-500 border border-red-200 rounded mb-2 flex items-center justify-between">
