@@ -43,9 +43,6 @@ import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
 import { Label } from '@/components/ui/label';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 import { ScheduleSlot } from '@/types/schedule';
-import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
-import { DaySelector } from '@/components/schedule/ui/DaySelector';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -281,47 +278,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         else if (selectedDays.length > 0) {
           console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
           
-          // First create assignment for current slot
-          try {
-            // Only create if current day is in selected days
-            if (selectedDays.includes(currentSlot.day_of_week)) {
-              const currentSlotAssignment = {
-                slot_id: currentSlot.id,
-                worker_id: form.workerId,
-                role: roleName,
-                week_start: format(currentWeek, 'yyyy-MM-dd'),
-                is_recurring: false,
-                notes: form.additionalText || undefined
-              };
-              
-              console.log(`Creating producer assignment with week_start: ${format(currentWeek, 'yyyy-MM-dd')}`);
-              const result = await createProducerAssignment(currentSlotAssignment);
-              if (result) {
-                successCount++;
-              }
-            }
-          } catch (error: any) {
-            console.error("Error creating assignment for current slot:", error);
-          }
-          
-          // Then find and create assignments for all other selected days
-          // Extract critical information from current slot
-          const currentTime = currentSlot.start_time;
-          const currentDay = currentSlot.day_of_week;
-          
-          // Get applicable days from selected days (excluding the current day if already processed)
-          const applicableDays = selectedDays.filter(day => day !== currentDay || !selectedDays.includes(currentDay));
-          
-          for (const dayIndex of applicableDays) {
-            const key = `${dayIndex}-${currentTime}`;
+          // Process all selected days
+          for (const dayIndex of selectedDays) {
+            // Find slots for the current day and time
+            const key = `${dayIndex}-${currentSlot.start_time}`;
             const slotsForDay = slotsByDayAndTime[key] || [];
             
-            // Check if we have slots for this day and time
             if (slotsForDay.length > 0) {
               for (const slot of slotsForDay) {
-                // Make sure slot exists and is valid
-                if (!slot || !slot.id) continue;
-                
                 try {
                   const assignment = {
                     slot_id: slot.id,
@@ -332,7 +296,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                     notes: form.additionalText || undefined
                   };
                   
-                  console.log(`Creating assignment for day ${dayIndex} slot for worker ${form.workerId}`);
                   console.log(`Creating producer assignment with week_start: ${format(currentWeek, 'yyyy-MM-dd')}`);
                   const result = await createProducerAssignment(assignment);
                   if (result) {
@@ -345,7 +308,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             }
           }
         } else {
-          // Create a single assignment
+          // Create a single assignment for the current slot
           try {
             // Create date string in yyyy-MM-dd format consistently
             const weekStartDate = new Date(currentWeek);
