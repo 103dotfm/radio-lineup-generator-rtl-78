@@ -43,9 +43,6 @@ import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
 import { Label } from '@/components/ui/label';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 import { ScheduleSlot } from '@/types/schedule';
-import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
-import { DaySelector } from '@/components/schedule/ui/DaySelector';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -215,7 +212,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     });
   };
 
-  // Fixed: Handle day selection properly
+  // Handle day selection properly
   const toggleDay = (dayId: number) => {
     setSelectedDays(current => 
       current.includes(dayId) 
@@ -258,11 +255,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         if (isPermanent) {
           console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName}`);
           try {
+            const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
             const success = await createRecurringProducerAssignment(
               currentSlot.id,
               form.workerId,
               roleName,
-              format(currentWeek, 'yyyy-MM-dd')
+              formattedWeekStart
             );
             
             if (success) {
@@ -281,27 +279,28 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         else if (selectedDays.length > 0) {
           console.log(`Creating assignments for selected days: ${selectedDays.join(', ')} for worker ${form.workerId} with role ${roleName}`);
           
-          // First create assignment for current slot
-          try {
-            // Only create if current day is in selected days
-            if (selectedDays.includes(currentSlot.day_of_week)) {
+          const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
+          
+          // First create assignment for current slot if its day is selected
+          if (selectedDays.includes(currentSlot.day_of_week)) {
+            try {
               const currentSlotAssignment = {
                 slot_id: currentSlot.id,
                 worker_id: form.workerId,
                 role: roleName,
-                week_start: format(currentWeek, 'yyyy-MM-dd'),
+                week_start: formattedWeekStart,
                 is_recurring: false,
                 notes: form.additionalText || undefined
               };
               
-              console.log(`Creating producer assignment with week_start: ${format(currentWeek, 'yyyy-MM-dd')}`);
+              console.log(`Creating producer assignment with week_start: ${formattedWeekStart}`);
               const result = await createProducerAssignment(currentSlotAssignment);
               if (result) {
                 successCount++;
               }
+            } catch (error: any) {
+              console.error("Error creating assignment for current slot:", error);
             }
-          } catch (error: any) {
-            console.error("Error creating assignment for current slot:", error);
           }
           
           // Then find and create assignments for all other selected days
@@ -327,13 +326,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                     slot_id: slot.id,
                     worker_id: form.workerId,
                     role: roleName,
-                    week_start: format(currentWeek, 'yyyy-MM-dd'),
+                    week_start: formattedWeekStart,
                     is_recurring: false,
                     notes: form.additionalText || undefined
                   };
                   
                   console.log(`Creating assignment for day ${dayIndex} slot for worker ${form.workerId}`);
-                  console.log(`Creating producer assignment with week_start: ${format(currentWeek, 'yyyy-MM-dd')}`);
+                  console.log(`Creating producer assignment with week_start: ${formattedWeekStart}`);
                   const result = await createProducerAssignment(assignment);
                   if (result) {
                     successCount++;
@@ -348,8 +347,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           // Create a single assignment
           try {
             // Create date string in yyyy-MM-dd format consistently
-            const weekStartDate = new Date(currentWeek);
-            const formattedWeekStart = weekStartDate.toISOString().split('T')[0];
+            const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
             console.log(`Using week start date: ${formattedWeekStart} for assignment`);
             
             const assignment = {
