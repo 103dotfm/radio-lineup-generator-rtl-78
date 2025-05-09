@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import UserList from './UserList';
 import EditUserDialog from './EditUserDialog';
+import UserManagementHeader from './UserManagementHeader';
 import { User } from './types';
 import { useUsers } from './hooks/useUsers';
 
@@ -26,7 +27,14 @@ const UserManagement = () => {
   };
 
   return (
-    <div dir="rtl" className="text-right">
+    <Card className="p-6">
+      <UserManagementHeader
+        isAddUserOpen={isAddUserOpen}
+        setIsAddUserOpen={setIsAddUserOpen}
+        newUser={newUser}
+        setNewUser={setNewUser}
+      />
+
       <EditUserDialog
         isOpen={isEditUserOpen}
         setIsOpen={setIsEditUserOpen}
@@ -40,7 +48,7 @@ const UserManagement = () => {
         onDelete={(userId) => deleteUserMutation.mutate(userId)}
         isLoading={isLoading}
       />
-    </div>
+    </Card>
   );
 };
 
