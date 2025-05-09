@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -74,9 +73,37 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   onOpenChange
 }) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+  
+  // Store scroll position when dialog opens
+  React.useEffect(() => {
+    if (isOpen) {
+      // Store current scroll position when dialog opens
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore scroll behavior when dialog closes
+      document.body.style.overflow = '';
+    }
+  }, [isOpen]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      // Prevent scroll position change when dialog closes
+      if (!open) {
+        const scrollPos = window.scrollY;
+        
+        onOpenChange(open);
+        
+        // Set a small timeout to ensure scroll position is maintained after state updates
+        setTimeout(() => {
+          window.scrollTo({
+            top: scrollPos,
+            behavior: 'auto'
+          });
+        }, 0);
+      } else {
+        onOpenChange(open);
+      }
+    }}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>

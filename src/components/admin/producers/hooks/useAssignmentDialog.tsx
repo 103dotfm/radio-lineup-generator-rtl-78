@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { ScheduleSlot } from '@/types/schedule';
 import { 
@@ -86,6 +85,7 @@ export const useAssignmentDialog = ({
     );
   };
 
+  // Store scroll position when opening the dialog
   const handleAssignProducer = (slot: ScheduleSlot, slotAssignments: ProducerAssignment[]) => {
     setCurrentSlot(slot);
     
@@ -295,6 +295,7 @@ export const useAssignmentDialog = ({
   };
 
   const handleCloseDialog = () => {
+    // Remember scroll position when closing the dialog
     setIsDialogOpen(false);
   };
 
