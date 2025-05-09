@@ -7,8 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import ProducersTable from './ProducersTable';
 import WeeklyAssignments from './WeeklyAssignments';
 import MonthlySummary from './MonthlySummary';
+import ProducerUsers from './ProducerUsers';
 import { getOrCreateProducerWorkArrangement, updateProducerWorkArrangementNotes } from '@/lib/supabase/producers';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -118,27 +120,26 @@ const ProducerWorkArrangement = () => {
             onValueChange={setActiveTab}
             className="space-y-4"
           >
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="weekly">סידור שבועי</TabsTrigger>
+              <TabsTrigger value="producers">עובדי הפקה</TabsTrigger>
               <TabsTrigger value="monthly">סיכום חודשי</TabsTrigger>
+              <TabsTrigger value="users">משתמשי מערכת</TabsTrigger>
             </TabsList>
             
             <TabsContent value="weekly">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-medium text-right">הערות לסידור</h3>
+                  <h3 className="text-lg font-medium">הערות לסידור</h3>
                   <Textarea
                     placeholder="הערות כלליות לסידור העבודה"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={3}
-                    className="text-right"
                   />
-                  <div className="flex justify-end">
-                    <Button onClick={handleSaveNotes} disabled={isLoading}>
-                      שמור הערות
-                    </Button>
-                  </div>
+                  <Button onClick={handleSaveNotes} disabled={isLoading}>
+                    שמור הערות
+                  </Button>
                 </div>
                 <WeeklyAssignments 
                   currentWeek={currentWeek} 
@@ -148,8 +149,16 @@ const ProducerWorkArrangement = () => {
               </div>
             </TabsContent>
             
+            <TabsContent value="producers">
+              <ProducersTable />
+            </TabsContent>
+            
             <TabsContent value="monthly">
               <MonthlySummary />
+            </TabsContent>
+            
+            <TabsContent value="users">
+              <ProducerUsers />
             </TabsContent>
           </Tabs>
         </CardContent>
