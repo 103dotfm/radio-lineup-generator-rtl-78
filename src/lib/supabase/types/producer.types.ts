@@ -1,5 +1,6 @@
 
-import { Worker, ScheduleSlot } from "@/types/schedule";
+import { ScheduleSlot } from "@/types/schedule";
+import { Worker } from "@/lib/supabase/workers";
 
 export type ProducerAssignment = {
   id: string;
