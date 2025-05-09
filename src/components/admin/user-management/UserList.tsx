@@ -26,7 +26,7 @@ const UserList: React.FC<UserListProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <Table>
+      <Table className="direction-rtl">
         <TableHeader>
           <TableRow>
             <TableHead className="text-right">שם משתמש</TableHead>
@@ -42,7 +42,7 @@ const UserList: React.FC<UserListProps> = ({
   }
 
   return (
-    <Table>
+    <Table dir="rtl">
       <TableHeader>
         <TableRow>
           <TableHead className="text-right">שם משתמש</TableHead>

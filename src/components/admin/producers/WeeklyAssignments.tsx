@@ -57,6 +57,8 @@ interface ProducerFormItem {
 
 const EDITING_ROLE_ID = '483bd320-9935-4184-bad7-43255fbe0691'; // עריכה
 const PRODUCTION_ROLE_ID = '348cf89d-0a9b-4c2c-bb33-8b2edee4c612'; // הפקה
+const EDITING_FIRST_ROLE_ID = 'new_role_id_1'; // עריכה ראשית
+const EVENING_PRODUCTION_ROLE_ID = 'new_role_id_2'; // הפקת ערב
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ 
   currentWeek, 
@@ -76,6 +78,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
     { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
     { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
+    { workerId: '', role: EDITING_FIRST_ROLE_ID, additionalText: '' }, // Default to עריכה ראשית
+    { workerId: '', role: EVENING_PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקת ערב
     { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, 
     { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, 
   ]);
@@ -174,6 +178,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     const newProducerForms = [
       { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, // Default to עריכה
       { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקה
+      { workerId: '', role: EDITING_FIRST_ROLE_ID, additionalText: '' }, // Default to עריכה ראשית
+      { workerId: '', role: EVENING_PRODUCTION_ROLE_ID, additionalText: '' }, // Default to הפקת ערב
       { workerId: '', role: EDITING_ROLE_ID, additionalText: '' }, 
       { workerId: '', role: PRODUCTION_ROLE_ID, additionalText: '' }, 
     ];
