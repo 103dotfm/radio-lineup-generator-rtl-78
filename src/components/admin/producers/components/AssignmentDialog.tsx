@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useRef, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
@@ -73,33 +74,36 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   onOpenChange
 }) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+  const scrollPosRef = useRef(0);
   
-  // Store scroll position when dialog opens
-  React.useEffect(() => {
+  // Store scroll position and manage body overflow
+  useEffect(() => {
     if (isOpen) {
       // Store current scroll position when dialog opens
+      scrollPosRef.current = window.scrollY;
       document.body.style.overflow = 'hidden';
     } else {
       // Restore scroll behavior when dialog closes
       document.body.style.overflow = '';
+      
+      // Use RAF to ensure the scroll happens after state updates
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: scrollPosRef.current,
+          behavior: 'instant' // Use 'instant' to prevent smooth scrolling
+        });
+      });
     }
   }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-      // Prevent scroll position change when dialog closes
       if (!open) {
-        const scrollPos = window.scrollY;
+        // Save current scroll position before closing
+        scrollPosRef.current = window.scrollY;
         
+        // Call the parent's onOpenChange
         onOpenChange(open);
-        
-        // Set a small timeout to ensure scroll position is maintained after state updates
-        setTimeout(() => {
-          window.scrollTo({
-            top: scrollPos,
-            behavior: 'auto'
-          });
-        }, 0);
       } else {
         onOpenChange(open);
       }
