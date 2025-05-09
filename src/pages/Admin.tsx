@@ -7,7 +7,6 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import TimezoneSettings from '@/components/admin/TimezoneSettings';
 import AdminTabs from '@/components/admin/AdminTabs';
 import DomainSettings from '@/components/admin/DomainSettings';
-import WorkerManagement from '@/components/admin/workers/WorkerManagement';
 
 const Admin = () => {
   const { isAdmin, isAuthenticated } = useAuth();
@@ -16,7 +15,6 @@ const Admin = () => {
   const [serverTime, setServerTime] = useState<Date | null>(null);
   const [redirectProcessed, setRedirectProcessed] = useState(false);
   const [defaultTab, setDefaultTab] = useState("schedule");
-  const [showStaffManagement, setShowStaffManagement] = useState(false);
   const [appDomain, setAppDomain] = useState("");
 
   useEffect(() => {
@@ -36,7 +34,6 @@ const Admin = () => {
       console.log("Setting default tab to exports based on URL parameter");
     } else if (tab === 'staff') {
       setDefaultTab("workers");
-      setShowStaffManagement(true);
     }
   }, [searchParams, redirectProcessed]);
 
