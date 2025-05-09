@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
 import WorkerDivisionsTab from './WorkerDivisionsTab';
 import WorkerAccountTab from './WorkerAccountTab';
+import UserManagement from '@/components/admin/user-management/UserManagement';
 
 const WorkerManagement = () => {
   const { workers, loading, error, loadWorkers } = useWorkers();
@@ -206,7 +207,7 @@ const WorkerManagement = () => {
               הוספת עובד
             </Button>
           )}
-          {activeTab !== "list" && selectedWorker && (
+          {activeTab !== "list" && activeTab !== "users" && selectedWorker && (
             <div className="flex items-center">
               <span className="mr-2 font-medium">עובד נבחר: {selectedWorker.name}</span>
               <Button variant="outline" onClick={() => {
@@ -222,6 +223,7 @@ const WorkerManagement = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="list">רשימת עובדים</TabsTrigger>
+              <TabsTrigger value="users">ניהול משתמשים</TabsTrigger>
               {selectedWorker && (
                 <>
                   <TabsTrigger value="divisions">שיוך מחלקות</TabsTrigger>
@@ -239,6 +241,10 @@ const WorkerManagement = () => {
                 onDelete={handleDeleteWorker}
                 onSelect={handleWorkerSelect}
               />
+            </TabsContent>
+            
+            <TabsContent value="users">
+              <UserManagement />
             </TabsContent>
             
             {selectedWorker && (

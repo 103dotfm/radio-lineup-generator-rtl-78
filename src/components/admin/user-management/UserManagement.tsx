@@ -27,7 +27,7 @@ const UserManagement = () => {
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-6" dir="rtl">
       <UserManagementHeader
         isAddUserOpen={isAddUserOpen}
         setIsAddUserOpen={setIsAddUserOpen}
