@@ -38,6 +38,13 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
     return DIVISION_TRANSLATIONS;
   }, []);
 
+  // Define the translation function
+  const getDivisionTranslation = (name: string) => {
+    return divisionTranslations[name.toLowerCase()] || 
+           divisionTranslations[name] || 
+           name;
+  };
+
   useEffect(() => {
     const loadAllWorkerDivisions = async () => {
       if (workers && workers.length > 0) {
@@ -87,12 +94,6 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
 
     loadAllWorkerDivisions();
   }, [workers]);
-
-  const getDivisionTranslation = (name: string) => {
-    return divisionTranslations[name.toLowerCase()] || 
-           divisionTranslations[name] || 
-           name;
-  };
 
   if (loading) {
     return <div className="text-center py-4">טוען...</div>;
