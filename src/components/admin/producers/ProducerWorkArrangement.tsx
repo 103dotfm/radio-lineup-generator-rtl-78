@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { format, addWeeks, subWeeks, startOfWeek } from 'date-fns';
+import { format, addWeeks, subWeeks, startOfWeek, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

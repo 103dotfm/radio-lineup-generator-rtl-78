@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { format, startOfWeek, parseISO, addDays } from 'date-fns';
+import { format, startOfWeek, parseISO } from 'date-fns';
 import { getProducersByDivision, getProducers as fetchProducers, getProducerRoles as fetchProducerRoles } from './producers/workers';
 
 // Re-export functions from the workers module
@@ -42,38 +42,8 @@ export type ScheduleSlot = {
   end_time: string;
 };
 
-export const getProducerRoles = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('producer_roles')
-      .select('*')
-      .order('name');
-      
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error("Error fetching producer roles:", error);
-    throw error;
-  }
-};
-
-export const getProducers = async () => {
-  try {
-    console.log('producers.ts: Fetching workers from Supabase...');
-    const { data, error } = await supabase
-      .from('workers')
-      .select('*')
-      .order('name');
-      
-    if (error) throw error;
-    
-    console.log(`Workers data fetched successfully: ${data?.length} workers`, data);
-    return data;
-  } catch (error) {
-    console.error("Error fetching producers:", error);
-    throw error;
-  }
-};
+// Remove duplicate functions since we're already importing and re-exporting them above
+// Instead, reuse our re-exported functions from ./producers/workers
 
 export const getProducerAssignments = async (weekStart: Date) => {
   try {
