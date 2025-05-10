@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import WorkerDivisionsManager from './WorkerDivisionsManager';
 
@@ -7,12 +7,7 @@ interface WorkerDivisionsTabProps {
   workerId: string;
 }
 
-const WorkerDivisionsTab: React.FC<WorkerDivisionsTabProps> = ({ workerId }) => {
-  // Log when this component mounts to track usage
-  useEffect(() => {
-    console.log(`WorkerDivisionsTab mounted for worker ID: ${workerId}`);
-  }, [workerId]);
-
+const WorkerDivisionsTab: React.FC<WorkerDivisionsTabProps> = React.memo(({ workerId }) => {
   return (
     <Card>
       <CardContent className="pt-6">
@@ -20,6 +15,8 @@ const WorkerDivisionsTab: React.FC<WorkerDivisionsTabProps> = ({ workerId }) => 
       </CardContent>
     </Card>
   );
-};
+});
+
+WorkerDivisionsTab.displayName = 'WorkerDivisionsTab';
 
 export default WorkerDivisionsTab;

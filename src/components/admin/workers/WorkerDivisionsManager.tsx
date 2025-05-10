@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWorkerDivisions, DIVISION_TRANSLATIONS } from '@/hooks/useWorkerDivisions';
@@ -14,6 +14,7 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
   const [removing, setRemoving] = useState<{ [key: string]: boolean }>({});
   const { toast } = useToast();
+  const initialLoadComplete = useRef(false);
   
   const {
     divisions,
@@ -28,22 +29,19 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   } = useWorkerDivisions(workerId);
 
   useEffect(() => {
-    console.log(`WorkerDivisionsManager mounted for worker ID: ${workerId}, refreshing data`);
-    refreshData();
-  }, [workerId, refreshData]);
+    if (!initialLoadComplete.current) {
+      console.log(`Initial load for worker ID: ${workerId}`);
+      initialLoadComplete.current = true;
+    }
+  }, [workerId]);
 
   const handleAssignDivision = async (divisionId: string) => {
     setLoading(prev => ({ ...prev, [divisionId]: true }));
     
     try {
-      console.log(`WorkerDivisionsManager: Assigning division ${divisionId} to worker ${workerId}`);
       const success = await assignDivision(divisionId);
       
-      if (success) {
-        console.log('Division assigned successfully in the UI');
-        // Force a refresh of the worker divisions data
-        await refreshData();
-      } else {
+      if (!success) {
         toast({
           title: "שגיאה",
           description: "לא ניתן היה להקצות את המחלקה",
@@ -66,14 +64,9 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
     setRemoving(prev => ({ ...prev, [divisionId]: true }));
     
     try {
-      console.log(`WorkerDivisionsManager: Removing division ${divisionId} from worker ${workerId}`);
       const success = await removeDivision(divisionId);
       
-      if (success) {
-        console.log('Division removed successfully in the UI');
-        // Force a refresh of the worker divisions data
-        await refreshData();
-      } else {
+      if (!success) {
         toast({
           title: "שגיאה",
           description: "לא ניתן היה להסיר את המחלקה",
@@ -109,7 +102,6 @@ const WorkerDivisionsManager: React.FC<WorkerDivisionsManagerProps> = ({ workerI
   }
 
   const workerDivisionIds = workerDivisions.map(div => div.id);
-  console.log(`Worker ${workerId} has divisions: ${JSON.stringify(workerDivisionIds)}`);
 
   return (
     <Card className="mt-4">

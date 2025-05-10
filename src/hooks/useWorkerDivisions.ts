@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Division, 
   getDivisions, 
@@ -8,6 +8,20 @@ import {
 } from '@/lib/supabase/divisions';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+
+// Cache for divisions to prevent redundant API calls
+const divisionsCache: {
+  allDivisions: Division[] | null;
+  workerDivisions: Record<string, Division[]>;
+  timestamp: number;
+} = {
+  allDivisions: null,
+  workerDivisions: {},
+  timestamp: 0
+};
+
+// Cache expiration time (5 minutes)
+const CACHE_EXPIRATION = 5 * 60 * 1000;
 
 // Mapping of division names to their Hebrew translations
 export const DIVISION_TRANSLATIONS: Record<string, string> = {
@@ -26,14 +40,35 @@ export const useWorkerDivisions = (workerId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const initialLoadDone = useRef(false);
 
-  // Load available divisions
+  // Check if cache is valid
+  const isCacheValid = () => {
+    return (
+      divisionsCache.allDivisions !== null &&
+      Date.now() - divisionsCache.timestamp < CACHE_EXPIRATION
+    );
+  };
+
+  // Load available divisions with cache
   const loadDivisions = useCallback(async () => {
     try {
-      console.log('useWorkerDivisions: Loading all divisions...');
       setLoading(true);
+      
+      // Use cached divisions if available and not expired
+      if (isCacheValid()) {
+        console.log('Using cached divisions data');
+        setDivisions(divisionsCache.allDivisions || []);
+        return divisionsCache.allDivisions || [];
+      }
+
+      console.log('Fetching divisions from Supabase...');
       const data = await getDivisions();
-      console.log(`useWorkerDivisions: Loaded ${data.length} divisions`);
+      
+      // Update cache
+      divisionsCache.allDivisions = data;
+      divisionsCache.timestamp = Date.now();
+      
       setDivisions(data);
       return data;
     } catch (err) {
@@ -45,7 +80,7 @@ export const useWorkerDivisions = (workerId?: string) => {
     }
   }, []);
 
-  // Load worker's assigned divisions
+  // Load worker's assigned divisions with cache
   const loadWorkerDivisions = useCallback(async () => {
     if (!workerId) {
       setWorkerDivisions([]);
@@ -53,10 +88,21 @@ export const useWorkerDivisions = (workerId?: string) => {
     }
     
     try {
-      console.log(`useWorkerDivisions: Loading divisions for worker ${workerId}...`);
       setLoading(true);
+      
+      // Use cached worker divisions if available
+      if (divisionsCache.workerDivisions[workerId] && isCacheValid()) {
+        console.log(`Using cached divisions for worker ${workerId}`);
+        setWorkerDivisions(divisionsCache.workerDivisions[workerId]);
+        return divisionsCache.workerDivisions[workerId];
+      }
+      
+      console.log(`Fetching divisions for worker ID: ${workerId}`);
       const data = await getWorkerDivisions(workerId);
-      console.log(`useWorkerDivisions: Loaded ${data.length} divisions for worker ${workerId}:`, data);
+      
+      // Update cache
+      divisionsCache.workerDivisions[workerId] = data;
+      
       setWorkerDivisions(data);
       return data;
     } catch (err) {
@@ -70,11 +116,13 @@ export const useWorkerDivisions = (workerId?: string) => {
 
   // Initial data loading
   useEffect(() => {
+    if (initialLoadDone.current && workerId) return;
+    
     const initData = async () => {
-      console.log(`useWorkerDivisions: Initializing data for worker ${workerId}`);
       await loadDivisions();
       if (workerId) {
         await loadWorkerDivisions();
+        initialLoadDone.current = true;
       }
     };
     
@@ -85,7 +133,7 @@ export const useWorkerDivisions = (workerId?: string) => {
     if (!workerId) return false;
     
     try {
-      console.log(`useWorkerDivisions: Assigning division ${divisionId} to worker ${workerId}`);
+      console.log(`Assigning division ${divisionId} to worker ${workerId}`);
       const success = await assignDivisionToWorker(workerId, divisionId);
       
       if (success) {
@@ -94,8 +142,18 @@ export const useWorkerDivisions = (workerId?: string) => {
           description: "המחלקה הוקצתה לעובד בהצלחה",
         });
         
-        // Refresh divisions data after assignment
-        await loadWorkerDivisions();
+        // Update local state directly without fetching again
+        const divToAdd = divisionsCache.allDivisions?.find(d => d.id === divisionId);
+        if (divToAdd) {
+          const updatedDivisions = [...workerDivisions, divToAdd];
+          setWorkerDivisions(updatedDivisions);
+          
+          // Update cache
+          divisionsCache.workerDivisions[workerId] = updatedDivisions;
+        } else {
+          // Fallback if division not found in cache
+          await loadWorkerDivisions();
+        }
       } else {
         toast({
           title: "שגיאה",
@@ -120,7 +178,7 @@ export const useWorkerDivisions = (workerId?: string) => {
     if (!workerId) return false;
     
     try {
-      console.log(`useWorkerDivisions: Removing division ${divisionId} from worker ${workerId}`);
+      console.log(`Removing division ${divisionId} from worker ${workerId}`);
       const success = await removeDivisionFromWorker(workerId, divisionId);
       
       if (success) {
@@ -129,8 +187,12 @@ export const useWorkerDivisions = (workerId?: string) => {
           description: "המחלקה הוסרה מהעובד בהצלחה",
         });
         
-        // Refresh divisions data after removal
-        await loadWorkerDivisions();
+        // Update local state directly without fetching again
+        const updatedDivisions = workerDivisions.filter(div => div.id !== divisionId);
+        setWorkerDivisions(updatedDivisions);
+        
+        // Update cache
+        divisionsCache.workerDivisions[workerId] = updatedDivisions;
       } else {
         toast({
           title: "שגיאה",
@@ -144,7 +206,7 @@ export const useWorkerDivisions = (workerId?: string) => {
       console.error('Error removing division:', err);
       toast({
         title: "שגיאה",
-        description: "אירע�� שגיאה בהסרת המחלקה",
+        description: "אירעה שגיאה בהסרת המחלקה",
         variant: "destructive",
       });
       return false;
@@ -156,8 +218,14 @@ export const useWorkerDivisions = (workerId?: string) => {
   };
 
   const refreshData = useCallback(async () => {
-    console.log(`useWorkerDivisions: Refreshing all data for worker ${workerId}`);
+    console.log(`Refreshing data for worker ${workerId}`);
     setError(null);
+    
+    // Invalidate cache for this worker
+    if (workerId) {
+      delete divisionsCache.workerDivisions[workerId];
+    }
+    
     await loadDivisions();
     if (workerId) {
       await loadWorkerDivisions();
@@ -165,11 +233,9 @@ export const useWorkerDivisions = (workerId?: string) => {
   }, [loadDivisions, loadWorkerDivisions, workerId]);
 
   const getDivisionTranslation = (name: string) => {
-    const translatedName = DIVISION_TRANSLATIONS[name.toLowerCase()] || 
-                          DIVISION_TRANSLATIONS[name] || 
-                          name;
-    console.log(`Translating division "${name}" to "${translatedName}"`);
-    return translatedName;
+    return DIVISION_TRANSLATIONS[name.toLowerCase()] || 
+           DIVISION_TRANSLATIONS[name] || 
+           name;
   };
 
   return {

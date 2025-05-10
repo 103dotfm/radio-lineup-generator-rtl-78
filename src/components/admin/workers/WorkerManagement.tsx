@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WorkerTable from './WorkerTable';
@@ -13,6 +13,7 @@ import { Plus } from 'lucide-react';
 import WorkerDivisionsTab from './WorkerDivisionsTab';
 import WorkerAccountTab from './WorkerAccountTab';
 import UserManagement from '@/components/admin/user-management/UserManagement';
+import { useScroll } from '@/contexts/ScrollContext';
 
 const WorkerManagement = () => {
   const { workers, loading, error, loadWorkers } = useWorkers();
@@ -30,6 +31,17 @@ const WorkerManagement = () => {
   });
   
   const { toast } = useToast();
+  const { saveScrollPosition, setIsScrollLocked } = useScroll();
+  
+  // Prevent scroll jump when selecting a worker
+  useEffect(() => {
+    if (selectedWorker) {
+      setIsScrollLocked(true);
+      setTimeout(() => {
+        setIsScrollLocked(false);
+      }, 100);
+    }
+  }, [selectedWorker, setIsScrollLocked]);
   
   const handleOpenDialog = (worker?: Worker) => {
     if (worker) {
@@ -135,6 +147,10 @@ const WorkerManagement = () => {
   };
   
   const handleWorkerSelect = (worker: Worker) => {
+    // Save the current scroll position before changing the view
+    saveScrollPosition();
+    
+    // Set the selected worker and change tab
     setSelectedWorker(worker);
     setActiveTab("divisions");
   };
@@ -250,7 +266,10 @@ const WorkerManagement = () => {
             {selectedWorker && (
               <>
                 <TabsContent value="divisions">
-                  <WorkerDivisionsTab workerId={selectedWorker.id} />
+                  <WorkerDivisionsTab 
+                    key={`divisions-${selectedWorker.id}`} 
+                    workerId={selectedWorker.id} 
+                  />
                 </TabsContent>
                 
                 <TabsContent value="account">
