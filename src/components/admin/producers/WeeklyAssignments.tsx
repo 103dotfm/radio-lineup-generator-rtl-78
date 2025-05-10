@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -25,6 +24,7 @@ import AssignmentDialog from './components/AssignmentDialog';
 import SlotAssignments from './components/SlotAssignments';
 import { useAssignmentDialog } from './hooks/useAssignmentDialog';
 import { useScroll } from '@/contexts/ScrollContext';
+import { useFilterWorkersByDivision } from '@/hooks/useWorkerDivisions';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -44,6 +44,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [roles, setRoles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { saveScrollPosition, restoreScrollPosition, setIsScrollLocked } = useScroll();
+  const [producerDivisionId, setProducerDivisionId] = useState<string | undefined>(undefined);
+  
+  // Get the producer division ID from cache
+  useEffect(() => {
+    const cachedId = localStorage.getItem('producer-division-id');
+    if (cachedId) {
+      setProducerDivisionId(cachedId);
+    }
+  }, []);
+
+  // Filter producers by division
+  const { workerIds: producerWorkerIds, loading: workersLoading } = 
+    useFilterWorkersByDivision(producerDivisionId);
   
   const { toast } = useToast();
   
@@ -98,7 +111,18 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       console.log("WeeklyAssignments: Loaded roles:", rolesData);
       
       setAssignments(assignmentsData || []);
-      setProducers(producersData || []);
+      
+      // Filter producers by division if we have a producer division ID
+      if (producerDivisionId && producerWorkerIds.length > 0) {
+        const filteredProducers = producersData.filter(producer => 
+          producerWorkerIds.includes(producer.id)
+        );
+        setProducers(filteredProducers || []);
+        console.log("Filtered producers to division members only:", filteredProducers.length);
+      } else {
+        setProducers(producersData || []);
+      }
+      
       setRoles(rolesData || []);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -119,8 +143,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   
   // Get assignments for a slot
   const getAssignmentsForSlot = useCallback((slotId: string): ProducerAssignment[] => {
+    // Filter assignments to show only those for producers division workers if we have a filter
+    if (producerDivisionId && producerWorkerIds.length > 0) {
+      return assignments.filter((assignment) => 
+        assignment.slot_id === slotId &&
+        producerWorkerIds.includes(assignment.worker_id)
+      );
+    }
+    // Otherwise return all assignments for this slot
     return assignments.filter((assignment) => assignment.slot_id === slotId);
-  }, [assignments]);
+  }, [assignments, producerDivisionId, producerWorkerIds]);
   
   const handleDeleteAssignment = async (assignmentId: string) => {
     saveScrollPosition();
@@ -215,7 +247,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   // Sort timeslots to display them in chronological order
   const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
   
-  if (isLoading || slotsLoading) {
+  if (isLoading || slotsLoading || workersLoading) {
     return <div className="text-center py-4">טוען...</div>;
   }
   

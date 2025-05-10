@@ -1,5 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO, addDays } from 'date-fns';
+import { getProducersByDivision, getProducers as fetchProducers, getProducerRoles as fetchProducerRoles } from './producers/workers';
+
+// Re-export functions from the workers module
+export const getProducers = fetchProducers;
+export const getProducerRoles = fetchProducerRoles;
 
 // Types
 export type ProducerAssignment = {

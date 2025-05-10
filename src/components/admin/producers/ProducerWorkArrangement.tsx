@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, RefreshCw } from 'lucide-react';
 import WeeklyAssignments from './WeeklyAssignments';
 import MonthlySummary from './MonthlySummary';
 import { getOrCreateProducerWorkArrangement, updateProducerWorkArrangementNotes } from '@/lib/supabase/producers';
 import { Textarea } from '@/components/ui/textarea';
+import { getDivisions } from '@/lib/supabase/divisions';
 
 const ProducerWorkArrangement = () => {
   const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
@@ -21,6 +22,36 @@ const ProducerWorkArrangement = () => {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   
   const { toast } = useToast();
+  
+  // Ensure we have the producer division ID in localStorage
+  useEffect(() => {
+    const ensureProducerDivisionId = async () => {
+      try {
+        // Check if we already have the ID stored
+        const cachedId = localStorage.getItem('producer-division-id');
+        if (cachedId) return;
+        
+        // If not, find the producer division and store its ID
+        const divisions = await getDivisions();
+        const producerDiv = divisions.find(div => 
+          div.name.toLowerCase() === 'producers' || 
+          div.name.toLowerCase() === 'מפיקים' ||
+          div.name.toLowerCase() === 'עורכים ומפיקים'
+        );
+        
+        if (producerDiv) {
+          localStorage.setItem('producer-division-id', producerDiv.id);
+          console.log('Producer division ID saved:', producerDiv.id);
+        } else {
+          console.warn('No producer division found');
+        }
+      } catch (error) {
+        console.error("Error ensuring producer division ID:", error);
+      }
+    };
+    
+    ensureProducerDivisionId();
+  }, []);
   
   useEffect(() => {
     // Use a consistent date format for debugging
@@ -76,12 +107,29 @@ const ProducerWorkArrangement = () => {
     setCurrentWeek(newWeek);
   };
   
+  const handleForceRefresh = () => {
+    // Clear caches related to producers/divisions
+    localStorage.removeItem('producer-division-id');
+    localStorage.removeItem('divisions-cache');
+    localStorage.removeItem('producers-list');
+    localStorage.removeItem('producer-roles');
+    sessionStorage.removeItem('all-worker-divisions');
+    
+    // Force re-fetch from API
+    setRefreshTrigger(prev => prev + 1);
+    
+    toast({
+      title: "רענון נתונים",
+      description: "הנתונים מתעדכנים מהשרת...",
+    });
+  };
+  
   // This function is now simplified to not cause a full reload
   const triggerRefresh = () => {
     console.log("Assignment change notification received - no need for full refresh");
   };
   
-  const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addWeeks(currentWeek, 1), 'dd/MM/yyyy', { locale: he })}`;
+  const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addDays(currentWeek, 1), 'dd/MM/yyyy', { locale: he })}`;
 
   return (
     <div className="space-y-4" dir="rtl">
@@ -106,6 +154,14 @@ const ProducerWorkArrangement = () => {
               onClick={() => navigateWeek('next')}
             >
               <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleForceRefresh}
+              title="רענן נתונים"
+            >
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
