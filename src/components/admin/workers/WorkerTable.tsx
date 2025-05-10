@@ -1,8 +1,23 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Worker } from '@/lib/supabase/workers';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, User } from 'lucide-react';
+import { useWorkerDivisions, DIVISION_TRANSLATIONS } from '@/hooks/useWorkerDivisions';
+import { getDivisions, getWorkerDivisions } from '@/lib/supabase/divisions';
+
+interface Division {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface WorkerDivisionInfo {
+  workerId: string;
+  divisions: Division[];
+}
+
 interface WorkerTableProps {
   workers: Worker[];
   loading: boolean;
@@ -11,6 +26,7 @@ interface WorkerTableProps {
   onDelete: (id: string) => void;
   onSelect: (worker: Worker) => void;
 }
+
 const WorkerTable: React.FC<WorkerTableProps> = ({
   workers,
   loading,
@@ -19,6 +35,36 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
   onDelete,
   onSelect
 }) => {
+  const [workerDivisions, setWorkerDivisions] = useState<Record<string, Division[]>>({});
+
+  useEffect(() => {
+    const loadAllWorkerDivisions = async () => {
+      if (workers && workers.length > 0) {
+        const divisionsMap: Record<string, Division[]> = {};
+        
+        for (const worker of workers) {
+          try {
+            const divisions = await getWorkerDivisions(worker.id);
+            divisionsMap[worker.id] = divisions;
+          } catch (error) {
+            console.error(`Error loading divisions for worker ${worker.id}:`, error);
+            divisionsMap[worker.id] = [];
+          }
+        }
+        
+        setWorkerDivisions(divisionsMap);
+      }
+    };
+
+    loadAllWorkerDivisions();
+  }, [workers]);
+
+  const getDivisionTranslation = (name: string) => {
+    return DIVISION_TRANSLATIONS[name.toLowerCase()] || 
+           DIVISION_TRANSLATIONS[name] || 
+           name;
+  };
+
   if (loading) {
     return <div className="text-center py-4">טוען...</div>;
   }
@@ -30,6 +76,7 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
   if (!workers || workers.length === 0) {
     return <div className="text-center py-4">לא נמצאו עובדים</div>;
   }
+  
   return <Table dir="rtl">
       <TableHeader>
         <TableRow>
@@ -42,31 +89,38 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {workers.map(worker => <TableRow key={worker.id}>
-            <TableCell className="font-medium text-right">
-              <Button variant="ghost" className="p-0 h-auto hover:bg-transparent hover:underline text-right" onClick={() => onSelect(worker)}>
-                {worker.name}
-              </Button>
-            </TableCell>
-            <TableCell className="text-right">{worker.department}</TableCell>
-            <TableCell className="text-right">{worker.position}</TableCell>
-            <TableCell className="text-right">{worker.email}</TableCell>
-            <TableCell className="text-right">{worker.phone}</TableCell>
-            <TableCell>
-              <div className="flex gap-2 justify-start">
-                
-                <Button variant="outline" size="sm" onClick={() => onEdit(worker)}>
-                  <Pencil className="h-4 w-4 mr-1" />
-                  עריכה
+        {workers.map(worker => {
+          const divisions = workerDivisions[worker.id] || [];
+          const divisionNames = divisions.map(d => getDivisionTranslation(d.name)).join(', ');
+          
+          return (
+            <TableRow key={worker.id}>
+              <TableCell className="font-medium text-right">
+                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent hover:underline text-right" onClick={() => onSelect(worker)}>
+                  {worker.name}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => onDelete(worker.id)} className="text-red-500 hover:text-red-700">
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  מחיקה
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>)}
+              </TableCell>
+              <TableCell className="text-right">{divisionNames || worker.department || '-'}</TableCell>
+              <TableCell className="text-right">{worker.position}</TableCell>
+              <TableCell className="text-right">{worker.email}</TableCell>
+              <TableCell className="text-right">{worker.phone}</TableCell>
+              <TableCell>
+                <div className="flex gap-2 justify-start">
+                  <Button variant="outline" size="sm" onClick={() => onEdit(worker)}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    עריכה
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => onDelete(worker.id)} className="text-red-500 hover:text-red-700">
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    מחיקה
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>;
 };
+
 export default WorkerTable;
