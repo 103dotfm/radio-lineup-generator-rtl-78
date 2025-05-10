@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   Select,
   SelectContent,
@@ -29,6 +29,11 @@ const ProducerFormField = ({
   producers,
   roles
 }: ProducerFormFieldProps) => {
+  // Sort producers by name for easier selection
+  const sortedProducers = useMemo(() => {
+    return [...producers].sort((a, b) => a.name.localeCompare(b.name));
+  }, [producers]);
+  
   return (
     <div className="grid grid-cols-2 gap-3 mb-5">
       <div>
@@ -41,7 +46,7 @@ const ProducerFormField = ({
             <SelectValue placeholder="בחר עובד" />
           </SelectTrigger>
           <SelectContent>
-            {producers.map((worker) => (
+            {sortedProducers.map((worker) => (
               <SelectItem key={worker.id} value={worker.id}>
                 {worker.name} 
                 {worker.position && (
