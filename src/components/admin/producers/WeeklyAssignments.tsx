@@ -198,7 +198,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     setIsPermanent,
     handleAssignProducer,
     handleSubmit,
-    handleCloseDialog
+    handleCloseDialog,
+    isSubmitting
   } = useAssignmentDialog({
     currentWeek,
     roles,
@@ -306,6 +307,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         producers={producers}
         roles={roles}
         currentWeek={currentWeek}
+        isSubmitting={isSubmitting}
       />
     </div>
   );
