@@ -30,6 +30,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Define the translation function BEFORE using it in useMemo
+  const getDivisionTranslation = (name: string) => {
+    return DIVISION_TRANSLATIONS[name.toLowerCase()] || 
+           DIVISION_TRANSLATIONS[name] || 
+           name;
+  };
+
   // Pre-calculate division translations once
   const divisionTranslations = useMemo(() => {
     const translations: Record<string, string> = {};
@@ -91,11 +98,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     }
   };
 
-  const getDivisionTranslation = (name: string) => {
-    return DIVISION_TRANSLATIONS[name.toLowerCase()] || 
-           DIVISION_TRANSLATIONS[name] || 
-           name;
-  };
+  // No need to define getDivisionTranslation again here - removed the duplicate declaration
 
   return (
     <div className="grid gap-4 py-4">
