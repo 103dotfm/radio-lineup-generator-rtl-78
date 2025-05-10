@@ -84,8 +84,8 @@ export const getProducerRoles = async () => {
 
 export const getProducersByDivision = async (divisionId: string) => {
   if (!divisionId) {
-    console.log('No division ID provided, cannot filter producers');
-    return [];
+    console.log('No division ID provided, returning all workers');
+    return getProducers(); // Return all workers if no division is specified
   }
   
   try {

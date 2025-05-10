@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -296,7 +295,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                           </div>
                         ) : (
                           <div className="text-center text-gray-400 text-xs">
-                            אין תוכניות
+                            אין תוכ��יות
                           </div>
                         )}
                       </TableCell>
