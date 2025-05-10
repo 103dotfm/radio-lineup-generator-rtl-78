@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ScheduleSlot } from '@/types/schedule';
 import { 
   createProducerAssignment,
@@ -26,14 +26,16 @@ interface UseAssignmentDialogProps {
   currentWeek: Date;
   roles: any[];
   slotsByDayAndTime: { [key: string]: ScheduleSlot[] };
-  onSuccess: () => Promise<void>;
+  onSuccess: (newAssignments: ProducerAssignment[]) => void;
+  assignments: ProducerAssignment[];
 }
 
 export const useAssignmentDialog = ({
   currentWeek,
   roles,
   slotsByDayAndTime,
-  onSuccess
+  onSuccess,
+  assignments
 }: UseAssignmentDialogProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
@@ -56,7 +58,7 @@ export const useAssignmentDialog = ({
   const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
-  const { saveScrollPosition, restoreScrollPosition } = useScroll();
+  const { saveScrollPosition, setIsScrollLocked } = useScroll();
 
   // Add another worker form field (show more)
   const addWorkerForm = () => {
@@ -88,7 +90,11 @@ export const useAssignmentDialog = ({
     );
   };
 
-  const handleAssignProducer = (slot: ScheduleSlot, slotAssignments: ProducerAssignment[]) => {
+  const handleAssignProducer = useCallback((slot: ScheduleSlot, slotAssignments: ProducerAssignment[]) => {
+    // Lock scrolling during dialog operations
+    setIsScrollLocked(true);
+    
+    // Save scroll position
     saveScrollPosition();
     setCurrentSlot(slot);
     
@@ -128,7 +134,10 @@ export const useAssignmentDialog = ({
     setIsPermanent(false);
     
     setIsDialogOpen(true);
-  };
+    
+    // Unlock scrolling after dialog opens
+    setIsScrollLocked(false);
+  }, [roles, saveScrollPosition, setIsScrollLocked]);
 
   const handleSubmit = async () => {
     if (!currentSlot) {
@@ -140,7 +149,10 @@ export const useAssignmentDialog = ({
       return;
     }
     
-    // Store current scroll position before submission
+    // Lock scrolling during submission
+    setIsScrollLocked(true);
+    
+    // Store current scroll position
     saveScrollPosition();
     
     // Only use visible worker forms, then filter out empty rows
@@ -153,11 +165,13 @@ export const useAssignmentDialog = ({
         description: "יש לבחור לפחות מפיק אחד",
         variant: "destructive"
       });
+      setIsScrollLocked(false);
       return;
     }
     
     try {
       let successCount = 0;
+      const newAssignments: ProducerAssignment[] = [];
       
       for (const form of validForms) {
         const selectedRole = roles.find(r => r.id === form.role);
@@ -179,6 +193,27 @@ export const useAssignmentDialog = ({
             
             if (success) {
               successCount++;
+              
+              // Create a placeholder assignment to update the UI
+              const newAssignment: ProducerAssignment = {
+                id: `temp-${Date.now()}-${Math.random()}`,
+                slot_id: currentSlot.id,
+                worker_id: form.workerId,
+                role: roleName,
+                week_start: formattedWeekStart,
+                is_recurring: true,
+                notes: form.additionalText || null,
+                created_at: new Date().toISOString(),
+                worker: {
+                  id: form.workerId,
+                  name: assignments.find(a => a.worker_id === form.workerId)?.worker?.name || 'Unknown',
+                  position: assignments.find(a => a.worker_id === form.workerId)?.worker?.position || null,
+                  email: null
+                },
+                slot: currentSlot
+              };
+              
+              newAssignments.push(newAssignment);
             }
           } catch (error: any) {
             console.error("Error creating permanent assignment:", error);
@@ -209,6 +244,7 @@ export const useAssignmentDialog = ({
               const result = await createProducerAssignment(currentSlotAssignment);
               if (result) {
                 successCount++;
+                newAssignments.push(result);
               }
             } catch (error: any) {
               console.error("Error creating assignment for current slot:", error);
@@ -247,6 +283,7 @@ export const useAssignmentDialog = ({
                   const result = await createProducerAssignment(assignment);
                   if (result) {
                     successCount++;
+                    newAssignments.push(result);
                   }
                 } catch (error: any) {
                   console.error(`Error creating assignment for day ${dayIndex} slot:`, error);
@@ -270,6 +307,7 @@ export const useAssignmentDialog = ({
             const result = await createProducerAssignment(assignment);
             if (result) {
               successCount++;
+              newAssignments.push(result);
             }
           } catch (error: any) {
             console.error("Error creating producer assignment:", error);
@@ -283,20 +321,11 @@ export const useAssignmentDialog = ({
           description: `נוספו ${successCount} שיבוצים לסידור העבודה`
         });
         
-        // Close the dialog
+        // Close the dialog - don't reload data yet
         setIsDialogOpen(false);
         
-        // Wait a short delay before refreshing data
-        setTimeout(async () => {
-          // Make sure scroll position is saved again right before data refresh
-          saveScrollPosition();
-          await onSuccess(); // Refresh the assignments
-          
-          // Restore scroll position after a delay
-          setTimeout(() => {
-            restoreScrollPosition();
-          }, 100);
-        }, 200);
+        // Pass the new assignments to the parent
+        onSuccess(newAssignments);
       } else {
         toast({
           title: "מידע",
@@ -310,15 +339,14 @@ export const useAssignmentDialog = ({
         description: error.message || "אירעה שגיאה בהוספת העובדים לסידור",
         variant: "destructive"
       });
+    } finally {
+      // Unlock scrolling after submission
+      setIsScrollLocked(false);
     }
   };
 
   const handleCloseDialog = () => {
-    saveScrollPosition();
     setIsDialogOpen(false);
-    setTimeout(() => {
-      restoreScrollPosition();
-    }, 100);
   };
 
   return {
