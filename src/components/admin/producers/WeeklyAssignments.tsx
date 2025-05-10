@@ -163,6 +163,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const handleNewAssignments = useCallback((newAssignments: ProducerAssignment[]) => {
     if (newAssignments.length === 0) return;
     
+    console.log('Locally updating assignments with new data:', newAssignments);
+    
     setAssignments(prevAssignments => {
       // Filter out any existing assignments that might be duplicates
       const filteredPrevAssignments = prevAssignments.filter(existing => 
@@ -177,8 +179,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       return [...filteredPrevAssignments, ...newAssignments];
     });
     
-    // Also notify parent if needed
+    // Notify parent without triggering a full data reload
     if (onAssignmentChange) {
+      console.log("Notifying parent component about assignment change");
       onAssignmentChange();
     }
   }, [onAssignmentChange]);

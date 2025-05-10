@@ -74,13 +74,11 @@ const ProducerWorkArrangement = () => {
     // Use consistent date format for logging
     console.log(`Navigating to ${direction} week:`, format(newWeek, 'yyyy-MM-dd'));
     setCurrentWeek(newWeek);
-    // Trigger refresh when navigating to make sure assignments are properly loaded
-    setRefreshTrigger(prev => prev + 1);
   };
   
+  // This function is now simplified to not cause a full reload
   const triggerRefresh = () => {
-    console.log("Triggering refresh of assignments");
-    setRefreshTrigger(prev => prev + 1);
+    console.log("Assignment change notification received - no need for full refresh");
   };
   
   const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addWeeks(currentWeek, 1), 'dd/MM/yyyy', { locale: he })}`;
