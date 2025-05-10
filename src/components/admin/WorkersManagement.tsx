@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWorkers } from '@/hooks/useWorkers';
 import WorkerTable from './workers/WorkerTable';
 import WorkerDialog from './workers/WorkerDialog';
+import { assignDivisionToWorker, removeDivisionFromWorker } from '@/lib/supabase/divisions';
 
 const WorkersManagement = () => {
   const { workers, loading, error, loadWorkers } = useWorkers();
@@ -18,7 +19,8 @@ const WorkersManagement = () => {
     department: '',
     position: '',
     email: '',
-    phone: ''
+    phone: '',
+    photo_url: ''
   });
   
   const { toast } = useToast();
@@ -31,7 +33,8 @@ const WorkersManagement = () => {
         department: worker.department || '',
         position: worker.position || '',
         email: worker.email || '',
-        phone: worker.phone || ''
+        phone: worker.phone || '',
+        photo_url: worker.photo_url || ''
       });
     } else {
       setEditingWorker(null);
@@ -40,7 +43,8 @@ const WorkersManagement = () => {
         department: '',
         position: '',
         email: '',
-        phone: ''
+        phone: '',
+        photo_url: ''
       });
     }
     setDialogOpen(true);
@@ -51,7 +55,7 @@ const WorkersManagement = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSubmit = async () => {
+  const handleSubmit = async (selectedDivisions: string[] = []) => {
     try {
       if (!formData.name.trim()) {
         toast({
@@ -62,25 +66,50 @@ const WorkersManagement = () => {
         return;
       }
       
+      let workerId: string;
+      
       if (editingWorker) {
         const updated = await updateWorker(editingWorker.id, formData);
-        if (updated) {
-          toast({
-            title: "עודכן בהצלחה",
-            description: "פרטי העובד עודכנו בהצלחה",
-          });
-        } else {
+        if (!updated) {
           throw new Error("Failed to update worker");
         }
+        
+        workerId = editingWorker.id;
+        toast({
+          title: "עודכן בהצלחה",
+          description: "פרטי העובד עודכנו בהצלחה",
+        });
       } else {
         const created = await createWorker(formData);
-        if (created) {
-          toast({
-            title: "נוסף בהצלחה",
-            description: "העובד נוסף בהצלחה",
-          });
-        } else {
+        if (!created || !created.id) {
           throw new Error("Failed to create worker");
+        }
+        
+        workerId = created.id;
+        toast({
+          title: "נוסף בהצלחה",
+          description: "העובד נוסף בהצלחה",
+        });
+      }
+      
+      // Now update the worker's divisions if we have a worker ID
+      if (workerId) {
+        // Remove existing divisions and add new ones
+        try {
+          console.log('Updating worker divisions for worker ID:', workerId);
+          console.log('Selected divisions:', selectedDivisions);
+          
+          // Process each selected division
+          for (const divisionId of selectedDivisions) {
+            await assignDivisionToWorker(workerId, divisionId);
+          }
+        } catch (error) {
+          console.error('Error updating worker divisions:', error);
+          toast({
+            title: "אזהרה",
+            description: "עובד נוצר אך הייתה בעיה בהקצאת מחלקות",
+            variant: "destructive",
+          });
         }
       }
       
