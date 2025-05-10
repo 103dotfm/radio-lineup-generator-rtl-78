@@ -83,7 +83,10 @@ export const getProducerRoles = async () => {
 };
 
 export const getProducersByDivision = async (divisionId: string) => {
-  if (!divisionId) return [];
+  if (!divisionId) {
+    console.log('No division ID provided, cannot filter producers');
+    return [];
+  }
   
   try {
     console.log(`Getting producers filtered by division ID: ${divisionId}`);
@@ -96,7 +99,7 @@ export const getProducersByDivision = async (divisionId: string) => {
         const parsed = JSON.parse(cachedData);
         const cacheTime = parsed.timestamp || 0;
         if (Date.now() - cacheTime < 5 * 60 * 1000) { // 5 minutes cache
-          console.log('Using cached producers by division data');
+          console.log(`Using cached producers for division ${divisionId}, found ${parsed.data?.length || 0} workers`);
           return parsed.data || [];
         }
       } catch (e) {
@@ -118,6 +121,7 @@ export const getProducersByDivision = async (divisionId: string) => {
     }
     
     const workerIds = workerDivisions.map(wd => wd.worker_id);
+    console.log(`Found ${workerIds.length} worker IDs in division ${divisionId}:`, workerIds);
     
     // Get the worker details
     const { data: workers, error: workersError } = await supabase
@@ -128,7 +132,7 @@ export const getProducersByDivision = async (divisionId: string) => {
       
     if (workersError) throw workersError;
     
-    // Save to cache
+    // Save to cache with a more descriptive key
     localStorage.setItem(cacheKey, JSON.stringify({
       data: workers,
       timestamp: Date.now()

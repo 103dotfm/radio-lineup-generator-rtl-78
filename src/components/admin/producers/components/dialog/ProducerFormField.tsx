@@ -46,14 +46,18 @@ const ProducerFormField = ({
             <SelectValue placeholder="בחר עובד" />
           </SelectTrigger>
           <SelectContent>
-            {sortedProducers.map((worker) => (
-              <SelectItem key={worker.id} value={worker.id}>
-                {worker.name} 
-                {worker.position && (
-                  <span className="text-gray-500 text-sm"> ({worker.position})</span>
-                )}
-              </SelectItem>
-            ))}
+            {sortedProducers.length === 0 ? (
+              <div className="p-2 text-center text-muted-foreground">אין עובדים זמינים</div>
+            ) : (
+              sortedProducers.map((worker) => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name} 
+                  {worker.position && (
+                    <span className="text-gray-500 text-sm"> ({worker.position})</span>
+                  )}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         <Input

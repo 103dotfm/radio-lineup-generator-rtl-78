@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -15,7 +16,7 @@ import {
   deleteProducerAssignment,
   getProducerAssignments,
   getProducerRoles,
-  getProducers,
+  getProducersByDivision,
   type ProducerAssignment
 } from '@/lib/supabase/producers';
 import { useScheduleSlots } from '@/components/schedule/hooks/useScheduleSlots';
@@ -24,7 +25,6 @@ import AssignmentDialog from './components/AssignmentDialog';
 import SlotAssignments from './components/SlotAssignments';
 import { useAssignmentDialog } from './hooks/useAssignmentDialog';
 import { useScroll } from '@/contexts/ScrollContext';
-import { useFilterWorkersByDivision } from '@/hooks/useWorkerDivisions';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -50,14 +50,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   useEffect(() => {
     const cachedId = localStorage.getItem('producer-division-id');
     if (cachedId) {
+      console.log('Found cached producer division ID:', cachedId);
       setProducerDivisionId(cachedId);
+    } else {
+      console.log('No cached producer division ID found');
     }
   }, []);
 
-  // Filter producers by division
-  const { workerIds: producerWorkerIds, loading: workersLoading } = 
-    useFilterWorkersByDivision(producerDivisionId);
-  
   const { toast } = useToast();
   
   // Group slots by day and time for a more organized display
@@ -90,7 +89,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     
     saveScrollPosition();
     loadData();
-  }, [currentWeek, refreshTrigger]);
+  }, [currentWeek, refreshTrigger, producerDivisionId]);
   
   const loadData = async () => {
     setIsLoading(true);
@@ -100,30 +99,26 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       const formattedDate = format(weekStartDate, 'yyyy-MM-dd');
       console.log("WeeklyAssignments: Loading data for week", formattedDate);
       
-      const [assignmentsData, producersData, rolesData] = await Promise.all([
-        getProducerAssignments(weekStartDate),
-        getProducers(),
-        getProducerRoles()
-      ]);
-      
+      // Get assignments
+      const assignmentsData = await getProducerAssignments(weekStartDate);
       console.log("WeeklyAssignments: Loaded assignments:", assignmentsData);
-      console.log("WeeklyAssignments: Loaded producers:", producersData);
-      console.log("WeeklyAssignments: Loaded roles:", rolesData);
-      
       setAssignments(assignmentsData || []);
       
-      // Filter producers by division if we have a producer division ID
-      if (producerDivisionId && producerWorkerIds.length > 0) {
-        const filteredProducers = producersData.filter(producer => 
-          producerWorkerIds.includes(producer.id)
-        );
-        setProducers(filteredProducers || []);
-        console.log("Filtered producers to division members only:", filteredProducers.length);
-      } else {
-        setProducers(producersData || []);
-      }
-      
+      // Get roles
+      const rolesData = await getProducerRoles();
+      console.log("WeeklyAssignments: Loaded roles:", rolesData);
       setRoles(rolesData || []);
+      
+      // Get producers filtered by division
+      if (producerDivisionId) {
+        console.log("Fetching producers for division ID:", producerDivisionId);
+        const producersData = await getProducersByDivision(producerDivisionId);
+        console.log(`WeeklyAssignments: Loaded ${producersData?.length || 0} producers for division ${producerDivisionId}:`, producersData);
+        setProducers(producersData || []);
+      } else {
+        console.log("No producer division ID available, cannot filter producers");
+        setProducers([]); // Empty array since we don't have a division to filter by
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -143,16 +138,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   
   // Get assignments for a slot
   const getAssignmentsForSlot = useCallback((slotId: string): ProducerAssignment[] => {
-    // Filter assignments to show only those for producers division workers if we have a filter
-    if (producerDivisionId && producerWorkerIds.length > 0) {
-      return assignments.filter((assignment) => 
-        assignment.slot_id === slotId &&
-        producerWorkerIds.includes(assignment.worker_id)
-      );
-    }
-    // Otherwise return all assignments for this slot
     return assignments.filter((assignment) => assignment.slot_id === slotId);
-  }, [assignments, producerDivisionId, producerWorkerIds]);
+  }, [assignments]);
   
   const handleDeleteAssignment = async (assignmentId: string) => {
     saveScrollPosition();
@@ -247,7 +234,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   // Sort timeslots to display them in chronological order
   const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
   
-  if (isLoading || slotsLoading || workersLoading) {
+  if (isLoading || slotsLoading) {
     return <div className="text-center py-4">טוען...</div>;
   }
   
