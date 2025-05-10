@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
@@ -10,22 +10,24 @@ import WorkerTable from './workers/WorkerTable';
 import WorkerDialog from './workers/WorkerDialog';
 import { assignDivisionToWorker, removeDivisionFromWorker } from '@/lib/supabase/divisions';
 
+const emptyFormData = {
+  name: '',
+  department: '',
+  position: '',
+  email: '',
+  phone: '',
+  photo_url: ''
+};
+
 const WorkersManagement = () => {
   const { workers, loading, error, loadWorkers } = useWorkers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    department: '',
-    position: '',
-    email: '',
-    phone: '',
-    photo_url: ''
-  });
+  const [formData, setFormData] = useState(emptyFormData);
   
   const { toast } = useToast();
   
-  const handleOpenDialog = (worker?: Worker) => {
+  const handleOpenDialog = useCallback((worker?: Worker) => {
     if (worker) {
       setEditingWorker(worker);
       setFormData({
@@ -38,22 +40,15 @@ const WorkersManagement = () => {
       });
     } else {
       setEditingWorker(null);
-      setFormData({
-        name: '',
-        department: '',
-        position: '',
-        email: '',
-        phone: '',
-        photo_url: ''
-      });
+      setFormData(emptyFormData);
     }
     setDialogOpen(true);
-  };
+  }, []);
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
   
   const handleSubmit = async (selectedDivisions: string[] = []) => {
     try {
@@ -94,12 +89,12 @@ const WorkersManagement = () => {
       
       // Now update the worker's divisions if we have a worker ID
       if (workerId) {
-        // Remove existing divisions and add new ones
+        // Process each selected division
         try {
-          console.log('Updating worker divisions for worker ID:', workerId);
-          console.log('Selected divisions:', selectedDivisions);
+          // Clear cached division data for this worker
+          sessionStorage.removeItem(`worker-divisions-${workerId}`);
           
-          // Process each selected division
+          // For performance, get the existing worker divisions and determine what needs to be added/removed
           for (const divisionId of selectedDivisions) {
             await assignDivisionToWorker(workerId, divisionId);
           }
@@ -112,6 +107,9 @@ const WorkersManagement = () => {
           });
         }
       }
+      
+      // Clear cached data for workers to ensure fresh data on reload
+      sessionStorage.removeItem('all-worker-divisions');
       
       setDialogOpen(false);
       loadWorkers();
@@ -130,6 +128,10 @@ const WorkersManagement = () => {
       try {
         const success = await deleteWorker(id);
         if (success) {
+          // Clear cached data
+          sessionStorage.removeItem(`worker-divisions-${id}`);
+          sessionStorage.removeItem('all-worker-divisions');
+          
           toast({
             title: "נמחק בהצלחה",
             description: "העובד נמחק בהצלחה",
@@ -149,9 +151,7 @@ const WorkersManagement = () => {
     }
   };
 
-  // Add a no-op select handler since we don't need worker selection in this component
   const handleWorkerSelect = (worker: Worker) => {
-    // No action needed in this component
     console.log("Worker selected in WorkersManagement:", worker.name);
   };
   
@@ -191,4 +191,4 @@ const WorkersManagement = () => {
   );
 };
 
-export default WorkersManagement;
+export default React.memo(WorkersManagement);

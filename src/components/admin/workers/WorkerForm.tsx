@@ -1,11 +1,12 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Worker } from '@/lib/supabase/workers';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DIVISION_TRANSLATIONS } from '@/hooks/useWorkerDivisions';
 import { getDivisions } from '@/lib/supabase/divisions';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Division {
   id: string;
@@ -29,11 +30,46 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Pre-calculate division translations once
+  const divisionTranslations = useMemo(() => {
+    const translations: Record<string, string> = {};
+    divisions.forEach(division => {
+      translations[division.id] = getDivisionTranslation(division.name);
+    });
+    return translations;
+  }, [divisions]);
+
   useEffect(() => {
     const loadDivisions = async () => {
       try {
         setLoading(true);
-        const divisionsData = await getDivisions();
+        // Try to get divisions from localStorage cache first
+        const cachedData = localStorage.getItem('divisions-cache');
+        let divisionsData: Division[] = [];
+        
+        if (cachedData) {
+          try {
+            const parsed = JSON.parse(cachedData);
+            const cacheTime = parsed.timestamp || 0;
+            // Cache valid for 10 minutes
+            if (Date.now() - cacheTime < 10 * 60 * 1000) {
+              divisionsData = parsed.data || [];
+            }
+          } catch (e) {
+            console.error('Error parsing divisions cache:', e);
+          }
+        }
+
+        // If no valid cache, fetch from API
+        if (divisionsData.length === 0) {
+          divisionsData = await getDivisions();
+          // Save to cache
+          localStorage.setItem('divisions-cache', JSON.stringify({
+            data: divisionsData,
+            timestamp: Date.now()
+          }));
+        }
+        
         setDivisions(divisionsData);
       } catch (error) {
         console.error('Error loading divisions:', error);
@@ -96,7 +132,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                     htmlFor={`division-${division.id}`} 
                     className="mr-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    {getDivisionTranslation(division.name)}
+                    {divisionTranslations[division.id] || getDivisionTranslation(division.name)}
                   </Label>
                 </div>
               ))}
@@ -153,4 +189,4 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   );
 };
 
-export default WorkerForm;
+export default React.memo(WorkerForm);
