@@ -94,7 +94,18 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
         });
       });
     }
+    
+    // Cleanup function to restore scroll behavior if component unmounts
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
+
+  const handleFormSubmit = async () => {
+    // Remember current scroll position before submitting
+    scrollPosRef.current = window.scrollY;
+    await handleSubmit();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -232,7 +243,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
             
             <DialogFooter className="flex justify-between mt-6">
               <Button variant="outline" onClick={handleCloseDialog}>ביטול</Button>
-              <Button onClick={handleSubmit}>שמור</Button>
+              <Button onClick={handleFormSubmit}>שמור</Button>
             </DialogFooter>
           </div>
         )}

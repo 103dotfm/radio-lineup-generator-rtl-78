@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { ScheduleSlot } from '@/types/schedule';
 import { 
@@ -85,7 +86,6 @@ export const useAssignmentDialog = ({
     );
   };
 
-  // Store scroll position when opening the dialog
   const handleAssignProducer = (slot: ScheduleSlot, slotAssignments: ProducerAssignment[]) => {
     setCurrentSlot(slot);
     
@@ -276,8 +276,14 @@ export const useAssignmentDialog = ({
           title: "נוסף בהצלחה",
           description: `נוספו ${successCount} שיבוצים לסידור העבודה`
         });
-        await onSuccess(); // Refresh the assignments immediately
+        
+        // Close the dialog before refreshing the data to avoid scroll jumps
         setIsDialogOpen(false);
+        
+        // Wait for dialog closing animation to finish before refreshing data
+        setTimeout(async () => {
+          await onSuccess(); // Refresh the assignments
+        }, 300);
       } else {
         toast({
           title: "מידע",
@@ -295,7 +301,6 @@ export const useAssignmentDialog = ({
   };
 
   const handleCloseDialog = () => {
-    // Remember scroll position when closing the dialog
     setIsDialogOpen(false);
   };
 
