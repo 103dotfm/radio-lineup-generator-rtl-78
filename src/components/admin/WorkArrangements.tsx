@@ -23,6 +23,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { supabase, getStorageUrl } from "@/lib/supabase";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 import ProducerWorkArrangement from "./producers/ProducerWorkArrangement";
+import { ScrollProvider } from "@/contexts/ScrollContext";
 
 const formSchema = z.object({
   week_start: z.date(),
@@ -278,7 +279,9 @@ export default function WorkArrangements() {
           </TabsContent>
           
           <TabsContent value="producers" className="py-4">
-            <ProducerWorkArrangement />
+            <ScrollProvider>
+              <ProducerWorkArrangement />
+            </ScrollProvider>
           </TabsContent>
           
           <TabsContent value="digital-editor" className="py-4">

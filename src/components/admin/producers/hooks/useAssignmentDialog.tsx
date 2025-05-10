@@ -1,5 +1,5 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { ScheduleSlot } from '@/types/schedule';
 import { 
   createProducerAssignment,
@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/producers';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useScroll } from '@/contexts/ScrollContext';
 import { 
   EDITING_ROLE_ID, 
   PRODUCTION_ROLE_ID,
@@ -36,7 +37,6 @@ export const useAssignmentDialog = ({
 }: UseAssignmentDialogProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
-  const scrollPosRef = useRef(0);
   
   // Only show 2 producers by default, with option to add more
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
@@ -56,14 +56,7 @@ export const useAssignmentDialog = ({
   const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
-
-  // Store scroll position before dialog opens or closes
-  useEffect(() => {
-    if (isDialogOpen) {
-      // Store current scroll position when dialog opens
-      scrollPosRef.current = window.scrollY;
-    }
-  }, [isDialogOpen]);
+  const { saveScrollPosition, restoreScrollPosition } = useScroll();
 
   // Add another worker form field (show more)
   const addWorkerForm = () => {
@@ -96,9 +89,7 @@ export const useAssignmentDialog = ({
   };
 
   const handleAssignProducer = (slot: ScheduleSlot, slotAssignments: ProducerAssignment[]) => {
-    // Save scroll position before opening dialog
-    scrollPosRef.current = window.scrollY;
-    
+    saveScrollPosition();
     setCurrentSlot(slot);
     
     // Reset form when opening dialog - showing only 2 workers initially
@@ -150,7 +141,7 @@ export const useAssignmentDialog = ({
     }
     
     // Store current scroll position before submission
-    scrollPosRef.current = window.scrollY;
+    saveScrollPosition();
     
     // Only use visible worker forms, then filter out empty rows
     const visibleForms = producerForms.slice(0, visibleWorkerCount);
@@ -292,23 +283,20 @@ export const useAssignmentDialog = ({
           description: `נוספו ${successCount} שיבוצים לסידור העבודה`
         });
         
-        // Close the dialog before refreshing the data to avoid scroll jumps
+        // Close the dialog
         setIsDialogOpen(false);
         
-        // IMPORTANT: Wait longer before refreshing data
-        // This gives the browser time to restore scroll position
+        // Wait a short delay before refreshing data
         setTimeout(async () => {
-          // Store the scroll position again right before refresh
-          const currentScrollY = window.scrollY;
-          scrollPosRef.current = currentScrollY;
-          
+          // Make sure scroll position is saved again right before data refresh
+          saveScrollPosition();
           await onSuccess(); // Refresh the assignments
           
-          // After data refresh, restore scroll position
+          // Restore scroll position after a delay
           setTimeout(() => {
-            window.scrollTo({ top: currentScrollY, behavior: 'instant' });
-          }, 10);
-        }, 300);
+            restoreScrollPosition();
+          }, 100);
+        }, 200);
       } else {
         toast({
           title: "מידע",
@@ -326,9 +314,11 @@ export const useAssignmentDialog = ({
   };
 
   const handleCloseDialog = () => {
-    // Get current scroll position before closing the dialog
-    scrollPosRef.current = window.scrollY;
+    saveScrollPosition();
     setIsDialogOpen(false);
+    setTimeout(() => {
+      restoreScrollPosition();
+    }, 100);
   };
 
   return {
@@ -345,7 +335,6 @@ export const useAssignmentDialog = ({
     setIsPermanent,
     handleAssignProducer,
     handleSubmit,
-    handleCloseDialog,
-    scrollPosition: scrollPosRef.current
+    handleCloseDialog
   };
 };
