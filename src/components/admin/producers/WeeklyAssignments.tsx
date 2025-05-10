@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
@@ -42,6 +42,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const scrollPosRef = useRef(0);
   
   const { toast } = useToast();
   
@@ -72,12 +73,18 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     // Format date consistently for logging
     const formattedDate = format(currentWeek, 'yyyy-MM-dd');
     console.log("WeeklyAssignments: Loading data for week", formattedDate);
+    
+    // Store current scroll position before loading data
+    scrollPosRef.current = window.scrollY;
     loadData();
   }, [currentWeek, refreshTrigger]);
   
   const loadData = async () => {
     setIsLoading(true);
     try {
+      // Save scroll position before data changes
+      const savedScroll = window.scrollY;
+      
       // Use a consistent date format for the week start
       const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
       const formattedDate = format(weekStartDate, 'yyyy-MM-dd');
@@ -96,6 +103,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       setAssignments(assignmentsData || []);
       setProducers(producersData || []);
       setRoles(rolesData || []);
+      
+      // Restore scroll position after data is loaded
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: savedScroll, behavior: 'instant' });
+      });
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -114,6 +126,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   };
   
   const handleDeleteAssignment = async (assignmentId: string) => {
+    // Save scroll position before showing confirmation dialog
+    const scrollPosBefore = window.scrollY;
+    
     if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
       try {
         const success = await deleteProducerAssignment(assignmentId);
@@ -122,10 +137,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             title: "נמחק בהצלחה",
             description: "השיבוץ נמחק בהצלחה"
           });
+          
+          // Save the current scroll position before data refresh
+          scrollPosRef.current = window.scrollY;
+          
           await loadData(); // Refresh the assignments immediately
           if (onAssignmentChange) {
             onAssignmentChange(); // Notify parent component
           }
+          
+          // Restore scroll position after refresh
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollPosRef.current, behavior: 'instant' });
+          });
         } else {
           throw new Error("Failed to delete assignment");
         }
@@ -136,7 +160,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           description: "אירעה שגיאה במחיקת השיבוץ",
           variant: "destructive"
         });
+        
+        // Restore scroll position if there was an error
+        window.scrollTo({ top: scrollPosBefore, behavior: 'instant' });
       }
+    } else {
+      // Restore scroll position if action was cancelled
+      window.scrollTo({ top: scrollPosBefore, behavior: 'instant' });
     }
   };
   
@@ -161,11 +191,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     roles,
     slotsByDayAndTime,
     onSuccess: async () => {
+      // Save scroll position before refreshing data
+      scrollPosRef.current = window.scrollY;
+      
       await loadData();
       if (onAssignmentChange) {
         console.log("Notifying parent component about assignment change");
         onAssignmentChange();
       }
+      
+      // Restore scroll position after data refresh
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollPosRef.current, behavior: 'instant' });
+      });
     }
   });
   
