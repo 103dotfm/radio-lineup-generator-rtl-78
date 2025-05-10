@@ -68,11 +68,21 @@ export const useFilterWorkersByDivision = (divisionId?: string) => {
 
     loadWorkersByDivision();
   }, [divisionId]);
+  
+  // Add method to clear cache for testing/debugging
+  const clearCache = () => {
+    if (divisionId) {
+      const cacheKey = `workers-by-division-${divisionId}`;
+      localStorage.removeItem(cacheKey);
+      console.log(`Cleared cache for division ${divisionId}`);
+    }
+  };
 
   return {
     workerIds: workers,
     loading,
-    error
+    error,
+    clearCache
   };
 };
 

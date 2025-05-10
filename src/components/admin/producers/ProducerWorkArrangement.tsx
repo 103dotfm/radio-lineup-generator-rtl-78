@@ -29,21 +29,29 @@ const ProducerWorkArrangement = () => {
       try {
         // Check if we already have the ID stored
         const cachedId = localStorage.getItem('producer-division-id');
-        if (cachedId) return;
+        if (cachedId) {
+          console.log('Using cached producer division ID:', cachedId);
+          return;
+        }
         
         // If not, find the producer division and store its ID
         const divisions = await getDivisions();
+        // Look for producer division with multiple possible names
         const producerDiv = divisions.find(div => 
           div.name.toLowerCase() === 'producers' || 
           div.name.toLowerCase() === 'מפיקים' ||
-          div.name.toLowerCase() === 'עורכים ומפיקים'
+          div.name.toLowerCase() === 'עורכים ומפיקים' ||
+          div.name.toLowerCase() === 'הפקה' ||
+          div.name.toLowerCase() === 'מפיק' ||
+          div.name.toLowerCase() === 'production staff'
         );
         
         if (producerDiv) {
           localStorage.setItem('producer-division-id', producerDiv.id);
           console.log('Producer division ID saved:', producerDiv.id);
         } else {
-          console.warn('No producer division found');
+          console.warn('No producer division found. Available divisions:', 
+            divisions.map(d => `${d.name} (${d.id})`).join(', '));
         }
       } catch (error) {
         console.error("Error ensuring producer division ID:", error);
@@ -113,6 +121,7 @@ const ProducerWorkArrangement = () => {
     localStorage.removeItem('divisions-cache');
     localStorage.removeItem('producers-list');
     localStorage.removeItem('producer-roles');
+    localStorage.removeItem('producers-by-division-cache');
     sessionStorage.removeItem('all-worker-divisions');
     
     // Force re-fetch from API
@@ -129,7 +138,7 @@ const ProducerWorkArrangement = () => {
     console.log("Assignment change notification received - no need for full refresh");
   };
   
-  const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addDays(currentWeek, 1), 'dd/MM/yyyy', { locale: he })}`;
+  const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}`;
 
   return (
     <div className="space-y-4" dir="rtl">
