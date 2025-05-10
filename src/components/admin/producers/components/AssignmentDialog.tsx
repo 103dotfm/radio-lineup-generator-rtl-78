@@ -1,7 +1,5 @@
 
-import React, { useEffect } from 'react';
-import { format, addDays } from 'date-fns';
-import { he } from 'date-fns/locale';
+import React from 'react';
 import { 
   Dialog,
   DialogContent,
@@ -10,20 +8,13 @@ import {
   DialogFooter,
   DialogDescription
 } from "@/components/ui/dialog";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Plus } from 'lucide-react';
-import { Label } from "@/components/ui/label";
 import { ScheduleSlot } from "@/types/schedule";
-import { getCombinedShowDisplay } from '@/utils/showDisplay';
 import { useScroll } from '@/contexts/ScrollContext';
+import SlotInfo from './dialog/SlotInfo';
+import ProducerFormField from './dialog/ProducerFormField';
+import AssignmentOptions from './dialog/AssignmentOptions';
 
 // Definition for role IDs
 export const EDITING_ROLE_ID = '483bd320-9935-4184-bad7-43255fbe0691'; // עריכה
@@ -54,6 +45,7 @@ interface AssignmentDialogProps {
   roles: any[];
   currentWeek: Date;
   onOpenChange: (isOpen: boolean) => void;
+  isSubmitting?: boolean;
 }
 
 const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
@@ -72,22 +64,11 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   producers,
   roles,
   currentWeek,
-  onOpenChange
+  onOpenChange,
+  isSubmitting = false
 }) => {
-  const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  const { saveScrollPosition, setIsScrollLocked } = useScroll();
+  const { saveScrollPosition } = useScroll();
   
-  // Prevent default scroll behavior of dialog
-  useEffect(() => {
-    const handleBeforeDialogClose = () => {
-      saveScrollPosition();
-    };
-    
-    return () => {
-      setIsScrollLocked(false);
-    };
-  }, [saveScrollPosition, setIsScrollLocked]);
-
   const handleFormSubmit = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
     saveScrollPosition();
@@ -116,65 +97,24 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
             שבץ עובדים לתפקידים שונים בתוכנית
           </DialogDescription>
         </DialogHeader>
+        
         {currentSlot && (
           <div className="space-y-6 py-4">
-            <div>
-              <p className="font-medium">{getCombinedShowDisplay(currentSlot.show_name, currentSlot.host_name)}</p>
-              <p className="text-sm text-muted-foreground">
-                {dayNames[currentSlot.day_of_week]} {format(addDays(currentWeek, currentSlot.day_of_week), 'dd/MM/yyyy', { locale: he })}, {currentSlot.start_time}
-              </p>
-            </div>
+            <SlotInfo currentSlot={currentSlot} currentWeek={currentWeek} />
             
             <div className="border rounded-md p-3 bg-slate-50">
-              {/* Show only visible worker forms - initially 2 */}
+              {/* Show only visible worker forms */}
               {producerForms.slice(0, visibleWorkerCount).map((form, index) => (
-                <div key={`producer-form-${index}`} className="grid grid-cols-2 gap-3 mb-5">
-                  <div>
-                    <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
-                    <Select 
-                      value={form.workerId} 
-                      onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="בחר עובד" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {producers.map((worker) => (
-                          <SelectItem key={worker.id} value={worker.id}>
-                            {worker.name} 
-                            {worker.position && (
-                              <span className="text-gray-500 text-sm"> ({worker.position})</span>
-                            )}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <input
-                      type="text"
-                      value={form.additionalText || ""}
-                      onChange={(e) => updateProducerForm(index, 'additionalText', e.target.value)}
-                      placeholder="הערות נוספות..."
-                      className="w-full mt-2 p-2 border rounded text-sm"
-                    />
-                  </div>
-                  <div className="pt-9">
-                    <Select 
-                      value={form.role} 
-                      onValueChange={(value) => updateProducerForm(index, 'role', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="בחר תפקיד" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <ProducerFormField
+                  key={`producer-form-${index}`}
+                  index={index}
+                  workerId={form.workerId}
+                  role={form.role}
+                  additionalText={form.additionalText}
+                  updateForm={updateProducerForm}
+                  producers={producers}
+                  roles={roles}
+                />
               ))}
 
               {/* Button to add more workers */}
@@ -190,45 +130,12 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
                 </Button>
               )}
               
-              <div className="mt-6 border-t pt-4">
-                <h4 className="font-medium mb-4">אפשרויות נוספות:</h4>
-                
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <Label htmlFor="permanent-toggle">משבץ קבוע (חל על כל השבועות)</Label>
-                      <Switch 
-                        id="permanent-toggle" 
-                        checked={isPermanent}
-                        onCheckedChange={(checked) => {
-                          setIsPermanent(checked);
-                          if (checked) toggleDay(-1); // Clear selected days when selecting permanent
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  {!isPermanent && (
-                    <div>
-                      <Label className="mb-2 block">הוסף לימים נוספים בשבוע זה:</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                          <Button
-                            key={`day-toggle-${day}`}
-                            type="button"
-                            variant={selectedDays.includes(day) ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => toggleDay(day)}
-                            className={`${selectedDays.includes(day) ? 'bg-primary text-primary-foreground' : ''}`}
-                          >
-                            {dayNames[day]}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <AssignmentOptions
+                isPermanent={isPermanent}
+                setIsPermanent={setIsPermanent}
+                selectedDays={selectedDays}
+                toggleDay={toggleDay}
+              />
             </div>
             
             <DialogFooter className="flex justify-between mt-6">
@@ -238,7 +145,12 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
               >
                 ביטול
               </Button>
-              <Button onClick={handleFormSubmit}>שמור</Button>
+              <Button 
+                onClick={handleFormSubmit} 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'שומר...' : 'שמור'}
+              </Button>
             </DialogFooter>
           </div>
         )}
