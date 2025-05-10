@@ -15,6 +15,8 @@ import { getProducerAssignments } from '@/lib/supabase/producers';
 import { ScheduleSlot, ProducerAssignment } from '@/types/schedule';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
+import { useFilterWorkersByDivision } from '@/hooks/useWorkerDivisions';
+import { getDivisions } from '@/lib/supabase/divisions';
 
 interface ProducerAssignmentsViewProps {
   selectedDate: Date;
@@ -25,6 +27,42 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(selectedDate, false);
   const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [producerDivisionId, setProducerDivisionId] = useState<string | undefined>(undefined);
+  
+  // Get the producer division ID
+  useEffect(() => {
+    const getProducerDivisionId = async () => {
+      try {
+        // Try to get from localStorage first
+        const cachedId = localStorage.getItem('producer-division-id');
+        if (cachedId) {
+          setProducerDivisionId(cachedId);
+          return;
+        }
+        
+        // If not in cache, find it from the divisions list
+        const divisions = await getDivisions();
+        const producerDiv = divisions.find(div => 
+          div.name.toLowerCase() === 'producers' || 
+          div.name.toLowerCase() === 'מפיקים' ||
+          div.name.toLowerCase() === 'עורכים ומפיקים'
+        );
+        
+        if (producerDiv) {
+          setProducerDivisionId(producerDiv.id);
+          localStorage.setItem('producer-division-id', producerDiv.id);
+        }
+      } catch (error) {
+        console.error("Error getting producer division ID:", error);
+      }
+    };
+    
+    getProducerDivisionId();
+  }, []);
+  
+  // Get producers division workers
+  const { workerIds: producerWorkerIds, loading: workersLoading } = 
+    useFilterWorkersByDivision(producerDivisionId);
   
   useEffect(() => {
     const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -61,10 +99,14 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   
   // Get assignments for a slot
   const getAssignmentsForSlot = (slotId: string): ProducerAssignment[] => {
-    return assignments.filter((assignment) => assignment.slot_id === slotId);
+    // Filter assignments to show only those for producers division workers
+    return assignments.filter((assignment) => 
+      assignment.slot_id === slotId && 
+      (producerWorkerIds.length === 0 || producerWorkerIds.includes(assignment.worker_id))
+    );
   };
   
-  if (isLoading || slotsLoading) {
+  if (isLoading || slotsLoading || workersLoading) {
     return <div className="text-center py-4">טוען...</div>;
   }
 
@@ -96,10 +138,12 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
     }
   });
 
-  // Check if there are any assignments - use valid assignments
+  // Filter assignments by producer division
   const validAssignments = assignments.filter(assignment => 
-    assignment.slot || scheduleSlots.some(slot => slot.id === assignment.slot_id)
+    assignment.slot && 
+    (producerWorkerIds.length === 0 || producerWorkerIds.includes(assignment.worker_id))
   );
+  
   const hasAnyAssignments = validAssignments.length > 0;
   
   if (!hasAnyAssignments) {

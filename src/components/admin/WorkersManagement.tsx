@@ -108,8 +108,9 @@ const WorkersManagement = () => {
         }
       }
       
-      // Clear cached data for workers to ensure fresh data on reload
+      // Clear ALL cached data for workers to ensure fresh data on reload
       sessionStorage.removeItem('all-worker-divisions');
+      localStorage.removeItem('divisions-cache');
       
       setDialogOpen(false);
       loadWorkers();
@@ -131,6 +132,7 @@ const WorkersManagement = () => {
           // Clear cached data
           sessionStorage.removeItem(`worker-divisions-${id}`);
           sessionStorage.removeItem('all-worker-divisions');
+          localStorage.removeItem('divisions-cache');
           
           toast({
             title: "נמחק בהצלחה",
