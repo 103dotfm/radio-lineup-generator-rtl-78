@@ -81,13 +81,16 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
     if (isOpen) {
       // Store current scroll position when dialog opens
       scrollPosRef.current = window.scrollY;
+      // Prevent body scrolling while dialog is open
       document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '0px'; // Prevent layout shift
     } else {
-      // Restore scroll behavior when dialog closes
+      // Restore body scrolling when dialog closes
       document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
       
-      // Use RAF to ensure the scroll happens after state updates
-      requestAnimationFrame(() => {
+      // Use requestAnimationFrame to ensure the scroll happens after React updates
+      window.requestAnimationFrame(() => {
         window.scrollTo({
           top: scrollPosRef.current,
           behavior: 'instant' // Use 'instant' to prevent smooth scrolling
@@ -95,31 +98,48 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
       });
     }
     
-    // Cleanup function to restore scroll behavior if component unmounts
+    // Cleanup function when component unmounts
     return () => {
       document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     };
   }, [isOpen]);
 
-  const handleFormSubmit = async () => {
-    // Remember current scroll position before submitting
+  const handleFormSubmit = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    
+    // Remember scroll position before submitting
     scrollPosRef.current = window.scrollY;
     await handleSubmit();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        // Save current scroll position before closing
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Remember scroll position before dialog state changes
         scrollPosRef.current = window.scrollY;
         
-        // Call the parent's onOpenChange
+        // Call the parent's onOpenChange handler
         onOpenChange(open);
-      } else {
-        onOpenChange(open);
-      }
-    }}>
-      <DialogContent className="max-w-xl">
+        
+        // If closing manually (without using our close handler),
+        // we need to restore scroll position
+        if (!open) {
+          // Use setTimeout to ensure this runs after React updates
+          setTimeout(() => {
+            window.scrollTo({
+              top: scrollPosRef.current,
+              behavior: 'instant'
+            });
+          }, 0);
+        }
+      }}
+    >
+      <DialogContent className="max-w-xl" onInteractOutside={(e) => {
+        // Store current scroll position when clicking outside
+        scrollPosRef.current = window.scrollY;
+      }}>
         <DialogHeader>
           <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
           <DialogDescription>
@@ -242,7 +262,16 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
             </div>
             
             <DialogFooter className="flex justify-between mt-6">
-              <Button variant="outline" onClick={handleCloseDialog}>ביטול</Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Store scroll position before closing
+                  scrollPosRef.current = window.scrollY;
+                  handleCloseDialog();
+                }}
+              >
+                ביטול
+              </Button>
               <Button onClick={handleFormSubmit}>שמור</Button>
             </DialogFooter>
           </div>

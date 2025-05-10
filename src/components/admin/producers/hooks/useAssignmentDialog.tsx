@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ScheduleSlot } from '@/types/schedule';
 import { 
   createProducerAssignment,
@@ -36,6 +36,7 @@ export const useAssignmentDialog = ({
 }: UseAssignmentDialogProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSlot, setCurrentSlot] = useState<ScheduleSlot | null>(null);
+  const scrollPosRef = useRef(0);
   
   // Only show 2 producers by default, with option to add more
   const [producerForms, setProducerForms] = useState<ProducerFormItem[]>([
@@ -55,6 +56,14 @@ export const useAssignmentDialog = ({
   const [isPermanent, setIsPermanent] = useState(false);
   
   const { toast } = useToast();
+
+  // Store scroll position before dialog opens or closes
+  useEffect(() => {
+    if (isDialogOpen) {
+      // Store current scroll position when dialog opens
+      scrollPosRef.current = window.scrollY;
+    }
+  }, [isDialogOpen]);
 
   // Add another worker form field (show more)
   const addWorkerForm = () => {
@@ -87,6 +96,9 @@ export const useAssignmentDialog = ({
   };
 
   const handleAssignProducer = (slot: ScheduleSlot, slotAssignments: ProducerAssignment[]) => {
+    // Save scroll position before opening dialog
+    scrollPosRef.current = window.scrollY;
+    
     setCurrentSlot(slot);
     
     // Reset form when opening dialog - showing only 2 workers initially
@@ -136,6 +148,9 @@ export const useAssignmentDialog = ({
       });
       return;
     }
+    
+    // Store current scroll position before submission
+    scrollPosRef.current = window.scrollY;
     
     // Only use visible worker forms, then filter out empty rows
     const visibleForms = producerForms.slice(0, visibleWorkerCount);
@@ -280,9 +295,19 @@ export const useAssignmentDialog = ({
         // Close the dialog before refreshing the data to avoid scroll jumps
         setIsDialogOpen(false);
         
-        // Wait for dialog closing animation to finish before refreshing data
+        // IMPORTANT: Wait longer before refreshing data
+        // This gives the browser time to restore scroll position
         setTimeout(async () => {
+          // Store the scroll position again right before refresh
+          const currentScrollY = window.scrollY;
+          scrollPosRef.current = currentScrollY;
+          
           await onSuccess(); // Refresh the assignments
+          
+          // After data refresh, restore scroll position
+          setTimeout(() => {
+            window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+          }, 10);
         }, 300);
       } else {
         toast({
@@ -301,6 +326,8 @@ export const useAssignmentDialog = ({
   };
 
   const handleCloseDialog = () => {
+    // Get current scroll position before closing the dialog
+    scrollPosRef.current = window.scrollY;
     setIsDialogOpen(false);
   };
 
@@ -318,6 +345,7 @@ export const useAssignmentDialog = ({
     setIsPermanent,
     handleAssignProducer,
     handleSubmit,
-    handleCloseDialog
+    handleCloseDialog,
+    scrollPosition: scrollPosRef.current
   };
 };
