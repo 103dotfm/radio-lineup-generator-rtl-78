@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Worker } from '@/lib/supabase/workers';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,27 +30,57 @@ const WorkerDialog: React.FC<WorkerDialogProps> = ({
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const loadWorkerDivisions = async () => {
-      if (editingWorker) {
-        try {
-          setIsLoading(true);
-          const divisions = await getWorkerDivisions(editingWorker.id);
-          setSelectedDivisions(divisions.map(div => div.id));
-        } catch (error) {
-          console.error('Error loading worker divisions:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setSelectedDivisions([]);
-      }
-    };
+  // Memoize the worker ID to prevent unnecessary rerenders
+  const workerId = editingWorker?.id;
 
+  const loadWorkerDivisions = useCallback(async () => {
+    if (workerId) {
+      try {
+        setIsLoading(true);
+        // Try to use cached data first
+        const cacheKey = `worker-divisions-${workerId}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        
+        if (cachedData) {
+          try {
+            const parsed = JSON.parse(cachedData);
+            const cacheTime = parsed.timestamp || 0;
+            // Cache valid for 5 minutes
+            if (Date.now() - cacheTime < 5 * 60 * 1000) {
+              setSelectedDivisions(parsed.divisions || []);
+              setIsLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing worker divisions cache:', e);
+          }
+        }
+        
+        const divisions = await getWorkerDivisions(workerId);
+        const divisionIds = divisions.map(div => div.id);
+        
+        // Update cache
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          divisions: divisionIds,
+          timestamp: Date.now()
+        }));
+        
+        setSelectedDivisions(divisionIds);
+      } catch (error) {
+        console.error('Error loading worker divisions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setSelectedDivisions([]);
+    }
+  }, [workerId]);
+
+  useEffect(() => {
     if (open) {
       loadWorkerDivisions();
     }
-  }, [editingWorker, open]);
+  }, [open, loadWorkerDivisions]);
 
   const handleCloseDialog = () => {
     if (document.body.style.pointerEvents === 'none') {
@@ -80,6 +110,7 @@ const WorkerDialog: React.FC<WorkerDialogProps> = ({
           e.preventDefault();
           handleCloseDialog();
         }}
+        className="max-w-md w-full"
       >
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
@@ -106,4 +137,4 @@ const WorkerDialog: React.FC<WorkerDialogProps> = ({
   );
 };
 
-export default WorkerDialog;
+export default React.memo(WorkerDialog);
