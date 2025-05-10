@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
@@ -69,13 +69,26 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     }
   });
   
+  // Save scroll position manually before data loading
+  const saveScrollPosition = useCallback(() => {
+    scrollPosRef.current = window.scrollY;
+  }, []);
+
+  // Restore scroll position after DOM updates
+  const restoreScrollPosition = useCallback(() => {
+    const savedPos = scrollPosRef.current;
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: savedPos, behavior: 'instant' });
+    });
+  }, []);
+  
   useEffect(() => {
     // Format date consistently for logging
     const formattedDate = format(currentWeek, 'yyyy-MM-dd');
     console.log("WeeklyAssignments: Loading data for week", formattedDate);
     
     // Store current scroll position before loading data
-    scrollPosRef.current = window.scrollY;
+    saveScrollPosition();
     loadData();
   }, [currentWeek, refreshTrigger]);
   
@@ -84,6 +97,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     try {
       // Save scroll position before data changes
       const savedScroll = window.scrollY;
+      scrollPosRef.current = savedScroll;
       
       // Use a consistent date format for the week start
       const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
@@ -105,9 +119,10 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       setRoles(rolesData || []);
       
       // Restore scroll position after data is loaded
-      requestAnimationFrame(() => {
+      // Give a little time for the DOM to update before scrolling
+      setTimeout(() => {
         window.scrollTo({ top: savedScroll, behavior: 'instant' });
-      });
+      }, 10);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -127,7 +142,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   
   const handleDeleteAssignment = async (assignmentId: string) => {
     // Save scroll position before showing confirmation dialog
-    const scrollPosBefore = window.scrollY;
+    saveScrollPosition();
     
     if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
       try {
@@ -139,7 +154,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           });
           
           // Save the current scroll position before data refresh
-          scrollPosRef.current = window.scrollY;
+          saveScrollPosition();
           
           await loadData(); // Refresh the assignments immediately
           if (onAssignmentChange) {
@@ -147,9 +162,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           }
           
           // Restore scroll position after refresh
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: scrollPosRef.current, behavior: 'instant' });
-          });
+          restoreScrollPosition();
         } else {
           throw new Error("Failed to delete assignment");
         }
@@ -162,11 +175,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         });
         
         // Restore scroll position if there was an error
-        window.scrollTo({ top: scrollPosBefore, behavior: 'instant' });
+        restoreScrollPosition();
       }
     } else {
       // Restore scroll position if action was cancelled
-      window.scrollTo({ top: scrollPosBefore, behavior: 'instant' });
+      restoreScrollPosition();
     }
   };
   
@@ -192,7 +205,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     slotsByDayAndTime,
     onSuccess: async () => {
       // Save scroll position before refreshing data
-      scrollPosRef.current = window.scrollY;
+      saveScrollPosition();
       
       await loadData();
       if (onAssignmentChange) {
@@ -201,9 +214,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       }
       
       // Restore scroll position after data refresh
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: scrollPosRef.current, behavior: 'instant' });
-      });
+      restoreScrollPosition();
     }
   });
   
@@ -263,7 +274,11 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                                   key={`slot-${slot.id}-${time}-${slotIndex}`}
                                   slot={slot}
                                   slotAssignments={slotAssignments}
-                                  onAssign={(slot) => handleAssignProducer(slot, slotAssignments)}
+                                  onAssign={(slot) => {
+                                    // Save scroll position before opening dialog
+                                    saveScrollPosition();
+                                    handleAssignProducer(slot, slotAssignments);
+                                  }}
                                   onDeleteAssignment={handleDeleteAssignment}
                                 />
                               );
@@ -286,7 +301,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       
       <AssignmentDialog
         isOpen={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => {
+          // Save scroll position before dialog change
+          saveScrollPosition();
+          setIsDialogOpen(open);
+          
+          if (!open) {
+            // Use timeout to restore scroll position after the dialog closes
+            setTimeout(restoreScrollPosition, 100);
+          }
+        }}
         currentSlot={currentSlot}
         producerForms={producerForms}
         updateProducerForm={updateProducerForm}
@@ -297,7 +321,13 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         isPermanent={isPermanent}
         setIsPermanent={setIsPermanent}
         handleSubmit={handleSubmit}
-        handleCloseDialog={handleCloseDialog}
+        handleCloseDialog={() => {
+          // Save scroll position before closing dialog
+          saveScrollPosition();
+          handleCloseDialog();
+          // Use timeout to restore scroll position after the dialog closes
+          setTimeout(restoreScrollPosition, 100);
+        }}
         producers={producers}
         roles={roles}
         currentWeek={currentWeek}
