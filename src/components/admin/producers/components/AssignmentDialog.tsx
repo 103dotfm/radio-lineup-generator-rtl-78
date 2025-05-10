@@ -75,17 +75,18 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   onOpenChange
 }) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  const { saveScrollPosition, restoreScrollPosition } = useScroll();
+  const { saveScrollPosition, setIsScrollLocked } = useScroll();
   
-  // Manage scroll position when dialog opens/closes
+  // Prevent default scroll behavior of dialog
   useEffect(() => {
-    if (!isOpen) {
-      // When dialog closes, restore scroll position after a delay
-      setTimeout(() => {
-        restoreScrollPosition();
-      }, 100);
-    }
-  }, [isOpen, restoreScrollPosition]);
+    const handleBeforeDialogClose = () => {
+      saveScrollPosition();
+    };
+    
+    return () => {
+      setIsScrollLocked(false);
+    };
+  }, [saveScrollPosition, setIsScrollLocked]);
 
   const handleFormSubmit = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
@@ -108,9 +109,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
         }
       }}
     >
-      <DialogContent className="max-w-xl" onInteractOutside={(e) => {
-        saveScrollPosition();
-      }}>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
           <DialogDescription>
@@ -235,10 +234,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
             <DialogFooter className="flex justify-between mt-6">
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  saveScrollPosition();
-                  handleCloseDialog();
-                }}
+                onClick={handleCloseDialog}
               >
                 ביטול
               </Button>

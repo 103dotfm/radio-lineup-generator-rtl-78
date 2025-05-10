@@ -43,7 +43,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { saveScrollPosition, restoreScrollPosition } = useScroll();
+  const { saveScrollPosition, restoreScrollPosition, setIsScrollLocked } = useScroll();
   
   const { toast } = useToast();
   
@@ -82,8 +82,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const loadData = async () => {
     setIsLoading(true);
     try {
-      saveScrollPosition();
-      
       // Use a consistent date format for the week start
       const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
       const formattedDate = format(weekStartDate, 'yyyy-MM-dd');
@@ -102,11 +100,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       setAssignments(assignmentsData || []);
       setProducers(producersData || []);
       setRoles(rolesData || []);
-      
-      // Restore scroll position after data is loaded
-      setTimeout(() => {
-        restoreScrollPosition();
-      }, 50);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -116,16 +109,22 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       });
     } finally {
       setIsLoading(false);
+      
+      // Restore scroll position after a short delay to ensure the content is rendered
+      setTimeout(() => {
+        restoreScrollPosition();
+      }, 50);
     }
   };
   
   // Get assignments for a slot
-  const getAssignmentsForSlot = (slotId: string): ProducerAssignment[] => {
+  const getAssignmentsForSlot = useCallback((slotId: string): ProducerAssignment[] => {
     return assignments.filter((assignment) => assignment.slot_id === slotId);
-  };
+  }, [assignments]);
   
   const handleDeleteAssignment = async (assignmentId: string) => {
     saveScrollPosition();
+    setIsScrollLocked(true);
     
     if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
       try {
@@ -136,16 +135,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             description: "השיבוץ נמחק בהצלחה"
           });
           
-          saveScrollPosition();
+          // Update local state instead of reloading everything
+          setAssignments(prevAssignments => 
+            prevAssignments.filter(assignment => assignment.id !== assignmentId)
+          );
           
-          await loadData(); // Refresh the assignments immediately
           if (onAssignmentChange) {
             onAssignmentChange(); // Notify parent component
           }
-          
-          setTimeout(() => {
-            restoreScrollPosition();
-          }, 50);
         } else {
           throw new Error("Failed to delete assignment");
         }
@@ -156,17 +153,35 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
           description: "אירעה שגיאה במחיקת השיבוץ",
           variant: "destructive"
         });
-        
-        setTimeout(() => {
-          restoreScrollPosition();
-        }, 50);
       }
-    } else {
-      setTimeout(() => {
-        restoreScrollPosition();
-      }, 50);
     }
+    
+    setIsScrollLocked(false);
   };
+  
+  // Handle new assignments by updating local state instead of reloading all data
+  const handleNewAssignments = useCallback((newAssignments: ProducerAssignment[]) => {
+    if (newAssignments.length === 0) return;
+    
+    setAssignments(prevAssignments => {
+      // Filter out any existing assignments that might be duplicates
+      const filteredPrevAssignments = prevAssignments.filter(existing => 
+        !newAssignments.some(newAssign => 
+          newAssign.slot_id === existing.slot_id && 
+          newAssign.worker_id === existing.worker_id && 
+          newAssign.role === existing.role
+        )
+      );
+      
+      // Combine with the new assignments
+      return [...filteredPrevAssignments, ...newAssignments];
+    });
+    
+    // Also notify parent if needed
+    if (onAssignmentChange) {
+      onAssignmentChange();
+    }
+  }, [onAssignmentChange]);
   
   // Use the custom hook for dialog management and assignment operations
   const {
@@ -188,19 +203,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     currentWeek,
     roles,
     slotsByDayAndTime,
-    onSuccess: async () => {
-      saveScrollPosition();
-      
-      await loadData();
-      if (onAssignmentChange) {
-        console.log("Notifying parent component about assignment change");
-        onAssignmentChange();
-      }
-      
-      setTimeout(() => {
-        restoreScrollPosition();
-      }, 50);
-    }
+    onSuccess: handleNewAssignments,
+    assignments
   });
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
@@ -260,7 +264,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                                   slot={slot}
                                   slotAssignments={slotAssignments}
                                   onAssign={(slot) => {
-                                    saveScrollPosition();
                                     handleAssignProducer(slot, slotAssignments);
                                   }}
                                   onDeleteAssignment={handleDeleteAssignment}
@@ -288,12 +291,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         onOpenChange={(open) => {
           saveScrollPosition();
           setIsDialogOpen(open);
-          
-          if (!open) {
-            setTimeout(() => {
-              restoreScrollPosition();
-            }, 100);
-          }
         }}
         currentSlot={currentSlot}
         producerForms={producerForms}
@@ -305,13 +302,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         isPermanent={isPermanent}
         setIsPermanent={setIsPermanent}
         handleSubmit={handleSubmit}
-        handleCloseDialog={() => {
-          saveScrollPosition();
-          handleCloseDialog();
-          setTimeout(() => {
-            restoreScrollPosition();
-          }, 100);
-        }}
+        handleCloseDialog={handleCloseDialog}
         producers={producers}
         roles={roles}
         currentWeek={currentWeek}
