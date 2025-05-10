@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { 
@@ -23,6 +23,7 @@ import { Plus } from 'lucide-react';
 import { Label } from "@/components/ui/label";
 import { ScheduleSlot } from "@/types/schedule";
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
+import { useScroll } from '@/contexts/ScrollContext';
 
 // Definition for role IDs
 export const EDITING_ROLE_ID = '483bd320-9935-4184-bad7-43255fbe0691'; // עריכה
@@ -74,42 +75,21 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   onOpenChange
 }) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  const scrollPosRef = useRef(0);
+  const { saveScrollPosition, restoreScrollPosition } = useScroll();
   
-  // Store scroll position and manage body overflow
+  // Manage scroll position when dialog opens/closes
   useEffect(() => {
-    if (isOpen) {
-      // Store current scroll position when dialog opens
-      scrollPosRef.current = window.scrollY;
-      // Prevent body scrolling while dialog is open
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '0px'; // Prevent layout shift
-    } else {
-      // Restore body scrolling when dialog closes
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-      
-      // Use requestAnimationFrame to ensure the scroll happens after React updates
-      window.requestAnimationFrame(() => {
-        window.scrollTo({
-          top: scrollPosRef.current,
-          behavior: 'instant' // Use 'instant' to prevent smooth scrolling
-        });
-      });
+    if (!isOpen) {
+      // When dialog closes, restore scroll position after a delay
+      setTimeout(() => {
+        restoreScrollPosition();
+      }, 100);
     }
-    
-    // Cleanup function when component unmounts
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    };
-  }, [isOpen]);
+  }, [isOpen, restoreScrollPosition]);
 
   const handleFormSubmit = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    
-    // Remember scroll position before submitting
-    scrollPosRef.current = window.scrollY;
+    saveScrollPosition();
     await handleSubmit();
   };
 
@@ -117,28 +97,19 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
     <Dialog 
       open={isOpen} 
       onOpenChange={(open) => {
-        // Remember scroll position before dialog state changes
-        scrollPosRef.current = window.scrollY;
+        saveScrollPosition();
         
-        // Call the parent's onOpenChange handler
-        onOpenChange(open);
-        
-        // If closing manually (without using our close handler),
-        // we need to restore scroll position
-        if (!open) {
-          // Use setTimeout to ensure this runs after React updates
-          setTimeout(() => {
-            window.scrollTo({
-              top: scrollPosRef.current,
-              behavior: 'instant'
-            });
-          }, 0);
+        if (open === false) {
+          // If closing, call handleCloseDialog
+          handleCloseDialog();
+        } else {
+          // If opening, call parent's onOpenChange
+          onOpenChange(open);
         }
       }}
     >
       <DialogContent className="max-w-xl" onInteractOutside={(e) => {
-        // Store current scroll position when clicking outside
-        scrollPosRef.current = window.scrollY;
+        saveScrollPosition();
       }}>
         <DialogHeader>
           <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
@@ -265,8 +236,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  // Store scroll position before closing
-                  scrollPosRef.current = window.scrollY;
+                  saveScrollPosition();
                   handleCloseDialog();
                 }}
               >
