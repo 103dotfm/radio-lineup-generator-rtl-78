@@ -6,21 +6,48 @@ import {
   EDITING_FIRST_ROLE_ID, 
   EVENING_PRODUCTION_ROLE_ID 
 } from "@/components/admin/producers/components/AssignmentDialog";
+import { ProducerRole } from "@/lib/supabase/types/producer.types";
 
 // Ensure that all the required roles exist in the database with correct display order
 export const ensureProducerRoles = async () => {
   try {
-    // First, check if display_order column exists, if not add it
-    const { data: columnExists } = await supabase.rpc('column_exists', { 
-      table_name: 'producer_roles',
-      column_name: 'display_order'
-    }).single();
+    // First check if the db_helper_functions migration has been run
+    const { data: tableExists } = await supabase.rpc('check_table_exists', { 
+      table_name: 'producer_roles'
+    });
 
+    // If the table doesn't exist yet, we can't proceed
+    if (!tableExists) {
+      console.error("Producer roles table doesn't exist yet");
+      return false;
+    }
+
+    // Use the execute_sql edge function instead of direct RPC
+    const { data: columnCheckResult, error: columnCheckError } = await supabase.functions
+      .invoke('execute_sql', {
+        body: { sql_query: "SELECT column_exists('producer_roles', 'display_order')" }
+      });
+
+    if (columnCheckError) {
+      console.error("Error checking if display_order column exists:", columnCheckError);
+      throw columnCheckError;
+    }
+
+    const columnExists = columnCheckResult?.data?.[0]?.column_exists || false;
+    
     if (!columnExists) {
       console.log("Adding display_order column to producer_roles table");
-      await supabase.rpc('execute_sql', { 
-        sql_query: 'ALTER TABLE producer_roles ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 999'
-      });
+      const { data: alterResult, error: alterError } = await supabase.functions
+        .invoke('execute_sql', {
+          body: { sql_query: 'ALTER TABLE producer_roles ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 999' }
+        });
+      
+      if (alterError) {
+        console.error("Error adding display_order column:", alterError);
+        throw alterError;
+      }
+      
+      console.log("Added display_order column:", alterResult);
     }
 
     // Define required roles with their display order
@@ -75,12 +102,18 @@ export const ensureProducerRoles = async () => {
 // Get producer roles ordered by display_order
 export const getProducerRoles = async () => {
   try {
-    // Check if display_order column exists
-    const { data: columnExists } = await supabase.rpc('column_exists', { 
-      table_name: 'producer_roles',
-      column_name: 'display_order'
-    }).single();
+    // Use direct query with proper error handling for the column check
+    const { data: columnCheckResult, error: columnCheckError } = await supabase.functions
+      .invoke('execute_sql', {
+        body: { sql_query: "SELECT column_exists('producer_roles', 'display_order')" }
+      });
 
+    if (columnCheckError) {
+      console.error("Error checking if display_order column exists:", columnCheckError);
+      throw columnCheckError;
+    }
+
+    const columnExists = columnCheckResult?.data?.[0]?.column_exists || false;
     let query = supabase.from('producer_roles').select('*');
     
     // Only order by display_order if the column exists
