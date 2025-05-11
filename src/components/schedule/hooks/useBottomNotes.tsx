@@ -12,8 +12,7 @@ export const useBottomNotes = (bottomNotes: DayNote[], onBottomNoteChange: () =>
       if (noteId) {
         await updateDayNote(noteId, noteText);
       } else {
-        // For bottom notes, we'll store them with a "bottom_" prefix in the note field
-        // This way we can distinguish between top and bottom notes
+        // For bottom notes, we pass the is_bottom_note flag as true
         await createDayNote(date, noteText, true);
       }
       onBottomNoteChange();

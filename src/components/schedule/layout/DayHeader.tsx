@@ -43,7 +43,14 @@ const DayHeader: React.FC<DayHeaderProps> = ({
             {format(date, 'dd/MM')}
           </div>
           <DayNoteComponent
-            note={isCurrentlyEditing ? { id: dayNote?.id || '', date: format(date, 'yyyy-MM-dd'), note: dayNote?.note || '' } : dayNote}
+            note={isCurrentlyEditing ? 
+              (dayNote || { 
+                id: '', 
+                date: format(date, 'yyyy-MM-dd'), 
+                note: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString() 
+              }) : dayNote}
             date={date}
             onSave={onSaveDayNote}
             onDelete={onDeleteDayNote}
