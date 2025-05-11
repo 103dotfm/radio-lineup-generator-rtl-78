@@ -20,19 +20,21 @@ export const ensureProducerRolesDisplayOrder = async () => {
       return false;
     }
     
-    // If the table exists, check for the display_order column
-    // Using raw SQL query to avoid type errors with information_schema
-    const { data: columnData, error: columnError } = await supabase
-      .from('producer_roles')
-      .select('display_order')
-      .limit(1)
-      .single();
+    // Try to select a row with display_order to check if the column exists
+    try {
+      const { data: columnData, error: columnError } = await supabase
+        .from('producer_roles')
+        .select('display_order')
+        .limit(1);
       
-    if (columnError && columnError.code === 'PGRST116') {
-      // If no rows exist, that's fine
-      console.log('No producer roles found, but column check will continue');
-    } else if (columnError && columnError.message?.includes('column "display_order" does not exist')) {
-      // Column doesn't exist, let's add it by calling our edge function
+      // If we get here without error, the column exists
+      console.log('display_order column exists in producer_roles');
+      return true;
+    } catch (error) {
+      // If there's an exception, check if it's because the column doesn't exist
+      console.log('Error checking for display_order column, may not exist:', error);
+      
+      // Call the edge function to add the column
       const { data: functionResult, error: functionError } = await supabase.functions.invoke('add-display-order-column');
       
       if (functionError) {
@@ -41,9 +43,8 @@ export const ensureProducerRolesDisplayOrder = async () => {
       }
       
       console.log('Display order column added successfully:', functionResult);
+      return true;
     }
-    
-    return true;
   } catch (error) {
     console.error('Error ensuring producer_roles display_order column:', error);
     return false;

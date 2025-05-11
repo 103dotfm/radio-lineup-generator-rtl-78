@@ -19,10 +19,27 @@ export const ensureProducerRoles = async () => {
       { id: EVENING_PRODUCTION_ROLE_ID, name: 'הפקת ערב', display_order: 4 },
     ];
 
-    // Check which roles already exist
-    const { data: existingRoles, error: fetchError } = await supabase
-      .from('producer_roles')
-      .select('id, name, display_order');
+    // Try to select with display_order first
+    let existingRoles;
+    let fetchError;
+    
+    try {
+      const result = await supabase
+        .from('producer_roles')
+        .select('id, name, display_order');
+        
+      existingRoles = result.data;
+      fetchError = result.error;
+    } catch (error) {
+      // If there's an error due to display_order not existing, fall back to just id and name
+      console.warn("Error fetching producer roles with display_order, falling back:", error);
+      const fallbackResult = await supabase
+        .from('producer_roles')
+        .select('id, name');
+        
+      existingRoles = fallbackResult.data;
+      fetchError = fallbackResult.error;
+    }
 
     if (fetchError) throw fetchError;
 
