@@ -89,10 +89,10 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
         }
       }}
     >
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" dir="rtl">
         <DialogHeader>
-          <DialogTitle>הוספת עובדים לתוכנית</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-right">הוספת עובדים לתוכנית</DialogTitle>
+          <DialogDescription className="text-right">
             שבץ עובדים לתפקידים שונים בתוכנית
           </DialogDescription>
         </DialogHeader>
@@ -124,7 +124,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
                   className="w-full mt-2"
                   onClick={addWorkerForm}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 ml-2" />
                   הוסף עובד נוסף
                 </Button>
               )}
