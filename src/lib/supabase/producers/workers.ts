@@ -46,7 +46,7 @@ export const getProducers = async () => {
   }
 };
 
-// Renamed to getProducerRolesUnsorted to avoid naming conflict
+// This provides an unsorted version of roles
 export const getProducerRolesUnsorted = async (): Promise<ProducerRole[]> => {
   try {
     // Ensure all required roles exist before fetching

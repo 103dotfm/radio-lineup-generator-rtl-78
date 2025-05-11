@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { getProducerRolesOrdered, type ProducerRole } from '@/lib/supabase/producers';
+import { getProducerRoles, type ProducerRole } from '@/lib/supabase/producers';
 
 interface ProducerFormFieldProps {
   form: any;
@@ -29,7 +29,7 @@ const ProducerFormField: React.FC<ProducerFormFieldProps> = ({
     const fetchRoles = async () => {
       setIsLoading(true);
       try {
-        const rolesData = await getProducerRolesOrdered();
+        const rolesData = await getProducerRoles();
         setRoles(rolesData);
       } catch (error) {
         console.error('Error fetching producer roles:', error);
