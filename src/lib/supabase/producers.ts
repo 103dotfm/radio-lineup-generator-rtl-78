@@ -1,57 +1,14 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO } from 'date-fns';
-import { 
-  getProducersByDivision, 
-  getProducers as fetchProducers, 
-  getProducerRolesBasic 
-} from './producers/workers';
-import { getProducerRoles as fetchProducerRolesSorted } from './producers/roles';
 
-// Re-export functions from the workers module with appropriate names
-export const getProducers = fetchProducers;
-export const getProducerRolesBasic = getProducerRolesBasic;
-export const getProducerRoles = fetchProducerRolesSorted;
-export { getProducersByDivision };
+// Re-export everything from the new modular structure
+export * from './producers/index';
 
-// Types
-export type ProducerAssignment = {
-  id: string;
-  slot_id: string;
-  worker_id: string;
-  role: string;
-  week_start: string;
-  notes?: string | null;
-  is_recurring?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  worker?: Worker;
-  slot?: ScheduleSlot;
-};
+// We now don't need to import and re-export anything here as our index.ts is doing that job
+// This file can serve as a facade to the rest of the application
 
-export type Worker = {
-  id: string;
-  name: string;
-  position?: string;
-  email?: string;
-  phone?: string;
-  user_id?: string | null;
-  password_readable?: string | null;
-  created_at?: string;
-  updated_at?: string;
-};
-
-export type ScheduleSlot = {
-  id: string;
-  show_name: string;
-  host_name?: string;
-  day_of_week: number;
-  start_time: string;
-  end_time: string;
-};
-
-// Remove duplicate functions since we're already importing and re-exporting them above
-// Instead, reuse our re-exported functions from ./producers/workers
+// The rest of the functions can either be moved to separate files in the producers/ directory 
+// or kept here as needed. For now, we'll keep them here for backward compatibility.
 
 export const getProducerAssignments = async (weekStart: Date) => {
   try {
