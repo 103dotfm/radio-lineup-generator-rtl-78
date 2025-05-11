@@ -110,37 +110,11 @@ export const ensureProducerRoles = async () => {
 // Get producer roles ordered by display_order
 export const getProducerRoles = async () => {
   try {
-    // Use direct query with proper error handling for the column check
-    const { data: columnCheckResult, error: columnCheckError } = await supabase.functions
-      .invoke('execute_sql', {
-        body: { sql_query: "SELECT column_exists('producer_roles', 'display_order')" }
-      });
-
-    if (columnCheckError) {
-      console.error("Error checking if display_order column exists:", columnCheckError);
-      throw columnCheckError;
-    }
-
-    // Safely extract the boolean value with proper type checking
-    let columnExists = false;
-    if (columnCheckResult && 
-        Array.isArray(columnCheckResult.data) && 
-        columnCheckResult.data.length > 0 && 
-        columnCheckResult.data[0] && 
-        typeof columnCheckResult.data[0].column_exists === 'boolean') {
-      columnExists = columnCheckResult.data[0].column_exists;
-    }
-    
-    let query = supabase.from('producer_roles').select('*');
-    
-    // Only order by display_order if the column exists
-    if (columnExists) {
-      query = query.order('display_order');
-    } else {
-      console.warn("display_order column not found in producer_roles table");
-    }
-    
-    const { data, error } = await query;
+    // Simply query the producer_roles table with proper order
+    const { data, error } = await supabase
+      .from('producer_roles')
+      .select('*')
+      .order('display_order');
 
     if (error) throw error;
     return data || [];
