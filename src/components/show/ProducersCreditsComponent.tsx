@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Editor } from '@tiptap/react';
 import { Button } from "@/components/ui/button";
 import { ProducerAssignment } from '@/lib/supabase/producers';
@@ -17,6 +17,8 @@ const ProducersCreditsComponent = ({
   showDate,
   showTime 
 }: ProducersCreditsComponentProps) => {
+  const [isAdded, setIsAdded] = useState(false);
+  
   const relevantProducers = useMemo(() => {
     if (!showDate || !showTime || assignments.length === 0) return [];
 
@@ -44,15 +46,32 @@ const ProducersCreditsComponent = ({
   const sortedProducers = useMemo(() => {
     if (!relevantProducers.length) return [];
     
+    // Create a priority map for role sorting
+    const rolePriorities = {
+      'עריכה': 1,
+      'עורך': 1,
+      'עורכת': 1,
+      'הפקה': 2,
+      'מפיק': 2,
+      'מפיקה': 2,
+    };
+    
     return [...relevantProducers]
       .sort((a, b) => {
-        // Sort by role display order if available
-        if (a.role && b.role) {
-          // For simplicity, we'll prioritize editing roles
-          if (a.role.includes('עריכה') && !b.role.includes('עריכה')) return -1;
-          if (!a.role.includes('עריכה') && b.role.includes('עריכה')) return 1;
-        }
-        return 0;
+        // Sort by role priority - editors first, then producers
+        const roleA = a.role?.toLowerCase() || '';
+        const roleB = b.role?.toLowerCase() || '';
+        
+        // Check against the priority map (default to 999 if not found)
+        let priorityA = 999;
+        let priorityB = 999;
+        
+        Object.entries(rolePriorities).forEach(([key, priority]) => {
+          if (roleA.includes(key.toLowerCase())) priorityA = priority;
+          if (roleB.includes(key.toLowerCase())) priorityB = priority;
+        });
+        
+        return priorityA - priorityB;
       })
       .map(assignment => ({
         name: assignment.worker?.name || '',
@@ -63,35 +82,56 @@ const ProducersCreditsComponent = ({
   const producersText = useMemo(() => {
     if (sortedProducers.length === 0) return '';
     
-    // Look for common roles to determine if we need a unified credit
-    const hasEditors = sortedProducers.some(p => 
-      p.role.includes('עריכה') || p.role.toLowerCase().includes('editing')
-    );
-    const hasProducers = sortedProducers.some(p => 
-      p.role.includes('הפקה') || p.role.toLowerCase().includes('producer')
+    // Group producers by role
+    const editorsGroup = sortedProducers.filter(p => 
+      p.role.includes('עריכה') || 
+      p.role.includes('עורך') || 
+      p.role.includes('עורכת')
     );
     
-    // If we have both editors and producers, use unified credit
-    const needsUnifiedCredit = hasEditors && hasProducers && sortedProducers.length > 1;
+    const producersGroup = sortedProducers.filter(p => 
+      p.role.includes('הפקה') || 
+      p.role.includes('מפיק') || 
+      p.role.includes('מפיקה')
+    );
     
-    if (needsUnifiedCredit || sortedProducers.length > 1) {
-      const names = sortedProducers.map(p => p.name);
-      
-      if (names.length === 2) {
-        return `עורכים ומפיקים: ${names[0]} ו${names[1]}`;
+    // Generate text for editors first
+    let result = '';
+    
+    if (editorsGroup.length > 0) {
+      const editorNames = editorsGroup.map(p => p.name);
+      if (editorNames.length === 1) {
+        result = `עריכה: ${editorNames[0]}`;
+      } else if (editorNames.length === 2) {
+        result = `עריכה: ${editorNames[0]} ו${editorNames[1]}`;
       } else {
-        // For 3 or more names
-        const lastIndex = names.length - 1;
-        const allButLast = names.slice(0, lastIndex).join(', ');
-        return `עורכים ומפיקים: ${allButLast} ו${names[lastIndex]}`;
+        const allButLast = editorNames.slice(0, -1).join(', ');
+        result = `עריכה: ${allButLast} ו${editorNames[editorNames.length - 1]}`;
       }
-    } else if (sortedProducers.length === 1) {
-      // Single producer with their specific role
-      return `${sortedProducers[0].role}: ${sortedProducers[0].name}`;
     }
     
-    return '';
+    // Add producers text
+    if (producersGroup.length > 0) {
+      const producerNames = producersGroup.map(p => p.name);
+      const producerText = producerNames.length === 1 
+        ? `הפקה: ${producerNames[0]}`
+        : producerNames.length === 2
+          ? `הפקה: ${producerNames[0]} ו${producerNames[1]}`
+          : `הפקה: ${producerNames.slice(0, -1).join(', ')} ו${producerNames[producerNames.length - 1]}`;
+      
+      result = result ? `${result}\n${producerText}` : producerText;
+    }
+    
+    return result;
   }, [sortedProducers]);
+
+  // Check if current editor content already includes this credit line
+  useEffect(() => {
+    if (editor && producersText) {
+      const currentContent = editor.getHTML();
+      setIsAdded(currentContent.includes(producersText));
+    }
+  }, [editor, producersText]);
 
   const handleAddToCredits = () => {
     if (!producersText) return;
@@ -102,12 +142,53 @@ const ProducersCreditsComponent = ({
     // Avoid adding duplicate content
     if (currentContent.includes(producersText)) return;
     
+    // Split the producers text by lines if it contains both editors and producers
+    const lines = producersText.split('\n');
+    
     // Add the text to the editor
     if (currentContent.trim() === '') {
-      editor.commands.setContent(`<p>${producersText}</p>`);
+      // Create a paragraph for each line
+      const content = lines.map(line => `<p>${line}</p>`).join('');
+      editor.commands.setContent(content);
     } else {
-      editor.commands.insertContentAt(editor.state.doc.nodeSize - 2, `<p>${producersText}</p>`);
+      // Add each line as a separate paragraph
+      lines.forEach(line => {
+        editor.commands.insertContentAt(editor.state.doc.nodeSize - 2, `<p>${line}</p>`);
+      });
     }
+    
+    // Update state to reflect that content has been added
+    setIsAdded(true);
+  };
+
+  const handleRemoveFromCredits = () => {
+    if (!producersText) return;
+    
+    // Get current content
+    const currentContent = editor.getHTML();
+    
+    // Create a temporary DOM element to parse and modify HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = currentContent;
+    
+    // Split the producers text by lines
+    const lines = producersText.split('\n');
+    
+    // Find and remove each paragraph containing our text lines
+    const paragraphs = tempDiv.querySelectorAll('p');
+    lines.forEach(line => {
+      paragraphs.forEach(p => {
+        if (p.textContent === line) {
+          p.remove();
+        }
+      });
+    });
+    
+    // Set the modified content back to editor
+    editor.commands.setContent(tempDiv.innerHTML);
+    
+    // Update state to reflect that content has been removed
+    setIsAdded(false);
   };
 
   if (!producersText) {
@@ -118,16 +199,29 @@ const ProducersCreditsComponent = ({
     <div className="text-sm bg-white rounded p-3 border">
       <div className="mb-2 flex justify-between items-center">
         <span className="font-medium">קרדיט למפיקים:</span>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleAddToCredits}
-          className="text-xs"
-        >
-          הוסף לקרדיטים
-        </Button>
+        <div className="space-x-2 space-x-reverse rtl">
+          {!isAdded ? (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleAddToCredits}
+              className="text-xs"
+            >
+              הוסף לקרדיטים
+            </Button>
+          ) : (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleRemoveFromCredits}
+              className="text-xs text-red-500 hover:text-red-700"
+            >
+              הסר מהקרדיטים
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="text-right">{producersText}</div>
+      <div className="text-right whitespace-pre-line">{producersText}</div>
     </div>
   );
 };
