@@ -33,11 +33,19 @@ export const ensureProducerRoles = async () => {
       throw columnCheckError;
     }
 
-    const columnExists = columnCheckResult?.data?.[0]?.column_exists || false;
+    // Safely extract the boolean value with proper type checking
+    let columnExists = false;
+    if (columnCheckResult && 
+        Array.isArray(columnCheckResult.data) && 
+        columnCheckResult.data.length > 0 && 
+        columnCheckResult.data[0] && 
+        typeof columnCheckResult.data[0].column_exists === 'boolean') {
+      columnExists = columnCheckResult.data[0].column_exists;
+    }
     
     if (!columnExists) {
       console.log("Adding display_order column to producer_roles table");
-      const { data: alterResult, error: alterError } = await supabase.functions
+      const { error: alterError } = await supabase.functions
         .invoke('execute_sql', {
           body: { sql_query: 'ALTER TABLE producer_roles ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 999' }
         });
@@ -47,7 +55,7 @@ export const ensureProducerRoles = async () => {
         throw alterError;
       }
       
-      console.log("Added display_order column:", alterResult);
+      console.log("Added display_order column");
     }
 
     // Define required roles with their display order
