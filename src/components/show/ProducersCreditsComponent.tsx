@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { Editor } from '@tiptap/react';
 import { Button } from "@/components/ui/button";
@@ -42,64 +41,55 @@ const ProducersCreditsComponent = ({
     });
   }, [assignments, showDate, showTime]);
 
-  // Extract editors and producers, sorted by the order in the work arrangement
+  // Preserve original order from assignments array
   const sortedProducers = useMemo(() => {
     if (!relevantProducers.length) return [];
     
-    // Create a priority map for role sorting
-    const rolePriorities = {
-      'עריכה': 1,
-      'עורך': 1,
-      'עורכת': 1,
-      'הפקה': 2,
-      'מפיק': 2,
-      'מפיקה': 2,
+    // Create a priority map for role categorization (not for sorting)
+    const roleCategories = {
+      'עריכה': 'editor',
+      'עורך': 'editor',
+      'עורכת': 'editor',
+      'הפקה': 'producer',
+      'מפיק': 'producer',
+      'מפיקה': 'producer',
     };
     
-    return [...relevantProducers]
-      .sort((a, b) => {
-        // Sort by role priority - editors first, then producers
-        const roleA = a.role?.toLowerCase() || '';
-        const roleB = b.role?.toLowerCase() || '';
-        
-        // Check against the priority map (default to 999 if not found)
-        let priorityA = 999;
-        let priorityB = 999;
-        
-        Object.entries(rolePriorities).forEach(([key, priority]) => {
-          if (roleA.includes(key.toLowerCase())) priorityA = priority;
-          if (roleB.includes(key.toLowerCase())) priorityB = priority;
-        });
-        
-        return priorityA - priorityB;
-      })
-      .map(assignment => ({
+    // Don't sort by role - keep the original order but categorize for display
+    return relevantProducers.map(assignment => {
+      // Determine category
+      let category = 'other';
+      const roleLC = (assignment.role || '').toLowerCase();
+      
+      Object.entries(roleCategories).forEach(([key, value]) => {
+        if (roleLC.includes(key.toLowerCase())) category = value;
+      });
+      
+      return {
         name: assignment.worker?.name || '',
-        role: assignment.role || ''
-      }));
+        role: assignment.role || '',
+        category,
+        // Store the original index to preserve order
+        originalIndex: relevantProducers.indexOf(assignment)
+      };
+    });
   }, [relevantProducers]);
 
   const producersText = useMemo(() => {
     if (sortedProducers.length === 0) return '';
     
-    // Group producers by role
-    const editorsGroup = sortedProducers.filter(p => 
-      p.role.includes('עריכה') || 
-      p.role.includes('עורך') || 
-      p.role.includes('עורכת')
-    );
-    
-    const producersGroup = sortedProducers.filter(p => 
-      p.role.includes('הפקה') || 
-      p.role.includes('מפיק') || 
-      p.role.includes('מפיקה')
-    );
+    // Separate producers by category while preserving original order
+    const editors = sortedProducers.filter(p => p.category === 'editor');
+    const producers = sortedProducers.filter(p => p.category === 'producer');
     
     // Generate text for editors first
     let result = '';
     
-    if (editorsGroup.length > 0) {
-      const editorNames = editorsGroup.map(p => p.name);
+    if (editors.length > 0) {
+      // Sort by original index to maintain work arrangement order
+      const editorsSorted = [...editors].sort((a, b) => a.originalIndex - b.originalIndex);
+      const editorNames = editorsSorted.map(p => p.name);
+      
       if (editorNames.length === 1) {
         result = `עריכה: ${editorNames[0]}`;
       } else if (editorNames.length === 2) {
@@ -111,8 +101,11 @@ const ProducersCreditsComponent = ({
     }
     
     // Add producers text
-    if (producersGroup.length > 0) {
-      const producerNames = producersGroup.map(p => p.name);
+    if (producers.length > 0) {
+      // Sort by original index to maintain work arrangement order
+      const producersSorted = [...producers].sort((a, b) => a.originalIndex - b.originalIndex);
+      const producerNames = producersSorted.map(p => p.name);
+      
       const producerText = producerNames.length === 1 
         ? `הפקה: ${producerNames[0]}`
         : producerNames.length === 2
