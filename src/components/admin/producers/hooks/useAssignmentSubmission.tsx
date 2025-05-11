@@ -245,11 +245,14 @@ export const useAssignmentSubmission = ({
       
       // If we have worker details, enhance the result for UI display
       if (result && workerDetails && slotDetails) {
-        result.worker = workerDetails;
-        result.slot = slotDetails;
+        // Cast the result to ProducerAssignment to allow property assignment
+        const enhancedResult = result as ProducerAssignment;
+        enhancedResult.worker = workerDetails;
+        enhancedResult.slot = slotDetails;
+        return enhancedResult;
       }
       
-      return result;
+      return result as ProducerAssignment;
     } catch (error: any) {
       console.error("Error creating producer assignment:", error);
       return null;
