@@ -26,6 +26,7 @@ import AssignmentDialog from './components/AssignmentDialog';
 import SlotAssignments from './components/SlotAssignments';
 import { useAssignmentDialog } from './hooks/useAssignmentDialog';
 import { useScroll } from '@/contexts/ScrollContext';
+import { supabase } from '@/lib/supabase';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;

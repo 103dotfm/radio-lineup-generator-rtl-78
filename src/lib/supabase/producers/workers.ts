@@ -83,27 +83,26 @@ export const getProducerRoles = async () => {
 };
 
 export const getProducersByDivision = async (divisionId: string) => {
-  if (!divisionId) {
-    console.log('No division ID provided, fetching producers with department filter instead');
-    // Try to fetch producers by department instead of division
-    try {
-      const { data, error } = await supabase
+  try {
+    console.log(`Getting producers filtered by division ID: ${divisionId}`);
+    
+    // Check if divisionId is a valid UUID
+    const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(divisionId);
+    
+    if (!isValidUuid) {
+      console.log('Invalid division ID format, falling back to department filter');
+      // Fallback to department filter
+      const { data: deptWorkers, error: deptError } = await supabase
         .from('workers')
         .select('*')
         .or('department.eq.מפיקים,department.eq.מפיק,department.eq.הפקה,department.eq.producers,department.eq.Production staff')
         .order('name');
         
-      if (error) throw error;
-      console.log(`Found ${data?.length || 0} producers based on department filter`);
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching producers by department:', err);
-      return [];
+      if (deptError) throw deptError;
+      
+      console.log(`Found ${deptWorkers?.length || 0} producers by department filter (fallback)`);
+      return deptWorkers || [];
     }
-  }
-  
-  try {
-    console.log(`Getting producers filtered by division ID: ${divisionId}`);
     
     // Try to use cached data first
     const cacheKey = `producers-by-division-${divisionId}`;
