@@ -20,6 +20,16 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
 }) => {
   const combinedShowName = getCombinedShowDisplay(slot.show_name, slot.host_name);
 
+  // Group assignments by role while preserving the original order
+  const assignmentsByRole: Record<string, ProducerAssignment[]> = {};
+  slotAssignments.forEach(assignment => {
+    const role = assignment.role || 'ללא תפקיד';
+    if (!assignmentsByRole[role]) {
+      assignmentsByRole[role] = [];
+    }
+    assignmentsByRole[role].push(assignment);
+  });
+
   return (
     <div
       className="mb-3 border rounded p-2 bg-gray-50"
@@ -31,21 +41,14 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
       
       {slotAssignments.length > 0 && (
         <div className="mt-2 text-sm border-t pt-2">
-          {/* Group assignments by role */}
-          {Object.entries(
-            slotAssignments.reduce<Record<string, ProducerAssignment[]>>((acc, assignment) => {
-              const role = assignment.role || 'ללא תפקיד';
-              if (!acc[role]) acc[role] = [];
-              acc[role].push(assignment);
-              return acc;
-            }, {})
-          ).map(([role, roleAssignments]) => (
+          {/* Display assignments grouped by role */}
+          {Object.entries(assignmentsByRole).map(([role, roleAssignments]) => (
             <div key={`role-${role}-${slot.id}`} className="mb-1">
               <span className="font-medium">{role}: </span> 
               <div className="space-y-1">
                 {roleAssignments.map((assignment) => (
                   <div key={`assignment-${assignment.id}`} className="flex justify-between items-center bg-white p-1 rounded">
-                    <span>{assignment.worker?.name}</span>
+                    <span>{assignment.worker?.name || 'עובד לא ידוע'}</span>
                     <Button 
                       variant="ghost" 
                       size="sm" 

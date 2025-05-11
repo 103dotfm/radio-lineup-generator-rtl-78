@@ -1,6 +1,6 @@
-
 import { supabase } from "@/lib/supabase";
 import { getWorkerDivisions } from "@/lib/supabase/divisions";
+import { ensureProducerRoles } from "./roles";
 
 export const getProducers = async () => {
   try {
@@ -46,6 +46,9 @@ export const getProducers = async () => {
 
 export const getProducerRoles = async () => {
   try {
+    // Ensure all required roles exist before fetching
+    await ensureProducerRoles();
+    
     // Try to use cached data first
     const cacheKey = 'producer-roles';
     const cachedData = localStorage.getItem(cacheKey);

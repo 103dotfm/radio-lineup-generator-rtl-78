@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Dialog,
@@ -19,8 +18,8 @@ import AssignmentOptions from './dialog/AssignmentOptions';
 // Definition for role IDs
 export const EDITING_ROLE_ID = '483bd320-9935-4184-bad7-43255fbe0691'; // עריכה
 export const PRODUCTION_ROLE_ID = '348cf89d-0a9b-4c2c-bb33-8b2edee4c612'; // הפקה
-export const EDITING_FIRST_ROLE_ID = 'new_role_id_1'; // עריכה ראשית
-export const EVENING_PRODUCTION_ROLE_ID = 'new_role_id_2'; // הפקת ערב
+export const EDITING_FIRST_ROLE_ID = 'c8fb5c44-280a-4b1d-8a8b-8c3f3c1d2e4f'; // עריכה ראשית
+export const EVENING_PRODUCTION_ROLE_ID = 'a7d65e32-91b3-4c09-8f5a-1e2d3f4b5c6d'; // הפקת ערב
 
 interface ProducerFormItem {
   workerId: string;

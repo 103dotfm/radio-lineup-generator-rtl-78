@@ -84,17 +84,107 @@ export const useAssignmentSubmission = ({
         const roleName = selectedRole ? selectedRole.name : '';
         const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
         
+        // Get the worker details for adding to UI immediately
+        const workerDetails = assignments
+          .find(a => a.worker_id === form.workerId)?.worker || 
+          { id: form.workerId, name: 'עובד', position: null, email: null };
+        
         // Handle permanent assignments
         if (isPermanent) {
-          await handlePermanentAssignment(form, roleName, formattedWeekStart, newAssignments, successCount);
+          try {
+            const success = await createRecurringProducerAssignment(
+              currentSlot.id,
+              form.workerId,
+              roleName,
+              formattedWeekStart
+            );
+            
+            if (success) {
+              // Create a placeholder assignment to update the UI
+              const newAssignment: ProducerAssignment = {
+                id: `temp-${Date.now()}-${Math.random()}`,
+                slot_id: currentSlot.id,
+                worker_id: form.workerId,
+                role: roleName,
+                week_start: formattedWeekStart,
+                is_recurring: true,
+                notes: form.additionalText || null,
+                created_at: new Date().toISOString(),
+                worker: workerDetails,
+                slot: currentSlot
+              };
+              
+              newAssignments.push(newAssignment);
+              successCount++;
+            }
+          } catch (error) {
+            console.error("Error creating permanent assignment:", error);
+          }
         } 
         // Handle multi-day assignments
         else if (selectedDays.length > 0) {
-          await handleMultiDayAssignment(form, roleName, formattedWeekStart, selectedDays, newAssignments, successCount);
+          // Handle current slot if its day is selected
+          if (selectedDays.includes(currentSlot.day_of_week)) {
+            const result = await createSingleAssignment(
+              currentSlot.id,
+              form.workerId,
+              roleName,
+              formattedWeekStart,
+              form.additionalText,
+              workerDetails,
+              currentSlot
+            );
+            
+            if (result) {
+              newAssignments.push(result);
+              successCount++;
+            }
+          }
+          
+          // Process other selected days
+          const currentTime = currentSlot.start_time;
+          const applicableDays = selectedDays.filter(day => day !== currentSlot.day_of_week);
+          
+          for (const dayIndex of applicableDays) {
+            const key = `${dayIndex}-${currentTime}`;
+            const slotsForDay = slotsByDayAndTime[key] || [];
+            
+            for (const slot of slotsForDay) {
+              if (!slot || !slot.id) continue;
+              
+              const result = await createSingleAssignment(
+                slot.id,
+                form.workerId,
+                roleName,
+                formattedWeekStart,
+                form.additionalText,
+                workerDetails,
+                slot
+              );
+              
+              if (result) {
+                newAssignments.push(result);
+                successCount++;
+              }
+            }
+          }
         } 
         // Handle single assignment
         else {
-          await handleSingleAssignment(form, roleName, formattedWeekStart, newAssignments, successCount);
+          const result = await createSingleAssignment(
+            currentSlot.id,
+            form.workerId,
+            roleName,
+            formattedWeekStart,
+            form.additionalText,
+            workerDetails,
+            currentSlot
+          );
+          
+          if (result) {
+            newAssignments.push(result);
+            successCount++;
+          }
         }
       }
       
@@ -130,146 +220,16 @@ export const useAssignmentSubmission = ({
     }
   };
 
-  // Helper function for permanent assignments
-  const handlePermanentAssignment = async (
-    form: ProducerFormItem, 
-    roleName: string, 
-    weekStart: string,
-    newAssignments: ProducerAssignment[],
-    successCount: number
-  ) => {
-    try {
-      console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName}`);
-      const success = await createRecurringProducerAssignment(
-        currentSlot!.id,
-        form.workerId,
-        roleName,
-        weekStart
-      );
-      
-      if (success) {
-        // Create a placeholder assignment to update the UI
-        const worker = assignments.find(a => a.worker_id === form.workerId)?.worker;
-        
-        const newAssignment: ProducerAssignment = {
-          id: `temp-${Date.now()}-${Math.random()}`,
-          slot_id: currentSlot!.id,
-          worker_id: form.workerId,
-          role: roleName,
-          week_start: weekStart,
-          is_recurring: true,
-          notes: form.additionalText || null,
-          created_at: new Date().toISOString(),
-          worker: {
-            id: form.workerId,
-            name: worker?.name || 'Unknown',
-            position: worker?.position || null,
-            email: null
-          },
-          slot: currentSlot!
-        };
-        
-        newAssignments.push(newAssignment);
-        return successCount + 1;
-      }
-    } catch (error: any) {
-      console.error("Error creating permanent assignment:", error);
-      toast({
-        title: "שגיאה",
-        description: error.message || "לא ניתן להוסיף את העובד לסידור הקבוע",
-        variant: "destructive"
-      });
-    }
-    return successCount;
-  };
-
-  // Helper function for multi-day assignments
-  const handleMultiDayAssignment = async (
-    form: ProducerFormItem,
-    roleName: string,
-    weekStart: string,
-    selectedDays: number[],
-    newAssignments: ProducerAssignment[],
-    successCount: number
-  ) => {
-    let updatedSuccessCount = successCount;
-    
-    // First create assignment for current slot if its day is selected
-    if (selectedDays.includes(currentSlot!.day_of_week)) {
-      const result = await createSingleAssignment(
-        currentSlot!.id,
-        form.workerId,
-        roleName,
-        weekStart,
-        form.additionalText
-      );
-      
-      if (result) {
-        newAssignments.push(result);
-        updatedSuccessCount++;
-      }
-    }
-    
-    // Process other selected days
-    const currentTime = currentSlot!.start_time;
-    const applicableDays = selectedDays.filter(day => day !== currentSlot!.day_of_week);
-    
-    for (const dayIndex of applicableDays) {
-      const key = `${dayIndex}-${currentTime}`;
-      const slotsForDay = slotsByDayAndTime[key] || [];
-      
-      for (const slot of slotsForDay) {
-        if (!slot || !slot.id) continue;
-        
-        const result = await createSingleAssignment(
-          slot.id,
-          form.workerId,
-          roleName,
-          weekStart,
-          form.additionalText
-        );
-        
-        if (result) {
-          newAssignments.push(result);
-          updatedSuccessCount++;
-        }
-      }
-    }
-    
-    return updatedSuccessCount;
-  };
-
-  // Helper function for single assignments
-  const handleSingleAssignment = async (
-    form: ProducerFormItem,
-    roleName: string,
-    weekStart: string,
-    newAssignments: ProducerAssignment[],
-    successCount: number
-  ) => {
-    const result = await createSingleAssignment(
-      currentSlot!.id,
-      form.workerId,
-      roleName,
-      weekStart,
-      form.additionalText
-    );
-    
-    if (result) {
-      newAssignments.push(result);
-      return successCount + 1;
-    }
-    return successCount;
-  };
-
   // Common function to create a single assignment
   const createSingleAssignment = async (
     slotId: string,
     workerId: string,
     roleName: string,
     weekStart: string,
-    notes?: string
-  ) => {
+    notes?: string,
+    workerDetails?: any,
+    slotDetails?: ScheduleSlot
+  ): Promise<ProducerAssignment | null> => {
     try {
       const assignment = {
         slot_id: slotId,
@@ -282,6 +242,13 @@ export const useAssignmentSubmission = ({
       
       console.log(`Creating single assignment for worker ${workerId} with role ${roleName}`);
       const result = await createProducerAssignment(assignment);
+      
+      // If we have worker details, enhance the result for UI display
+      if (result && workerDetails && slotDetails) {
+        result.worker = workerDetails;
+        result.slot = slotDetails;
+      }
+      
       return result;
     } catch (error: any) {
       console.error("Error creating producer assignment:", error);
