@@ -54,7 +54,7 @@ const ProducerFormField = ({
           <SelectTrigger className="w-full">
             <SelectValue placeholder="בחר עובד" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             {!sortedProducers || sortedProducers.length === 0 ? (
               <div className="p-2 text-center text-muted-foreground">אין עובדים זמינים</div>
             ) : (
@@ -85,7 +85,7 @@ const ProducerFormField = ({
           <SelectTrigger>
             <SelectValue placeholder="בחר תפקיד" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             {roles.map((role) => (
               <SelectItem key={role.id} value={role.id}>
                 {role.name}
