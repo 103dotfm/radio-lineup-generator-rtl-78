@@ -34,6 +34,9 @@ const ProducerFormField = ({
     return [...producers].sort((a, b) => a.name.localeCompare(b.name));
   }, [producers]);
   
+  // Debug
+  console.log(`ProducerFormField: Got ${producers.length} producers, displaying ${sortedProducers.length} sorted producers`);
+  
   return (
     <div className="grid grid-cols-2 gap-3 mb-5">
       <div>

@@ -108,15 +108,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       console.log("WeeklyAssignments: Loaded roles:", rolesData);
       setRoles(rolesData || []);
       
-      // Get producers filtered by division
-      if (producerDivisionId) {
-        console.log("Fetching producers for division ID:", producerDivisionId);
-        const producersData = await getProducersByDivision(producerDivisionId);
-        console.log(`WeeklyAssignments: Loaded ${producersData?.length || 0} producers for division ${producerDivisionId}:`, producersData);
-        setProducers(producersData || []);
-      } else {
-        console.log("No producer division ID available, cannot filter producers");
-        setProducers([]); // Empty array since we don't have a division to filter by
+      // Get producers filtered by division or department
+      console.log("Fetching producers with ID:", producerDivisionId);
+      const producersData = await getProducersByDivision(producerDivisionId || 'producers-default');
+      console.log(`WeeklyAssignments: Loaded ${producersData?.length || 0} producers:`);
+      setProducers(producersData || []);
+      
+      if (!producersData?.length) {
+        console.warn("No producers found! This is unexpected.");
+        toast({
+          title: "שים לב",
+          description: "לא נמצאו מפיקים במערכת. ייתכן שיש בעיה בהגדרות המחלקה",
+          variant: "warning"
+        });
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -295,7 +299,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                           </div>
                         ) : (
                           <div className="text-center text-gray-400 text-xs">
-                            אין תוכ��יות
+                            אין תוכניות
                           </div>
                         )}
                       </TableCell>

@@ -50,8 +50,9 @@ const ProducerWorkArrangement = () => {
           localStorage.setItem('producer-division-id', producerDiv.id);
           console.log('Producer division ID saved:', producerDiv.id);
         } else {
-          console.warn('No producer division found. Available divisions:', 
-            divisions.map(d => `${d.name} (${d.id})`).join(', '));
+          console.warn('No producer division found in divisions table. Creating a default producer division ID.');
+          // If no producer division found, create a temporary ID so we can still use department filter as fallback
+          localStorage.setItem('producer-division-id', 'producers-default');
         }
       } catch (error) {
         console.error("Error ensuring producer division ID:", error);
@@ -121,7 +122,14 @@ const ProducerWorkArrangement = () => {
     localStorage.removeItem('divisions-cache');
     localStorage.removeItem('producers-list');
     localStorage.removeItem('producer-roles');
-    localStorage.removeItem('producers-by-division-cache');
+    
+    // Clear specific producers by division cache
+    const producerDivisionId = localStorage.getItem('producer-division-id');
+    if (producerDivisionId) {
+      localStorage.removeItem(`producers-by-division-${producerDivisionId}`);
+    }
+    
+    // Clear other related caches
     sessionStorage.removeItem('all-worker-divisions');
     
     // Force re-fetch from API
