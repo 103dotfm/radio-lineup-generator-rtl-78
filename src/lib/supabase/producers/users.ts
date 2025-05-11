@@ -9,7 +9,13 @@ export const createProducerUser = async (workerId: string, email: string) => {
       body: { worker_id: workerId, email },
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Edge function error:", error);
+      throw error;
+    }
+    
+    // Log the response for debugging
+    console.log("Edge function response:", data);
     return data || { success: false, message: 'Unknown error' };
   } catch (error: any) {
     console.error("Error creating producer user:", error);
@@ -23,11 +29,18 @@ export const createProducerUser = async (workerId: string, email: string) => {
 export const resetProducerPassword = async (workerId: string) => {
   try {
     // Call the edge function to reset a password
+    console.log("Invoking reset password function with params:", { worker_id: workerId });
     const { data, error } = await supabase.functions.invoke('reset-producer-password', {
       body: { worker_id: workerId },
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Edge function error:", error);
+      throw error;
+    }
+    
+    // Log the response for debugging
+    console.log("Edge function response:", data);
     return data || { success: false, message: 'Unknown error' };
   } catch (error: any) {
     console.error("Error resetting producer password:", error);
