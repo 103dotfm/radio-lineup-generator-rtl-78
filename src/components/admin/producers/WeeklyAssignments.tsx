@@ -106,7 +106,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       console.log("WeeklyAssignments: Loaded assignments:", assignmentsData);
       setAssignments(assignmentsData || []);
       
-      // Get roles
+      // Get roles - get them sorted by display_order
       const rolesData = await getProducerRoles();
       console.log("WeeklyAssignments: Loaded roles:", rolesData);
       setRoles(rolesData || []);
@@ -233,7 +233,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     roles,
     slotsByDayAndTime,
     onSuccess: handleNewAssignments,
-    assignments
+    assignments,
+    producers // Make sure to pass the producers state here
   });
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
