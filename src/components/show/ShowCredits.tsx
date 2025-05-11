@@ -50,41 +50,46 @@ const ShowCredits = ({
 
   if (!editor) return null;
 
+  const hasCreditsToShow = 
+    (!isLoadingProducers && producerAssignments.length > 0 && showDate && showTime) || 
+    (showDate && showTime) || 
+    nextShowName;
+
   return (
     <div className="col-span-2 space-y-4">
       <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
       
-      <div className="space-y-4 rounded-md border p-4 bg-gray-50">
-        <h3 className="text-sm font-medium text-gray-500">הצעות קרדיטים</h3>
-        
-        {isLoadingProducers ? (
-          <div className="text-sm text-gray-500">טוען הצעת קרדיטים למפיקים...</div>
-        ) : (
-          <ProducersCreditsComponent 
-            editor={editor}
-            assignments={producerAssignments}
-            showDate={showDate}
-            showTime={showTime}
-          />
-        )}
-        
-        {showDate && showTime && (
-          <DigitalCreditsSuggestion 
-            showDate={showDate} 
-            showTime={showTime} 
-            editor={editor} 
-          />
-        )}
-        
-        {nextShowName && (
-          <NextShowCredits
-            editor={editor}
-            nextShowName={nextShowName}
-            nextShowHost={nextShowHost}
-            onRemoveLine={onRemoveNextShowLine}
-          />
-        )}
-      </div>
+      {hasCreditsToShow && (
+        <div className="space-y-4 rounded-md border p-4 bg-gray-50">
+          <h3 className="text-sm font-medium text-gray-500">הצעות קרדיטים</h3>
+          
+          {!isLoadingProducers && showDate && showTime && (
+            <ProducersCreditsComponent 
+              editor={editor}
+              assignments={producerAssignments}
+              showDate={showDate}
+              showTime={showTime}
+            />
+          )}
+          
+          {showDate && showTime && (
+            <DigitalCreditsSuggestion 
+              showDate={showDate} 
+              showTime={showTime} 
+              editor={editor} 
+            />
+          )}
+          
+          {nextShowName && (
+            <NextShowCredits
+              editor={editor}
+              nextShowName={nextShowName}
+              nextShowHost={nextShowHost}
+              onRemoveLine={onRemoveNextShowLine}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

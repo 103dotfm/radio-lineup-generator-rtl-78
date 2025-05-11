@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import { Editor } from '@tiptap/react';
 import { Button } from "@/components/ui/button";
 import { ProducerAssignment } from '@/lib/supabase/producers';
-import { isSameDay } from 'date-fns';
 
 interface ProducersCreditsComponentProps {
   editor: Editor;
@@ -110,7 +109,7 @@ const ProducersCreditsComponent = ({
   };
 
   if (!producersText) {
-    return <div className="text-sm text-gray-500">אין מידע על מפיקים ועורכים למשבצת זו</div>;
+    return null;
   }
 
   return (
