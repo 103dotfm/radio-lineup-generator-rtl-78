@@ -1,8 +1,4 @@
-
-import { ScheduleSlot } from "@/types/schedule";
-import { Worker } from "@/lib/supabase/workers";
-
-export type ProducerAssignment = {
+export interface ProducerAssignment {
   id: string;
   slot_id: string;
   worker_id: string;
@@ -14,19 +10,42 @@ export type ProducerAssignment = {
   updated_at?: string;
   worker?: Worker;
   slot?: ScheduleSlot;
-};
+}
 
-export type ProducerRole = {
+export interface Worker {
   id: string;
   name: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+  user_id?: string | null;
+  password_readable?: string | null;
   created_at?: string;
   updated_at?: string;
-};
+}
 
-export type ProducerWorkArrangement = {
+export interface ScheduleSlot {
+  id: string;
+  show_name: string;
+  host_name?: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+export interface ProducerWorkArrangement {
   id: string;
   week_start: string;
   notes?: string | null;
   created_at?: string;
   updated_at?: string;
-};
+}
+
+// Add or update ProducerRole type to include display_order
+export interface ProducerRole {
+  id: string;
+  name: string;
+  display_order?: number;
+  created_at?: string;
+  updated_at?: string;
+}

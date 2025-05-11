@@ -44,7 +44,8 @@ export const getProducers = async () => {
   }
 };
 
-export const getProducerRoles = async () => {
+// Rename this function to avoid naming conflict with the one in roles.ts
+export const getProducerRolesBasic = async () => {
   try {
     // Ensure all required roles exist before fetching
     await ensureProducerRoles();
