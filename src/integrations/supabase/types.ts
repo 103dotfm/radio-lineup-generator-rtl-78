@@ -405,18 +405,21 @@ export type Database = {
       producer_roles: {
         Row: {
           created_at: string | null
+          display_order: number | null
           id: string
           name: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          display_order?: number | null
           id?: string
           name: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          display_order?: number | null
           id?: string
           name?: string
           updated_at?: string | null
