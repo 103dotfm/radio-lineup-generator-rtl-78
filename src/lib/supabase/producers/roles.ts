@@ -22,7 +22,7 @@ export const ensureProducerRoles = async () => {
     // Check which roles already exist
     const { data: existingRoles, error: fetchError } = await supabase
       .from('producer_roles')
-      .select('id, name');
+      .select('id, name, display_order');
 
     if (fetchError) throw fetchError;
 
@@ -33,16 +33,9 @@ export const ensureProducerRoles = async () => {
     if (rolesToInsert.length > 0) {
       console.log(`Adding ${rolesToInsert.length} missing producer roles`);
       
-      // Only include the fields that exist in the table schema
-      const sanitizedRolesToInsert = rolesToInsert.map(role => ({
-        id: role.id,
-        name: role.name,
-        display_order: role.display_order
-      }));
-      
       const { error: insertError } = await supabase
         .from('producer_roles')
-        .upsert(sanitizedRolesToInsert);
+        .insert(rolesToInsert as any);
 
       if (insertError) throw insertError;
     }
@@ -52,7 +45,7 @@ export const ensureProducerRoles = async () => {
       if (existingIds.includes(role.id)) {
         const { error: updateError } = await supabase
           .from('producer_roles')
-          .update({ display_order: role.display_order })
+          .update({ display_order: role.display_order } as any)
           .eq('id', role.id);
 
         if (updateError) {
@@ -83,6 +76,3 @@ export const getProducerRoles = async (): Promise<ProducerRole[]> => {
     return [];
   }
 };
-
-// Call this function on app initialization
-ensureProducerRoles().catch(console.error);

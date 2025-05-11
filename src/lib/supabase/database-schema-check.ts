@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 // and add it if it doesn't
 export const ensureProducerRolesDisplayOrder = async () => {
   try {
-    // Check if the column exists using information_schema
+    // Check if the table exists using information_schema
     const { data, error } = await supabase.rpc('check_table_exists', {
       table_name: 'producer_roles'
     });
@@ -21,29 +21,26 @@ export const ensureProducerRolesDisplayOrder = async () => {
     }
     
     // If the table exists, check for the display_order column
-    const { data: columnExists, error: columnError } = await supabase
-      .from('information_schema.columns')
-      .select('column_name')
-      .eq('table_schema', 'public')
-      .eq('table_name', 'producer_roles')
-      .eq('column_name', 'display_order')
+    // Using raw SQL query to avoid type errors with information_schema
+    const { data: columnData, error: columnError } = await supabase
+      .from('producer_roles')
+      .select('display_order')
+      .limit(1)
       .single();
       
-    if (columnError && columnError.code !== 'PGRST116') {
-      // If error is not "no rows returned", then something else went wrong
-      console.error('Error checking for display_order column:', columnError);
-      return false;
-    }
-    
-    // If column doesn't exist, add it
-    if (!columnExists || columnError?.code === 'PGRST116') {
-      console.log('Adding display_order column to producer_roles table');
-      const { error: alterError } = await supabase.rpc('add_display_order_to_producer_roles');
+    if (columnError && columnError.code === 'PGRST116') {
+      // If no rows exist, that's fine
+      console.log('No producer roles found, but column check will continue');
+    } else if (columnError && columnError.message?.includes('column "display_order" does not exist')) {
+      // Column doesn't exist, let's add it by calling our edge function
+      const { data: functionResult, error: functionError } = await supabase.functions.invoke('add-display-order-column');
       
-      if (alterError) {
-        console.error('Error adding display_order column:', alterError);
+      if (functionError) {
+        console.error('Error adding display_order column:', functionError);
         return false;
       }
+      
+      console.log('Display order column added successfully:', functionResult);
     }
     
     return true;
