@@ -10,6 +10,20 @@ import {
 // Ensure that all the required roles exist in the database with correct display order
 export const ensureProducerRoles = async () => {
   try {
+    // First, check if display_order column exists, if not add it
+    const { data: columnExists } = await supabase.rpc('column_exists', { 
+      table_name: 'producer_roles',
+      column_name: 'display_order'
+    }).single();
+
+    if (!columnExists) {
+      console.log("Adding display_order column to producer_roles table");
+      await supabase.rpc('execute_sql', { 
+        sql_query: 'ALTER TABLE producer_roles ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 999'
+      });
+    }
+
+    // Define required roles with their display order
     const requiredRoles = [
       { id: EDITING_ROLE_ID, name: 'עריכה', display_order: 1 },
       { id: PRODUCTION_ROLE_ID, name: 'הפקה', display_order: 2 },
@@ -22,7 +36,10 @@ export const ensureProducerRoles = async () => {
       .from('producer_roles')
       .select('id, name, display_order');
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error("Error fetching producer roles:", fetchError);
+      throw fetchError;
+    }
 
     // Find which roles need to be inserted or updated
     const existingIds = existingRoles?.map(role => role.id) || [];
@@ -58,10 +75,22 @@ export const ensureProducerRoles = async () => {
 // Get producer roles ordered by display_order
 export const getProducerRoles = async () => {
   try {
-    const { data, error } = await supabase
-      .from('producer_roles')
-      .select('*')
-      .order('display_order');
+    // Check if display_order column exists
+    const { data: columnExists } = await supabase.rpc('column_exists', { 
+      table_name: 'producer_roles',
+      column_name: 'display_order'
+    }).single();
+
+    let query = supabase.from('producer_roles').select('*');
+    
+    // Only order by display_order if the column exists
+    if (columnExists) {
+      query = query.order('display_order');
+    } else {
+      console.warn("display_order column not found in producer_roles table");
+    }
+    
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
@@ -70,6 +99,3 @@ export const getProducerRoles = async () => {
     throw error;
   }
 };
-
-// Call this function on app initialization
-ensureProducerRoles().catch(console.error);
