@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 import { 
   deleteProducerAssignment,
   getProducerAssignments,
@@ -119,7 +121,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         toast({
           title: "שים לב",
           description: "לא נמצאו מפיקים במערכת. ייתכן שיש בעיה בהגדרות המחלקה",
-          variant: "warning"
+          variant: "default"
         });
       }
     } catch (error) {
@@ -244,6 +246,16 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-medium">סידור שבועי</h3>
+      
+      {!producers || producers.length === 0 ? (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>שים לב</AlertTitle>
+          <AlertDescription>
+            לא נמצאו מפיקים במערכת. ייתכן שיש בעיה בהגדרות המחלקה.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       
       <Card className="mb-4">
         <div className="p-2 font-bold border-b bg-slate-100">
