@@ -1,8 +1,6 @@
-
 import { supabase } from "@/lib/supabase";
 import { getWorkerDivisions } from "@/lib/supabase/divisions";
 import { ensureProducerRoles } from "./roles";
-import type { ProducerRole } from "../types/producer.types";
 
 export const getProducers = async () => {
   try {
@@ -46,8 +44,7 @@ export const getProducers = async () => {
   }
 };
 
-// This provides an unsorted version of roles
-export const getProducerRolesUnsorted = async (): Promise<ProducerRole[]> => {
+export const getProducerRoles = async () => {
   try {
     // Ensure all required roles exist before fetching
     await ensureProducerRoles();
@@ -84,7 +81,7 @@ export const getProducerRolesUnsorted = async (): Promise<ProducerRole[]> => {
     return data;
   } catch (error) {
     console.error("Error fetching producer roles:", error);
-    return [];
+    throw error;
   }
 };
 

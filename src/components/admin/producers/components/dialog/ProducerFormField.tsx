@@ -1,66 +1,98 @@
 
-import React from 'react';
-import {
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl
-} from "@/components/ui/form";
+import React, { useMemo } from 'react';
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
-import { WorkerSelector } from '@/components/schedule/workers/WorkerSelector';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface ProducerFormFieldProps {
-  form: any; // This prop is not being used properly
   index: number;
-  name: string;
-  label: string;
-  placeholder: string;
+  workerId: string;
+  role: string;
+  additionalText?: string;
+  updateForm: (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => void;
+  producers: any[];
+  roles: any[];
 }
 
-const ProducerFormField: React.FC<ProducerFormFieldProps> = ({
+const ProducerFormField = ({
   index,
-  name,
-  label,
-  placeholder
-}) => {
-  // This component is expecting to be used within a FormProvider context
-  // but that context isn't available, causing the runtime error
+  workerId,
+  role,
+  additionalText,
+  updateForm,
+  producers,
+  roles
+}: ProducerFormFieldProps) => {
+  // Sort producers by name for easier selection
+  const sortedProducers = useMemo(() => {
+    // Make a defensive copy to avoid null/undefined issues
+    return [...(producers || [])].sort((a, b) => {
+      // Handle potential missing names
+      const nameA = a?.name || '';
+      const nameB = b?.name || '';
+      return nameA.localeCompare(nameB);
+    });
+  }, [producers]);
   
-  // Instead of trying to use FormField which requires FormProvider,
-  // let's use a simpler approach that doesn't depend on react-hook-form
+  // Debug
+  console.log(`ProducerFormField: Got ${producers?.length || 0} producers, displaying ${sortedProducers.length} sorted producers`);
   
   return (
-    <div className="space-y-2 mb-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">{label}</label>
-          <Select>
-            <SelectTrigger>
-              <SelectValue placeholder={placeholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="483bd320-9935-4184-bad7-43255fbe0691">עריכה</SelectItem>
-              <SelectItem value="348cf89d-0a9b-4c2c-bb33-8b2edee4c612">הפקה</SelectItem>
-              <SelectItem value="c8fb5c44-280a-4b1d-8a8b-8c3f3c1d2e4f">עריכה ראשית</SelectItem>
-              <SelectItem value="a7d65e32-91b3-4c09-8f5a-1e2d3f4b5c6d">הפקת ערב</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <label className="text-sm font-medium">עובד</label>
-          <WorkerSelector 
-            value={null} 
-            onChange={() => {}}
-            placeholder="בחר עובד..." 
-          />
-        </div>
+    <div className="grid grid-cols-2 gap-3 mb-5">
+      <div>
+        <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
+        <Select 
+          value={workerId} 
+          onValueChange={(value) => updateForm(index, 'workerId', value)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="בחר עובד" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {!sortedProducers || sortedProducers.length === 0 ? (
+              <div className="p-2 text-center text-muted-foreground">אין עובדים זמינים</div>
+            ) : (
+              sortedProducers.map((worker) => (
+                <SelectItem key={worker.id} value={worker.id}>
+                  {worker.name} 
+                  {worker.position && (
+                    <span className="text-gray-500 text-sm"> ({worker.position})</span>
+                  )}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        <Input
+          type="text"
+          value={additionalText || ""}
+          onChange={(e) => updateForm(index, 'additionalText', e.target.value)}
+          placeholder="הערות נוספות..."
+          className="w-full mt-2 p-2 border rounded text-sm"
+        />
+      </div>
+      <div className="pt-9">
+        <Select 
+          value={role} 
+          onValueChange={(value) => updateForm(index, 'role', value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="בחר תפקיד" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {roles.map((role) => (
+              <SelectItem key={role.id} value={role.id}>
+                {role.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
