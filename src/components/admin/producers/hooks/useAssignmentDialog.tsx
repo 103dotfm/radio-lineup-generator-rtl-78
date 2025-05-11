@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { ProducerAssignment } from '@/lib/supabase/producers';
 import { ScheduleSlot } from '@/types/schedule';
@@ -82,11 +83,18 @@ export const useAssignmentDialog = ({
     
     // Pre-fill the form with existing assignments
     if (existingAssignments && existingAssignments.length > 0) {
-      const initialForms = existingAssignments.map(assignment => ({
-        workerId: assignment.worker_id,
-        role: assignment.role,
-        additionalText: assignment.notes || ''
-      }));
+      const initialForms = existingAssignments.map(assignment => {
+        // Find the corresponding role ID based on the role name
+        const roleObject = roles.find(r => r.name === assignment.role);
+        const roleId = roleObject ? roleObject.id : '';
+        
+        return {
+          workerId: assignment.worker_id,
+          role: roleId, // Use the mapped role ID instead of the role name
+          additionalText: assignment.notes || ''
+        };
+      });
+      
       setProducerForms(initialForms);
       setVisibleWorkerCount(initialForms.length);
     } else {

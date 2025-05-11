@@ -41,7 +41,7 @@ const ProducerFormField = ({
   }, [producers]);
   
   // Debug
-  console.log(`ProducerFormField: Got ${producers?.length || 0} producers, displaying ${sortedProducers.length} sorted producers`);
+  console.log(`ProducerFormField: role=${role}, Got ${roles?.length || 0} roles with selected role id: ${role}`);
   
   return (
     <div className="grid grid-cols-2 gap-3 mb-5" dir="rtl">
