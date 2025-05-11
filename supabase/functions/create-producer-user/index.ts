@@ -59,9 +59,9 @@ serve(async (req) => {
       );
     }
     
-    const { workerId, email } = body;
+    const { worker_id, email } = body;
     
-    if (!workerId || !email) {
+    if (!worker_id || !email) {
       console.error("Missing required fields");
       return new Response(
         JSON.stringify({ 
@@ -105,7 +105,7 @@ serve(async (req) => {
     const { data: workerData, error: workerError } = await supabaseClient
       .from('workers')
       .select('name, position, department')
-      .eq('id', workerId)
+      .eq('id', worker_id)
       .single();
     
     if (workerError) {
@@ -155,7 +155,7 @@ serve(async (req) => {
     }
     
     // Update worker record with user_id and password
-    console.log("Updating worker record for ID:", workerId);
+    console.log("Updating worker record for ID:", worker_id);
     const { error: updateError } = await supabaseClient
       .from('workers')
       .update({ 
@@ -163,7 +163,7 @@ serve(async (req) => {
         password_readable: newPassword,
         email: email  // Ensure the email is stored in the worker record as well
       })
-      .eq('id', workerId);
+      .eq('id', worker_id);
     
     if (updateError) {
       console.error("Error updating worker record:", updateError);
