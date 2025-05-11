@@ -45,15 +45,17 @@ const DigitalCreditsSuggestion = ({
   const handleAddToCredits = () => {
     if (!digitalCredit) return;
 
+    // Get the current editor content
     const currentContent = editor.getHTML();
     
     // Avoid adding duplicate content
     if (currentContent.includes(digitalCredit)) return;
     
+    // Add the text to the editor
     if (currentContent.trim() === '') {
       editor.commands.setContent(`<p>${digitalCredit}</p>`);
     } else {
-      editor.commands.insertContentAt(editor.getHTML().length, `<p>${digitalCredit}</p>`);
+      editor.commands.insertContentAt(editor.state.doc.nodeSize - 2, `<p>${digitalCredit}</p>`);
     }
   };
 

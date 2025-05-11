@@ -96,15 +96,17 @@ const ProducersCreditsComponent = ({
   const handleAddToCredits = () => {
     if (!producersText) return;
 
+    // Get the current editor content
     const currentContent = editor.getHTML();
     
     // Avoid adding duplicate content
     if (currentContent.includes(producersText)) return;
     
+    // Add the text to the editor
     if (currentContent.trim() === '') {
       editor.commands.setContent(`<p>${producersText}</p>`);
     } else {
-      editor.commands.insertContentAt(editor.getHTML().length, `<p>${producersText}</p>`);
+      editor.commands.insertContentAt(editor.state.doc.nodeSize - 2, `<p>${producersText}</p>`);
     }
   };
 

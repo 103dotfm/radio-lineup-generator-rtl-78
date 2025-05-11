@@ -25,15 +25,17 @@ const NextShowCredits = ({
   }, [nextShowName, nextShowHost]);
 
   const handleAddToCredits = () => {
+    // Get the current editor content
     const currentContent = editor.getHTML();
     
     // Avoid adding duplicate content
     if (currentContent.includes(nextShowText)) return;
     
+    // Add the text to the editor
     if (currentContent.trim() === '') {
       editor.commands.setContent(`<p>${nextShowText}</p>`);
     } else {
-      editor.commands.insertContentAt(editor.getHTML().length, `<p>${nextShowText}</p>`);
+      editor.commands.insertContentAt(editor.state.doc.nodeSize - 2, `<p>${nextShowText}</p>`);
     }
   };
 
