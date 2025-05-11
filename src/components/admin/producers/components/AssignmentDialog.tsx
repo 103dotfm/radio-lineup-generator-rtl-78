@@ -107,7 +107,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
               {producerForms.slice(0, visibleWorkerCount).map((form, index) => (
                 <ProducerFormField
                   key={`producer-form-${index}`}
-                  form={{ control: { control: true } }} // Passing a minimal form object
+                  form={{}} // Removed dependency on react-hook-form
                   index={index}
                   name="producerForms"
                   label="תפקיד"
