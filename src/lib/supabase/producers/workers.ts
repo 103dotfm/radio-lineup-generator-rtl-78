@@ -84,8 +84,22 @@ export const getProducerRoles = async () => {
 
 export const getProducersByDivision = async (divisionId: string) => {
   if (!divisionId) {
-    console.log('No division ID provided, returning all workers');
-    return getProducers(); // Return all workers if no division is specified
+    console.log('No division ID provided, fetching producers with department filter instead');
+    // Try to fetch producers by department instead of division
+    try {
+      const { data, error } = await supabase
+        .from('workers')
+        .select('*')
+        .or('department.eq.מפיקים,department.eq.מפיק,department.eq.הפקה,department.eq.producers,department.eq.Production staff')
+        .order('name');
+        
+      if (error) throw error;
+      console.log(`Found ${data?.length || 0} producers based on department filter`);
+      return data || [];
+    } catch (err) {
+      console.error('Error fetching producers by department:', err);
+      return [];
+    }
   }
   
   try {
@@ -116,8 +130,18 @@ export const getProducersByDivision = async (divisionId: string) => {
     if (divisionsError) throw divisionsError;
     
     if (!workerDivisions?.length) {
-      console.log(`No workers found in division ${divisionId}`);
-      return [];
+      console.log(`No workers found in division ${divisionId}, trying department filter fallback`);
+      // Fallback to department filter if no workers in division
+      const { data: deptWorkers, error: deptError } = await supabase
+        .from('workers')
+        .select('*')
+        .or('department.eq.מפיקים,department.eq.מפיק,department.eq.הפקה,department.eq.producers,department.eq.Production staff')
+        .order('name');
+        
+      if (deptError) throw deptError;
+      
+      console.log(`Found ${deptWorkers?.length || 0} producers by department filter (fallback)`);
+      return deptWorkers || [];
     }
     
     const workerIds = workerDivisions.map(wd => wd.worker_id);
