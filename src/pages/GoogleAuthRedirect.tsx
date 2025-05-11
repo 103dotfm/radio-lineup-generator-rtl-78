@@ -17,7 +17,7 @@ const GoogleAuthRedirect = () => {
             <h2 className="text-2xl font-bold mb-2">Google Authentication</h2>
             <p className="text-gray-500">
               {status === 'processing' && 'Processing your authentication...'}
-              {status === 'success' && 'Authentication successful!'}
+              {status === 'success' && 'Authentication successful! Redirecting to dashboard...'}
               {status === 'error' && 'Authentication failed'}
             </p>
           </div>
