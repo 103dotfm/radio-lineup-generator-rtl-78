@@ -60,7 +60,7 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
   return <>
       {/* Empty cell for the time column */}
       <div className="p-2 text-center border-b border-r bg-gray-50 font-bold">
-        הערות תחתונות
+        הערות
       </div>
 
       {/* One cell per day */}
