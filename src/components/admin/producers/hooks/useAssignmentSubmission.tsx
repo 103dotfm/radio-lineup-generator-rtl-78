@@ -22,6 +22,7 @@ interface UseAssignmentSubmissionProps {
   selectedDays: number[];
   isPermanent: boolean;
   onClose: () => void;
+  producers: any[]; // Added producers property to fix the TypeScript error
 }
 
 export const useAssignmentSubmission = ({
@@ -35,7 +36,8 @@ export const useAssignmentSubmission = ({
   visibleWorkerCount,
   selectedDays,
   isPermanent,
-  onClose
+  onClose,
+  producers // Make sure to receive producers here
 }: UseAssignmentSubmissionProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
