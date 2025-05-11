@@ -21,11 +21,15 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
   onResetPassword 
 }) => {
   const [email, setEmail] = useState(worker.email || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (email && email.includes('@')) {
+      setIsSubmitting(true);
       onCreateAccount(email);
+      // The parent component will handle success/error messages
+      setTimeout(() => setIsSubmitting(false), 2000);
     }
   };
   
@@ -61,7 +65,11 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
               )}
               
               <div>
-                <Button onClick={onResetPassword} className="flex items-center">
+                <Button 
+                  onClick={onResetPassword} 
+                  className="flex items-center"
+                  disabled={isSubmitting}
+                >
                   <RefreshCw className="mr-2 h-4 w-4" />
                   איפוס סיסמה
                 </Button>
@@ -82,9 +90,13 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
                 />
               </div>
               
-              <Button type="submit" className="flex items-center">
+              <Button 
+                type="submit" 
+                className="flex items-center"
+                disabled={isSubmitting}
+              >
                 <UserPlus className="mr-2 h-4 w-4" />
-                יצירת חשבון משתמש
+                {isSubmitting ? 'יוצר חשבון...' : 'יצירת חשבון משתמש'}
               </Button>
               
               <p className="text-sm text-gray-500">יצירת חשבון תשלח לכתובת האימייל הזו סיסמה זמנית.</p>
