@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
@@ -85,9 +84,8 @@ export const useAssignmentSubmission = ({
         const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
         
         // Get the worker details for adding to UI immediately
-        const workerDetails = assignments
-          .find(a => a.worker_id === form.workerId)?.worker || 
-          { id: form.workerId, name: 'עובד', position: null, email: null };
+        const workerDetails = producers.find(p => p.id === form.workerId) || 
+          { id: form.workerId, name: 'עובד לא ידוע', position: null, email: null };
         
         // Handle permanent assignments
         if (isPermanent) {
