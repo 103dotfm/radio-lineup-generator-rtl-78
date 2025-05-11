@@ -1,3 +1,13 @@
+
+// Define all producer-related types in a central location
+export interface ProducerRole {
+  id: string;
+  name: string;
+  display_order?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface ProducerAssignment {
   id: string;
   slot_id: string;
@@ -37,15 +47,6 @@ export interface ProducerWorkArrangement {
   id: string;
   week_start: string;
   notes?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// Add or update ProducerRole type to include display_order
-export interface ProducerRole {
-  id: string;
-  name: string;
-  display_order?: number;
   created_at?: string;
   updated_at?: string;
 }

@@ -6,15 +6,7 @@ import {
   EDITING_FIRST_ROLE_ID, 
   EVENING_PRODUCTION_ROLE_ID 
 } from "@/components/admin/producers/components/AssignmentDialog";
-
-// Define the ProducerRole type to include the display_order property
-export interface ProducerRole {
-  id: string;
-  name: string;
-  display_order?: number;
-  created_at?: string;
-  updated_at?: string;
-}
+import type { ProducerRole } from "../types/producer.types";
 
 // Ensure that all the required roles exist in the database
 export const ensureProducerRoles = async () => {
@@ -69,7 +61,7 @@ export const ensureProducerRoles = async () => {
 };
 
 // Get producer roles sorted by display_order
-export const getProducerRoles = async () => {
+export const getProducerRoles = async (): Promise<ProducerRole[]> => {
   try {
     const { data, error } = await supabase
       .from('producer_roles')
