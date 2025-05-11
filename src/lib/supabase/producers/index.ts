@@ -7,8 +7,7 @@ export * from './users';
 export { getProducersByDivision, getProducers, getProducerRolesUnsorted } from './workers';
 // Export from roles.ts
 export { ensureProducerRoles } from './roles';
-// Import and re-export the getProducerRoles from roles.ts as getProducerRolesOrdered
-import { getProducerRoles } from './roles';
-export { getProducerRoles as getProducerRolesOrdered };
+// Import and re-export the getProducerRoles from roles.ts directly
+export { getProducerRoles } from './roles';
 // Export types
-export type { ProducerRole, ProducerAssignment, ProducerWorkArrangement } from '../types/producer.types';
+export type { ProducerRole, ProducerAssignment, ProducerWorkArrangement, Worker, ScheduleSlot } from '../types/producer.types';

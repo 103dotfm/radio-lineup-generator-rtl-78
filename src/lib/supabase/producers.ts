@@ -4,9 +4,6 @@ import { format, startOfWeek, parseISO } from 'date-fns';
 // Re-export everything from the new modular structure
 export * from './producers/index';
 
-// We now don't need to import and re-export anything here as our index.ts is doing that job
-// This file can serve as a facade to the rest of the application
-
 // The rest of the functions can either be moved to separate files in the producers/ directory 
 // or kept here as needed. For now, we'll keep them here for backward compatibility.
 
@@ -180,7 +177,16 @@ export const updateProducerWorkArrangementNotes = async (id: string, notes: stri
   }
 };
 
-export const createProducerAssignment = async (assignment: Omit<ProducerAssignment, 'id'>) => {
+import type { ProducerAssignment } from './types/producer.types';
+
+export const createProducerAssignment = async (assignment: { 
+  slot_id: string; 
+  worker_id: string; 
+  role: string; 
+  week_start: string; 
+  notes?: string | null;
+  is_recurring?: boolean;
+}) => {
   try {
     // Check if a duplicate assignment already exists
     const { data: existing, error: checkError } = await supabase
