@@ -32,9 +32,17 @@ export const ensureProducerRoles = async () => {
 
     if (rolesToInsert.length > 0) {
       console.log(`Adding ${rolesToInsert.length} missing producer roles`);
+      
+      // Only include the fields that exist in the table schema
+      const sanitizedRolesToInsert = rolesToInsert.map(role => ({
+        id: role.id,
+        name: role.name,
+        display_order: role.display_order
+      }));
+      
       const { error: insertError } = await supabase
         .from('producer_roles')
-        .upsert(rolesToInsert);
+        .upsert(sanitizedRolesToInsert);
 
       if (insertError) throw insertError;
     }
