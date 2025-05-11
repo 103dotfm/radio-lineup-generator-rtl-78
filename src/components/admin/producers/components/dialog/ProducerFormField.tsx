@@ -3,8 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { getProducerRolesOrdered } from '@/lib/supabase/producers';
-import { ProducerRole } from '@/lib/supabase/producers/roles';
+import { getProducerRolesOrdered, type ProducerRole } from '@/lib/supabase/producers';
 
 interface ProducerFormFieldProps {
   form: any;

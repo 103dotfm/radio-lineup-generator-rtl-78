@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Dialog,
@@ -106,13 +107,11 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
               {producerForms.slice(0, visibleWorkerCount).map((form, index) => (
                 <ProducerFormField
                   key={`producer-form-${index}`}
+                  form={{ control: { control: true } }} // Passing a minimal form object
                   index={index}
-                  workerId={form.workerId}
-                  role={form.role}
-                  additionalText={form.additionalText}
-                  updateForm={updateProducerForm}
-                  producers={producers}
-                  roles={roles}
+                  name="producerForms"
+                  label="תפקיד"
+                  placeholder="בחר תפקיד"
                 />
               ))}
 
