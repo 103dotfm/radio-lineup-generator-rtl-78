@@ -48,9 +48,7 @@ export type ScheduleSlot = {
   end_time: string;
 };
 
-// Remove duplicate functions since we're already importing and re-exporting them above
-// Instead, reuse our re-exported functions from ./producers/workers
-
+// Assignment-related functions
 export const getProducerAssignments = async (weekStart: Date) => {
   try {
     // Format as YYYY-MM-DD for consistent date handling
@@ -312,42 +310,5 @@ export const deleteProducerAssignment = async (id: string) => {
   } catch (error) {
     console.error("Error deleting producer assignment:", error);
     throw error;
-  }
-};
-
-// Add missing functions for ProducerUsers
-export const createProducerUser = async (workerId: string, email: string) => {
-  try {
-    // Call the edge function to create a user
-    const { data, error } = await supabase.functions.invoke('create-producer-user', {
-      body: { worker_id: workerId, email },
-    });
-    
-    if (error) throw error;
-    return data || { success: false, message: 'Unknown error' };
-  } catch (error: any) {
-    console.error("Error creating producer user:", error);
-    return { 
-      success: false, 
-      message: error.message || "Failed to create user" 
-    };
-  }
-};
-
-export const resetProducerPassword = async (workerId: string) => {
-  try {
-    // Call the edge function to reset a password
-    const { data, error } = await supabase.functions.invoke('reset-producer-password', {
-      body: { worker_id: workerId },
-    });
-    
-    if (error) throw error;
-    return data || { success: false, message: 'Unknown error' };
-  } catch (error: any) {
-    console.error("Error resetting producer password:", error);
-    return { 
-      success: false, 
-      message: error.message || "Failed to reset password" 
-    };
   }
 };
