@@ -77,4 +77,7 @@ export interface DayNote {
   id: string;
   date: string;
   note: string;
+  created_at: string;
+  updated_at: string;
+  is_bottom_note?: boolean;
 }

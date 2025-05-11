@@ -3,6 +3,7 @@ import React from 'react';
 import { ScheduleSlot, DayNote } from '@/types/schedule';
 import TimeCell from './TimeCell';
 import DayHeader from './DayHeader';
+import BottomNotes from './BottomNotes';
 
 interface WeeklyGridProps {
   dates: Date[];
@@ -20,6 +21,12 @@ interface WeeklyGridProps {
   handleDayHeaderClick: (date: Date) => void;
   handleSaveDayNote: (date: Date, noteText: string, noteId?: string) => Promise<void>;
   handleDeleteDayNote: (noteId: string) => Promise<void>;
+  bottomNotes: DayNote[];
+  editingBottomNoteDate: Date | null;
+  handleBottomNoteAdd: (date: Date) => void;
+  handleSaveBottomNote: (date: Date, noteText: string, noteId?: string) => Promise<void>;
+  handleDeleteBottomNote: (noteId: string) => Promise<void>;
+  handleBottomNoteEdit: (date: Date) => void;
 }
 
 const WeeklyGrid: React.FC<WeeklyGridProps> = ({
@@ -37,7 +44,13 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   getNoteForDate,
   handleDayHeaderClick,
   handleSaveDayNote,
-  handleDeleteDayNote
+  handleDeleteDayNote,
+  bottomNotes,
+  editingBottomNoteDate,
+  handleBottomNoteAdd,
+  handleSaveBottomNote,
+  handleDeleteBottomNote,
+  handleBottomNoteEdit
 }) => {
   return (
     <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
@@ -79,6 +92,19 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
           ))}
         </React.Fragment>
       ))}
+      
+      {/* Bottom notes section - only visible for admins */}
+      {isAdmin && (
+        <BottomNotes
+          dates={dates}
+          bottomNotes={bottomNotes} 
+          editingBottomNoteDate={editingBottomNoteDate}
+          onBottomNoteAdd={handleBottomNoteAdd}
+          onSaveBottomNote={handleSaveBottomNote}
+          onDeleteBottomNote={handleDeleteBottomNote}
+          onBottomNoteEdit={handleBottomNoteEdit}
+        />
+      )}
     </div>
   );
 };

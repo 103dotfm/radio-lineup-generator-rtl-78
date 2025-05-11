@@ -75,7 +75,7 @@ export const ScheduleView = ({
     isMasterSchedule
   );
   
-  const { dayNotes, refreshDayNotes } = useDayNotes(selectedDateState, viewMode);
+  const { dayNotes, bottomNotes, refreshDayNotes, refreshBottomNotes } = useDayNotes(selectedDateState, viewMode);
 
   // Important: Update the selectedDate when the prop changes
   React.useEffect(() => {
@@ -158,7 +158,9 @@ export const ScheduleView = ({
         isAuthenticated={isAuthenticated}
         hideHeaderDates={hideHeaderDates}
         dayNotes={dayNotes}
+        bottomNotes={bottomNotes}
         onDayNoteChange={refreshDayNotes}
+        onBottomNoteChange={refreshBottomNotes}
       />
 
       <ScheduleDialogs 

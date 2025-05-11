@@ -3,6 +3,7 @@ import React from 'react';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
 import { timeSlotsList, calculateDates } from '../utils/timeUtils';
 import { useDayNotesHandlers } from '../hooks/useDayNotesHandlers';
+import { useBottomNotes } from '../hooks/useBottomNotes';
 import DailyGrid from './DailyGrid';
 import WeeklyGrid from './WeeklyGrid';
 import MonthlyGrid from './MonthlyGrid';
@@ -18,7 +19,9 @@ interface ScheduleGridProps {
   isAuthenticated: boolean;
   hideHeaderDates: boolean;
   dayNotes: DayNote[];
+  bottomNotes: DayNote[];
   onDayNoteChange: () => void;
+  onBottomNoteChange: () => void;
 }
 
 export default function ScheduleGrid({
@@ -32,12 +35,15 @@ export default function ScheduleGrid({
   isAuthenticated,
   hideHeaderDates,
   dayNotes,
-  onDayNoteChange
+  bottomNotes,
+  onDayNoteChange,
+  onBottomNoteChange
 }: ScheduleGridProps) {
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const timeSlots = timeSlotsList();
   const dates = calculateDates(selectedDate, viewMode);
 
+  // Handlers for top notes
   const {
     editingNoteDate,
     handleSaveDayNote,
@@ -45,6 +51,15 @@ export default function ScheduleGrid({
     getNoteForDate,
     handleDayHeaderClick
   } = useDayNotesHandlers(dayNotes, onDayNoteChange);
+
+  // Handlers for bottom notes
+  const {
+    editingBottomNoteDate,
+    handleSaveBottomNote,
+    handleDeleteBottomNote,
+    handleBottomNoteAdd,
+    handleBottomNoteEdit
+  } = useBottomNotes(bottomNotes, onBottomNoteChange);
 
   const renderGrid = () => {
     switch (viewMode) {
@@ -66,6 +81,12 @@ export default function ScheduleGrid({
             handleDayHeaderClick={handleDayHeaderClick}
             handleSaveDayNote={handleSaveDayNote}
             handleDeleteDayNote={handleDeleteDayNote}
+            bottomNotes={bottomNotes}
+            editingBottomNoteDate={editingBottomNoteDate}
+            handleBottomNoteAdd={handleBottomNoteAdd}
+            handleSaveBottomNote={handleSaveBottomNote}
+            handleDeleteBottomNote={handleDeleteBottomNote}
+            handleBottomNoteEdit={handleBottomNoteEdit}
           />
         );
         
@@ -87,6 +108,12 @@ export default function ScheduleGrid({
             handleDayHeaderClick={handleDayHeaderClick}
             handleSaveDayNote={handleSaveDayNote}
             handleDeleteDayNote={handleDeleteDayNote}
+            bottomNotes={bottomNotes}
+            editingBottomNoteDate={editingBottomNoteDate}
+            handleBottomNoteAdd={handleBottomNoteAdd}
+            handleSaveBottomNote={handleSaveBottomNote}
+            handleDeleteBottomNote={handleDeleteBottomNote}
+            handleBottomNoteEdit={handleBottomNoteEdit}
           />
         );
         

@@ -3,17 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { DayNote } from "@/types/schedule";
 import { format } from "date-fns";
 
-export const getDayNotes = async (startDate: Date, endDate: Date): Promise<DayNote[]> => {
+export const getDayNotes = async (startDate: Date, endDate: Date, isBottomNote: boolean = false): Promise<DayNote[]> => {
   const formattedStartDate = format(startDate, 'yyyy-MM-dd');
   const formattedEndDate = format(endDate, 'yyyy-MM-dd');
   
-  console.log(`Fetching day notes from ${formattedStartDate} to ${formattedEndDate}`);
+  console.log(`Fetching day notes from ${formattedStartDate} to ${formattedEndDate}, isBottomNote: ${isBottomNote}`);
   
   const { data, error } = await supabase
     .from('day_notes')
     .select('*')
     .gte('date', formattedStartDate)
-    .lte('date', formattedEndDate);
+    .lte('date', formattedEndDate)
+    .eq('is_bottom_note', isBottomNote);
     
   if (error) {
     console.error('Error fetching day notes:', error);
@@ -23,14 +24,15 @@ export const getDayNotes = async (startDate: Date, endDate: Date): Promise<DayNo
   return data as DayNote[];
 };
 
-export const createDayNote = async (date: Date, note: string): Promise<DayNote | null> => {
+export const createDayNote = async (date: Date, note: string, isBottomNote: boolean = false): Promise<DayNote | null> => {
   const formattedDate = format(date, 'yyyy-MM-dd');
   
   const { data, error } = await supabase
     .from('day_notes')
     .insert({
       date: formattedDate,
-      note
+      note,
+      is_bottom_note: isBottomNote
     })
     .select()
     .single();

@@ -3,6 +3,7 @@ import React from 'react';
 import { ScheduleSlot, DayNote } from '@/types/schedule';
 import TimeCell from './TimeCell';
 import DayHeader from './DayHeader';
+import BottomNotes from './BottomNotes';
 
 interface DailyGridProps {
   selectedDate: Date;
@@ -20,6 +21,12 @@ interface DailyGridProps {
   handleDayHeaderClick: (date: Date) => void;
   handleSaveDayNote: (date: Date, noteText: string, noteId?: string) => Promise<void>;
   handleDeleteDayNote: (noteId: string) => Promise<void>;
+  bottomNotes: DayNote[];
+  editingBottomNoteDate: Date | null;
+  handleBottomNoteAdd: (date: Date) => void;
+  handleSaveBottomNote: (date: Date, noteText: string, noteId?: string) => Promise<void>;
+  handleDeleteBottomNote: (noteId: string) => Promise<void>;
+  handleBottomNoteEdit: (date: Date) => void;
 }
 
 const DailyGrid: React.FC<DailyGridProps> = ({
@@ -37,7 +44,13 @@ const DailyGrid: React.FC<DailyGridProps> = ({
   getNoteForDate,
   handleDayHeaderClick,
   handleSaveDayNote,
-  handleDeleteDayNote
+  handleDeleteDayNote,
+  bottomNotes,
+  editingBottomNoteDate,
+  handleBottomNoteAdd,
+  handleSaveBottomNote,
+  handleDeleteBottomNote,
+  handleBottomNoteEdit
 }) => {
   return (
     <div className="grid grid-cols-[auto,1fr]" dir="rtl">
@@ -73,6 +86,19 @@ const DailyGrid: React.FC<DailyGridProps> = ({
           />
         </React.Fragment>
       ))}
+
+      {/* Bottom notes section - only visible for admins */}
+      {isAdmin && (
+        <BottomNotes
+          dates={[selectedDate]}
+          bottomNotes={bottomNotes} 
+          editingBottomNoteDate={editingBottomNoteDate}
+          onBottomNoteAdd={handleBottomNoteAdd}
+          onSaveBottomNote={handleSaveBottomNote}
+          onDeleteBottomNote={handleDeleteBottomNote}
+          onBottomNoteEdit={handleBottomNoteEdit}
+        />
+      )}
     </div>
   );
 };
