@@ -113,7 +113,16 @@ export const getProducerRoles = async () => {
       throw columnCheckError;
     }
 
-    const columnExists = columnCheckResult?.data?.[0]?.column_exists || false;
+    // Safely extract the boolean value with proper type checking
+    let columnExists = false;
+    if (columnCheckResult && 
+        Array.isArray(columnCheckResult.data) && 
+        columnCheckResult.data.length > 0 && 
+        columnCheckResult.data[0] && 
+        typeof columnCheckResult.data[0].column_exists === 'boolean') {
+      columnExists = columnCheckResult.data[0].column_exists;
+    }
+    
     let query = supabase.from('producer_roles').select('*');
     
     // Only order by display_order if the column exists
