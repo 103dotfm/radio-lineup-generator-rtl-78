@@ -4,7 +4,7 @@ import { DayNote } from '@/types/schedule';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from 'date-fns';
-import { Plus, Edit, Trash, Save, X } from 'lucide-react';
+import { Plus, Save, X } from 'lucide-react';
 
 interface BottomNotesProps {
   dates: Date[];
@@ -33,12 +33,6 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
     return bottomNotes.filter(note => note.date === formattedDate);
   };
 
-  // Handle note editing
-  const handleEditNote = (date: Date, note: DayNote) => {
-    onBottomNoteEdit(date);
-    setNoteText(note.note);
-  };
-
   // Handle save
   const handleSave = (date: Date, noteId?: string) => {
     if (noteText.trim()) {
@@ -51,6 +45,20 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
   const handleCancel = () => {
     setNoteText("");
     onBottomNoteEdit(new Date(0)); // Reset editing state
+  };
+
+  // Handle note click for editing
+  const handleNoteClick = (date: Date, note: DayNote) => {
+    setNoteText(note.note);
+    onBottomNoteEdit(date);
+    (date as any).noteId = note.id;
+  };
+
+  // Handle note delete (on double click)
+  const handleNoteDoubleClick = (noteId: string) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק הערה זו?')) {
+      onDeleteBottomNote(noteId);
+    }
   };
 
   return (
@@ -71,8 +79,13 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
             {notesForDate.length > 0 ? (
               <div className="space-y-2">
                 {notesForDate.map((note) => (
-                  <div key={note.id} className="bg-white p-2 rounded shadow-sm">
-                    {isEditing && note.id === (editingBottomNoteDate as any).noteId ? (
+                  <div 
+                    key={note.id} 
+                    className={`bg-white p-2 rounded shadow-sm cursor-pointer hover:bg-gray-50 transition-colors ${
+                      isEditing && note.id === (editingBottomNoteDate as any)?.noteId ? 'ring-2 ring-blue-400' : ''
+                    }`}
+                  >
+                    {isEditing && note.id === (editingBottomNoteDate as any)?.noteId ? (
                       <div className="space-y-2">
                         <Textarea
                           value={noteText}
@@ -80,6 +93,7 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
                           placeholder="הערה..."
                           className="min-h-[60px] text-right"
                           dir="rtl"
+                          autoFocus
                         />
                         <div className="flex justify-end space-x-2 space-x-reverse">
                           <Button 
@@ -98,26 +112,13 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="flex justify-between items-start">
-                        <div className="flex space-x-2 rtl:space-x-reverse">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0" 
-                            onClick={() => handleEditNote(date, note)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700" 
-                            onClick={() => onDeleteBottomNote(note.id)}
-                          >
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="text-right flex-grow">{note.note}</div>
+                      <div 
+                        className="text-right"
+                        onClick={() => handleNoteClick(date, note)}
+                        onDoubleClick={() => handleNoteDoubleClick(note.id)}
+                      >
+                        {note.note}
+                        <div className="text-xs text-gray-500 mt-1">לחץ לעריכה, לחיצה כפולה למחיקה</div>
                       </div>
                     )}
                   </div>
@@ -131,6 +132,7 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
                       placeholder="הערה חדשה..."
                       className="min-h-[60px] text-right"
                       dir="rtl"
+                      autoFocus
                     />
                     <div className="flex justify-end space-x-2 space-x-reverse mt-2">
                       <Button 
@@ -169,6 +171,7 @@ const BottomNotes: React.FC<BottomNotesProps> = ({
                     placeholder="הערה..."
                     className="min-h-[60px] text-right"
                     dir="rtl"
+                    autoFocus
                   />
                   <div className="flex justify-end space-x-2 space-x-reverse mt-2">
                     <Button 
