@@ -31,11 +31,17 @@ const ProducerFormField = ({
 }: ProducerFormFieldProps) => {
   // Sort producers by name for easier selection
   const sortedProducers = useMemo(() => {
-    return [...producers].sort((a, b) => a.name.localeCompare(b.name));
+    // Make a defensive copy to avoid null/undefined issues
+    return [...(producers || [])].sort((a, b) => {
+      // Handle potential missing names
+      const nameA = a?.name || '';
+      const nameB = b?.name || '';
+      return nameA.localeCompare(nameB);
+    });
   }, [producers]);
   
   // Debug
-  console.log(`ProducerFormField: Got ${producers.length} producers, displaying ${sortedProducers.length} sorted producers`);
+  console.log(`ProducerFormField: Got ${producers?.length || 0} producers, displaying ${sortedProducers.length} sorted producers`);
   
   return (
     <div className="grid grid-cols-2 gap-3 mb-5">
@@ -49,7 +55,7 @@ const ProducerFormField = ({
             <SelectValue placeholder="בחר עובד" />
           </SelectTrigger>
           <SelectContent>
-            {sortedProducers.length === 0 ? (
+            {!sortedProducers || sortedProducers.length === 0 ? (
               <div className="p-2 text-center text-muted-foreground">אין עובדים זמינים</div>
             ) : (
               sortedProducers.map((worker) => (

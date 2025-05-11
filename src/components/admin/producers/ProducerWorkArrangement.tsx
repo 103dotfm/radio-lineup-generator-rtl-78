@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addWeeks, subWeeks, startOfWeek, addDays } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -30,8 +29,15 @@ const ProducerWorkArrangement = () => {
         // Check if we already have the ID stored
         const cachedId = localStorage.getItem('producer-division-id');
         if (cachedId) {
-          console.log('Using cached producer division ID:', cachedId);
-          return;
+          // Validate the cached ID to ensure it's a valid UUID
+          const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cachedId);
+          if (isValidUuid) {
+            console.log('Using cached producer division ID:', cachedId);
+            return;
+          } else {
+            console.log('Cached producer division ID is invalid, fetching new one');
+            localStorage.removeItem('producer-division-id');
+          }
         }
         
         // If not, find the producer division and store its ID
@@ -50,9 +56,8 @@ const ProducerWorkArrangement = () => {
           localStorage.setItem('producer-division-id', producerDiv.id);
           console.log('Producer division ID saved:', producerDiv.id);
         } else {
-          console.warn('No producer division found in divisions table. Creating a default producer division ID.');
-          // If no producer division found, create a temporary ID so we can still use department filter as fallback
-          localStorage.setItem('producer-division-id', 'producers-default');
+          console.warn('No producer division found in divisions table.');
+          // Here we won't create a default ID since that was causing the UUID validation error
         }
       } catch (error) {
         console.error("Error ensuring producer division ID:", error);
