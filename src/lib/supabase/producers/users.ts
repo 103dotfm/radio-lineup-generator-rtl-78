@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 export const createProducerUser = async (workerId: string, email: string) => {
   try {
     // Call the edge function to create a user
+    console.log("Invoking edge function with params:", { worker_id: workerId, email });
     const { data, error } = await supabase.functions.invoke('create-producer-user', {
       body: { worker_id: workerId, email },
     });

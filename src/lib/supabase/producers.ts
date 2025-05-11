@@ -1,6 +1,11 @@
+
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO } from 'date-fns';
 import { getProducersByDivision, getProducers as fetchProducers, getProducerRoles as fetchProducerRoles } from './producers/workers';
+import { createProducerUser, resetProducerPassword } from './producers/users';
+
+// Re-export functions from the users module
+export { createProducerUser, resetProducerPassword };
 
 // Re-export functions from the workers module
 export const getProducers = fetchProducers;
