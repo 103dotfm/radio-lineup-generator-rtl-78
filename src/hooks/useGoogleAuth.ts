@@ -25,15 +25,15 @@ export const useGoogleAuth = () => {
         // We'll handle the auth state ourselves and redirect appropriately
         setStatus('success');
         
-        // After a small delay, redirect to the dashboard
+        // After a small delay, redirect to the profile page
         setTimeout(() => {
           // Refresh user profile to ensure latest data
           if (refreshProfile) {
             refreshProfile().then(() => {
-              navigate('/'); // Redirect to dashboard
+              navigate('/profile');
             });
           } else {
-            navigate('/'); // Redirect to dashboard
+            navigate('/profile');
           }
         }, 1000);
         
