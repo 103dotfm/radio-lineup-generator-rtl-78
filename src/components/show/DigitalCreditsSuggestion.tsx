@@ -57,12 +57,8 @@ const DigitalCreditsSuggestion = ({
     }
   };
 
-  if (isLoading) {
-    return <div className="text-sm text-gray-500">טוען הצעת קרדיטים לדיגיטל...</div>;
-  }
-
-  if (!digitalCredit) {
-    return <div className="text-sm text-gray-500">אין מידע על עובדי דיגיטל למשבצת זו</div>;
+  if (isLoading || !digitalCredit) {
+    return null;
   }
 
   return (
