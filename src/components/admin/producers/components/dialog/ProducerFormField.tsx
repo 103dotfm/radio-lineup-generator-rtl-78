@@ -1,100 +1,75 @@
-
-import React, { useMemo } from 'react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import React, { useEffect, useState } from 'react';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { getProducerRolesOrdered } from '@/lib/supabase/producers';
+import { ProducerRole } from '@/lib/supabase/producers/roles';
 
 interface ProducerFormFieldProps {
+  form: any;
   index: number;
-  workerId: string;
-  role: string;
-  additionalText?: string;
-  updateForm: (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => void;
-  producers: any[];
-  roles: any[];
+  name: string;
+  label: string;
+  placeholder: string;
+  isDisabled?: boolean;
 }
 
-const ProducerFormField = ({
+const ProducerFormField: React.FC<ProducerFormFieldProps> = ({
+  form,
   index,
-  workerId,
-  role,
-  additionalText,
-  updateForm,
-  producers,
-  roles
-}: ProducerFormFieldProps) => {
-  // Sort producers by name for easier selection
-  const sortedProducers = useMemo(() => {
-    // Make a defensive copy to avoid null/undefined issues
-    return [...(producers || [])].sort((a, b) => {
-      // Handle potential missing names
-      const nameA = a?.name || '';
-      const nameB = b?.name || '';
-      return nameA.localeCompare(nameB);
-    });
-  }, [producers]);
-  
-  // Debug
-  console.log(`ProducerFormField: Got ${producers?.length || 0} producers, displaying ${sortedProducers.length} sorted producers`);
-  
+  name,
+  label,
+  placeholder,
+  isDisabled = false
+}) => {
+  const [roles, setRoles] = useState<ProducerRole[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      setIsLoading(true);
+      try {
+        const rolesData = await getProducerRolesOrdered();
+        setRoles(rolesData);
+      } catch (error) {
+        console.error('Error fetching producer roles:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
   return (
-    <div className="grid grid-cols-2 gap-3 mb-5">
-      <div>
-        <Label htmlFor={`worker-${index}`} className="mb-2 block">עובד {index + 1}</Label>
-        <Select 
-          value={workerId} 
-          onValueChange={(value) => updateForm(index, 'workerId', value)}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="בחר עובד" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {!sortedProducers || sortedProducers.length === 0 ? (
-              <div className="p-2 text-center text-muted-foreground">אין עובדים זמינים</div>
-            ) : (
-              sortedProducers.map((worker) => (
-                <SelectItem key={worker.id} value={worker.id}>
-                  {worker.name} 
-                  {worker.position && (
-                    <span className="text-gray-500 text-sm"> ({worker.position})</span>
-                  )}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <Input
-          type="text"
-          value={additionalText || ""}
-          onChange={(e) => updateForm(index, 'additionalText', e.target.value)}
-          placeholder="הערות נוספות..."
-          className="w-full mt-2 p-2 border rounded text-sm"
-        />
-      </div>
-      <div className="pt-9">
-        <Select 
-          value={role} 
-          onValueChange={(value) => updateForm(index, 'role', value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="בחר תפקיד" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.id}>
-                {role.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
+    <FormField
+      control={form.control}
+      name={`${name}.${index}.role`}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <FormControl>
+            <Select
+              disabled={isDisabled || isLoading}
+              onValueChange={field.onChange}
+              value={field.value || ""}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={placeholder} />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
   );
 };
 
