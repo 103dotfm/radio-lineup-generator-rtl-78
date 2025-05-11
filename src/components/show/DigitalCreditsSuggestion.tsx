@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor } from '@tiptap/react';
-import { getDigitalWorkers } from '@/lib/getDigitalWorkers';
+import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
 
 interface DigitalCreditsSuggestionProps {
   showDate: Date;
@@ -22,19 +22,10 @@ const DigitalCreditsSuggestion = ({
     const loadDigitalWorkers = async () => {
       try {
         setIsLoading(true);
-        const workers = await getDigitalWorkers(showDate, showTime);
+        const creditLine = await getDigitalWorkersForShow(showDate, showTime);
         
-        if (workers.length > 0) {
-          const names = workers.map(w => w.name);
-          
-          if (names.length === 1) {
-            setDigitalCredit(`דיגיטל: ${names[0]}`);
-          } else if (names.length === 2) {
-            setDigitalCredit(`דיגיטל: ${names[0]} ו${names[1]}`);
-          } else if (names.length > 2) {
-            const allButLast = names.slice(0, names.length - 1).join(', ');
-            setDigitalCredit(`דיגיטל: ${allButLast} ו${names[names.length - 1]}`);
-          }
+        if (creditLine) {
+          setDigitalCredit(creditLine);
         } else {
           setDigitalCredit('');
         }
