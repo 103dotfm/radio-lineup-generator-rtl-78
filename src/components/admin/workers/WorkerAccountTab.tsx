@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Worker } from '@/lib/supabase/workers';
-import { AlertCircle, UserPlus, KeyRound, RefreshCw } from 'lucide-react';
+import { AlertCircle, UserPlus, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
