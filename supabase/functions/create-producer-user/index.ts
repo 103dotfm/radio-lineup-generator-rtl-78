@@ -35,7 +35,6 @@ serve(async (req) => {
       );
     }
 
-    console.log("Creating Supabase client");
     // Create a Supabase client with the service role key
     const supabaseClient = createClient(
       supabaseUrl,
@@ -44,29 +43,17 @@ serve(async (req) => {
     );
     
     // Parse request body
-    let body;
-    try {
-      body = await req.json();
-      console.log("Request body parsed:", body);
-    } catch (e) {
-      console.error("Error parsing request body:", e);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Invalid request body'
-        }),
-        { headers: corsHeaders, status: 400 }
-      );
-    }
+    const body = await req.json();
+    console.log("Request body parsed:", body);
     
     const { worker_id, email } = body;
     
     if (!worker_id || !email) {
-      console.error("Missing required fields");
+      console.error("Missing required fields:", { worker_id, email });
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Missing required fields'
+          message: 'Missing required fields: worker_id or email'
         }),
         { headers: corsHeaders, status: 400 }
       );

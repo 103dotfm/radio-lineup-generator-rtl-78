@@ -35,7 +35,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Creating Supabase client");
+    // Create a Supabase client with the service role key
     const supabaseClient = createClient(
       supabaseUrl,
       supabaseKey,
@@ -43,40 +43,28 @@ serve(async (req) => {
     );
     
     // Parse request body
-    let body;
-    try {
-      body = await req.json();
-      console.log("Request body parsed:", body);
-    } catch (e) {
-      console.error("Error parsing request body:", e);
+    const body = await req.json();
+    console.log("Request body parsed:", body);
+    
+    const { worker_id } = body;
+    
+    if (!worker_id) {
+      console.error("Missing required field: worker_id");
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Invalid request body'
-        }),
-        { headers: corsHeaders, status: 400 }
-      );
-    }
-    
-    const { workerId } = body;
-    
-    if (!workerId) {
-      console.error("Missing required fields");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Missing required fields'
+          message: 'Missing required field: worker_id'
         }),
         { headers: corsHeaders, status: 400 }
       );
     }
     
     // Get the worker to check if they have a user_id
-    console.log("Fetching worker record for ID:", workerId);
+    console.log("Fetching worker record for ID:", worker_id);
     const { data: workerData, error: workerError } = await supabaseClient
       .from('workers')
       .select('user_id, email')
-      .eq('id', workerId)
+      .eq('id', worker_id)
       .single();
     
     if (workerError || !workerData) {
@@ -130,7 +118,7 @@ serve(async (req) => {
     const { error: updateError } = await supabaseClient
       .from('workers')
       .update({ password_readable: newPassword })
-      .eq('id', workerId);
+      .eq('id', worker_id);
     
     if (updateError) {
       console.error("Error updating worker record:", updateError);
