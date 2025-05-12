@@ -10,6 +10,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   console.log("Function called with method:", req.method);
+  console.log("Request URL:", req.url);
   
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -21,20 +22,25 @@ serve(async (req) => {
   }
   
   try {
+    console.log("Starting user creation process");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error("Missing environment variables");
+      console.error("Missing environment variables:", {
+        hasSupabaseUrl: !!supabaseUrl,
+        hasSupabaseKey: !!supabaseKey
+      });
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Server configuration error'
+          message: 'Server configuration error - missing environment variables'
         }),
         { headers: corsHeaders, status: 500 }
       );
     }
 
+    console.log("Creating Supabase client");
     // Create a Supabase client with the service role key
     const supabaseClient = createClient(
       supabaseUrl,
@@ -43,8 +49,21 @@ serve(async (req) => {
     );
     
     // Parse request body
-    const body = await req.json();
-    console.log("Request body parsed:", body);
+    let body;
+    try {
+      body = await req.json();
+      console.log("Request body parsed:", body);
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Invalid JSON in request body',
+          error: error.message
+        }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
     
     const { worker_id, email } = body;
     
@@ -75,6 +94,7 @@ serve(async (req) => {
       );
     }
     
+    console.log("Retrieved users count:", existingUser?.users?.length || 0);
     const userExists = existingUser?.users.some(user => user.email === email);
     
     if (userExists) {
@@ -89,6 +109,7 @@ serve(async (req) => {
     }
     
     // Fetch worker details to get the name and other info first
+    console.log("Fetching worker details for ID:", worker_id);
     const { data: workerData, error: workerError } = await supabaseClient
       .from('workers')
       .select('name, position, department')
@@ -108,6 +129,7 @@ serve(async (req) => {
     }
     
     if (!workerData) {
+      console.error("Worker not found with ID:", worker_id);
       return new Response(
         JSON.stringify({
           success: false,
@@ -117,91 +139,120 @@ serve(async (req) => {
       );
     }
     
+    console.log("Worker found:", workerData);
+    
     // Generate new password
     const newPassword = generateStrongPassword(12);
     console.log("Generated password for new user");
     
     // Create the user using admin API
     console.log("Creating user with email:", email);
-    const { data, error } = await supabaseClient.auth.admin.createUser({
-      email,
-      password: newPassword,
-      email_confirm: true
-    });
-    
-    if (error) {
-      console.error("Error creating user:", error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: error.message, 
-          message: error.message 
-        }),
-        { headers: corsHeaders, status: 400 }
-      );
-    }
-    
-    // Update worker record with user_id and password
-    console.log("Updating worker record for ID:", worker_id);
-    const { error: updateError } = await supabaseClient
-      .from('workers')
-      .update({ 
-        user_id: data.user.id,
-        password_readable: newPassword,
-        email: email  // Ensure the email is stored in the worker record as well
-      })
-      .eq('id', worker_id);
-    
-    if (updateError) {
-      console.error("Error updating worker record:", updateError);
-      // We should handle this case by ensuring the user is properly deleted
-      await supabaseClient.auth.admin.deleteUser(data.user.id);
+    try {
+      const { data, error } = await supabaseClient.auth.admin.createUser({
+        email,
+        password: newPassword,
+        email_confirm: true
+      });
       
+      if (error) {
+        console.error("Error creating user:", error);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: error.message, 
+            message: error.message 
+          }),
+          { headers: corsHeaders, status: 400 }
+        );
+      }
+      
+      if (!data.user) {
+        console.error("User creation returned no user data");
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "נכשל ביצירת משתמש - אין פרטי משתמש"
+          }),
+          { headers: corsHeaders, status: 500 }
+        );
+      }
+      
+      console.log("User created successfully with ID:", data.user.id);
+      
+      // Update worker record with user_id and password
+      console.log("Updating worker record for ID:", worker_id);
+      const { error: updateError } = await supabaseClient
+        .from('workers')
+        .update({ 
+          user_id: data.user.id,
+          password_readable: newPassword,
+          email: email  // Ensure the email is stored in the worker record as well
+        })
+        .eq('id', worker_id);
+      
+      if (updateError) {
+        console.error("Error updating worker record:", updateError);
+        // We should handle this case by ensuring the user is properly deleted
+        console.log("Attempting to delete the created user to maintain consistency");
+        await supabaseClient.auth.admin.deleteUser(data.user.id);
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "נוצר משתמש אך אירעה שגיאה בקישור למפיק",
+            error: updateError.message
+          }),
+          { headers: corsHeaders, status: 500 }
+        );
+      }
+      
+      // Create an entry in the users table for the new user with producer info
+      console.log("Creating users table entry for ID:", data.user.id);
+      
+      // Create the users table entry with worker name and position
+      const { error: usersTableError } = await supabaseClient
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: email,
+          full_name: workerData.name || email,
+          username: `${workerData.name || ''} (${email})`,
+          title: workerData.position || workerData.department || '',
+          is_admin: false // producers are not admins by default
+        });
+      
+      if (usersTableError) {
+        console.error("Error creating users table entry:", usersTableError);
+        console.log("User authentication created, but profile creation failed");
+      }
+      
+      console.log("Successfully created user and updated worker record");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          password: newPassword
+        }),
+        { headers: corsHeaders, status: 200 }
+      );
+    } catch (authError) {
+      console.error("Error in auth.admin.createUser:", authError);
       return new Response(
         JSON.stringify({
           success: false,
-          message: "נוצר משתמש אך אירעה שגיאה בקישור למפיק",
-          error: updateError.message
+          message: "שגיאה ביצירת משתמש",
+          error: authError.message
         }),
         { headers: corsHeaders, status: 500 }
       );
     }
-    
-    // Create an entry in the users table for the new user with producer info
-    console.log("Creating users table entry for ID:", data.user.id);
-    
-    // Create the users table entry with worker name and position
-    const { error: usersTableError } = await supabaseClient
-      .from('users')
-      .insert({
-        id: data.user.id,
-        email: email,
-        full_name: workerData.name || email,
-        username: `${workerData.name} (${email})`,
-        title: workerData.position || workerData.department || '',
-        is_admin: false // producers are not admins by default
-      });
-    
-    if (usersTableError) {
-      console.error("Error creating users table entry:", usersTableError);
-      // Log the error but still return success since the authentication user was created
-    }
-    
-    console.log("Successfully created user and updated worker record");
-    return new Response(
-      JSON.stringify({
-        success: true,
-        password: newPassword
-      }),
-      { headers: corsHeaders, status: 200 }
-    );
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: error.message || "Unknown error",
-        message: "שגיאה לא צפויה אירעה"
+        message: "שגיאה לא צפויה אירעה",
+        stack: error.stack
       }),
       { headers: corsHeaders, status: 500 }
     );
