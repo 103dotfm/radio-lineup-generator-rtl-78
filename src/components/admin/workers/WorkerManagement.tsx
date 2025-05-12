@@ -6,7 +6,7 @@ import WorkerDialog from './WorkerDialog';
 import { useToast } from "@/hooks/use-toast";
 import { useWorkers } from '@/hooks/useWorkers';
 import { Worker, createWorker, updateWorker, deleteWorker } from '@/lib/supabase/workers';
-import { createProducerUser, resetProducerPassword } from '@/lib/supabase/producers';
+import { createProducerUser, resetProducerPassword } from '@/lib/supabase/producers/users';
 import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
 import WorkerDivisionsTab from './WorkerDivisionsTab';
@@ -159,21 +159,33 @@ const WorkerManagement = () => {
     
     try {
       console.log(`Creating user account for worker ${selectedWorker.name} with email ${email}`);
+      
+      // Show loading toast
+      toast({
+        title: "יוצר חשבון משתמש...",
+        description: `עבור ${selectedWorker.name}`,
+      });
+      
       const result = await createProducerUser(selectedWorker.id, email);
+      
+      console.log("User creation result:", result);
       
       if (result.success) {
         toast({
           title: "משתמש נוצר בהצלחה",
           description: `סיסמה זמנית: ${result.password}`,
         });
-        loadWorkers();
+        loadWorkers(); // Refresh data
       } else {
         console.error("Failed to create user account:", result);
         
         // Display more detailed error if available
-        const errorDescription = result.details 
-          ? `${result.message} - ${JSON.stringify(result.details)}`
-          : result.message || "שגיאה ביצירת משתמש";
+        let errorDescription = result.message || "שגיאה ביצירת משתמש";
+        
+        if (result.details) {
+          console.error("Error details:", result.details);
+          errorDescription = `${errorDescription} - ${JSON.stringify(result.details)}`;
+        }
         
         toast({
           title: "שגיאה",
@@ -196,6 +208,13 @@ const WorkerManagement = () => {
     
     try {
       console.log(`Resetting password for worker ${selectedWorker.name}`);
+      
+      // Show loading toast
+      toast({
+        title: "מאפס סיסמה...",
+        description: `עבור ${selectedWorker.name}`,
+      });
+      
       const result = await resetProducerPassword(selectedWorker.id);
       
       if (result.success) {
@@ -203,13 +222,17 @@ const WorkerManagement = () => {
           title: "איפוס סיסמה בוצע בהצלחה",
           description: `סיסמה חדשה: ${result.password}`,
         });
+        loadWorkers(); // Refresh data
       } else {
         console.error("Failed to reset password:", result);
         
         // Display more detailed error if available
-        const errorDescription = result.details 
-          ? `${result.message} - ${JSON.stringify(result.details)}`
-          : result.message || "שגיאה באיפוס סיסמה";
+        let errorDescription = result.message || "שגיאה באיפוס סיסמה";
+        
+        if (result.details) {
+          console.error("Error details:", result.details);
+          errorDescription = `${errorDescription} - ${JSON.stringify(result.details)}`;
+        }
         
         toast({
           title: "שגיאה",
