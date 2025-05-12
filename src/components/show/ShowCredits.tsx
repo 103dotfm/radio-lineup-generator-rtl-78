@@ -27,6 +27,11 @@ const ShowCredits = ({
 }: ShowCreditsProps) => {
   const [producerAssignments, setProducerAssignments] = useState<ProducerAssignment[]>([]);
   const [isLoadingProducers, setIsLoadingProducers] = useState(false);
+  const [creditsAdded, setCreditsAdded] = useState({
+    producers: false,
+    digital: false,
+    nextShow: false
+  });
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -47,6 +52,14 @@ const ShowCredits = ({
 
     fetchAssignments();
   }, [showDate]);
+  
+  // Check if all suggested credits have been added
+  const allCreditsAdded = Object.values(creditsAdded).every(added => added);
+  
+  // Handle individual credit additions
+  const handleProducerCreditAdded = () => setCreditsAdded(prev => ({ ...prev, producers: true }));
+  const handleDigitalCreditAdded = () => setCreditsAdded(prev => ({ ...prev, digital: true }));
+  const handleNextShowCreditAdded = () => setCreditsAdded(prev => ({ ...prev, nextShow: true }));
 
   if (!editor) return null;
 
@@ -54,12 +67,15 @@ const ShowCredits = ({
     (!isLoadingProducers && producerAssignments.length > 0 && showDate && showTime) || 
     (showDate && showTime) || 
     nextShowName;
+    
+  // Don't show the suggestions box if all credits have been added
+  const showSuggestionsBox = hasCreditsToShow && !allCreditsAdded;
 
   return (
     <div className="col-span-2 space-y-4">
       <EditorContent editor={editor} className="min-h-[100px] bg-white border rounded-md text-center" />
       
-      {hasCreditsToShow && (
+      {showSuggestionsBox && (
         <div className="space-y-4 rounded-md border p-4 bg-gray-50">
           <h3 className="text-sm font-medium text-gray-500">הצעות קרדיטים</h3>
           
@@ -69,6 +85,8 @@ const ShowCredits = ({
               assignments={producerAssignments}
               showDate={showDate}
               showTime={showTime}
+              onCreditAdded={handleProducerCreditAdded}
+              allCreditsAdded={allCreditsAdded}
             />
           )}
           
@@ -76,7 +94,9 @@ const ShowCredits = ({
             <DigitalCreditsSuggestion 
               showDate={showDate} 
               showTime={showTime} 
-              editor={editor} 
+              editor={editor}
+              onCreditAdded={handleDigitalCreditAdded}
+              allCreditsAdded={allCreditsAdded}
             />
           )}
           
@@ -86,6 +106,8 @@ const ShowCredits = ({
               nextShowName={nextShowName}
               nextShowHost={nextShowHost}
               onRemoveLine={onRemoveNextShowLine}
+              onCreditAdded={handleNextShowCreditAdded}
+              allCreditsAdded={allCreditsAdded}
             />
           )}
         </div>

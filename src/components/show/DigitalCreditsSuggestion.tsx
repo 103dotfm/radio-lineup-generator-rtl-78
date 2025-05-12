@@ -8,16 +8,21 @@ interface DigitalCreditsSuggestionProps {
   showDate: Date;
   showTime: string;
   editor: Editor;
+  onCreditAdded?: () => void;
+  allCreditsAdded?: boolean;
 }
 
 const DigitalCreditsSuggestion = ({ 
   showDate,
   showTime, 
-  editor 
+  editor,
+  onCreditAdded,
+  allCreditsAdded
 }: DigitalCreditsSuggestionProps) => {
   const [digitalCredit, setDigitalCredit] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     const loadDigitalWorkers = async () => {
@@ -50,6 +55,24 @@ const DigitalCreditsSuggestion = ({
       setIsAdded(currentContent.includes(digitalCredit));
     }
   }, [editor, digitalCredit]);
+
+  // Effect for handling animation and visibility
+  useEffect(() => {
+    if (isAdded) {
+      // Delay the removal from DOM to allow animation to play
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        // Notify parent component that a credit was added
+        if (onCreditAdded) {
+          onCreditAdded();
+        }
+      }, 250); // Match this with CSS transition duration
+      
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(true);
+    }
+  }, [isAdded, onCreditAdded]);
 
   const handleAddToCredits = () => {
     if (!digitalCredit) return;
@@ -96,12 +119,12 @@ const DigitalCreditsSuggestion = ({
     setIsAdded(false);
   };
 
-  if (isLoading || !digitalCredit) {
+  if (isLoading || !digitalCredit || !isVisible || allCreditsAdded) {
     return null;
   }
 
   return (
-    <div className="text-sm bg-white rounded p-3 border">
+    <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       <div className="mb-2 flex justify-between items-center">
         <span className="font-medium">קרדיט לדיגיטל:</span>
         <div className="space-x-2 space-x-reverse rtl">
