@@ -15,7 +15,7 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     console.log("Handling OPTIONS request");
-    return new Response(JSON.stringify({ success: true }), { 
+    return new Response(null, { 
       headers: corsHeaders,
       status: 200 
     });
@@ -68,8 +68,6 @@ serve(async (req) => {
     // Extract and validate required fields
     const { worker_id, email } = body;
     
-    console.log("Validating input fields:", { worker_id, email });
-    
     if (!worker_id) {
       console.error("Missing required field: worker_id");
       return new Response(
@@ -87,6 +85,21 @@ serve(async (req) => {
         JSON.stringify({ 
           success: false, 
           message: 'Missing required field: email'
+        }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+    
+    console.log("Validating input fields:", { worker_id, email });
+    
+    // Validate email format with a basic regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error("Invalid email format:", email);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Invalid email format'
         }),
         { headers: corsHeaders, status: 400 }
       );
@@ -173,8 +186,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: error.message, 
-            message: error.message 
+            message: error.message
           }),
           { headers: corsHeaders, status: 400 }
         );
@@ -264,9 +276,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Unknown error",
         message: "שגיאה לא צפויה אירעה",
-        stack: error.stack
+        error: error.message || "Unknown error"
       }),
       { headers: corsHeaders, status: 500 }
     );
