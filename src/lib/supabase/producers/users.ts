@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 
 export const createProducerUser = async (workerId: string, email: string) => {
@@ -24,7 +23,7 @@ export const createProducerUser = async (workerId: string, email: string) => {
       console.error("Edge function error:", error);
       
       // If there's context with response data, try to extract more details
-      let errorMessage = error.message;
+      let errorMessage = error.message || "Failed to create user";
       let errorDetails = null;
       
       if (error.context && error.context.response) {
@@ -122,7 +121,7 @@ export const resetProducerPassword = async (workerId: string) => {
       console.error("Edge function error:", error);
       
       // Try to extract more details about the error
-      let errorMessage = error.message;
+      let errorMessage = error.message || "Failed to reset password";
       let errorDetails = null;
       
       if (error.context && error.context.response) {
