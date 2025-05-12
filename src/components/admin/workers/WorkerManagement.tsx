@@ -175,7 +175,7 @@ const WorkerManagement = () => {
           title: "משתמש נוצר בהצלחה",
           description: `סיסמה זמנית: ${result.password}`,
         });
-        loadWorkers(); // Refresh data
+        await loadWorkers(); // Refresh data with await
       } else {
         console.error("Failed to create user account:", result);
         
@@ -184,7 +184,6 @@ const WorkerManagement = () => {
         
         if (result.details) {
           console.error("Error details:", result.details);
-          errorDescription = `${errorDescription} - ${JSON.stringify(result.details)}`;
         }
         
         toast({
@@ -222,7 +221,7 @@ const WorkerManagement = () => {
           title: "איפוס סיסמה בוצע בהצלחה",
           description: `סיסמה חדשה: ${result.password}`,
         });
-        loadWorkers(); // Refresh data
+        await loadWorkers(); // Refresh data with await
       } else {
         console.error("Failed to reset password:", result);
         
@@ -231,7 +230,6 @@ const WorkerManagement = () => {
         
         if (result.details) {
           console.error("Error details:", result.details);
-          errorDescription = `${errorDescription} - ${JSON.stringify(result.details)}`;
         }
         
         toast({

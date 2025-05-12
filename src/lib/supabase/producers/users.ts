@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 
 export const createProducerUser = async (workerId: string, email: string) => {
@@ -36,65 +35,40 @@ export const createProducerUser = async (workerId: string, email: string) => {
     console.log("Validations passed, proceeding with edge function call");
     
     // Call the edge function with robust error handling
-    try {
-      const { data, error } = await supabase.functions.invoke('create-producer-user', {
-        body: { 
-          worker_id: workerId, 
-          email: email.trim() 
-        },
-      });
+    const { data, error } = await supabase.functions.invoke('create-producer-user', {
+      body: { 
+        worker_id: workerId, 
+        email: email.trim() 
+      }
+    });
+    
+    if (error) {
+      console.error("Edge function error:", error);
       
-      if (error) {
-        console.error("Edge function error:", error);
-        
-        let errorMessage = "Failed to create user";
-        let errorDetails = null;
-        
-        // Try to extract more information from the error response
-        if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        if (error.context && error.context.response) {
-          try {
-            const responseData = await error.context.response.json();
-            console.log("Error response data:", responseData);
-            
-            if (responseData.message) {
-              errorMessage = responseData.message;
-            }
-            
-            errorDetails = responseData;
-          } catch (parseError) {
-            console.error("Could not parse error response:", parseError);
-          }
-        }
-        
-        return { 
-          success: false, 
-          message: errorMessage,
-          details: errorDetails
-        };
+      let errorMessage = "Failed to create user";
+      let errorDetails = null;
+      
+      if (error.message) {
+        errorMessage = error.message;
       }
       
-      console.log("Edge function response:", data);
-      
-      if (!data) {
-        return { 
-          success: false, 
-          message: 'No data returned from server' 
-        };
-      }
-      
-      return data;
-    } catch (invocationError) {
-      console.error("Error invoking edge function:", invocationError);
-      return {
-        success: false,
-        message: invocationError.message || "Failed to communicate with server",
-        details: { error: invocationError }
+      return { 
+        success: false, 
+        message: errorMessage,
+        details: errorDetails
       };
     }
+    
+    console.log("Edge function response:", data);
+    
+    if (!data) {
+      return { 
+        success: false, 
+        message: 'No data returned from server' 
+      };
+    }
+    
+    return data;
   } catch (error) {
     console.error("Unexpected error in createProducerUser:", error);
     return { 
