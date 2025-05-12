@@ -24,44 +24,59 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const validateEmail = (email: string): boolean => {
-    // Basic email validation
+  // Improved email validation with better error messages
+  const validateEmail = (email: string): { isValid: boolean; message: string | null } => {
+    if (!email.trim()) {
+      return { isValid: false, message: "יש להזין כתובת אימייל" };
+    }
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    if (!emailRegex.test(email)) {
+      return { isValid: false, message: "יש להזין כתובת אימייל תקינה" };
+    }
+    
+    return { isValid: true, message: null };
   };
 
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     
-    // Validate email
-    if (!email) {
-      setErrorMessage("יש להזין כתובת אימייל");
+    // Enhanced validation
+    const { isValid, message } = validateEmail(email);
+    if (!isValid) {
+      setErrorMessage(message);
       return;
     }
     
-    if (!validateEmail(email)) {
-      setErrorMessage("יש להזין כתובת אימייל תקינה");
-      return;
-    }
-    
-    // Handle form submission
+    // Set submitting state and log action
     setIsSubmitting(true);
+    console.log("Attempting to create account for worker:", worker.id, "with email:", email);
     
-    // The parent component will handle success/error messages
-    console.log("Creating account for worker:", worker.name, "with email:", email);
+    // Call the parent handler
     onCreateAccount(email);
     
-    // The parent component will handle disabling the loading state
-    // Set a timeout just in case the parent doesn't update our state
-    setTimeout(() => setIsSubmitting(false), 5000);
+    // Set timeout as fallback
+    setTimeout(() => {
+      if (isSubmitting) {
+        setIsSubmitting(false);
+        console.log("Timeout reached - resetting submit state");
+      }
+    }, 10000);
   };
   
   const handleResetPassword = () => {
     setIsSubmitting(true);
+    console.log("Attempting to reset password for worker:", worker.id);
     onResetPassword();
-    // Set a timeout just in case the parent doesn't update our state
-    setTimeout(() => setIsSubmitting(false), 5000);
+    
+    // Set timeout as fallback
+    setTimeout(() => {
+      if (isSubmitting) {
+        setIsSubmitting(false);
+        console.log("Timeout reached - resetting submit state");
+      }
+    }, 10000);
   };
   
   return (

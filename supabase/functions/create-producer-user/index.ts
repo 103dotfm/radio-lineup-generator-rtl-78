@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
+// Define CORS headers for all responses
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -48,25 +49,26 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
     
-    // Parse request body
+    // Parse and validate request body
     let body;
     try {
       body = await req.json();
-      console.log("Request body parsed:", body);
+      console.log("Request body received:", body);
     } catch (error) {
       console.error("Error parsing request body:", error);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Invalid JSON in request body',
-          error: error.message
+          message: 'Invalid JSON in request body'
         }),
         { headers: corsHeaders, status: 400 }
       );
     }
     
-    // Extract and validate required fields
+    // Validate required fields
     const { worker_id, email } = body;
+    
+    console.log("Validating required fields:", { worker_id, email });
     
     if (!worker_id) {
       console.error("Missing required field: worker_id");
@@ -90,9 +92,7 @@ serve(async (req) => {
       );
     }
     
-    console.log("Validating input fields:", { worker_id, email });
-    
-    // Validate email format with a basic regex
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       console.error("Invalid email format:", email);
