@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Worker } from '@/lib/supabase/workers';
-import { AlertCircle, UserPlus, RefreshCw } from 'lucide-react';
+import { AlertCircle, UserPlus, RefreshCw, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -22,19 +22,26 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
 }) => {
   const [email, setEmail] = useState(worker.email || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
+  const validateEmail = (email: string): boolean => {
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorDetails(null);
+    setErrorMessage(null);
     
+    // Validate email
     if (!email) {
-      setErrorDetails("יש להזין כתובת אימייל");
+      setErrorMessage("יש להזין כתובת אימייל");
       return;
     }
     
-    if (!email.includes('@')) {
-      setErrorDetails("יש להזין כתובת אימייל תקינה");
+    if (!validateEmail(email)) {
+      setErrorMessage("יש להזין כתובת אימייל תקינה");
       return;
     }
     
@@ -45,7 +52,15 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
     onCreateAccount(email);
     
     // The parent component will handle disabling the loading state
-    setTimeout(() => setIsSubmitting(false), 2000);
+    // Set a timeout just in case the parent doesn't update our state
+    setTimeout(() => setIsSubmitting(false), 5000);
+  };
+  
+  const handleResetPassword = () => {
+    setIsSubmitting(true);
+    onResetPassword();
+    // Set a timeout just in case the parent doesn't update our state
+    setTimeout(() => setIsSubmitting(false), 5000);
   };
   
   return (
@@ -63,11 +78,11 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
             )}
           </div>
           
-          {errorDetails && (
+          {errorMessage && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>שגיאה</AlertTitle>
-              <AlertDescription>{errorDetails}</AlertDescription>
+              <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           )}
           
@@ -89,12 +104,21 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
               
               <div>
                 <Button 
-                  onClick={onResetPassword} 
+                  onClick={handleResetPassword} 
                   className="flex items-center"
                   disabled={isSubmitting}
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  איפוס סיסמה
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      מאפס סיסמה...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      איפוס סיסמה
+                    </>
+                  )}
                 </Button>
                 <p className="text-sm text-gray-500 mt-2">איפוס סיסמה ייצור סיסמה חדשה ויבטל את הסיסמה הקודמת.</p>
               </div>
@@ -118,8 +142,17 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
                 className="flex items-center"
                 disabled={isSubmitting}
               >
-                <UserPlus className="mr-2 h-4 w-4" />
-                {isSubmitting ? 'יוצר חשבון...' : 'יצירת חשבון משתמש'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    יוצר חשבון...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    יצירת חשבון משתמש
+                  </>
+                )}
               </Button>
               
               <p className="text-sm text-gray-500">יצירת חשבון תשלח לכתובת האימייל הזו סיסמה זמנית.</p>
