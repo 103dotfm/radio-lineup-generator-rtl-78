@@ -95,7 +95,7 @@ serve(async (req) => {
     }
     
     console.log("Retrieved users count:", existingUser?.users?.length || 0);
-    const userExists = existingUser?.users.some(user => user.email === email);
+    const userExists = existingUser?.users?.some(user => user.email === email);
     
     if (userExists) {
       console.log("Email already registered:", email);
