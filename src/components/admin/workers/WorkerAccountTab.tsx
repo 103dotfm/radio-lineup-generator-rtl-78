@@ -22,15 +22,30 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
 }) => {
   const [email, setEmail] = useState(worker.email || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && email.includes('@')) {
-      setIsSubmitting(true);
-      onCreateAccount(email);
-      // The parent component will handle success/error messages
-      setTimeout(() => setIsSubmitting(false), 2000);
+    setErrorDetails(null);
+    
+    if (!email) {
+      setErrorDetails("יש להזין כתובת אימייל");
+      return;
     }
+    
+    if (!email.includes('@')) {
+      setErrorDetails("יש להזין כתובת אימייל תקינה");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    // The parent component will handle success/error messages
+    console.log("Creating account for worker:", worker.name, "with email:", email);
+    onCreateAccount(email);
+    
+    // The parent component will handle disabling the loading state
+    setTimeout(() => setIsSubmitting(false), 2000);
   };
   
   return (
@@ -47,6 +62,14 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
               <Badge variant="outline">אין חשבון משתמש</Badge>
             )}
           </div>
+          
+          {errorDetails && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>שגיאה</AlertTitle>
+              <AlertDescription>{errorDetails}</AlertDescription>
+            </Alert>
+          )}
           
           {worker.user_id ? (
             <div className="space-y-4">

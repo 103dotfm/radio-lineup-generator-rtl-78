@@ -3,25 +3,59 @@ import { supabase } from "@/lib/supabase";
 
 export const createProducerUser = async (workerId: string, email: string) => {
   try {
+    // Log attempt to create user
+    console.log("Starting producer user creation process:", { workerId, email });
+    
     // Call the edge function to create a user
     console.log("Invoking edge function with params:", { worker_id: workerId, email });
-    const { data, error } = await supabase.functions.invoke('create-producer-user', {
+    const { data, error, status } = await supabase.functions.invoke('create-producer-user', {
       body: { worker_id: workerId, email },
     });
     
     if (error) {
       console.error("Edge function error:", error);
+      console.error("Error status:", status);
       throw error;
     }
     
     // Log the response for debugging
     console.log("Edge function response:", data);
-    return data || { success: false, message: 'Unknown error' };
+    console.log("Response status:", status);
+    
+    if (!data) {
+      console.error("Edge function returned no data");
+      return { 
+        success: false, 
+        message: 'No data returned from server' 
+      };
+    }
+    
+    return data;
   } catch (error: any) {
     console.error("Error creating producer user:", error);
+    
+    // Try to extract more details about the error
+    let errorMessage = error.message || "Failed to create user";
+    let errorDetails = null;
+    
+    // Check if there's response data with more details
+    if (error.context && error.context.response) {
+      try {
+        const responseData = await error.context.response.json();
+        console.error("Error response data:", responseData);
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        errorDetails = responseData;
+      } catch (parseError) {
+        console.error("Could not parse error response:", parseError);
+      }
+    }
+    
     return { 
       success: false, 
-      message: error.message || "Failed to create user" 
+      message: errorMessage,
+      details: errorDetails
     };
   }
 };
@@ -30,23 +64,54 @@ export const resetProducerPassword = async (workerId: string) => {
   try {
     // Call the edge function to reset a password
     console.log("Invoking reset password function with params:", { worker_id: workerId });
-    const { data, error } = await supabase.functions.invoke('reset-producer-password', {
+    const { data, error, status } = await supabase.functions.invoke('reset-producer-password', {
       body: { worker_id: workerId },
     });
     
     if (error) {
       console.error("Edge function error:", error);
+      console.error("Error status:", status);
       throw error;
     }
     
     // Log the response for debugging
     console.log("Edge function response:", data);
-    return data || { success: false, message: 'Unknown error' };
+    console.log("Response status:", status);
+    
+    if (!data) {
+      console.error("Edge function returned no data");
+      return { 
+        success: false, 
+        message: 'No data returned from server' 
+      };
+    }
+    
+    return data;
   } catch (error: any) {
     console.error("Error resetting producer password:", error);
+    
+    // Try to extract more details about the error
+    let errorMessage = error.message || "Failed to reset password";
+    let errorDetails = null;
+    
+    // Check if there's response data with more details
+    if (error.context && error.context.response) {
+      try {
+        const responseData = await error.context.response.json();
+        console.error("Error response data:", responseData);
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        errorDetails = responseData;
+      } catch (parseError) {
+        console.error("Could not parse error response:", parseError);
+      }
+    }
+    
     return { 
       success: false, 
-      message: error.message || "Failed to reset password" 
+      message: errorMessage,
+      details: errorDetails
     };
   }
 };

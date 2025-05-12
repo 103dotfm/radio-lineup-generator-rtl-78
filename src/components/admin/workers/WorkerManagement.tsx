@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -159,6 +158,7 @@ const WorkerManagement = () => {
     if (!selectedWorker) return;
     
     try {
+      console.log(`Creating user account for worker ${selectedWorker.name} with email ${email}`);
       const result = await createProducerUser(selectedWorker.id, email);
       
       if (result.success) {
@@ -168,9 +168,16 @@ const WorkerManagement = () => {
         });
         loadWorkers();
       } else {
+        console.error("Failed to create user account:", result);
+        
+        // Display more detailed error if available
+        const errorDescription = result.details 
+          ? `${result.message} - ${JSON.stringify(result.details)}`
+          : result.message || "שגיאה ביצירת משתמש";
+        
         toast({
           title: "שגיאה",
-          description: result.message || "שגיאה ביצירת משתמש",
+          description: errorDescription,
           variant: "destructive",
         });
       }
@@ -178,7 +185,7 @@ const WorkerManagement = () => {
       console.error('Error creating user account:', error);
       toast({
         title: "שגיאה",
-        description: "שגיאה ביצירת משתמש",
+        description: `שגיאה ביצירת משתמש: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -188,6 +195,7 @@ const WorkerManagement = () => {
     if (!selectedWorker) return;
     
     try {
+      console.log(`Resetting password for worker ${selectedWorker.name}`);
       const result = await resetProducerPassword(selectedWorker.id);
       
       if (result.success) {
@@ -196,9 +204,16 @@ const WorkerManagement = () => {
           description: `סיסמה חדשה: ${result.password}`,
         });
       } else {
+        console.error("Failed to reset password:", result);
+        
+        // Display more detailed error if available
+        const errorDescription = result.details 
+          ? `${result.message} - ${JSON.stringify(result.details)}`
+          : result.message || "שגיאה באיפוס סיסמה";
+        
         toast({
           title: "שגיאה",
-          description: result.message || "שגיאה באיפוס סיסמה",
+          description: errorDescription,
           variant: "destructive",
         });
       }
@@ -206,7 +221,7 @@ const WorkerManagement = () => {
       console.error('Error resetting password:', error);
       toast({
         title: "שגיאה",
-        description: "שגיאה באיפוס סיסמה",
+        description: `שגיאה באיפוס סיסמה: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
