@@ -32,6 +32,11 @@ const ShowCredits = ({
     digital: false,
     nextShow: false
   });
+  const [dismissedSuggestions, setDismissedSuggestions] = useState({
+    producers: false,
+    digital: false,
+    nextShow: false
+  });
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -53,13 +58,21 @@ const ShowCredits = ({
     fetchAssignments();
   }, [showDate]);
   
-  // Check if all suggested credits have been added
-  const allCreditsAdded = Object.values(creditsAdded).every(added => added);
+  // Check if all suggested credits have been added or dismissed
+  const allCreditsAddedOrDismissed = Object.keys(creditsAdded).every(key => 
+    creditsAdded[key as keyof typeof creditsAdded] || 
+    dismissedSuggestions[key as keyof typeof dismissedSuggestions]
+  );
   
   // Handle individual credit additions
   const handleProducerCreditAdded = () => setCreditsAdded(prev => ({ ...prev, producers: true }));
   const handleDigitalCreditAdded = () => setCreditsAdded(prev => ({ ...prev, digital: true }));
   const handleNextShowCreditAdded = () => setCreditsAdded(prev => ({ ...prev, nextShow: true }));
+
+  // Handle dismissal of suggestions
+  const handleDismissProducer = () => setDismissedSuggestions(prev => ({ ...prev, producers: true }));
+  const handleDismissDigital = () => setDismissedSuggestions(prev => ({ ...prev, digital: true }));
+  const handleDismissNextShow = () => setDismissedSuggestions(prev => ({ ...prev, nextShow: true }));
 
   if (!editor) return null;
 
@@ -68,8 +81,8 @@ const ShowCredits = ({
     (showDate && showTime) || 
     nextShowName;
     
-  // Don't show the suggestions box if all credits have been added
-  const showSuggestionsBox = hasCreditsToShow && !allCreditsAdded;
+  // Don't show the suggestions box if all credits have been added or dismissed
+  const showSuggestionsBox = hasCreditsToShow && !allCreditsAddedOrDismissed;
 
   return (
     <div className="col-span-2 space-y-4">
@@ -79,35 +92,38 @@ const ShowCredits = ({
         <div className="space-y-4 rounded-md border p-4 bg-gray-50">
           <h3 className="text-sm font-medium text-gray-500">הצעות קרדיטים</h3>
           
-          {!isLoadingProducers && showDate && showTime && (
+          {!isLoadingProducers && showDate && showTime && !creditsAdded.producers && !dismissedSuggestions.producers && (
             <ProducersCreditsComponent 
               editor={editor}
               assignments={producerAssignments}
               showDate={showDate}
               showTime={showTime}
               onCreditAdded={handleProducerCreditAdded}
-              allCreditsAdded={allCreditsAdded}
+              onDismiss={handleDismissProducer}
+              allCreditsAdded={false}
             />
           )}
           
-          {showDate && showTime && (
+          {showDate && showTime && !creditsAdded.digital && !dismissedSuggestions.digital && (
             <DigitalCreditsSuggestion 
               showDate={showDate} 
               showTime={showTime} 
               editor={editor}
               onCreditAdded={handleDigitalCreditAdded}
-              allCreditsAdded={allCreditsAdded}
+              onDismiss={handleDismissDigital}
+              allCreditsAdded={false}
             />
           )}
           
-          {nextShowName && (
+          {nextShowName && !creditsAdded.nextShow && !dismissedSuggestions.nextShow && (
             <NextShowCredits
               editor={editor}
               nextShowName={nextShowName}
               nextShowHost={nextShowHost}
               onRemoveLine={onRemoveNextShowLine}
               onCreditAdded={handleNextShowCreditAdded}
-              allCreditsAdded={allCreditsAdded}
+              onDismiss={handleDismissNextShow}
+              allCreditsAdded={false}
             />
           )}
         </div>
