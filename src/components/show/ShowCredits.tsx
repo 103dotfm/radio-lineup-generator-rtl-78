@@ -76,13 +76,16 @@ const ShowCredits = ({
 
   if (!editor) return null;
 
-  const hasCreditsToShow = 
-    (!isLoadingProducers && producerAssignments.length > 0 && showDate && showTime) || 
-    (showDate && showTime) || 
-    nextShowName;
+  // Check if there are any suggestions to display
+  const hasProducerSuggestion = !isLoadingProducers && producerAssignments.length > 0 && showDate && showTime && !creditsAdded.producers && !dismissedSuggestions.producers;
+  const hasDigitalSuggestion = showDate && showTime && !creditsAdded.digital && !dismissedSuggestions.digital;
+  const hasNextShowSuggestion = nextShowName && !creditsAdded.nextShow && !dismissedSuggestions.nextShow;
+  
+  // Check if any suggestions are available to display
+  const hasSuggestions = hasProducerSuggestion || hasDigitalSuggestion || hasNextShowSuggestion;
     
   // Don't show the suggestions box if all credits have been added or dismissed
-  const showSuggestionsBox = hasCreditsToShow && !allCreditsAddedOrDismissed;
+  const showSuggestionsBox = hasSuggestions && !allCreditsAddedOrDismissed;
 
   return (
     <div className="col-span-2 space-y-4">
@@ -92,7 +95,7 @@ const ShowCredits = ({
         <div className="space-y-4 rounded-md border p-4 bg-gray-50">
           <h3 className="text-sm font-medium text-gray-500">הצעות קרדיטים</h3>
           
-          {!isLoadingProducers && showDate && showTime && !creditsAdded.producers && !dismissedSuggestions.producers && (
+          {hasProducerSuggestion && (
             <ProducersCreditsComponent 
               editor={editor}
               assignments={producerAssignments}
@@ -104,7 +107,7 @@ const ShowCredits = ({
             />
           )}
           
-          {showDate && showTime && !creditsAdded.digital && !dismissedSuggestions.digital && (
+          {hasDigitalSuggestion && (
             <DigitalCreditsSuggestion 
               showDate={showDate} 
               showTime={showTime} 
@@ -115,7 +118,7 @@ const ShowCredits = ({
             />
           )}
           
-          {nextShowName && !creditsAdded.nextShow && !dismissedSuggestions.nextShow && (
+          {hasNextShowSuggestion && (
             <NextShowCredits
               editor={editor}
               nextShowName={nextShowName}
