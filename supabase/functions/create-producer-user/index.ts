@@ -66,7 +66,7 @@ serve(async (req) => {
     }
     
     // Validate required fields
-    const { worker_id, email } = body;
+    const { worker_id, email } = body || {};
     
     console.log("Validating required fields:", { worker_id, email });
     

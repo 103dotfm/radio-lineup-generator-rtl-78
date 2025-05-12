@@ -11,8 +11,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface WorkerAccountTabProps {
   worker: Worker;
-  onCreateAccount: (email: string) => void;
-  onResetPassword: () => void;
+  onCreateAccount: (email: string) => Promise<void>;
+  onResetPassword: () => Promise<void>;
 }
 
 const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({ 
@@ -38,7 +38,7 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
     return { isValid: true, message: null };
   };
 
-  const handleCreateAccount = (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     
@@ -53,30 +53,29 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
     setIsSubmitting(true);
     console.log("Attempting to create account for worker:", worker.id, "with email:", email);
     
-    // Call the parent handler
-    onCreateAccount(email);
-    
-    // Set timeout as fallback
-    setTimeout(() => {
-      if (isSubmitting) {
-        setIsSubmitting(false);
-        console.log("Timeout reached - resetting submit state");
-      }
-    }, 10000);
+    try {
+      // Call the parent handler
+      await onCreateAccount(email);
+    } catch (error) {
+      console.error("Error in handleCreateAccount:", error);
+      setErrorMessage(error instanceof Error ? error.message : "An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     setIsSubmitting(true);
     console.log("Attempting to reset password for worker:", worker.id);
-    onResetPassword();
     
-    // Set timeout as fallback
-    setTimeout(() => {
-      if (isSubmitting) {
-        setIsSubmitting(false);
-        console.log("Timeout reached - resetting submit state");
-      }
-    }, 10000);
+    try {
+      await onResetPassword();
+    } catch (error) {
+      console.error("Error in handleResetPassword:", error);
+      setErrorMessage(error instanceof Error ? error.message : "An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
