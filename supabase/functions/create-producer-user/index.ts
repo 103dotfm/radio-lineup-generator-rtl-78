@@ -65,14 +65,28 @@ serve(async (req) => {
       );
     }
     
+    // Extract and validate required fields
     const { worker_id, email } = body;
     
-    if (!worker_id || !email) {
-      console.error("Missing required fields:", { worker_id, email });
+    console.log("Validating input fields:", { worker_id, email });
+    
+    if (!worker_id) {
+      console.error("Missing required field: worker_id");
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: 'Missing required fields: worker_id or email'
+          message: 'Missing required field: worker_id'
+        }),
+        { headers: corsHeaders, status: 400 }
+      );
+    }
+    
+    if (!email) {
+      console.error("Missing required field: email");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Missing required field: email'
         }),
         { headers: corsHeaders, status: 400 }
       );

@@ -6,6 +6,14 @@ export const createProducerUser = async (workerId: string, email: string) => {
     // Log attempt to create user
     console.log("Starting producer user creation process:", { workerId, email });
     
+    if (!workerId || !email) {
+      console.error("Missing required parameters:", { workerId, email });
+      return { 
+        success: false, 
+        message: 'Missing required parameters. Both worker ID and email must be provided.' 
+      };
+    }
+    
     // Call the edge function to create a user
     console.log("Invoking edge function with params:", { worker_id: workerId, email });
     const { data, error } = await supabase.functions.invoke('create-producer-user', {
@@ -14,7 +22,38 @@ export const createProducerUser = async (workerId: string, email: string) => {
     
     if (error) {
       console.error("Edge function error:", error);
-      throw error;
+      
+      // If there's context with response data, try to extract more details
+      let errorMessage = error.message;
+      let errorDetails = null;
+      
+      if (error.context && error.context.response) {
+        try {
+          // Try to parse error response
+          const responseData = await error.context.response.json();
+          console.error("Error response data:", responseData);
+          
+          // Use the custom error message from the edge function if available
+          if (responseData.message) {
+            errorMessage = responseData.message;
+          }
+          
+          errorDetails = responseData;
+        } catch (parseError) {
+          console.error("Could not parse error response:", parseError);
+        }
+      }
+      
+      // Enhanced error logging for debugging
+      console.error("Error type:", typeof error);
+      console.error("Error constructor:", error.constructor?.name);
+      console.error("Error properties:", Object.keys(error));
+      
+      return { 
+        success: false, 
+        message: errorMessage,
+        details: errorDetails
+      };
     }
     
     // Log the response for debugging
@@ -65,6 +104,14 @@ export const createProducerUser = async (workerId: string, email: string) => {
 
 export const resetProducerPassword = async (workerId: string) => {
   try {
+    if (!workerId) {
+      console.error("Missing required parameter: workerId");
+      return { 
+        success: false, 
+        message: 'Missing required parameter: worker ID' 
+      };
+    }
+    
     // Call the edge function to reset a password
     console.log("Invoking reset password function with params:", { worker_id: workerId });
     const { data, error } = await supabase.functions.invoke('reset-producer-password', {
@@ -73,7 +120,29 @@ export const resetProducerPassword = async (workerId: string) => {
     
     if (error) {
       console.error("Edge function error:", error);
-      throw error;
+      
+      // Try to extract more details about the error
+      let errorMessage = error.message;
+      let errorDetails = null;
+      
+      if (error.context && error.context.response) {
+        try {
+          const responseData = await error.context.response.json();
+          console.error("Error response data:", responseData);
+          if (responseData.message) {
+            errorMessage = responseData.message;
+          }
+          errorDetails = responseData;
+        } catch (parseError) {
+          console.error("Could not parse error response:", parseError);
+        }
+      }
+      
+      return { 
+        success: false, 
+        message: errorMessage,
+        details: errorDetails
+      };
     }
     
     // Log the response for debugging
