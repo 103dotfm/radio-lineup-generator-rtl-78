@@ -45,6 +45,7 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
       return;
     }
     
+    // Handle form submission
     setIsSubmitting(true);
     
     // The parent component will handle success/error messages
