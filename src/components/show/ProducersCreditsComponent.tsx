@@ -41,7 +41,7 @@ const ProducersCreditsComponent = ({
     });
   }, [assignments, showDate, showTime]);
 
-  // Preserve original order from assignments array
+  // Categorize producers while preserving original order
   const sortedProducers = useMemo(() => {
     if (!relevantProducers.length) return [];
     
@@ -55,8 +55,8 @@ const ProducersCreditsComponent = ({
       'מפיקה': 'producer',
     };
     
-    // Don't sort by role - keep the original order but categorize for display
-    return relevantProducers.map(assignment => {
+    // Don't sort by role - but categorize for display and keep original order
+    return relevantProducers.map((assignment, index) => {
       // Determine category
       let category = 'other';
       const roleLC = (assignment.role || '').toLowerCase();
@@ -69,8 +69,8 @@ const ProducersCreditsComponent = ({
         name: assignment.worker?.name || '',
         role: assignment.role || '',
         category,
-        // Store the original index to preserve order
-        originalIndex: relevantProducers.indexOf(assignment)
+        // Store the actual index from the original array to preserve order
+        originalIndex: index
       };
     });
   }, [relevantProducers]);
@@ -78,44 +78,24 @@ const ProducersCreditsComponent = ({
   const producersText = useMemo(() => {
     if (sortedProducers.length === 0) return '';
     
-    // Separate producers by category while preserving original order
-    const editors = sortedProducers.filter(p => p.category === 'editor');
-    const producers = sortedProducers.filter(p => p.category === 'producer');
+    // Get all producers preserving original order
+    const allProducers = [...sortedProducers].sort((a, b) => a.originalIndex - b.originalIndex);
+    const producerNames = allProducers.map(p => p.name);
     
-    // Generate text for editors first
-    let result = '';
-    
-    if (editors.length > 0) {
-      // Sort by original index to maintain work arrangement order
-      const editorsSorted = [...editors].sort((a, b) => a.originalIndex - b.originalIndex);
-      const editorNames = editorsSorted.map(p => p.name);
-      
-      if (editorNames.length === 1) {
-        result = `עריכה: ${editorNames[0]}`;
-      } else if (editorNames.length === 2) {
-        result = `עריכה: ${editorNames[0]} ו${editorNames[1]}`;
-      } else {
-        const allButLast = editorNames.slice(0, -1).join(', ');
-        result = `עריכה: ${allButLast} ו${editorNames[editorNames.length - 1]}`;
-      }
+    // Single producer case - show with role
+    if (producerNames.length === 1) {
+      const producer = allProducers[0];
+      const rolePrefix = producer.category === 'editor' ? 'עריכה' : 'הפקה';
+      return `${rolePrefix}: ${producer.name}`;
     }
     
-    // Add producers text
-    if (producers.length > 0) {
-      // Sort by original index to maintain work arrangement order
-      const producersSorted = [...producers].sort((a, b) => a.originalIndex - b.originalIndex);
-      const producerNames = producersSorted.map(p => p.name);
-      
-      const producerText = producerNames.length === 1 
-        ? `הפקה: ${producerNames[0]}`
-        : producerNames.length === 2
-          ? `הפקה: ${producerNames[0]} ו${producerNames[1]}`
-          : `הפקה: ${producerNames.slice(0, -1).join(', ')} ו${producerNames[producerNames.length - 1]}`;
-      
-      result = result ? `${result}\n${producerText}` : producerText;
+    // Multiple producers (2+) - use "עורכים ומפיקים" prefix
+    if (producerNames.length === 2) {
+      return `עורכים ומפיקים: ${producerNames[0]} ו${producerNames[1]}`;
+    } else {
+      const allButLast = producerNames.slice(0, -1).join(', ');
+      return `עורכים ומפיקים: ${allButLast} ו${producerNames[producerNames.length - 1]}`;
     }
-    
-    return result;
   }, [sortedProducers]);
 
   // Check if current editor content already includes this credit line
