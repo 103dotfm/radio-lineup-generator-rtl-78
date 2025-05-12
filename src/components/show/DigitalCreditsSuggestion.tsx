@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor } from '@tiptap/react';
 import { getDigitalWorkersForShow } from '@/lib/getDigitalWorkers';
+import { X } from 'lucide-react';
 
 interface DigitalCreditsSuggestionProps {
   showDate: Date;
   showTime: string;
   editor: Editor;
   onCreditAdded?: () => void;
+  onDismiss?: () => void;
   allCreditsAdded?: boolean;
 }
 
@@ -17,6 +18,7 @@ const DigitalCreditsSuggestion = ({
   showTime, 
   editor,
   onCreditAdded,
+  onDismiss,
   allCreditsAdded
 }: DigitalCreditsSuggestionProps) => {
   const [digitalCredit, setDigitalCredit] = useState<string>('');
@@ -119,6 +121,17 @@ const DigitalCreditsSuggestion = ({
     setIsAdded(false);
   };
 
+  const handleDismiss = () => {
+    // Animate out
+    setIsVisible(false);
+    // Call parent dismissal handler after animation completes
+    setTimeout(() => {
+      if (onDismiss) {
+        onDismiss();
+      }
+    }, 250);
+  };
+
   if (isLoading || !digitalCredit || !isVisible || allCreditsAdded) {
     return null;
   }
@@ -129,14 +142,24 @@ const DigitalCreditsSuggestion = ({
         <span className="font-medium">קרדיט לדיגיטל:</span>
         <div className="space-x-2 space-x-reverse rtl">
           {!isAdded ? (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleAddToCredits}
-              className="text-xs"
-            >
-              הוסף לקרדיטים
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAddToCredits}
+                className="text-xs"
+              >
+                הוסף לקרדיטים
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDismiss}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </>
           ) : (
             <Button 
               variant="ghost" 
