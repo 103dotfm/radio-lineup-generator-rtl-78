@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 
 export const createProducerUser = async (workerId: string, email: string) => {
@@ -10,6 +11,16 @@ export const createProducerUser = async (workerId: string, email: string) => {
       return { 
         success: false, 
         message: 'Missing required parameters. Both worker ID and email must be provided.' 
+      };
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error("Invalid email format:", email);
+      return {
+        success: false,
+        message: 'Invalid email format. Please provide a valid email address.'
       };
     }
     
