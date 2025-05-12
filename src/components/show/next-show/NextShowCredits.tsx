@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor } from '@tiptap/react';
 
@@ -8,15 +8,20 @@ interface NextShowCreditsProps {
   nextShowName: string;
   nextShowHost?: string;
   onRemoveLine?: () => void;
+  onCreditAdded?: () => void;
+  allCreditsAdded?: boolean;
 }
 
 const NextShowCredits = ({
   editor,
   nextShowName,
   nextShowHost,
-  onRemoveLine
+  onRemoveLine,
+  onCreditAdded,
+  allCreditsAdded
 }: NextShowCreditsProps) => {
   const [isAdded, setIsAdded] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
   const nextShowText = useMemo(() => {
     const displayName = nextShowHost
@@ -27,12 +32,30 @@ const NextShowCredits = ({
   }, [nextShowName, nextShowHost]);
 
   // Check if current editor content already includes this credit line
-  React.useEffect(() => {
+  useEffect(() => {
     if (editor) {
       const currentContent = editor.getHTML();
       setIsAdded(currentContent.includes(nextShowText));
     }
   }, [editor, nextShowText]);
+
+  // Effect for handling animation and visibility
+  useEffect(() => {
+    if (isAdded) {
+      // Delay the removal from DOM to allow animation to play
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        // Notify parent component that a credit was added
+        if (onCreditAdded) {
+          onCreditAdded();
+        }
+      }, 250); // Match this with CSS transition duration
+      
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(true);
+    }
+  }, [isAdded, onCreditAdded]);
 
   const handleAddToCredits = () => {
     // Get the current editor content
@@ -80,8 +103,12 @@ const NextShowCredits = ({
     }
   };
 
+  if (!isVisible || allCreditsAdded) {
+    return null;
+  }
+
   return (
-    <div className="text-sm bg-white rounded p-3 border">
+    <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       <div className="mb-2 flex justify-between items-center">
         <span className="font-medium">קרדיט לתוכנית הבאה:</span>
         <div className="space-x-2 space-x-reverse rtl">

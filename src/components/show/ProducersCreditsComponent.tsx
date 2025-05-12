@@ -8,15 +8,20 @@ interface ProducersCreditsComponentProps {
   assignments: ProducerAssignment[];
   showDate?: Date;
   showTime?: string;
+  onCreditAdded?: () => void;
+  allCreditsAdded?: boolean;
 }
 
 const ProducersCreditsComponent = ({ 
   editor, 
   assignments, 
   showDate,
-  showTime 
+  showTime,
+  onCreditAdded,
+  allCreditsAdded
 }: ProducersCreditsComponentProps) => {
   const [isAdded, setIsAdded] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   
   const relevantProducers = useMemo(() => {
     if (!showDate || !showTime || assignments.length === 0) return [];
@@ -106,6 +111,24 @@ const ProducersCreditsComponent = ({
     }
   }, [editor, producersText]);
 
+  // Effect for handling animation and visibility
+  useEffect(() => {
+    if (isAdded) {
+      // Delay the removal from DOM to allow animation to play
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        // Notify parent component that a credit was added
+        if (onCreditAdded) {
+          onCreditAdded();
+        }
+      }, 250); // Match this with CSS transition duration
+      
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(true);
+    }
+  }, [isAdded, onCreditAdded]);
+
   const handleAddToCredits = () => {
     if (!producersText) return;
 
@@ -164,12 +187,12 @@ const ProducersCreditsComponent = ({
     setIsAdded(false);
   };
 
-  if (!producersText) {
+  if (!producersText || !isVisible || allCreditsAdded) {
     return null;
   }
 
   return (
-    <div className="text-sm bg-white rounded p-3 border">
+    <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       <div className="mb-2 flex justify-between items-center">
         <span className="font-medium">קרדיט למפיקים:</span>
         <div className="space-x-2 space-x-reverse rtl">
