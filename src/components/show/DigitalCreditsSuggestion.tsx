@@ -33,7 +33,17 @@ const DigitalCreditsSuggestion = ({
         const creditLine = await getDigitalWorkersForShow(showDate, showTime);
         
         if (creditLine) {
-          setDigitalCredit(creditLine);
+          // Remove trailing period if it exists
+          const formattedCredit = creditLine.endsWith('.') ? creditLine.slice(0, -1) : creditLine;
+          // Add strong tags to the first part (before the colon)
+          const colonIndex = formattedCredit.indexOf(':');
+          if (colonIndex !== -1) {
+            const prefix = formattedCredit.substring(0, colonIndex + 1);
+            const suffix = formattedCredit.substring(colonIndex + 1);
+            setDigitalCredit(`<strong>${prefix}</strong>${suffix}`);
+          } else {
+            setDigitalCredit(formattedCredit);
+          }
         } else {
           setDigitalCredit('');
         }
@@ -138,8 +148,7 @@ const DigitalCreditsSuggestion = ({
 
   return (
     <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-      <div className="mb-2 flex justify-between items-center">
-        <span className="font-medium">קרדיט לדיגיטל:</span>
+      <div className="flex justify-between items-center">
         <div className="space-x-2 space-x-reverse rtl">
           {!isAdded ? (
             <>
@@ -172,7 +181,7 @@ const DigitalCreditsSuggestion = ({
           )}
         </div>
       </div>
-      <div className="text-right">{digitalCredit}</div>
+      <div className="text-right mt-2" dangerouslySetInnerHTML={{ __html: digitalCredit }}></div>
     </div>
   );
 };

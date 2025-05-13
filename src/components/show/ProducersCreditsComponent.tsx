@@ -94,15 +94,15 @@ const ProducersCreditsComponent = ({
     if (producerNames.length === 1) {
       const producer = allProducers[0];
       const rolePrefix = producer.category === 'editor' ? 'עריכה' : 'הפקה';
-      return `${rolePrefix}: ${producer.name}`;
+      return `<strong>${rolePrefix}: </strong>${producer.name}`;
     }
     
     // Multiple producers (2+) - use "עורכים ומפיקים" prefix
     if (producerNames.length === 2) {
-      return `עורכים ומפיקים: ${producerNames[0]} ו${producerNames[1]}`;
+      return `<strong>עורכים ומפיקים: </strong>${producerNames[0]} ו${producerNames[1]}`;
     } else {
       const allButLast = producerNames.slice(0, -1).join(', ');
-      return `עורכים ומפיקים: ${allButLast} ו${producerNames[producerNames.length - 1]}`;
+      return `<strong>עורכים ומפיקים: </strong>${allButLast} ו${producerNames[producerNames.length - 1]}`;
     }
   }, [sortedProducers]);
 
@@ -207,8 +207,7 @@ const ProducersCreditsComponent = ({
 
   return (
     <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-      <div className="mb-2 flex justify-between items-center">
-        <span className="font-medium">קרדיט למפיקים:</span>
+      <div className="flex justify-between items-center">
         <div className="space-x-2 space-x-reverse rtl">
           {!isAdded ? (
             <>
@@ -241,7 +240,7 @@ const ProducersCreditsComponent = ({
           )}
         </div>
       </div>
-      <div className="text-right whitespace-pre-line">{producersText}</div>
+      <div className="text-right whitespace-pre-line mt-2" dangerouslySetInnerHTML={{ __html: producersText }}></div>
     </div>
   );
 };

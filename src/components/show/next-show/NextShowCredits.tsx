@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor } from '@tiptap/react';
@@ -31,7 +30,7 @@ const NextShowCredits = ({
       ? `${nextShowName} עם ${nextShowHost}`
       : nextShowName;
     
-    return `אחרי החדשות: ${displayName}`;
+    return `<strong>אחרי החדשות: </strong>${displayName}`;
   }, [nextShowName, nextShowHost]);
 
   // Check if current editor content already includes this credit line
@@ -123,8 +122,7 @@ const NextShowCredits = ({
 
   return (
     <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-      <div className="mb-2 flex justify-between items-center">
-        <span className="font-medium">קרדיט לתוכנית הבאה:</span>
+      <div className="flex justify-between items-center">
         <div className="space-x-2 space-x-reverse rtl">
           {!isAdded ? (
             <>
@@ -157,7 +155,7 @@ const NextShowCredits = ({
           )}
         </div>
       </div>
-      <div className="text-right">{nextShowText}</div>
+      <div className="text-right mt-2" dangerouslySetInnerHTML={{ __html: nextShowText }}></div>
     </div>
   );
 };
