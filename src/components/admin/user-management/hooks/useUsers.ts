@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User } from '../types';
@@ -99,6 +98,7 @@ export const useUsers = () => {
                   
                 if (workerData) {
                   // Create a new user entry from the worker data
+                  // Note: We're explicitly adding only the properties that exist in the User type
                   data.push({
                     id: workerId,
                     email: workerData.email || '',
@@ -107,7 +107,7 @@ export const useUsers = () => {
                     title: workerData.position || workerData.department || 'producer',
                     is_admin: false,
                     created_at: workerData.created_at
-                  });
+                  } as User); // Type assertion to ensure compatibility
                 }
               }
             }
@@ -129,11 +129,6 @@ export const useUsers = () => {
                 }
                 if (!user.full_name && worker.name) {
                   user.full_name = worker.name;
-                }
-                
-                // Mark producers for visual identification
-                if (!user.title || user.title === '') {
-                  user.title = 'producer';
                 }
               }
             });
