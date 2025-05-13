@@ -2,7 +2,7 @@
 export interface User {
   id: string;
   email: string;
-  username?: string;
+  username: string; // Changed from optional to required
   full_name: string; // Changed from optional to required
   title?: string;
   is_admin: boolean;

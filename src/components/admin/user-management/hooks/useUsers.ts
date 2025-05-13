@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User, NewUser } from '../types';
@@ -101,8 +102,8 @@ export const useUsers = () => {
                   const newUser: User = {
                     id: workerId,
                     email: workerData.email || '',
-                    username: workerData.name || '',
-                    full_name: workerData.name || '', 
+                    username: workerData.name || '', // Ensuring username is provided
+                    full_name: workerData.name || '',
                     title: workerData.position || workerData.department || 'producer',
                     is_admin: false,
                     created_at: workerData.created_at || new Date().toISOString(),
