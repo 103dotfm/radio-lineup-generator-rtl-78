@@ -16,8 +16,8 @@ import { useUsers } from './hooks/useUsers';
 interface AddUserDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  newUser: Partial<User>;
-  setNewUser: React.Dispatch<React.SetStateAction<Partial<User>>>;
+  newUser: Partial<User> & { password: string };
+  setNewUser: React.Dispatch<React.SetStateAction<Partial<User> & { password: string }>>;
 }
 
 const AddUserDialog: React.FC<AddUserDialogProps> = ({ 

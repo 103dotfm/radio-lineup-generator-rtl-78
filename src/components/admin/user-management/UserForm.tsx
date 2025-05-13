@@ -3,12 +3,12 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User } from './types';
+import { User, NewUser } from './types';
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface UserFormProps {
-  user: Partial<User>;
-  setUser: React.Dispatch<React.SetStateAction<Partial<User>>>;
+  user: Partial<User> & { password?: string };
+  setUser: React.Dispatch<React.SetStateAction<Partial<User> & { password?: string }>>;
   onSubmit: () => void;
   submitLabel: string;
   isLoading?: boolean;

@@ -11,7 +11,7 @@ const UserManagement = () => {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Partial<User> | null>(null);
-  const [newUser, setNewUser] = useState<Partial<User>>({
+  const [newUser, setNewUser] = useState<Partial<User> & { password: string }>({
     email: '',
     username: '',
     full_name: '',

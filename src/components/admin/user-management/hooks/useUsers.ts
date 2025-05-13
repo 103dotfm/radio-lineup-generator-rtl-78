@@ -99,16 +99,16 @@ export const useUsers = () => {
                   
                 if (workerData) {
                   // Create a new user entry from the worker data
-                  // Provide default values for required fields
-                  data.push({
+                  const newUser: Partial<User> = {
                     id: workerId,
                     email: workerData.email || '',
                     username: workerData.name || '',
                     full_name: workerData.name || '',
                     title: workerData.position || workerData.department || 'producer',
                     is_admin: false,
-                    created_at: workerData.created_at || new Date().toISOString() // Ensure created_at is always provided
-                  });
+                    created_at: workerData.created_at || new Date().toISOString()
+                  };
+                  data.push(newUser as User);
                 }
               }
             }
