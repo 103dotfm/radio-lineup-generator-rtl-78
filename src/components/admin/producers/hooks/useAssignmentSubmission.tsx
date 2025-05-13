@@ -92,11 +92,13 @@ export const useAssignmentSubmission = ({
         // Handle permanent assignments
         if (isPermanent) {
           try {
+            // Pass the current week's start date to ensure the recurring assignment
+            // only applies from this week forward
             const success = await createRecurringProducerAssignment(
               currentSlot.id,
               form.workerId,
               roleName,
-              formattedWeekStart
+              formattedWeekStart // Pass the current week start date
             );
             
             if (success) {
