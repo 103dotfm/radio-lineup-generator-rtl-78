@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User } from '../types';
@@ -98,7 +99,7 @@ export const useUsers = () => {
                   
                 if (workerData) {
                   // Create a new user entry from the worker data
-                  // Note: We're explicitly adding only the properties that exist in the User type
+                  // Provide default values for required fields
                   data.push({
                     id: workerId,
                     email: workerData.email || '',
@@ -106,8 +107,8 @@ export const useUsers = () => {
                     full_name: workerData.name || '',
                     title: workerData.position || workerData.department || 'producer',
                     is_admin: false,
-                    created_at: workerData.created_at
-                  } as User); // Type assertion to ensure compatibility
+                    created_at: workerData.created_at || new Date().toISOString() // Ensure created_at is always provided
+                  });
                 }
               }
             }
