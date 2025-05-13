@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -26,7 +27,6 @@ import AssignmentDialog from './components/AssignmentDialog';
 import SlotAssignments from './components/SlotAssignments';
 import { useAssignmentDialog } from './hooks/useAssignmentDialog';
 import { useScroll } from '@/contexts/ScrollContext';
-import { supabase } from '@/lib/supabase';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
@@ -61,7 +61,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
 
   const { toast } = useToast();
   
-  // Group slots by day and time for a more organized display
+  // Group slots by day and time for a more organized display and to support the multi-day assignment feature
   const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
   
   // Create a map of unique slots to prevent duplicates
