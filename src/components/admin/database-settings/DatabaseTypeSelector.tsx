@@ -8,9 +8,11 @@ import { DatabaseFormValues } from './types';
 
 interface DatabaseTypeSelectorProps {
   form: UseFormReturn<DatabaseFormValues>;
+  databaseType: 'supabase' | 'local';
+  setDatabaseType: (type: 'supabase' | 'local') => void;
 }
 
-const DatabaseTypeSelector: React.FC<DatabaseTypeSelectorProps> = ({ form }) => {
+const DatabaseTypeSelector: React.FC<DatabaseTypeSelectorProps> = ({ form, databaseType, setDatabaseType }) => {
   return (
     <FormField
       control={form.control}
@@ -20,8 +22,12 @@ const DatabaseTypeSelector: React.FC<DatabaseTypeSelectorProps> = ({ form }) => 
           <FormLabel>סוג בסיס נתונים</FormLabel>
           <FormControl>
             <RadioGroup
-              onValueChange={field.onChange}
+              onValueChange={(value) => {
+                field.onChange(value);
+                setDatabaseType(value as 'supabase' | 'local');
+              }}
               defaultValue={field.value}
+              value={field.value}
               className="flex flex-col space-y-1"
             >
               <div className="flex items-center space-x-2 space-x-reverse">

@@ -7,6 +7,7 @@ import { DatabaseFormValues, databaseSchema } from './types';
 
 export const useDatabaseConfig = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [databaseType, setDatabaseType] = useState<'supabase' | 'local'>('supabase');
   const [currentConfig, setCurrentConfig] = useState<DatabaseFormValues>({
     databaseType: "supabase",
     host: "",
@@ -41,6 +42,7 @@ export const useDatabaseConfig = () => {
             createSchema: false,
           };
           setCurrentConfig(configWithCreateSchema);
+          setDatabaseType(config.databaseType || 'supabase');
           form.reset(configWithCreateSchema);
         }
       } catch (error) {
@@ -53,8 +55,21 @@ export const useDatabaseConfig = () => {
     fetchDatabaseConfig();
   }, [form]);
 
+  // Watch for changes in the form's databaseType field
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'databaseType' && value.databaseType) {
+        setDatabaseType(value.databaseType);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   return {
     form,
+    databaseType,
+    setDatabaseType,
     isLoading,
     setIsLoading,
     currentConfig

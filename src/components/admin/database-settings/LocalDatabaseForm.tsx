@@ -7,12 +7,15 @@ import { DatabaseFormValues } from './types';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface LocalDatabaseFormProps {
   form: UseFormReturn<DatabaseFormValues>;
+  isSubmitting: boolean;
 }
 
-const LocalDatabaseForm: React.FC<LocalDatabaseFormProps> = ({ form }) => {
+const LocalDatabaseForm: React.FC<LocalDatabaseFormProps> = ({ form, isSubmitting }) => {
   return (
     <div className="space-y-4 p-2 sm:p-4 border rounded-md">
       <FormField
@@ -124,6 +127,13 @@ const LocalDatabaseForm: React.FC<LocalDatabaseFormProps> = ({ form }) => {
           </p>
         </CardContent>
       </Card>
+      
+      <div className="flex justify-end pt-4">
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+          שמור הגדרות
+        </Button>
+      </div>
     </div>
   );
 };

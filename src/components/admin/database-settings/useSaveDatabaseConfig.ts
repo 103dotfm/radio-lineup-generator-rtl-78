@@ -1,10 +1,13 @@
 
+import { useState } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from '@/lib/supabase';
 import { DatabaseFormValues, dbSchemaSQL } from './types';
+import { UseFormReturn } from 'react-hook-form';
 
-export const useSaveDatabaseConfig = () => {
+export const useSaveDatabaseConfig = (form: UseFormReturn<DatabaseFormValues>) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const runDbSchemaScript = async (config: DatabaseFormValues): Promise<boolean> => {
     try {
@@ -35,8 +38,8 @@ export const useSaveDatabaseConfig = () => {
     }
   };
 
-  const saveConfig = async (values: DatabaseFormValues, setIsLoading: (value: boolean) => void) => {
-    setIsLoading(true);
+  const handleSubmit = form.handleSubmit(async (values) => {
+    setIsSubmitting(true);
     try {
       if (values.databaseType === "local") {
         // Validate that all required fields are filled for local DB
@@ -46,7 +49,7 @@ export const useSaveDatabaseConfig = () => {
             description: "יש למלא את כל השדות הנדרשים",
             variant: "destructive",
           });
-          setIsLoading(false);
+          setIsSubmitting(false);
           return;
         }
 
@@ -54,7 +57,7 @@ export const useSaveDatabaseConfig = () => {
         if (values.createSchema) {
           const success = await runDbSchemaScript(values);
           if (!success) {
-            setIsLoading(false);
+            setIsSubmitting(false);
             return;
           }
         }
@@ -92,9 +95,12 @@ export const useSaveDatabaseConfig = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
+  });
 
-  return { saveConfig };
+  return { 
+    handleSubmit,
+    isSubmitting
+  };
 };
