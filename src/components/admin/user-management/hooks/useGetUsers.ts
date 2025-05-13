@@ -7,20 +7,14 @@ export const useGetUsers = () => {
   return useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      // First try to get the auth users to ensure we have all users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        throw authError;
-      }
-      
-      // Get users from the users table (includes both regular users and worker-created users)
+      // Get users from the users table
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
+        console.error("Error fetching users:", error);
         throw error;
       }
       
@@ -122,7 +116,7 @@ export const useGetUsers = () => {
             });
           }
         } catch (error) {
-          throw error;
+          console.error("Error fetching worker data:", error);
         }
       }
       
