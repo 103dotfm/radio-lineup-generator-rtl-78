@@ -33,6 +33,7 @@ const UserList: React.FC<UserListProps> = ({
             <TableHead className="text-right">אימייל</TableHead>
             <TableHead className="text-right">שם מלא</TableHead>
             <TableHead className="text-right">תפקיד</TableHead>
+            <TableHead className="text-right">הרשאה</TableHead>
             <TableHead className="text-right">פעולות</TableHead>
           </TableRow>
         </TableHeader>
@@ -49,18 +50,25 @@ const UserList: React.FC<UserListProps> = ({
           <TableHead className="text-right">אימייל</TableHead>
           <TableHead className="text-right">שם מלא</TableHead>
           <TableHead className="text-right">תפקיד</TableHead>
+          <TableHead className="text-right">הרשאה</TableHead>
           <TableHead className="text-right">פעולות</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {users?.map((user) => (
-          <UserRow 
-            key={user.id}
-            user={user}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
+        {users?.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={6} className="text-center py-8">לא נמצאו משתמשים</TableCell>
+          </TableRow>
+        ) : (
+          users?.map((user) => (
+            <UserRow 
+              key={user.id}
+              user={user}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))
+        )}
       </TableBody>
     </Table>
   );

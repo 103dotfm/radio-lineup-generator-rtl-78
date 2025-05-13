@@ -2,8 +2,10 @@
 export interface User {
   id: string;
   email: string;
-  username: string;
+  username?: string;
   full_name?: string;
+  title?: string;
   is_admin: boolean;
-  password?: string; // Added optional password field for new user creation
+  created_at?: string;
+  avatar_url?: string;
 }

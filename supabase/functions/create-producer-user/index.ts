@@ -142,7 +142,7 @@ serve(async (req) => {
     console.log("Fetching worker details for ID:", workerId);
     const { data: workerData, error: workerError } = await supabaseClient
       .from('workers')
-      .select('name, position, department')
+      .select('name, position, department, email, phone')
       .eq('id', workerId)
       .single();
     
@@ -245,14 +245,30 @@ serve(async (req) => {
           id: data.user.id,
           email: email,
           full_name: workerData.name || email,
-          username: `${workerData.name || ''} (${email})`,
+          username: workerData.name || email.split('@')[0],
           title: workerData.position || workerData.department || '',
           is_admin: false // producers are not admins by default
         });
       
       if (usersTableError) {
         console.error("Error creating users table entry:", usersTableError);
-        console.log("User authentication created, but profile creation failed");
+        // If creating the user entry fails, log it but don't fail the entire operation
+        // Since we've already created the auth user and updated the worker
+        console.log("User authentication created, but profile creation failed:", usersTableError.message);
+      }
+      
+      // Also create a profile entry
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          full_name: workerData.name || '',
+          title: workerData.position || workerData.department || '',
+          avatar_url: ''
+        });
+        
+      if (profileError) {
+        console.error("Error creating profile entry:", profileError);
       }
       
       console.log("Successfully created user and updated worker record");
