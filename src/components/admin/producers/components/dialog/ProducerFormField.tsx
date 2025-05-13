@@ -1,5 +1,5 @@
 
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ProducerFormItem } from "../../hooks/useProducerForms";
@@ -25,7 +25,7 @@ const ProducerFormField = ({
     <div className="space-y-2 p-2 rounded border">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
-          <FormLabel htmlFor={`worker-${index}`}>מפיק</FormLabel>
+          <Label htmlFor={`worker-${index}`}>מפיק</Label>
           <Select
             value={producerForm.workerId || ""}
             onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
@@ -44,7 +44,7 @@ const ProducerFormField = ({
         </div>
         
         <div>
-          <FormLabel htmlFor={`role-${index}`}>תפקיד</FormLabel>
+          <Label htmlFor={`role-${index}`}>תפקיד</Label>
           <Select
             value={producerForm.role || defaultRole || ""}
             onValueChange={(value) => updateProducerForm(index, 'role', value)}
@@ -64,7 +64,7 @@ const ProducerFormField = ({
       </div>
       
       <div>
-        <FormLabel htmlFor={`notes-${index}`}>הערות (אופציונלי)</FormLabel>
+        <Label htmlFor={`notes-${index}`}>הערות (אופציונלי)</Label>
         <Input
           id={`notes-${index}`}
           value={producerForm.additionalText || ""}
