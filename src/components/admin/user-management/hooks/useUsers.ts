@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User, NewUser } from '../types';
@@ -298,7 +297,7 @@ export const useUsers = () => {
     },
   });
 
-  // Add a new mutation for deleting a user by email
+  // Fix the deleteUserByEmailMutation to correctly use Supabase Admin API
   const deleteUserByEmailMutation = useMutation({
     mutationFn: async (email: string) => {
       try {
@@ -323,27 +322,30 @@ export const useUsers = () => {
           // This is for handling users that might exist in auth but not in users table
           try {
             // Try to find the user in auth.users (this might fail due to permissions)
-            const { data: authUser, error: authError } = await supabase.auth.admin.listUsers({
-              filter: {
-                email: email
-              }
-            });
+            const { data: authUserList, error: authError } = await supabase.auth.admin.listUsers();
             
-            if (!authError && authUser && authUser.users && authUser.users.length > 0) {
-              const userId = authUser.users[0].id;
-              console.log(`Found user in auth with ID ${userId}`);
+            if (!authError && authUserList) {
+              // Find the user with the matching email in the returned list
+              const authUser = authUserList.users?.find(user => user.email === email);
               
-              // Try to delete the auth user (might fail due to permissions)
-              try {
-                await supabase.auth.admin.deleteUser(userId);
-                console.log("Successfully deleted user from auth");
-                return { message: "User deleted from auth system" };
-              } catch (authDeleteError) {
-                console.error("Could not delete auth user:", authDeleteError);
-                throw new Error("Could not delete auth user: " + authDeleteError.message);
+              if (authUser) {
+                const userId = authUser.id;
+                console.log(`Found user in auth with ID ${userId}`);
+                
+                // Try to delete the auth user (might fail due to permissions)
+                try {
+                  await supabase.auth.admin.deleteUser(userId);
+                  console.log("Successfully deleted user from auth");
+                  return { message: "User deleted from auth system" };
+                } catch (authDeleteError) {
+                  console.error("Could not delete auth user:", authDeleteError);
+                  throw new Error("Could not delete auth user: " + authDeleteError.message);
+                }
+              } else {
+                throw new Error("User not found in auth system");
               }
             } else {
-              throw new Error("User not found in auth system");
+              throw new Error("Error accessing auth users");
             }
           } catch (error) {
             console.error("Error accessing auth users:", error);
