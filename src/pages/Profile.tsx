@@ -168,6 +168,17 @@ const Profile = () => {
   const handleUpdateProfile = async () => {
     try {
       setLoading(true);
+      
+      // Check if the user is a producer by looking if they have a record in the workers table
+      const { data: workerData, error: workerError } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+      
+      // Determine if this is a producer user
+      const isProducerUser = !!workerData;
+      
       const updates = {
         id: user?.id, // Ensure ID is included for the update
         full_name: name,
@@ -176,11 +187,31 @@ const Profile = () => {
         updated_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase
+      // Update the appropriate table based on user type
+      // For producers, we need to update both workers and profiles tables
+      if (isProducerUser) {
+        console.log("Updating producer profile in workers table");
+        const { error: workerUpdateError } = await supabase
+          .from('workers')
+          .update({
+            name: name,
+            position: title,
+            email: user?.email,
+            photo_url: avatarUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user?.id);
+          
+        if (workerUpdateError) throw workerUpdateError;
+      }
+      
+      // Always update the profiles table too
+      console.log("Updating profile in profiles table");
+      const { error: profileError } = await supabase
         .from('profiles')
         .upsert(updates);
-
-      if (error) throw error;
+        
+      if (profileError) throw profileError;
 
       toast({
         title: "הפרופיל עודכן בהצלחה"

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from '@/hooks/use-toast';
@@ -47,7 +46,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      // First get the basic user info
+      // First check if this user is a producer by looking up in workers table
+      const { data: workerData, error: workerError } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+        
+      if (workerError && workerError.code !== 'PGRST116') {
+        console.error('Error checking worker data:', workerError);
+      }
+      
+      // If the user is a producer (exists in workers table)
+      const isProducerUser = !!workerData;
+      
+      // Get the basic user info
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
@@ -56,49 +69,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (userError && userError.code !== 'PGRST116') {
         console.error('Error fetching user data:', userError);
-        return;
-      }
-      
-      if (!userData) {
-        console.warn('No user data found for ID:', userId);
-        
-        // Check if this user is a producer by looking up in workers table
-        const { data: workerData, error: workerError } = await supabase
-          .from('workers')
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle();
-          
-        if (workerError) {
-          console.error('Error checking worker data:', workerError);
-        }
-        
-        // Try to get user details from auth metadata as fallback
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        
-        if (authUser) {
-          // Create basic user object from auth data, enhanced with worker data if available
-          const basicUser: User = {
-            id: authUser.id,
-            email: authUser.email || '',
-            username: workerData?.name || authUser.email?.split('@')[0] || '',
-            full_name: workerData?.name || authUser.user_metadata?.full_name || authUser.email,
-            title: workerData?.position || '',
-            is_admin: false
-          };
-          
-          setUser(basicUser);
-          setIsAdmin(false);
-          
-          // Attempt to create user record
-          try {
-            await supabase.from('users').insert([basicUser]);
-            console.log('Created missing user record');
-          } catch (createError) {
-            console.error('Failed to create missing user record:', createError);
-          }
-        }
-        return;
       }
       
       // Then get profile info
@@ -112,43 +82,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error fetching profile data:', profileError);
       }
       
-      // Check if this user is a producer and get additional details
-      const { data: workerData, error: workerError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Try to get user details from auth metadata as fallback
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!userData) {
+        console.warn('No user data found for ID:', userId);
         
-      if (workerError && workerError.code !== 'PGRST116') {
-        console.error('Error fetching worker data:', workerError);
+        if (authUser) {
+          // Create basic user object from auth data, enhanced with worker data if available
+          const basicUser: User = {
+            id: authUser.id,
+            email: authUser.email || '',
+            username: workerData?.name || authUser.email?.split('@')[0] || '',
+            full_name: workerData?.name || authUser.user_metadata?.full_name || authUser.email,
+            title: workerData?.position || profileData?.title || '',
+            is_admin: false,
+            avatar_url: profileData?.avatar_url || workerData?.photo_url || ''
+          };
+          
+          setUser(basicUser);
+          setIsAdmin(false);
+          
+          // Attempt to create user record if it doesn't exist
+          if (!isProducerUser) { // Only for non-producer users
+            try {
+              await supabase.from('users').insert([{
+                id: authUser.id,
+                email: authUser.email,
+                username: authUser.email?.split('@')[0] || '',
+                full_name: authUser.user_metadata?.full_name || '',
+                is_admin: false
+              }]);
+              console.log('Created missing user record');
+            } catch (createError) {
+              console.error('Failed to create missing user record:', createError);
+            }
+          }
+        }
+        return;
       }
-
-      if (userData) {
-        // Create a User object with the correct type, explicitly including the title property
-        const userWithTitle: User = {
-          id: userData.id,
-          email: userData.email || '',
-          username: userData.username || '',
-          full_name: userData.full_name || '',
-          is_admin: userData.is_admin || false,
-          // Add the title property safely, with fallbacks
-          title: profileData?.title || workerData?.position || '',
-          avatar_url: profileData?.avatar_url || ''
-        };
-        
-        // Combine user data with profile data and worker data if available
-        const combinedUserData = {
-          ...userWithTitle,
-          ...(profileData || {}),
-          // If worker data exists, prioritize those fields
-          full_name: workerData?.name || userWithTitle.full_name || '',
-          title: workerData?.position || userWithTitle.title || '',
-        };
-        
-        setUser(combinedUserData);
-        setIsAdmin(userData.is_admin || false);
-        lastUserCheckRef.current = now;
-      }
+      
+      // We found user data in the users table
+      // Create a User object with the correct type, explicitly including the title property
+      const userWithTitle: User = {
+        id: userData.id,
+        email: userData.email || '',
+        username: userData.username || '',
+        full_name: userData.full_name || '',
+        is_admin: userData.is_admin || false,
+        // Add the title property safely, with fallbacks
+        title: profileData?.title || workerData?.position || '',
+        avatar_url: profileData?.avatar_url || workerData?.photo_url || ''
+      };
+      
+      // Combine user data with profile data and worker data if available
+      const combinedUserData = {
+        ...userWithTitle,
+        ...(profileData || {}),
+        // If worker data exists, prioritize those fields
+        full_name: workerData?.name || userWithTitle.full_name || '',
+        title: workerData?.position || userWithTitle.title || '',
+        avatar_url: profileData?.avatar_url || workerData?.photo_url || userWithTitle.avatar_url || ''
+      };
+      
+      setUser(combinedUserData);
+      setIsAdmin(userData.is_admin || false);
+      lastUserCheckRef.current = now;
     } catch (error) {
       console.error('Error in checkUserRole:', error);
       toast({
