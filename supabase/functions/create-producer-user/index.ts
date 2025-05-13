@@ -70,17 +70,25 @@ serve(async (req) => {
     
     console.log("Validating required fields:", { worker_id, email });
     
+    // Handle missing worker_id field - CRUCIAL FIX HERE
     if (!worker_id) {
-      console.error("Missing required field: worker_id");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Missing required field: worker_id'
-        }),
-        { headers: corsHeaders, status: 400 }
-      );
+      // Check if we have workerId (camelCase) instead - our client sends camelCase but server expects snake_case
+      if (body.workerId) {
+        console.log("Found workerId in camelCase format, converting to worker_id");
+        body.worker_id = body.workerId;
+      } else {
+        console.error("Missing required field: worker_id");
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: 'Missing required field: worker_id'
+          }),
+          { headers: corsHeaders, status: 400 }
+        );
+      }
     }
     
+    // Handle missing email field
     if (!email) {
       console.error("Missing required field: email");
       return new Response(
@@ -136,11 +144,14 @@ serve(async (req) => {
     }
     
     // Fetch worker details to get the name and other info first
-    console.log("Fetching worker details for ID:", worker_id);
+    // Use the worker_id from body or the converted camelCase version
+    const workerId = body.worker_id || body.workerId;
+    
+    console.log("Fetching worker details for ID:", workerId);
     const { data: workerData, error: workerError } = await supabaseClient
       .from('workers')
       .select('name, position, department')
-      .eq('id', worker_id)
+      .eq('id', workerId)
       .single();
     
     if (workerError) {
@@ -156,7 +167,7 @@ serve(async (req) => {
     }
     
     if (!workerData) {
-      console.error("Worker not found with ID:", worker_id);
+      console.error("Worker not found with ID:", workerId);
       return new Response(
         JSON.stringify({
           success: false,
@@ -206,7 +217,7 @@ serve(async (req) => {
       console.log("User created successfully with ID:", data.user.id);
       
       // Update worker record with user_id and password
-      console.log("Updating worker record for ID:", worker_id);
+      console.log("Updating worker record for ID:", workerId);
       const { error: updateError } = await supabaseClient
         .from('workers')
         .update({ 
@@ -214,7 +225,7 @@ serve(async (req) => {
           password_readable: newPassword,
           email: email  // Ensure the email is stored in the worker record as well
         })
-        .eq('id', worker_id);
+        .eq('id', workerId);
       
       if (updateError) {
         console.error("Error updating worker record:", updateError);

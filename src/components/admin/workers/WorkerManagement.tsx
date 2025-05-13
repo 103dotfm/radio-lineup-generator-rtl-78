@@ -166,6 +166,7 @@ const WorkerManagement = () => {
         description: `עבור ${selectedWorker.name}`,
       });
       
+      // Implement better logging and error handling when creating a user account
       const result = await createProducerUser(selectedWorker.id, email);
       
       console.log("User creation result:", result);
@@ -191,14 +192,20 @@ const WorkerManagement = () => {
           description: errorDescription,
           variant: "destructive",
         });
+        
+        throw new Error(errorDescription); // Throw error to trigger the catch in WorkerAccountTab
       }
     } catch (error) {
       console.error('Error creating user account:', error);
+      
       toast({
         title: "שגיאה",
         description: `שגיאה ביצירת משתמש: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
+      
+      // Re-throw the error so the component can handle it and update its state
+      throw error;
     }
   };
   
