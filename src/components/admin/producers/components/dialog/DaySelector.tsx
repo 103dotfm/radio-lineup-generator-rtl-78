@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 interface DaySelectorProps {
   selectedDays: number[];
   toggleDay: (dayId: number) => void;
-  isPermanent: boolean;
+  isPermanent?: boolean;
+  currentDay?: number; // Add this prop to match what's being passed
 }
 
-const DaySelector = ({ selectedDays, toggleDay, isPermanent }: DaySelectorProps) => {
+const DaySelector = ({ selectedDays, toggleDay, isPermanent, currentDay }: DaySelectorProps) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
   if (isPermanent) {
@@ -26,7 +27,8 @@ const DaySelector = ({ selectedDays, toggleDay, isPermanent }: DaySelectorProps)
             variant={selectedDays.includes(day) ? "default" : "outline"}
             size="sm"
             onClick={() => toggleDay(day)}
-            className={`${selectedDays.includes(day) ? 'bg-primary text-primary-foreground' : ''}`}
+            className={`${selectedDays.includes(day) ? 'bg-primary text-primary-foreground' : ''} ${day === currentDay ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={day === currentDay} // Disable button for the current day
           >
             {dayNames[day]}
           </Button>
