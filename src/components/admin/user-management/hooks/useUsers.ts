@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { User } from '../types';
+import { User, NewUser } from '../types';
 import { useToast } from "@/hooks/use-toast";
 
 export const useUsers = () => {
@@ -99,16 +99,18 @@ export const useUsers = () => {
                   
                 if (workerData) {
                   // Create a new user entry from the worker data
-                  const newUser: Partial<User> = {
+                  // Ensure created_at is always set to meet the required type
+                  const newUser: User = {
                     id: workerId,
                     email: workerData.email || '',
                     username: workerData.name || '',
                     full_name: workerData.name || '',
                     title: workerData.position || workerData.department || 'producer',
                     is_admin: false,
-                    created_at: workerData.created_at || new Date().toISOString()
+                    created_at: workerData.created_at || new Date().toISOString(), // Ensure created_at is always provided
+                    avatar_url: workerData.photo_url
                   };
-                  data.push(newUser as User);
+                  data.push(newUser);
                 }
               }
             }
@@ -146,7 +148,7 @@ export const useUsers = () => {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: Partial<User> & { password: string }) => {
+    mutationFn: async (userData: NewUser) => {
       // Get the app domain for the redirect URL
       const appDomain = window.location.origin;
       
