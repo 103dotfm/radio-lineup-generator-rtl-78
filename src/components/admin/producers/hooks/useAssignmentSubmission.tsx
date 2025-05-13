@@ -80,11 +80,15 @@ export const useAssignmentSubmission = ({
       let successCount = 0;
       const newAssignments: ProducerAssignment[] = [];
       
+      // Format the week start date once for consistent use throughout the function
+      const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
+      console.log("Submitting assignments for week starting:", formattedWeekStart);
+      console.log("Is permanent assignment:", isPermanent);
+      
       // Process each valid form entry
       for (const form of validForms) {
         const selectedRole = roles.find(r => r.id === form.role);
         const roleName = selectedRole ? selectedRole.name : '';
-        const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
         
         // Get the worker details for adding to UI immediately
         const workerDetails = producers.find(p => p.id === form.workerId) || 
@@ -93,6 +97,8 @@ export const useAssignmentSubmission = ({
         // Handle permanent assignments
         if (isPermanent) {
           try {
+            console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName} starting from ${formattedWeekStart}`);
+            
             // Pass the current week's start date to ensure the recurring assignment
             // only applies from this week forward
             const success = await createRecurringProducerAssignment(
