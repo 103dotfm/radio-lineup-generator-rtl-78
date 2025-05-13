@@ -66,6 +66,7 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
   
   const handleResetPassword = async () => {
     setIsSubmitting(true);
+    setErrorMessage(null);
     console.log("Attempting to reset password for worker:", worker.id);
     
     try {
