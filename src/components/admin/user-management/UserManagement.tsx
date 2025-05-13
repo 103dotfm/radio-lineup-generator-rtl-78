@@ -28,6 +28,18 @@ const UserManagement = () => {
       // Log the first few users to inspect their properties
       if (users.length > 0) {
         console.log("Sample user data:", users[0]);
+        
+        // Check for specific email
+        const testEmail = "efratk2005@gmail.com";
+        const foundUser = users.find(user => user.email === testEmail);
+        if (foundUser) {
+          console.log(`Found user with email ${testEmail}:`, foundUser);
+        } else {
+          console.log(`User with email ${testEmail} not found in the users array`);
+          
+          // Log all emails for debugging
+          console.log("All user emails:", users.map(u => u.email));
+        }
       }
     }
   }, [users]);

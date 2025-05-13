@@ -13,7 +13,11 @@ interface UserRowProps {
 
 const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete }) => {
   // Determine if this user is linked to a worker account
-  const isProducerAccount = user.id && user.title?.includes('producer');
+  const isProducerAccount = user.id && (
+    user.title?.toLowerCase().includes('producer') || 
+    user.title?.includes('מפיק') ||
+    user.title?.includes('הפקה')
+  );
 
   return (
     <TableRow key={user.id}>
