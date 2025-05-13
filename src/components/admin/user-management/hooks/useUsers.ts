@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User, NewUser } from '../types';
@@ -324,9 +325,11 @@ export const useUsers = () => {
             // Try to find the user in auth.users (this might fail due to permissions)
             const { data: authUserList, error: authError } = await supabase.auth.admin.listUsers();
             
-            if (!authError && authUserList) {
+            if (!authError && authUserList && authUserList.users) {
               // Find the user with the matching email in the returned list
-              const authUser = authUserList.users?.find(user => user.email === email);
+              const authUser = authUserList.users.find(user => 
+                user && typeof user === 'object' && 'email' in user && user.email === email
+              );
               
               if (authUser) {
                 const userId = authUser.id;
