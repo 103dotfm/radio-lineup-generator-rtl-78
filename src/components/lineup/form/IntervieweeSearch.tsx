@@ -28,7 +28,6 @@ const IntervieweeSearch = ({ onAdd }: IntervieweeSearchProps) => {
           phone: guest.phone || ''
         })));
       } catch (error) {
-        console.error('Error searching guests:', error);
         toast.error('שגיאה בחיפוש אורחים');
       } finally {
         setIsSearching(false);
