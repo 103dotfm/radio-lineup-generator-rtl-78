@@ -12,6 +12,9 @@ interface UserRowProps {
 }
 
 const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete }) => {
+  // Determine if this user is linked to a worker account
+  const isProducerAccount = user.id && user.title?.includes('producer');
+
   return (
     <TableRow key={user.id}>
       <TableCell>{user.username || user.email?.split('@')[0]}</TableCell>
@@ -21,6 +24,9 @@ const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete }) => {
         {user.title ? user.title : '-'}
         {user.id.startsWith('00000000-0000-0000-0000') && (
           <Badge variant="outline" className="ml-2">מערכת</Badge>
+        )}
+        {isProducerAccount && (
+          <Badge variant="secondary" className="ml-2">מפיק</Badge>
         )}
       </TableCell>
       <TableCell>

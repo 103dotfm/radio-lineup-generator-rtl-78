@@ -11,13 +11,18 @@ export const useUsers = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
+      console.log("Fetching all users...");
+      
       // Get users from the users table (includes both regular users and worker-created users)
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching users:", error);
+        throw error;
+      }
       
       // Enhance user data with any additional profile info if needed
       if (data && data.length > 0) {
@@ -45,9 +50,49 @@ export const useUsers = () => {
               if (!user.title && profileMap[user.id].title) {
                 user.title = profileMap[user.id].title;
               }
+              if (!user.full_name && profileMap[user.id].full_name) {
+                user.full_name = profileMap[user.id].full_name;
+              }
             }
           });
         }
+        
+        // Check for worker accounts that also have users
+        try {
+          const { data: workers, error: workersError } = await supabase
+            .from('workers')
+            .select('id, name, position, department, user_id')
+            .not('user_id', 'is', null);
+          
+          if (!workersError && workers && workers.length > 0) {
+            console.log(`Found ${workers.length} workers with user accounts`);
+            
+            // Create a map of workers with user accounts for quick lookup
+            const workerUserMap = workers.reduce((acc: Record<string, any>, worker: any) => {
+              if (worker.user_id) {
+                acc[worker.user_id] = worker;
+              }
+              return acc;
+            }, {});
+            
+            // Add additional information from worker data if available
+            data.forEach((user: any) => {
+              if (workerUserMap[user.id]) {
+                const worker = workerUserMap[user.id];
+                if (!user.title && worker.position) {
+                  user.title = worker.position || worker.department || '';
+                }
+                if (!user.full_name && worker.name) {
+                  user.full_name = worker.name;
+                }
+              }
+            });
+          }
+        } catch (workerError) {
+          console.error("Error fetching worker data:", workerError);
+        }
+      } else {
+        console.log("No users found or error fetching users");
       }
       
       return data as User[];
