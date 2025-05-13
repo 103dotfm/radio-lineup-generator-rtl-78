@@ -7,10 +7,10 @@ import { getCombinedShowDisplay } from '@/utils/showDisplay';
 
 interface SlotInfoProps {
   currentSlot: ScheduleSlot;
-  currentWeek: Date;
+  currentWeek?: Date; // Make currentWeek optional
 }
 
-const SlotInfo = ({ currentSlot, currentWeek }: SlotInfoProps) => {
+const SlotInfo = ({ currentSlot, currentWeek = new Date() }: SlotInfoProps) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
   return (

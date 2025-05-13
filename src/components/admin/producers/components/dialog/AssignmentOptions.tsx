@@ -3,19 +3,22 @@ import React from 'react';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import DaySelector from './DaySelector';
+import { ScheduleSlot } from '@/types/schedule';
 
 interface AssignmentOptionsProps {
   isPermanent: boolean;
   setIsPermanent: (value: boolean) => void;
   selectedDays: number[];
   toggleDay: (dayId: number) => void;
+  currentSlot?: ScheduleSlot; // Add this prop to fix the TypeScript error
 }
 
 const AssignmentOptions = ({
   isPermanent,
   setIsPermanent,
   selectedDays,
-  toggleDay
+  toggleDay,
+  currentSlot // Include currentSlot in the destructuring
 }: AssignmentOptionsProps) => {
   return (
     <div className="mt-6 border-t pt-4">
