@@ -6,7 +6,7 @@ export interface User {
   full_name?: string;
   title?: string;
   is_admin: boolean;
-  created_at?: string; // This is already marked as optional, which matches the error
+  created_at?: string; // Making created_at optional in the interface
   avatar_url?: string;
 }
 
