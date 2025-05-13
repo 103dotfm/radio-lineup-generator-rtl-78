@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import UserList from './UserList';
 import EditUserDialog from './EditUserDialog';
@@ -20,6 +20,17 @@ const UserManagement = () => {
   });
 
   const { users, isLoading, deleteUserMutation } = useUsers();
+
+  // Debug: Log users when they change
+  useEffect(() => {
+    if (users) {
+      console.log("Users management received users:", users.length);
+      // Log the first few users to inspect their properties
+      if (users.length > 0) {
+        console.log("Sample user data:", users[0]);
+      }
+    }
+  }, [users]);
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
