@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User, NewUser } from '../types';
@@ -98,19 +99,20 @@ export const useUsers = () => {
                   
                 if (workerData) {
                   // Create a new user entry from the worker data
-                  // We explicitly cast the object with a non-optional created_at
+                  // We need to ensure all required properties are non-optional
                   const newUser = {
                     id: workerId,
                     email: workerData.email || '',
                     username: workerData.name || '',
-                    full_name: workerData.name || '',
+                    full_name: workerData.name || '', // Ensure this is non-null
                     title: workerData.position || workerData.department || 'producer',
                     is_admin: false,
-                    created_at: workerData.created_at || new Date().toISOString(), 
+                    created_at: workerData.created_at || new Date().toISOString(),
                     avatar_url: workerData.photo_url
-                  } as User & { created_at: string }; // Force created_at to be non-optional for this object
+                  };
                 
-                  data.push(newUser);
+                  // Use type assertion to tell TypeScript this object has all required fields
+                  data.push(newUser as User);
                 }
               }
             }
