@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -74,7 +75,7 @@ const AssignmentDialog = ({
 
         <div className="grid gap-4 py-4">
           {/* Slot info section */}
-          <SlotInfo currentSlot={currentSlot} />
+          <SlotInfo currentSlot={currentSlot!} currentWeek={currentWeek} />
           
           {/* Producer forms section */}
           <div className="space-y-4">
@@ -107,7 +108,7 @@ const AssignmentDialog = ({
             setIsPermanent={setIsPermanent}
             selectedDays={selectedDays}
             toggleDay={toggleDay}
-            currentSlot={currentSlot}
+            currentSlot={currentSlot!}
           />
         </div>
 
