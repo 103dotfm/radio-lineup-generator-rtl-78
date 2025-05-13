@@ -35,11 +35,11 @@ export const createProducerUser = async (workerId: string, email: string) => {
     
     console.log("Validations passed, proceeding with edge function call");
     
-    // Call the edge function with robust error handling
-    // IMPORTANT: Send parameters using snake_case as expected by the edge function
+    // Call the edge function using the workerId parameter in snake_case format
+    // as expected by the edge function
     const { data, error } = await supabase.functions.invoke('create-producer-user', {
       body: { 
-        worker_id: workerId.trim(), 
+        workerId: workerId.trim(),  // Send in camelCase 
         email: email.trim() 
       }
     });

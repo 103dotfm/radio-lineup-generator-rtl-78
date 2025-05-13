@@ -65,30 +65,25 @@ serve(async (req) => {
       );
     }
     
+    // Extract parameters from the request body
+    // Support both worker_id (snake_case) and workerId (camelCase)
+    const workerId = body.worker_id || body.workerId;
+    const email = body.email;
+    
+    console.log("Extracted parameters:", { workerId, email });
+    
     // Validate required fields
-    const { worker_id, email } = body || {};
-    
-    console.log("Validating required fields:", { worker_id, email });
-    
-    // Handle missing worker_id field - CRUCIAL FIX HERE
-    if (!worker_id) {
-      // Check if we have workerId (camelCase) instead - our client sends camelCase but server expects snake_case
-      if (body.workerId) {
-        console.log("Found workerId in camelCase format, converting to worker_id");
-        body.worker_id = body.workerId;
-      } else {
-        console.error("Missing required field: worker_id");
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'Missing required field: worker_id'
-          }),
-          { headers: corsHeaders, status: 400 }
-        );
-      }
+    if (!workerId) {
+      console.error("Missing required field: worker_id/workerId");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Missing required field: worker_id'
+        }),
+        { headers: corsHeaders, status: 400 }
+      );
     }
     
-    // Handle missing email field
     if (!email) {
       console.error("Missing required field: email");
       return new Response(
@@ -144,9 +139,6 @@ serve(async (req) => {
     }
     
     // Fetch worker details to get the name and other info first
-    // Use the worker_id from body or the converted camelCase version
-    const workerId = body.worker_id || body.workerId;
-    
     console.log("Fetching worker details for ID:", workerId);
     const { data: workerData, error: workerError } = await supabaseClient
       .from('workers')
