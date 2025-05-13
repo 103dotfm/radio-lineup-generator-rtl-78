@@ -1,27 +1,23 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScheduleSlot } from '@/types/schedule';
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { format } from 'date-fns';
-import { he } from 'date-fns/locale';
-import { getCombinedShowDisplay } from '@/utils/showDisplay';
-import { ProducerFormItem } from '../hooks/useProducerForms';
+import AssignmentOptions from './dialog/AssignmentOptions';
 import ProducerFormField from './dialog/ProducerFormField';
+import SlotInfo from './dialog/SlotInfo';
+import { ScheduleSlot } from '@/types/schedule';
+import { ProducerFormItem } from '../hooks/useProducerForms';
 
-// Export these values to be used in other components
-export const EDITING_ROLE_ID = "7b6dc30f-58cf-4f30-b387-7353dd324362";
-export const PRODUCTION_ROLE_ID = "adfd67f8-f731-459e-8478-db5363b06549";
-export const EDITING_FIRST_ROLE_ID = "88232bd9-f9f1-4ae2-b7ea-c60248c3e4d3";
-export const EVENING_PRODUCTION_ROLE_ID = "fd4e1e3d-0d87-4322-a25e-fec33765d949";
+export const EDITING_ROLE_ID = "f3e35b3a-5957-4632-a646-ea39bfbd25e1";
+export const PRODUCTION_ROLE_ID = "a90d1edf-718a-4577-9ce7-e83a9c843d17";
+export const EDITING_FIRST_ROLE_ID = "a3acd83c-58e8-4b9c-a195-1442e1b5e54a";
+export const EVENING_PRODUCTION_ROLE_ID = "c1db7685-0ccc-44ab-a673-f528aeec3b92";
 
 interface AssignmentDialogProps {
   isOpen: boolean;
@@ -34,8 +30,8 @@ interface AssignmentDialogProps {
   selectedDays: number[];
   toggleDay: (day: number) => void;
   isPermanent: boolean;
-  setIsPermanent: (value: boolean) => void;
-  handleSubmit: () => void;
+  setIsPermanent: (isPermanent: boolean) => void;
+  handleSubmit: () => Promise<void>;
   handleCloseDialog: () => void;
   producers: any[];
   roles: any[];
@@ -43,7 +39,7 @@ interface AssignmentDialogProps {
   isSubmitting: boolean;
 }
 
-const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
+const AssignmentDialog = ({
   isOpen,
   onOpenChange,
   currentSlot,
@@ -61,106 +57,70 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   roles,
   currentWeek,
   isSubmitting
-}) => {
-  const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  const weekStartFormatted = format(currentWeek, 'dd/MM/yyyy', { locale: he });
-  
-  // Sort roles by display_order if available
-  const sortedRoles = [...roles].sort((a, b) => {
-    if (a.display_order !== undefined && b.display_order !== undefined) {
-      return a.display_order - b.display_order;
-    }
-    // Fallback to name comparison if display_order is not available
-    return a.name.localeCompare(b.name);
-  });
+}: AssignmentDialogProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" dir="rtl">
+      <DialogContent className="sm:max-w-lg" 
+        onEscapeKeyDown={handleCloseDialog}
+        onInteractOutside={handleCloseDialog}
+      >
         <DialogHeader>
-          <DialogTitle className="text-right">
-            {currentSlot ? getCombinedShowDisplay(currentSlot.show_name, currentSlot.host_name) : 'הוסף שיבוץ'}
-          </DialogTitle>
-          <div className="text-muted-foreground text-sm text-right">
-            {currentSlot && (
-              <>
-                {dayNames[currentSlot.day_of_week]} {currentSlot.start_time.substring(0, 5)}-{currentSlot.end_time.substring(0, 5)}
-              </>
-            )}
-            <div>שבוע {weekStartFormatted}</div>
-          </div>
+          <DialogTitle>שיבוץ מפיקים לתוכנית</DialogTitle>
+          <DialogDescription>
+            {currentSlot?.show_name} - {currentSlot?.start_time}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* Worker Forms */}
-        <div className="space-y-3 mt-5">
-          {Array.from({ length: visibleWorkerCount }).map((_, index) => (
-            <ProducerFormField
-              key={`producer-form-${index}`}
-              index={index}
-              workerId={producerForms[index]?.workerId || ""}
-              role={producerForms[index]?.role || ""}
-              additionalText={producerForms[index]?.additionalText}
-              updateForm={updateProducerForm}
-              producers={producers}
-              roles={sortedRoles}
-            />
-          ))}
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={addWorkerForm}
-          >
-            + הוסף עובד נוסף
-          </Button>
+        <div className="grid gap-4 py-4">
+          {/* Slot info section */}
+          <SlotInfo currentSlot={currentSlot} />
+          
+          {/* Producer forms section */}
+          <div className="space-y-4">
+            {Array.from({ length: visibleWorkerCount }).map((_, index) => (
+              <ProducerFormField
+                key={`producer-form-${index}`}
+                index={index}
+                producerForm={producerForms[index]}
+                updateProducerForm={updateProducerForm}
+                producers={producers}
+                roles={roles}
+                // Explicitly pass default role IDs based on position
+                defaultRole={index === 0 ? EDITING_ROLE_ID : 
+                            (index === 1 ? PRODUCTION_ROLE_ID : 
+                             (index === 2 ? EDITING_FIRST_ROLE_ID : 
+                              (index === 3 ? EVENING_PRODUCTION_ROLE_ID : EDITING_ROLE_ID)))}
+              />
+            ))}
+            
+            {visibleWorkerCount < 6 && (
+              <Button type="button" variant="outline" onClick={addWorkerForm} className="w-full">
+                הוספת מפיק נוסף
+              </Button>
+            )}
+          </div>
+          
+          {/* Assignment options section */}
+          <AssignmentOptions
+            isPermanent={isPermanent}
+            setIsPermanent={setIsPermanent}
+            selectedDays={selectedDays}
+            toggleDay={toggleDay}
+            currentSlot={currentSlot}
+          />
         </div>
 
-        {/* Assignment Options */}
-        <div className="space-y-4 border-t pt-4">
-          {/* Days multi-select */}
-          <div>
-            <Label className="mb-2 block">שכפל לימים נוספים באותו שבוע</Label>
-            <div className="flex flex-wrap gap-2">
-              {dayNames.map((day, index) => (
-                <div
-                  key={`day-${index}`}
-                  className={`px-3 py-1.5 border rounded cursor-pointer ${
-                    selectedDays.includes(index) ? "bg-primary text-primary-foreground" : "bg-background"
-                  }`}
-                  onClick={() => toggleDay(index)}
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Permanent checkbox */}
-          <div className="flex items-center space-x-2 space-x-reverse">
-            <Checkbox
-              id="permanent"
-              checked={isPermanent}
-              onCheckedChange={(checked) => setIsPermanent(checked as boolean)}
-            />
-            <Label htmlFor="permanent">קבוע (החל משבוע זה)</Label>
-          </div>
-        </div>
-
-        <DialogFooter className="justify-start">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handleCloseDialog}
-            disabled={isSubmitting}
-          >
+        <DialogFooter className="sm:justify-end">
+          <Button variant="outline" onClick={handleCloseDialog}>
             ביטול
           </Button>
           <Button 
-            onClick={handleSubmit}
+            onClick={handleSubmit} 
             disabled={isSubmitting}
+            className={isSubmitting ? "opacity-70" : ""}
           >
-            {isSubmitting ? 'שומר...' : 'שמור'}
+            {isSubmitting ? "מבצע שיבוץ..." : "שיבוץ"}
           </Button>
         </DialogFooter>
       </DialogContent>

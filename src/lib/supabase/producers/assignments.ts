@@ -1,5 +1,6 @@
+
 import { supabase } from "@/lib/supabase";
-import { format, startOfWeek } from 'date-fns';
+import { format, startOfWeek, parseISO, isBefore } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
 
 export const getProducerAssignments = async (weekStart: Date) => {
@@ -182,12 +183,20 @@ export const createRecurringProducerAssignment = async (
       return true;
     }
     
-    // Use current week date as week_start when creating a recurring assignment
-    // to ensure it only affects current and future weeks
-    const currentWeekStart = new Date(weekStart);
-    const formattedCurrentDate = format(currentWeekStart, 'yyyy-MM-dd');
+    // Always use the current week start date or the provided week start,
+    // whichever is more recent, to avoid affecting past weeks
+    const currentDate = new Date();
+    const providedWeekStart = new Date(weekStart);
     
-    console.log(`Creating recurring assignment with week_start ${formattedCurrentDate}`);
+    // Use the later date (current date or provided week date)
+    // to ensure we don't affect past weeks
+    const effectiveDate = isBefore(providedWeekStart, currentDate) 
+      ? startOfWeek(currentDate, { weekStartsOn: 0 }) 
+      : providedWeekStart;
+    
+    const formattedEffectiveDate = format(effectiveDate, 'yyyy-MM-dd');
+    
+    console.log(`Creating recurring assignment with week_start ${formattedEffectiveDate} (original week: ${weekStart})`);
     
     const { error } = await supabase
       .from('producer_assignments')
@@ -196,7 +205,7 @@ export const createRecurringProducerAssignment = async (
         worker_id: workerId,
         role: role,
         is_recurring: true,
-        week_start: formattedCurrentDate // Use current week as start date
+        week_start: formattedEffectiveDate // Use effective date to prevent affecting past weeks
       });
       
     if (error) throw error;

@@ -1,99 +1,76 @@
 
-import React, { useMemo } from 'react';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { ProducerFormItem } from "../../hooks/useProducerForms";
 
 interface ProducerFormFieldProps {
   index: number;
-  workerId: string;
-  role: string;
-  additionalText?: string;
-  updateForm: (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => void;
+  producerForm: ProducerFormItem;
+  updateProducerForm: (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => void;
   producers: any[];
   roles: any[];
+  defaultRole?: string;
 }
 
 const ProducerFormField = ({
   index,
-  workerId,
-  role,
-  additionalText,
-  updateForm,
+  producerForm,
+  updateProducerForm,
   producers,
-  roles
+  roles,
+  defaultRole
 }: ProducerFormFieldProps) => {
-  // Sort producers by name for easier selection
-  const sortedProducers = useMemo(() => {
-    // Make a defensive copy to avoid null/undefined issues
-    return [...(producers || [])].sort((a, b) => {
-      // Handle potential missing names
-      const nameA = a?.name || '';
-      const nameB = b?.name || '';
-      return nameA.localeCompare(nameB);
-    });
-  }, [producers]);
-  
-  // Debug
-  console.log(`ProducerFormField: role=${role}, Got ${roles?.length || 0} roles with selected role id: ${role}`);
-  
   return (
-    <div className="grid grid-cols-2 gap-3 mb-5" dir="rtl">
-      <div>
-        <Label htmlFor={`worker-${index}`} className="mb-2 block text-right">עובד {index + 1}</Label>
-        <Select 
-          value={workerId} 
-          onValueChange={(value) => updateForm(index, 'workerId', value)}
-        >
-          <SelectTrigger className="w-full text-right">
-            <SelectValue placeholder="בחר עובד" />
-          </SelectTrigger>
-          <SelectContent className="bg-white" align="end">
-            {!sortedProducers || sortedProducers.length === 0 ? (
-              <div className="p-2 text-center text-muted-foreground">אין עובדים זמינים</div>
-            ) : (
-              sortedProducers.map((worker) => (
-                <SelectItem key={worker.id} value={worker.id} className="text-right">
-                  {worker.name} 
-                  {worker.position && (
-                    <span className="text-gray-500 text-sm"> ({worker.position})</span>
-                  )}
+    <div className="space-y-2 p-2 rounded border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <FormLabel htmlFor={`worker-${index}`}>מפיק</FormLabel>
+          <Select
+            value={producerForm.workerId || ""}
+            onValueChange={(value) => updateProducerForm(index, 'workerId', value)}
+          >
+            <SelectTrigger id={`worker-${index}`}>
+              <SelectValue placeholder="בחר מפיק" />
+            </SelectTrigger>
+            <SelectContent>
+              {producers.map((producer) => (
+                <SelectItem key={producer.id} value={producer.id}>
+                  {producer.name}
                 </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <Input
-          type="text"
-          value={additionalText || ""}
-          onChange={(e) => updateForm(index, 'additionalText', e.target.value)}
-          placeholder="הערות נוספות..."
-          className="w-full mt-2 p-2 border rounded text-sm text-right"
-          dir="rtl"
-        />
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div>
+          <FormLabel htmlFor={`role-${index}`}>תפקיד</FormLabel>
+          <Select
+            value={producerForm.role || defaultRole || ""}
+            onValueChange={(value) => updateProducerForm(index, 'role', value)}
+          >
+            <SelectTrigger id={`role-${index}`}>
+              <SelectValue placeholder={index === 0 ? "עריכה" : (index === 1 ? "הפקה" : "בחר תפקיד")} />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id}>
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="pt-9">
-        <Select 
-          value={role} 
-          onValueChange={(value) => updateForm(index, 'role', value)}
-        >
-          <SelectTrigger className="text-right">
-            <SelectValue placeholder="בחר תפקיד" />
-          </SelectTrigger>
-          <SelectContent className="bg-white" align="end">
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.id} className="text-right">
-                {role.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      
+      <div>
+        <FormLabel htmlFor={`notes-${index}`}>הערות (אופציונלי)</FormLabel>
+        <Input
+          id={`notes-${index}`}
+          value={producerForm.additionalText || ""}
+          onChange={(e) => updateProducerForm(index, 'additionalText', e.target.value)}
+          placeholder="הערות נוספות"
+        />
       </div>
     </div>
   );
