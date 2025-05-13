@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
@@ -169,6 +168,8 @@ export const createRecurringProducerAssignment = async (
   weekStart: string
 ) => {
   try {
+    console.log(`Creating recurring assignment for slot ${slotId}, worker ${workerId}, role ${role}, starting from week ${weekStart}`);
+    
     // Check if a recurring assignment already exists for this specific combination
     // that starts on or after the current week_start date
     const { data: existing, error: checkError } = await supabase
@@ -189,7 +190,7 @@ export const createRecurringProducerAssignment = async (
     
     // Create a new recurring assignment with the specified week_start date
     // This ensures the assignment only affects weeks from the specified start date forward
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('producer_assignments')
       .insert({
         slot_id: slotId,
@@ -197,10 +198,12 @@ export const createRecurringProducerAssignment = async (
         role: role,
         is_recurring: true,
         week_start: weekStart // Store the start date for the recurring assignment
-      });
+      })
+      .select();
       
     if (error) throw error;
     
+    console.log("Successfully created recurring assignment:", data);
     return true;
   } catch (error: any) {
     console.error("Error creating recurring assignment:", error);
