@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor } from '@tiptap/react';
@@ -149,7 +150,8 @@ const DigitalCreditsSuggestion = ({
   return (
     <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       <div className="flex justify-between items-center">
-        <div className="space-x-2 space-x-reverse rtl">
+        <div className="flex-1 text-right" dangerouslySetInnerHTML={{ __html: digitalCredit }}></div>
+        <div className="flex items-center space-x-2 space-x-reverse rtl shrink-0 mr-2">
           {!isAdded ? (
             <>
               <Button 
@@ -181,7 +183,6 @@ const DigitalCreditsSuggestion = ({
           )}
         </div>
       </div>
-      <div className="text-right mt-2" dangerouslySetInnerHTML={{ __html: digitalCredit }}></div>
     </div>
   );
 };
