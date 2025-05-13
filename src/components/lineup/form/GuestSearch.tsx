@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { searchGuests } from '@/lib/supabase/guests';
 
 interface GuestSearchProps {
@@ -24,13 +22,10 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
     const fetchResults = async () => {
       if (value && value.trim()) {
         try {
-          console.log('Searching for guests with query:', value);
           const results = await searchGuests(value);
-          console.log('Search results:', results);
           setSearchResults(results || []);
           setOpen(results && results.length > 0);
         } catch (error) {
-          console.error('Error searching guests:', error);
           setSearchResults([]);
           setOpen(false);
         }
