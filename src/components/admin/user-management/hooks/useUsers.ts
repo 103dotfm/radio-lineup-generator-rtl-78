@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User, NewUser } from '../types';
@@ -298,7 +297,7 @@ export const useUsers = () => {
     },
   });
 
-  // Fix the deleteUserByEmailMutation to correctly use Supabase Admin API
+  // Fix the deleteUserByEmailMutation to correctly type the auth user
   const deleteUserByEmailMutation = useMutation({
     mutationFn: async (email: string) => {
       try {
@@ -326,10 +325,19 @@ export const useUsers = () => {
             const { data: authUserList, error: authError } = await supabase.auth.admin.listUsers();
             
             if (!authError && authUserList && authUserList.users) {
+              // Define a type for the auth user to avoid TypeScript errors
+              type AuthUser = {
+                id: string;
+                email?: string;
+                [key: string]: any;
+              };
+              
               // Find the user with the matching email in the returned list
-              const authUser = authUserList.users.find(user => 
-                user && typeof user === 'object' && 'email' in user && user.email === email
-              );
+              // Cast to the AuthUser type to work with the properties safely
+              const authUser = authUserList.users.find(user => {
+                const typedUser = user as AuthUser;
+                return typedUser && typedUser.email === email;
+              }) as AuthUser | undefined;
               
               if (authUser) {
                 const userId = authUser.id;
