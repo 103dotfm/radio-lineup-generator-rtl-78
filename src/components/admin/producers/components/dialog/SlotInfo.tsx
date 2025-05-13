@@ -6,12 +6,21 @@ import { ScheduleSlot } from "@/types/schedule";
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
 
 interface SlotInfoProps {
-  currentSlot: ScheduleSlot;
+  currentSlot: ScheduleSlot | null;
   currentWeek?: Date; // Make currentWeek optional
 }
 
 const SlotInfo = ({ currentSlot, currentWeek = new Date() }: SlotInfoProps) => {
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+
+  // If currentSlot is null, return a placeholder message
+  if (!currentSlot) {
+    return (
+      <div>
+        <p className="font-medium">אין נתונים להצגה</p>
+      </div>
+    );
+  }
 
   return (
     <div>
