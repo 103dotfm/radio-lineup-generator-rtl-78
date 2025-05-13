@@ -8,4 +8,5 @@ export interface User {
   is_admin: boolean;
   created_at?: string;
   avatar_url?: string;
+  password?: string; // Add password for user creation
 }

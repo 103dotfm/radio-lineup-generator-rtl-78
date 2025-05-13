@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { User } from '../types';
@@ -31,13 +32,13 @@ export const useUsers = () => {
           
         if (!profilesError && profiles) {
           // Create a map of profiles for quick lookup
-          const profileMap = profiles.reduce((acc, profile) => {
+          const profileMap = profiles.reduce((acc: Record<string, any>, profile: any) => {
             acc[profile.id] = profile;
             return acc;
           }, {});
           
           // Merge profile data with user data
-          data.forEach(user => {
+          data.forEach((user: any) => {
             if (profileMap[user.id]) {
               user.avatar_url = profileMap[user.id].avatar_url;
               // Only use profile data when user data is missing
