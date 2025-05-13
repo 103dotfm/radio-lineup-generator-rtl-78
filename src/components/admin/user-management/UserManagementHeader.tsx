@@ -1,16 +1,14 @@
 
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import AddUserDialog from './AddUserDialog';
 import { User } from './types';
+import { Separator } from '@/components/ui/separator';
 
 interface UserManagementHeaderProps {
   isAddUserOpen: boolean;
   setIsAddUserOpen: (open: boolean) => void;
-  newUser: Partial<User>;
-  setNewUser: React.Dispatch<React.SetStateAction<Partial<User>>>;
+  newUser: Partial<User> & { password: string };
+  setNewUser: React.Dispatch<React.SetStateAction<Partial<User> & { password: string }>>;
 }
 
 const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
@@ -19,25 +17,19 @@ const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
   newUser,
   setNewUser
 }) => {
-  const navigate = useNavigate();
-
   return (
-    <div className="flex justify-between items-center mb-6">
-      <Button 
-        variant="outline" 
-        onClick={() => navigate('/dashboard')}
-        className="flex items-center gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        חזרה ללוח הבקרה
-      </Button>
-      <h2 className="text-2xl font-bold">ניהול משתמשים</h2>
-      <AddUserDialog
-        isOpen={isAddUserOpen}
-        setIsOpen={setIsAddUserOpen}
-        newUser={newUser}
-        setNewUser={setNewUser}
-      />
+    <div className="mb-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">ניהול משתמשים</h2>
+        <AddUserDialog
+          isOpen={isAddUserOpen}
+          setIsOpen={setIsAddUserOpen}
+          newUser={newUser}
+          setNewUser={setNewUser}
+        />
+      </div>
+      <p className="text-muted-foreground mb-4">צור, ערוך ושנה הרשאות למשתמשי המערכת</p>
+      <Separator />
     </div>
   );
 };
