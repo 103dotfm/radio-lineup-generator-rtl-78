@@ -298,11 +298,86 @@ export const useUsers = () => {
     },
   });
 
+  // Add a new mutation for deleting a user by email
+  const deleteUserByEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      try {
+        console.log(`Attempting to delete user with email ${email}`);
+        
+        // First find the user in the users table
+        const { data: userData, error: userFindError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+        
+        if (userFindError) {
+          console.error("Error finding user:", userFindError);
+          throw userFindError;
+        }
+        
+        if (!userData) {
+          console.log("User not found in users table, trying to delete directly from auth");
+          
+          // If we couldn't find in users table, try to get from auth users
+          // This is for handling users that might exist in auth but not in users table
+          try {
+            // Try to find the user in auth.users (this might fail due to permissions)
+            const { data: authUser, error: authError } = await supabase.auth.admin.listUsers({
+              filter: {
+                email: email
+              }
+            });
+            
+            if (!authError && authUser && authUser.users && authUser.users.length > 0) {
+              const userId = authUser.users[0].id;
+              console.log(`Found user in auth with ID ${userId}`);
+              
+              // Try to delete the auth user (might fail due to permissions)
+              try {
+                await supabase.auth.admin.deleteUser(userId);
+                console.log("Successfully deleted user from auth");
+                return { message: "User deleted from auth system" };
+              } catch (authDeleteError) {
+                console.error("Could not delete auth user:", authDeleteError);
+                throw new Error("Could not delete auth user: " + authDeleteError.message);
+              }
+            } else {
+              throw new Error("User not found in auth system");
+            }
+          } catch (error) {
+            console.error("Error accessing auth users:", error);
+            throw new Error("User not found in the system");
+          }
+        }
+        
+        // If user was found in users table, delete using the existing function
+        return await deleteUserMutation.mutateAsync(userData.id);
+      } catch (error) {
+        console.error("Error in deleteUserByEmailMutation:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: "המשתמש נמחק בהצלחה" });
+    },
+    onError: (error: Error) => {
+      console.error("Delete user by email mutation failed:", error);
+      toast({
+        title: "שגיאה",
+        description: "שגיאה במחיקת המשתמש: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     users,
     isLoading,
     createUserMutation,
     updateUserMutation,
-    deleteUserMutation
+    deleteUserMutation,
+    deleteUserByEmailMutation
   };
 };

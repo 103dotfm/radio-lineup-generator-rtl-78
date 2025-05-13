@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import UserList from './UserList';
 import EditUserDialog from './EditUserDialog';
 import UserManagementHeader from './UserManagementHeader';
+import DeleteUserByEmail from './DeleteUserByEmail';
 import { User } from './types';
 import { useUsers } from './hooks/useUsers';
 
@@ -57,6 +58,8 @@ const UserManagement = () => {
         newUser={newUser}
         setNewUser={setNewUser}
       />
+
+      <DeleteUserByEmail />
 
       <EditUserDialog
         isOpen={isEditUserOpen}
