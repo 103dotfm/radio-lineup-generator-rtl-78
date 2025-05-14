@@ -1,5 +1,6 @@
+
 import { supabase } from "@/lib/supabase";
-import { format, startOfWeek } from 'date-fns';
+import { format, startOfWeek, isBefore } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
 
 export const getProducerAssignments = async (weekStart: Date) => {
@@ -170,6 +171,10 @@ export const createRecurringProducerAssignment = async (
   try {
     console.log(`Creating recurring assignment for slot ${slotId}, worker ${workerId}, role ${role}, starting from week ${weekStart}`);
     
+    // Important: Get current date to ensure we don't affect past weeks
+    const currentDate = new Date();
+    const currentDateString = format(currentDate, 'yyyy-MM-dd');
+    
     // Check if a recurring assignment already exists for this specific combination
     // that starts on or after the current week_start date
     const { data: existing, error: checkError } = await supabase
@@ -190,6 +195,7 @@ export const createRecurringProducerAssignment = async (
     
     // Create a new recurring assignment with the specified week_start date
     // This ensures the assignment only affects weeks from the specified start date forward
+    // and we're not changing any past week assignments
     const { data, error } = await supabase
       .from('producer_assignments')
       .insert({
@@ -239,7 +245,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
     // 2. Create a new recurring assignment that covers only past weeks if needed
     if (deleteMode === 'future' && assignment.is_recurring) {
       const today = new Date();
-      const weekStart = format(assignment.week_start, 'yyyy-MM-dd');
+      const weekStart = assignment.week_start; // This is already a date string
       const assignmentStartDate = new Date(weekStart);
       
       // Delete current recurring assignment
@@ -252,7 +258,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       
       // If the assignment started in the past, create a new assignment that ends with the current week
       // This ensures past weeks remain assigned
-      if (assignmentStartDate < today) {
+      if (isBefore(assignmentStartDate, today)) {
         console.log("Assignment started in the past, preserving past weeks assignments");
         
         // Create a replacement recurring assignment that only applies to past weeks

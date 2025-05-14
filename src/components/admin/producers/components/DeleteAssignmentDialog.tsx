@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 interface DeleteAssignmentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onDeleteCurrentWeek: () => void;
-  onDeleteAllFuture: () => void;
+  onDeleteCurrentWeek: () => Promise<void>;
+  onDeleteAllFuture: () => Promise<void>;
   isRecurring: boolean;
 }
 
@@ -31,8 +31,11 @@ const DeleteAssignmentDialog: React.FC<DeleteAssignmentDialogProps> = ({
     // For non-recurring assignments, just perform the current week deletion without showing the dialog
     React.useEffect(() => {
       if (isOpen) {
-        onDeleteCurrentWeek();
-        onClose();
+        const handleDelete = async () => {
+          await onDeleteCurrentWeek();
+          onClose();
+        };
+        handleDelete();
       }
     }, [isOpen, onDeleteCurrentWeek, onClose]);
     
@@ -54,16 +57,16 @@ const DeleteAssignmentDialog: React.FC<DeleteAssignmentDialogProps> = ({
           </AlertDialogCancel>
           <Button 
             variant="outline"
-            onClick={() => {
-              onDeleteCurrentWeek();
+            onClick={async () => {
+              await onDeleteCurrentWeek();
               onClose();
             }}
           >
             שבוע זה בלבד
           </Button>
           <AlertDialogAction
-            onClick={() => {
-              onDeleteAllFuture();
+            onClick={async () => {
+              await onDeleteAllFuture();
               onClose();
             }}
           >

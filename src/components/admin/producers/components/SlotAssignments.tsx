@@ -10,7 +10,7 @@ interface SlotAssignmentsProps {
   slot: ScheduleSlot;
   slotAssignments: ProducerAssignment[];
   onAssign: (slot: ScheduleSlot) => void;
-  onDeleteAssignment: (assignmentId: string, deleteMode: 'current' | 'future') => void;
+  onDeleteAssignment: (assignmentId: string, deleteMode: 'current' | 'future') => Promise<void>;
 }
 
 const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
@@ -40,15 +40,15 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
     setDeleteDialogOpen(true);
   };
   
-  const handleDeleteCurrentWeek = () => {
+  const handleDeleteCurrentWeek = async () => {
     if (assignmentToDelete) {
-      onDeleteAssignment(assignmentToDelete.id, 'current');
+      await onDeleteAssignment(assignmentToDelete.id, 'current');
     }
   };
   
-  const handleDeleteAllFuture = () => {
+  const handleDeleteAllFuture = async () => {
     if (assignmentToDelete) {
-      onDeleteAssignment(assignmentToDelete.id, 'future');
+      await onDeleteAssignment(assignmentToDelete.id, 'future');
     }
   };
 
