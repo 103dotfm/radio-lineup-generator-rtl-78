@@ -1,5 +1,6 @@
+
 import { supabase } from "@/lib/supabase";
-import { format, startOfWeek, parseISO, isAfter, isSameDay, addWeeks, subDays } from 'date-fns';
+import { format, startOfWeek, parseISO, isAfter, isSameDay, addWeeks, subDays, isBefore } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
 
 export const getProducerAssignments = async (weekStart: Date) => {
