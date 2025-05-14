@@ -1,10 +1,19 @@
 import { supabase } from "@/lib/supabase";
-import { ShiftWorker } from '@/types/schedule';
 
 // Export the Worker interface so it can be imported by other modules
-export interface Worker extends ShiftWorker {}
+export interface Worker {
+  id: string;
+  name: string;
+  department?: string;
+  position?: string;
+  email?: string;
+  phone?: string;
+  user_id?: string;
+  password_readable?: string;
+  photo_url?: string;
+}
 
-export const getWorkers = async (): Promise<ShiftWorker[]> => {
+export const getWorkers = async (): Promise<Worker[]> => {
   try {
     console.log('workers.ts: Fetching workers from Supabase...');
     
