@@ -16,7 +16,6 @@ export type ProducerAssignment = {
   role: string;
   week_start: string;
   end_date?: string; // Optional end date for recurring assignments
-  is_deleted?: boolean; // Flag to mark specific week deletions
   notes?: string | null;
   is_recurring?: boolean;
   created_at?: string;
