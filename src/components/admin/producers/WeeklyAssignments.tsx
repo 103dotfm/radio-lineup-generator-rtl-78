@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -157,6 +158,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         throw new Error("Assignment not found");
       }
       
+      console.log(`Deleting assignment ${assignmentId} with mode ${deleteMode}. Assignment is recurring: ${assignment.is_recurring}`);
+      
       const success = await deleteProducerAssignment(assignmentId, deleteMode);
       
       if (success) {
@@ -167,13 +170,15 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             : "השיבוץ נמחק משבוע זה בלבד"
         });
         
-        // Update local state instead of reloading everything
-        if (deleteMode === 'current') {
+        // Update local state for better user experience
+        if (deleteMode === 'current' && !assignment.is_recurring) {
+          // For non-recurring assignments or when current week only, just remove from the list
           setAssignments(prevAssignments => 
-            prevAssignments.filter(assignment => assignment.id !== assignmentId)
+            prevAssignments.filter(a => a.id !== assignmentId)
           );
         } else {
-          // For 'future' mode, we need to reload the data as multiple assignments might be affected
+          // For recurring assignments or future deletions, reload all data
+          console.log("Reloading all assignments data after recursive delete");
           loadData();
         }
         
