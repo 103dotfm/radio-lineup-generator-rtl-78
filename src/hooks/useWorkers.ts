@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from 'react';
-import { Worker, getWorkers } from '@/lib/supabase/workers';
+import { ShiftWorker } from '@/types/schedule';
+import { getWorkers } from '@/lib/supabase/workers';
 import { useToast } from "@/hooks/use-toast";
 
 export const useWorkers = () => {
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [workers, setWorkers] = useState<ShiftWorker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
