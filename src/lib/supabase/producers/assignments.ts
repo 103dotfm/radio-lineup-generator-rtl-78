@@ -1,4 +1,8 @@
 
+import { supabase } from "@/lib/supabase";
+import { format, startOfWeek } from 'date-fns';
+import { ProducerAssignment } from '../types/producer.types';
+
 export const getProducerAssignments = async (weekStart: Date) => {
   try {
     // Format as YYYY-MM-DD for consistent date handling
