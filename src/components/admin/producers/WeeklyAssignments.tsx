@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -147,41 +146,53 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     return assignments.filter((assignment) => assignment.slot_id === slotId);
   }, [assignments]);
   
-  const handleDeleteAssignment = async (assignmentId: string) => {
+  const handleDeleteAssignment = async (assignmentId: string, deleteMode: 'current' | 'future' = 'current') => {
     saveScrollPosition();
     setIsScrollLocked(true);
     
-    if (confirm('האם אתה בטוח שברצונך למחוק את השיבוץ?')) {
-      try {
-        const success = await deleteProducerAssignment(assignmentId);
-        if (success) {
-          toast({
-            title: "נמחק בהצלחה",
-            description: "השיבוץ נמחק בהצלחה"
-          });
-          
-          // Update local state instead of reloading everything
+    try {
+      const assignment = assignments.find(a => a.id === assignmentId);
+      
+      if (!assignment) {
+        throw new Error("Assignment not found");
+      }
+      
+      const success = await deleteProducerAssignment(assignmentId, deleteMode);
+      
+      if (success) {
+        toast({
+          title: "נמחק בהצלחה",
+          description: deleteMode === 'future' 
+            ? "השיבוץ נמחק מכל השבועות העתידיים" 
+            : "השיבוץ נמחק משבוע זה בלבד"
+        });
+        
+        // Update local state instead of reloading everything
+        if (deleteMode === 'current') {
           setAssignments(prevAssignments => 
             prevAssignments.filter(assignment => assignment.id !== assignmentId)
           );
-          
-          if (onAssignmentChange) {
-            onAssignmentChange(); // Notify parent component
-          }
         } else {
-          throw new Error("Failed to delete assignment");
+          // For 'future' mode, we need to reload the data as multiple assignments might be affected
+          loadData();
         }
-      } catch (error) {
-        console.error("Error deleting assignment:", error);
-        toast({
-          title: "שגיאה",
-          description: "אירעה שגיאה במחיקת השיבוץ",
-          variant: "destructive"
-        });
+        
+        if (onAssignmentChange) {
+          onAssignmentChange(); // Notify parent component
+        }
+      } else {
+        throw new Error("Failed to delete assignment");
       }
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה במחיקת השיבוץ",
+        variant: "destructive"
+      });
+    } finally {
+      setIsScrollLocked(false);
     }
-    
-    setIsScrollLocked(false);
   };
   
   // Handle new assignments by updating local state instead of reloading all data

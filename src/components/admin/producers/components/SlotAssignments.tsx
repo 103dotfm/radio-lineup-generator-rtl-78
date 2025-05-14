@@ -1,15 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ProducerAssignment } from '@/lib/supabase/producers';
 import { ScheduleSlot } from '@/types/schedule';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
+import DeleteAssignmentDialog from './DeleteAssignmentDialog';
 
 interface SlotAssignmentsProps {
   slot: ScheduleSlot;
   slotAssignments: ProducerAssignment[];
   onAssign: (slot: ScheduleSlot) => void;
-  onDeleteAssignment: (assignmentId: string) => void;
+  onDeleteAssignment: (assignmentId: string, deleteMode: 'current' | 'future') => void;
 }
 
 const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
@@ -18,6 +19,9 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
   onAssign,
   onDeleteAssignment
 }) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<ProducerAssignment | null>(null);
+  
   const combinedShowName = getCombinedShowDisplay(slot.show_name, slot.host_name);
 
   // Group assignments by role while preserving the original order
@@ -29,6 +33,24 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
     }
     assignmentsByRole[role].push(assignment);
   });
+  
+  const handleDeleteClick = (assignment: ProducerAssignment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAssignmentToDelete(assignment);
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleDeleteCurrentWeek = () => {
+    if (assignmentToDelete) {
+      onDeleteAssignment(assignmentToDelete.id, 'current');
+    }
+  };
+  
+  const handleDeleteAllFuture = () => {
+    if (assignmentToDelete) {
+      onDeleteAssignment(assignmentToDelete.id, 'future');
+    }
+  };
 
   return (
     <div
@@ -53,10 +75,7 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
                       variant="ghost" 
                       size="sm" 
                       className="h-6 w-6 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteAssignment(assignment.id);
-                      }}
+                      onClick={(e) => handleDeleteClick(assignment, e)}
                     >
                       ✕
                     </Button>
@@ -66,6 +85,20 @@ const SlotAssignments: React.FC<SlotAssignmentsProps> = ({
             </div>
           ))}
         </div>
+      )}
+      
+      {/* Delete Assignment Dialog */}
+      {assignmentToDelete && (
+        <DeleteAssignmentDialog 
+          isOpen={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setAssignmentToDelete(null);
+          }}
+          onDeleteCurrentWeek={handleDeleteCurrentWeek}
+          onDeleteAllFuture={handleDeleteAllFuture}
+          isRecurring={assignmentToDelete.is_recurring || false}
+        />
       )}
     </div>
   );
