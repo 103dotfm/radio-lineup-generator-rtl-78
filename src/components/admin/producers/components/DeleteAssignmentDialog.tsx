@@ -68,7 +68,7 @@ const DeleteAssignmentDialog: React.FC<DeleteAssignmentDialogProps> = ({
               onClose();
             }}
           >
-            כל השבועות העתידיים
+            מהשבוע ואילך
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
