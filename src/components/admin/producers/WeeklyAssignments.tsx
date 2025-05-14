@@ -171,7 +171,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         
         // Always reload all data to ensure we have the latest state
         console.log("Reloading all assignments data after deletion");
-        loadData();
+        await loadData();
         
         if (onAssignmentChange) {
           onAssignmentChange(); // Notify parent component
