@@ -1,4 +1,6 @@
 
+import { ScheduleSlot } from '@/types/schedule';
+
 export type ProducerRole = {
   id: string;
   name: string;
