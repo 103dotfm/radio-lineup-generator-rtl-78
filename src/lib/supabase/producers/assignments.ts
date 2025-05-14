@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
@@ -295,10 +296,13 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       if (assignmentStartDate < currentWeekStart) {
         console.log("Assignment started in the past, preserving past weeks assignments");
         
-        // Update the assignment with end_date - ensuring the property is recognized by TypeScript
+        // Update the assignment with end_date - using explicit type casting to ensure 
+        // TypeScript recognizes end_date as a valid field
+        const updateData: Partial<ProducerAssignment> = { end_date: formattedCurrentWeekStart };
+        
         const { error: updateError } = await supabase
           .from('producer_assignments')
-          .update({ end_date: formattedCurrentWeekStart })
+          .update(updateData)
           .eq('id', id);
           
         if (updateError) {
