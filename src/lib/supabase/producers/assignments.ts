@@ -295,12 +295,10 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       if (assignmentStartDate < currentWeekStart) {
         console.log("Assignment started in the past, preserving past weeks assignments");
         
-        // Update the assignment with end_date
+        // Update the assignment with end_date - ensuring the property is recognized by TypeScript
         const { error: updateError } = await supabase
           .from('producer_assignments')
-          .update({
-            end_date: formattedCurrentWeekStart
-          })
+          .update({ end_date: formattedCurrentWeekStart })
           .eq('id', id);
           
         if (updateError) {

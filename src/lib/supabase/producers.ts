@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO } from 'date-fns';
 import { getProducersByDivision, getProducers as fetchProducers, getProducerRoles as fetchProducerRoles } from './producers/workers';
@@ -34,7 +35,7 @@ export type ProducerAssignment = {
   worker_id: string;
   role: string;
   week_start: string;
-  end_date?: string; // Add end_date field here
+  end_date?: string; // End date for recurring assignments
   notes?: string | null;
   is_recurring?: boolean;
   created_at?: string;
