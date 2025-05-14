@@ -357,9 +357,7 @@ export type Database = {
       producer_assignments: {
         Row: {
           created_at: string | null
-          end_date: string | null
           id: string
-          is_deleted: boolean | null
           is_recurring: boolean | null
           notes: string | null
           role: string
@@ -370,9 +368,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          end_date?: string | null
           id?: string
-          is_deleted?: boolean | null
           is_recurring?: boolean | null
           notes?: string | null
           role: string
@@ -383,9 +379,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          end_date?: string | null
           id?: string
-          is_deleted?: boolean | null
           is_recurring?: boolean | null
           notes?: string | null
           role?: string

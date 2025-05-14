@@ -1,4 +1,3 @@
-
 // Type definitions for scheduling components
 
 export interface DigitalWorkArrangement {
@@ -19,14 +18,6 @@ export interface ShiftWorker {
   id: string;
   name: string;
   email?: string;
-  position?: string;
-  phone?: string;
-  department?: string;
-  user_id?: string | null;
-  photo_url?: string | null;
-  password_readable?: string | null;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export type ViewMode = 'daily' | 'weekly' | 'monthly';
@@ -63,11 +54,23 @@ export interface ProducerAssignment {
   week_start: string;
   notes?: string | null;
   is_recurring?: boolean;
-  end_date?: string;
   created_at?: string;
   updated_at?: string;
-  worker?: ShiftWorker;
-  slot?: ScheduleSlot;
+  worker?: {
+    id: string;
+    name: string;
+    position?: string;
+    email?: string;
+    phone?: string;
+  };
+  slot?: {
+    id: string;
+    show_name: string;
+    host_name?: string;
+    start_time: string;
+    end_time: string;
+    day_of_week: number;
+  };
 }
 
 export interface DayNote {

@@ -157,8 +157,6 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         throw new Error("Assignment not found");
       }
       
-      console.log(`Deleting assignment ${assignmentId} with mode ${deleteMode}. Assignment is recurring: ${assignment.is_recurring}`);
-      
       const success = await deleteProducerAssignment(assignmentId, deleteMode);
       
       if (success) {
@@ -169,9 +167,15 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             : "השיבוץ נמחק משבוע זה בלבד"
         });
         
-        // Always reload all data to ensure we have the latest state
-        console.log("Reloading all assignments data after deletion");
-        await loadData();
+        // Update local state instead of reloading everything
+        if (deleteMode === 'current') {
+          setAssignments(prevAssignments => 
+            prevAssignments.filter(assignment => assignment.id !== assignmentId)
+          );
+        } else {
+          // For 'future' mode, we need to reload the data as multiple assignments might be affected
+          loadData();
+        }
         
         if (onAssignmentChange) {
           onAssignmentChange(); // Notify parent component

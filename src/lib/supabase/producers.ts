@@ -28,10 +28,21 @@ export {
   deleteProducerAssignment
 };
 
-// Export types directly from producer.types.ts
-export type { ProducerAssignment, ProducerRole, ProducerWorkArrangement } from './types/producer.types';
+// Types
+export type ProducerAssignment = {
+  id: string;
+  slot_id: string;
+  worker_id: string;
+  role: string;
+  week_start: string;
+  notes?: string | null;
+  is_recurring?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  worker?: Worker;
+  slot?: ScheduleSlot;
+};
 
-// Type definitions for Worker and ScheduleSlot used in the local context
 export type Worker = {
   id: string;
   name: string;
