@@ -40,24 +40,6 @@ const DeleteAssignmentDialog: React.FC<DeleteAssignmentDialogProps> = ({
     return null;
   }
   
-  const handleDeleteCurrentWeek = () => {
-    try {
-      onDeleteCurrentWeek();
-      onClose();
-    } catch (error) {
-      console.error("Error in DeleteCurrentWeek handler:", error);
-    }
-  };
-  
-  const handleDeleteAllFuture = () => {
-    try {
-      onDeleteAllFuture();
-      onClose();
-    } catch (error) {
-      console.error("Error in DeleteAllFuture handler:", error);
-    }
-  };
-  
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
@@ -73,12 +55,12 @@ const DeleteAssignmentDialog: React.FC<DeleteAssignmentDialogProps> = ({
           </AlertDialogCancel>
           <Button 
             variant="outline"
-            onClick={handleDeleteCurrentWeek}
+            onClick={onDeleteCurrentWeek}
           >
             שבוע זה בלבד
           </Button>
           <AlertDialogAction
-            onClick={handleDeleteAllFuture}
+            onClick={onDeleteAllFuture}
           >
             מהשבוע ואילך
           </AlertDialogAction>
