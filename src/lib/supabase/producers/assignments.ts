@@ -1,6 +1,3 @@
-import { supabase } from "@/lib/supabase";
-import { format, startOfWeek } from 'date-fns';
-import { ProducerAssignment } from '../types/producer.types';
 
 export const getProducerAssignments = async (weekStart: Date) => {
   try {
@@ -30,7 +27,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
         )
       `)
       .eq('week_start', formattedDate)
-      .eq('is_recurring', false);
+      .eq('is_recurring', false)
+      .eq('is_deleted', false);
       
     if (weeklyError) {
       console.error("Error fetching weekly assignments:", weeklyError);
@@ -38,6 +36,30 @@ export const getProducerAssignments = async (weekStart: Date) => {
     }
     
     console.log(`Retrieved ${weeklyAssignments?.length || 0} weekly assignments for ${formattedDate}`);
+    
+    // Get the specific week deletions (for overriding recurring assignments)
+    const { data: weeklyDeletions, error: deletionsError } = await supabase
+      .from('producer_assignments')
+      .select(`
+        slot_id,
+        worker_id,
+        role
+      `)
+      .eq('week_start', formattedDate)
+      .eq('is_recurring', false)
+      .eq('is_deleted', true);
+    
+    if (deletionsError) {
+      console.error("Error fetching weekly deletions:", deletionsError);
+      throw deletionsError;
+    }
+    
+    // Create a set of keys for quick lookups of deleted assignments
+    const deletionKeys = new Set();
+    (weeklyDeletions || []).forEach(deletion => {
+      const key = `${deletion.slot_id}-${deletion.worker_id}-${deletion.role}`;
+      deletionKeys.add(key);
+    });
     
     // Create a separate query to fetch recurring assignments that are valid for this week
     // They should start on or before this week and either have no end_date or end_date after this week
@@ -72,10 +94,18 @@ export const getProducerAssignments = async (weekStart: Date) => {
     
     console.log(`Retrieved ${recurringAssignments?.length || 0} recurring assignments for week starting on or before ${formattedDate}`);
     
+    // Filter out any recurring assignments that have been specifically deleted for this week
+    const filteredRecurringAssignments = (recurringAssignments || []).filter(assignment => {
+      const key = `${assignment.slot_id}-${assignment.worker_id}-${assignment.role}`;
+      return !deletionKeys.has(key);
+    });
+    
+    console.log(`After filtering out deletions, ${filteredRecurringAssignments.length} recurring assignments remain`);
+    
     // Combine both types of assignments
     const combinedAssignments = [
       ...(weeklyAssignments || []),
-      ...(recurringAssignments || [])
+      ...filteredRecurringAssignments
     ];
     
     console.log(`Total combined assignments: ${combinedAssignments.length}`);
