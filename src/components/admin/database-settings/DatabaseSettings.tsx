@@ -1,3 +1,3 @@
 
-import DatabaseSettings from '../DatabaseSettings';
-export default DatabaseSettings;
+import { default as DatabaseSettingsComponent } from '../DatabaseSettings';
+export default DatabaseSettingsComponent;
