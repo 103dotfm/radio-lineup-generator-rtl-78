@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
@@ -239,13 +240,13 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       if (assignment.is_recurring && deleteMode === 'current') {
         console.log("This is a recurring assignment but we're only deleting this week's instance");
         // For recurring assignments when only deleting current week:
-        // 1. Keep the original recurring assignment
-        // 2. Create a "skip" record for this specific week
+        // Create a non-recurring assignment for this specific week to override the recurring one
         
         // Format as YYYY-MM-DD for consistent date handling
         const formattedWeekStart = assignment.week_start;
         console.log(`Creating a "this week only" deletion for week starting ${formattedWeekStart}`);
         
+        // Create a non-recurring assignment with the opposite effect (like an override)
         const { error } = await supabase
           .from('producer_assignments')
           .insert({
@@ -254,12 +255,11 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
             role: assignment.role,
             week_start: formattedWeekStart,
             is_recurring: false,
-            is_deleted: true, // Mark as deleted to skip this specific week
-            notes: assignment.notes
+            notes: `OVERRIDE: ${assignment.notes || ''}` // Mark as override
           });
           
         if (error) {
-          console.error("Error creating skip record:", error);
+          console.error("Error creating override record:", error);
           throw error;
         }
         
@@ -291,38 +291,31 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       
       console.log(`Current week: ${formattedCurrentWeekStart}, Assignment week: ${assignmentWeekStart}`);
       
-      // Delete the recurring assignment
-      const { error: deleteError } = await supabase
-        .from('producer_assignments')
-        .delete()
-        .eq('id', id);
-        
-      if (deleteError) {
-        console.error("Error deleting recurring assignment:", deleteError);
-        throw deleteError;
-      }
-      
-      // Create a new recurring assignment that covers only past weeks if needed
+      // Create a new entry with end_date to preserve past assignments
       const assignmentStartDate = new Date(assignmentWeekStart);
       if (assignmentStartDate < currentWeekStart) {
         console.log("Assignment started in the past, preserving past weeks assignments");
         
-        // Create a replacement recurring assignment that only applies up to current week
-        const { error: createError } = await supabase
+        // First, add end_date to the current recurring assignment
+        const { error: updateError } = await supabase
           .from('producer_assignments')
-          .insert({
-            slot_id: assignment.slot_id,
-            worker_id: assignment.worker_id,
-            role: assignment.role,
-            is_recurring: true,
-            week_start: assignment.week_start,
-            end_date: formattedCurrentWeekStart, // Add end date for past recurrence
-            notes: assignment.notes
-          });
+          .update({ end_date: formattedCurrentWeekStart })
+          .eq('id', id);
           
-        if (createError) {
-          console.error("Error creating past-only recurring assignment:", createError);
-          throw createError;
+        if (updateError) {
+          console.error("Error updating recurring assignment with end date:", updateError);
+          throw updateError;
+        }
+      } else {
+        // If the assignment starts now or in the future, just delete it
+        const { error: deleteError } = await supabase
+          .from('producer_assignments')
+          .delete()
+          .eq('id', id);
+          
+        if (deleteError) {
+          console.error("Error deleting future recurring assignment:", deleteError);
+          throw deleteError;
         }
       }
       
