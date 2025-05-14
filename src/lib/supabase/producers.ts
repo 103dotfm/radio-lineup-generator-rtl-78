@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO } from 'date-fns';
 import { getProducersByDivision, getProducers as fetchProducers, getProducerRoles as fetchProducerRoles } from './producers/workers';
@@ -28,22 +27,10 @@ export {
   deleteProducerAssignment
 };
 
-// Types
-export type ProducerAssignment = {
-  id: string;
-  slot_id: string;
-  worker_id: string;
-  role: string;
-  week_start: string;
-  end_date?: string; // End date for recurring assignments
-  notes?: string | null;
-  is_recurring?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  worker?: Worker;
-  slot?: ScheduleSlot;
-};
+// Export types directly from producer.types.ts
+export type { ProducerAssignment, ProducerRole, ProducerWorkArrangement } from './types/producer.types';
 
+// Type definitions for Worker and ScheduleSlot used in the local context
 export type Worker = {
   id: string;
   name: string;
