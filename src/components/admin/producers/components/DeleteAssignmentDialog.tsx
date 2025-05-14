@@ -27,15 +27,16 @@ const DeleteAssignmentDialog: React.FC<DeleteAssignmentDialogProps> = ({
   onDeleteAllFuture,
   isRecurring
 }) => {
+  // For non-recurring assignments, directly call delete for current week without showing dialog
+  React.useEffect(() => {
+    if (isOpen && !isRecurring) {
+      onDeleteCurrentWeek();
+      onClose();
+    }
+  }, [isOpen, isRecurring, onDeleteCurrentWeek, onClose]);
+  
+  // Only show the dialog for recurring assignments
   if (!isRecurring) {
-    // For non-recurring assignments, just perform the current week deletion without showing the dialog
-    React.useEffect(() => {
-      if (isOpen) {
-        onDeleteCurrentWeek();
-        onClose();
-      }
-    }, [isOpen, onDeleteCurrentWeek, onClose]);
-    
     return null;
   }
   
