@@ -296,12 +296,15 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       if (assignmentStartDate < currentWeekStart) {
         console.log("Assignment started in the past, preserving past weeks assignments");
         
+        // Define a partial update with just the fields we're changing
+        const updateData: { end_date: string } = {
+          end_date: formattedCurrentWeekStart
+        };
+        
         // First, add end_date to the current recurring assignment
         const { error: updateError } = await supabase
           .from('producer_assignments')
-          .update({
-            end_date: formattedCurrentWeekStart
-          })
+          .update(updateData)
           .eq('id', id);
           
         if (updateError) {
