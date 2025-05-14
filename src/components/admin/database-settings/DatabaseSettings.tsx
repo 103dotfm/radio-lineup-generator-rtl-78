@@ -1,3 +1,3 @@
 
-import DatabaseSettings from './database-settings/DatabaseSettings';
+import DatabaseSettings from '../DatabaseSettings';
 export default DatabaseSettings;
