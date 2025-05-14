@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
@@ -40,8 +39,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
     
     console.log(`Retrieved ${weeklyAssignments?.length || 0} weekly assignments for ${formattedDate}`);
     
-    // Create a separate query to fetch recurring assignments that start on or before this week
-    // This ensures we only get recurring assignments that are valid for the current week and future
+    // Create a separate query to fetch recurring assignments that are valid for this week
+    // They should start on or before this week and either have no end_date or end_date after this week
     const { data: recurringAssignments, error: recurringError } = await supabase
       .from('producer_assignments')
       .select(`
@@ -63,7 +62,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
         )
       `)
       .eq('is_recurring', true)
-      .lte('week_start', formattedDate); // Only get recurring assignments that start on or before the current week
+      .lte('week_start', formattedDate) // Only get recurring assignments that start on or before the current week
+      .or(`end_date.gt.${formattedDate},end_date.is.null`); // And either have no end_date or end_date after this week
     
     if (recurringError) {
       console.error("Error fetching recurring assignments:", recurringError);
@@ -233,56 +233,55 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       throw new Error('Assignment not found');
     }
     
-    // For non-recurring assignments or when only deleting current week, just delete the specific assignment
-    if (!assignment.is_recurring || deleteMode === 'current') {
-      console.log("Deleting single assignment or current week of recurring assignment");
-      
-      if (assignment.is_recurring && deleteMode === 'current') {
-        console.log("This is a recurring assignment but we're only deleting this week's instance");
-        // For recurring assignments when only deleting current week:
-        // Create a non-recurring assignment for this specific week to override the recurring one
+    // For non-recurring assignments, simply delete the specific assignment
+    if (!assignment.is_recurring) {
+      console.log("Deleting non-recurring assignment");
+      const { error } = await supabase
+        .from('producer_assignments')
+        .delete()
+        .eq('id', id);
         
-        // Format as YYYY-MM-DD for consistent date handling
-        const formattedWeekStart = assignment.week_start;
-        console.log(`Creating a "this week only" deletion for week starting ${formattedWeekStart}`);
-        
-        // Create a non-recurring assignment with the opposite effect (like an override)
-        const { error } = await supabase
-          .from('producer_assignments')
-          .insert({
-            slot_id: assignment.slot_id,
-            worker_id: assignment.worker_id,
-            role: assignment.role,
-            week_start: formattedWeekStart,
-            is_recurring: false,
-            notes: `OVERRIDE: ${assignment.notes || ''}` // Mark as override
-          });
-          
-        if (error) {
-          console.error("Error creating override record:", error);
-          throw error;
-        }
-        
-        return true;
-      } else {
-        // For non-recurring assignments, simply delete
-        console.log("Deleting non-recurring assignment");
-        const { error } = await supabase
-          .from('producer_assignments')
-          .delete()
-          .eq('id', id);
-          
-        if (error) {
-          console.error("Error deleting assignment:", error);
-          throw error;
-        }
-        
-        return true;
+      if (error) {
+        console.error("Error deleting assignment:", error);
+        throw error;
       }
+      
+      return true;
+    }
+    
+    // For recurring assignments when only deleting current week:
+    if (deleteMode === 'current') {
+      console.log("This is a recurring assignment but we're only deleting this week's instance");
+      // For recurring assignments when only deleting current week:
+      // Create a non-recurring assignment with is_deleted=true for this specific week to override the recurring one
+      
+      // Format as YYYY-MM-DD for consistent date handling
+      const formattedWeekStart = assignment.week_start;
+      console.log(`Creating a "this week only" deletion for week starting ${formattedWeekStart}`);
+      
+      // Create a non-recurring assignment with the opposite effect (like an override)
+      const { error } = await supabase
+        .from('producer_assignments')
+        .insert({
+          slot_id: assignment.slot_id,
+          worker_id: assignment.worker_id,
+          role: assignment.role,
+          week_start: formattedWeekStart,
+          is_recurring: false,
+          is_deleted: true, // Mark as deleted for this specific week
+          notes: `OVERRIDE: ${assignment.notes || ''}` // Mark as override
+        });
+        
+      if (error) {
+        console.error("Error creating override record:", error);
+        throw error;
+      }
+      
+      return true;
     }
     
     // For recurring assignments in 'future' mode:
-    if (deleteMode === 'future' && assignment.is_recurring) {
+    if (deleteMode === 'future') {
       console.log("Deleting recurring assignment for future weeks");
       const today = new Date();
       const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 });
@@ -291,18 +290,17 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       
       console.log(`Current week: ${formattedCurrentWeekStart}, Assignment week: ${assignmentWeekStart}`);
       
-      // Create a new entry with end_date to preserve past assignments
+      // If the assignment started in the past, update it with an end_date
+      // This preserves the assignment for past weeks but ends it now
       const assignmentStartDate = new Date(assignmentWeekStart);
       if (assignmentStartDate < currentWeekStart) {
         console.log("Assignment started in the past, preserving past weeks assignments");
         
-        // Update the assignment with end_date - using explicit type casting to ensure 
-        // TypeScript recognizes end_date as a valid field
-        const updateData: Partial<ProducerAssignment> = { end_date: formattedCurrentWeekStart };
-        
         const { error: updateError } = await supabase
           .from('producer_assignments')
-          .update(updateData)
+          .update({
+            end_date: formattedCurrentWeekStart // End date is exclusive
+          })
           .eq('id', id);
           
         if (updateError) {

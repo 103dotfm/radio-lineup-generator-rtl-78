@@ -18,6 +18,7 @@ export type ProducerAssignment = {
   end_date?: string; // End date for recurring assignments
   notes?: string | null;
   is_recurring?: boolean;
+  is_deleted?: boolean; // Added to mark single-week deletions
   created_at?: string;
   updated_at?: string;
   worker?: ShiftWorker;
