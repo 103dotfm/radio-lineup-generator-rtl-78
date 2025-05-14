@@ -15,7 +15,7 @@ export type ProducerAssignment = {
   worker_id: string;
   role: string;
   week_start: string;
-  end_date?: string; // Optional end date for recurring assignments
+  end_date?: string; // End date for recurring assignments
   notes?: string | null;
   is_recurring?: boolean;
   created_at?: string;
