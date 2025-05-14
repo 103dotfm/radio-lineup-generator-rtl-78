@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO, isAfter, isSameDay, addWeeks, subDays } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
@@ -128,11 +127,6 @@ export const getProducerAssignments = async (weekStart: Date) => {
     throw error;
   }
 };
-
-// Helper function to check if date1 is before date2
-function isBefore(date1: Date, date2: Date): boolean {
-  return date1 < date2;
-}
 
 export const getAllMonthlyAssignments = async (year: number, month: number) => {
   try {
@@ -333,6 +327,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
           .select('*')
           .eq('slot_id', assignment.slot_id)
           .eq('worker_id', assignment.worker_id)
+          .eq('role', assignment.role)
           .eq('week_start', assignment.week_start)
           .eq('is_recurring', false);
         
@@ -436,8 +431,3 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
     throw error;
   }
 };
-
-// Helper function to check if date1 is before date2
-function isBefore(date1: Date, date2: Date): boolean {
-  return date1 < date2;
-}
