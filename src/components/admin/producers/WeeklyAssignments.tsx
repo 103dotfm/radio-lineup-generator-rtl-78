@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -170,17 +169,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
             : "השיבוץ נמחק משבוע זה בלבד"
         });
         
-        // Update local state for better user experience
-        if (deleteMode === 'current' && !assignment.is_recurring) {
-          // For non-recurring assignments or when current week only, just remove from the list
-          setAssignments(prevAssignments => 
-            prevAssignments.filter(a => a.id !== assignmentId)
-          );
-        } else {
-          // For recurring assignments or future deletions, reload all data
-          console.log("Reloading all assignments data after recursive delete");
-          loadData();
-        }
+        // Always reload all data to ensure we have the latest state
+        console.log("Reloading all assignments data after deletion");
+        loadData();
         
         if (onAssignmentChange) {
           onAssignmentChange(); // Notify parent component

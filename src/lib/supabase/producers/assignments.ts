@@ -299,7 +299,9 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
         // First, add end_date to the current recurring assignment
         const { error: updateError } = await supabase
           .from('producer_assignments')
-          .update({ end_date: formattedCurrentWeekStart })
+          .update({
+            end_date: formattedCurrentWeekStart
+          })
           .eq('id', id);
           
         if (updateError) {
