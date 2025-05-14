@@ -1,5 +1,5 @@
 
-import { ScheduleSlot } from '@/types/schedule';
+import { ScheduleSlot, ShiftWorker } from '@/types/schedule';
 
 export type ProducerRole = {
   id: string;
@@ -20,7 +20,7 @@ export type ProducerAssignment = {
   is_recurring?: boolean;
   created_at?: string;
   updated_at?: string;
-  worker?: Worker;
+  worker?: ShiftWorker;
   slot?: ScheduleSlot;
 };
 

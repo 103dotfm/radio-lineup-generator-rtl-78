@@ -1,6 +1,8 @@
+
 import { supabase } from "@/lib/supabase";
 import { getWorkerDivisions } from "@/lib/supabase/divisions";
 import { ensureProducerRoles } from "./roles";
+import { ShiftWorker } from '@/types/schedule';
 
 export const getProducers = async () => {
   try {
