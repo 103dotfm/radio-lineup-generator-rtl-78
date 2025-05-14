@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, parseISO, isAfter, isSameDay, addWeeks, subDays } from 'date-fns';
 import { ProducerAssignment } from '../types/producer.types';
@@ -326,29 +327,33 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       console.log("Deleting just this week's instance of a recurring assignment");
       
       try {
-        // Check if a deletion record already exists for this specific combination
+        // First check if an override already exists
         const { data: existingOverride, error: checkError } = await supabase
           .from('producer_assignments')
-          .select('id')
+          .select('*')
           .eq('slot_id', assignment.slot_id)
           .eq('worker_id', assignment.worker_id)
-          .eq('role', assignment.role)
           .eq('week_start', assignment.week_start)
-          .eq('is_recurring', false)
-          .maybeSingle();
+          .eq('is_recurring', false);
         
-        if (checkError && checkError.code !== 'PGRST116') throw checkError;
+        if (checkError) {
+          console.error("Error checking for existing override:", checkError);
+          throw checkError;
+        }
         
-        if (existingOverride) {
+        if (existingOverride && existingOverride.length > 0) {
           // If an override already exists, update it to be deleted
-          console.log("Found existing override, updating it to deleted:", existingOverride);
+          console.log("Found existing override, updating it to deleted:", existingOverride[0]);
           
           const { error: updateError } = await supabase
             .from('producer_assignments')
             .update({ is_deleted: true })
-            .eq('id', existingOverride.id);
+            .eq('id', existingOverride[0].id);
             
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.error("Error updating existing override:", updateError);
+            throw updateError;
+          }
         } else {
           // Create a new non-recurring override with is_deleted=true
           console.log("Creating new deletion override");
@@ -381,24 +386,25 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       // Get current date and format it for consistent comparison
       const today = new Date();
       const currentWeekStart = startOfWeek(today, { weekStartsOn: 0 });
-      const formattedCurrentWeekStart = format(currentWeekStart, 'yyyy-MM-dd');
       
       // Parse assignment's week_start to a Date for comparison
       const assignmentWeekStart = parseISO(assignment.week_start);
-      const weekStartDate = parseISO(assignment.week_start);
       
-      console.log(`Current week: ${formattedCurrentWeekStart}, Assignment week: ${assignment.week_start}`);
+      console.log(`Current week: ${format(currentWeekStart, 'yyyy-MM-dd')}, Assignment week: ${assignment.week_start}`);
       
       // If the assignment started before the current week, we need to preserve past weeks
       if (isBefore(assignmentWeekStart, currentWeekStart)) {
         console.log("Assignment started in the past, preserving past weeks by setting end_date");
         
-        // Use the current week's start date as the end_date
-        // This excludes the current week and all future weeks
+        // Use the day before current week starts as the end_date
+        // This preserves all past assignments
+        const endDate = format(subDays(currentWeekStart, 1), 'yyyy-MM-dd');
+        console.log(`Setting end_date to ${endDate} to preserve past assignments`);
+        
         const { error: updateError } = await supabase
           .from('producer_assignments')
           .update({
-            end_date: format(subDays(currentWeekStart, 1), 'yyyy-MM-dd') // End date is the day before current week starts
+            end_date: endDate
           })
           .eq('id', id);
           
@@ -430,3 +436,8 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
     throw error;
   }
 };
+
+// Helper function to check if date1 is before date2
+function isBefore(date1: Date, date2: Date): boolean {
+  return date1 < date2;
+}
