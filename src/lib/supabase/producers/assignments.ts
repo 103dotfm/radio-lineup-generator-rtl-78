@@ -156,7 +156,7 @@ export const getProducerAssignments = async (weekStart: Date) => {
         skip.assignment_id === assignment.id && 
         normalizeDate(skip.week_start).getTime() === currentWeekDate.getTime()
       );
-      const isEnded = endDate ? isBefore(currentWeekDate, endDate) : false;
+      const isEnded = endDate ? !isBefore(currentWeekDate, endDate) : false;
       const hasStarted = !isBefore(currentWeekDate, assignmentStartDate);
       
       const isValid = hasStarted && !isSkipped && !isEnded;
