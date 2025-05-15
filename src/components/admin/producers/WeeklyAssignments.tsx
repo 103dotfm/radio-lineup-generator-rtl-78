@@ -156,8 +156,12 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       if (!assignment) {
         throw new Error("Assignment not found");
       }
+
+      // Format the current week's date consistently
+      const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
+      const formattedWeekStart = format(weekStartDate, 'yyyy-MM-dd');
       
-      const success = await deleteProducerAssignment(assignmentId, deleteMode);
+      const success = await deleteProducerAssignment(assignmentId, deleteMode, formattedWeekStart);
       
       if (success) {
         toast({

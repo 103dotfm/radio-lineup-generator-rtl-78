@@ -1050,6 +1050,38 @@ export type Database = {
         }
         Relationships: []
       }
+      producer_assignment_skips: {
+        Row: {
+          id: string
+          assignment_id: string
+          week_start: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          assignment_id: string
+          week_start: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          assignment_id?: string
+          week_start?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producer_assignment_skips_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "producer_assignments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1077,6 +1109,10 @@ export type Database = {
       check_table_exists: {
         Args: { table_name: string }
         Returns: boolean
+      }
+      create_skips_table: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       gtrgm_compress: {
         Args: { "": unknown }
