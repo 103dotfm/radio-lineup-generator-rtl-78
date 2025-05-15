@@ -1,9 +1,26 @@
+
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, isBefore, addDays, parseISO, isEqual } from 'date-fns';
 import type { Database } from '../types/producer.types';
 
 type Tables = Database['public']['Tables'];
-type ProducerAssignment = Tables['producer_assignments']['Row'];
+type ProducerAssignment = Tables['producer_assignments']['Row'] & {
+  worker?: {
+    id: string;
+    name: string;
+    position?: string;
+    email?: string;
+    phone?: string;
+  } | null;
+  slot?: {
+    id: string;
+    show_name: string;
+    host_name?: string;
+    start_time: string;
+    end_time: string;
+    day_of_week: number;
+  } | null;
+};
 type ProducerAssignmentSkip = Tables['producer_assignment_skips']['Row'];
 
 // Helper function to normalize dates for comparison
@@ -31,24 +48,26 @@ export const getProducerAssignments = async (weekStart: Date) => {
     console.log('Fetching assignments for week:', formattedDate);
 
     // Debug: Check RLS policies by getting raw count
-    const { count, error: countError } = await supabase
+    const countResponse = await supabase
       .from('producer_assignments')
       .select('*', { count: 'exact', head: true });
 
+    const count = countResponse.count;
     console.log('Total assignments in database (RLS check):', count);
     
     // Debug: Get table structure
-    const { data: sampleRow, error: sampleError } = await supabase
+    const sampleResponse = await supabase
       .from('producer_assignments')
       .select('*')
       .limit(1)
       .single();
 
+    const sampleRow = sampleResponse.data;
     console.log('Sample row to check table structure:', sampleRow);
     console.log('Available columns:', sampleRow ? Object.keys(sampleRow) : 'No rows found');
     
     // Get weekly (non-recurring) assignments for this specific week
-    const { data: weeklyAssignments, error: weeklyError } = await supabase
+    const weeklyResponse = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -72,11 +91,12 @@ export const getProducerAssignments = async (weekStart: Date) => {
       .eq('is_recurring', false)
       .is('is_deleted', null);
       
-    if (weeklyError) {
-      console.error('Error fetching weekly assignments:', weeklyError);
-      throw weeklyError;
+    if (weeklyResponse.error) {
+      console.error('Error fetching weekly assignments:', weeklyResponse.error);
+      throw weeklyResponse.error;
     }
 
+    const weeklyAssignments = weeklyResponse.data || [];
     console.log('Weekly assignments query:', {
       week_start: formattedDate,
       is_recurring: false,
@@ -84,15 +104,16 @@ export const getProducerAssignments = async (weekStart: Date) => {
     });
 
     // Get ALL recurring assignments to debug
-    const { data: allRecurring, error: allRecurringError } = await supabase
+    const allRecurringResponse = await supabase
       .from('producer_assignments')
       .select('*')
       .eq('is_recurring', true);
 
+    const allRecurring = allRecurringResponse.data;
     console.log('ALL recurring assignments (no filters):', allRecurring);
 
     // Get recurring assignments
-    const { data: recurringAssignments, error: recurringError } = await supabase
+    const recurringResponse = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -117,36 +138,37 @@ export const getProducerAssignments = async (weekStart: Date) => {
       .is('is_deleted', null)
       .or(`end_date.is.null,and(end_date.gte.${formattedDate})`);
 
-    if (recurringError) {
-      console.error('Error fetching recurring assignments:', recurringError);
-      throw recurringError;
+    if (recurringResponse.error) {
+      console.error('Error fetching recurring assignments:', recurringResponse.error);
+      throw recurringResponse.error;
     }
 
+    const recurringAssignments = recurringResponse.data || [];
     console.log('Recurring assignments before filtering:', recurringAssignments);
 
     // Get skips for recurring assignments
-    const recurringIds = (recurringAssignments || []).map(a => a.id);
+    const recurringIds = recurringAssignments.map(a => a.id);
     let skips: ProducerAssignmentSkip[] = [];
     
     if (recurringIds.length > 0) {
       // Get skips for the exact week we're viewing
-      const { data: allSkips, error: skipsError } = await supabase
+      const skipsResponse = await supabase
         .from('producer_assignment_skips')
         .select('*')
         .in('assignment_id', recurringIds)
         .eq('week_start', formattedDate);
 
-      if (skipsError) {
-        console.error('Error fetching skips:', skipsError);
-        throw skipsError;
+      if (skipsResponse.error) {
+        console.error('Error fetching skips:', skipsResponse.error);
+        throw skipsResponse.error;
       }
 
-      skips = allSkips || [];
+      skips = skipsResponse.data || [];
       console.log('Found skips for week', formattedDate, ':', skips);
     }
 
     // Filter out skipped recurring assignments
-    const validRecurringAssignments = (recurringAssignments || []).filter(assignment => {
+    const validRecurringAssignments = recurringAssignments.filter(assignment => {
       const assignmentStartDate = normalizeDate(assignment.week_start);
       const currentWeekDate = normalizeDate(formattedDate);
       const endDate = assignment.end_date ? normalizeDate(assignment.end_date) : null;
@@ -175,15 +197,35 @@ export const getProducerAssignments = async (weekStart: Date) => {
       return isValid;
     });
 
-    // Combine assignments
-    const combinedAssignments = [
+    // Combine assignments and process them to handle any type issues
+    const allAssignments = [
       ...(weeklyAssignments || []),
       ...validRecurringAssignments
     ];
+    
+    // Process the assignments to handle the case where slot might be a SelectQueryError
+    const processedAssignments = allAssignments.map(assignment => {
+      // Create a properly typed assignment object with null-checked properties
+      const processed: ProducerAssignment = {
+        ...assignment,
+        worker: assignment.worker || null,
+        slot: assignment.slot && typeof assignment.slot === 'object' && !('error' in assignment.slot) 
+          ? {
+              id: assignment.slot.id,
+              show_name: assignment.slot.show_name,
+              host_name: assignment.slot.host_name,
+              start_time: assignment.slot.start_time,
+              end_time: assignment.slot.end_time,
+              day_of_week: assignment.slot.day_of_week
+            }
+          : null
+      };
+      
+      return processed;
+    });
 
-    console.log('Final assignments:', combinedAssignments);
-
-    return combinedAssignments;
+    console.log('Final assignments:', processedAssignments);
+    return processedAssignments;
   } catch (error) {
     console.error("Error fetching producer assignments:", error);
     throw error;
@@ -200,7 +242,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number) => {
     const endDateStr = format(endDate, 'yyyy-MM-dd');
     
     // Find assignments where week_start is within the month
-    const { data, error } = await supabase
+    const response = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -220,9 +262,33 @@ export const getAllMonthlyAssignments = async (year: number, month: number) => {
       .gte('week_start', startDateStr)
       .lte('week_start', endDateStr);
       
-    if (error) throw error;
+    if (response.error) throw response.error;
     
-    return data || [];
+    const data = response.data || [];
+    
+    // Process the assignments to handle the case where slot might be a SelectQueryError
+    const processedAssignments = data.map(assignment => {
+      // Create a properly typed assignment object with null-checked properties
+      const processed: ProducerAssignment = {
+        ...assignment,
+        worker: assignment.worker || null,
+        slot: assignment.slot && typeof assignment.slot === 'object' && !('error' in assignment.slot) 
+          ? {
+              id: assignment.slot.id,
+              show_name: assignment.slot.show_name,
+              host_name: assignment.slot.host_name,
+              day_of_week: assignment.slot.day_of_week,
+              // Add required properties that may not be present in the server response
+              start_time: assignment.slot.start_time || '',
+              end_time: assignment.slot.end_time || ''
+            }
+          : null
+      };
+      
+      return processed;
+    });
+    
+    return processedAssignments;
   } catch (error) {
     console.error("Error fetching monthly assignments:", error);
     throw error;
@@ -395,7 +461,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
     console.log('Starting deleteProducerAssignment with:', { id, deleteMode, viewingWeekStart });
     
     // First, get the assignment details
-    const { data: assignment, error: fetchError } = await supabase
+    const assignmentResponse = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -411,7 +477,8 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       .eq('id', id)
       .single();
       
-    if (fetchError) throw fetchError;
+    if (assignmentResponse.error) throw assignmentResponse.error;
+    const assignment = assignmentResponse.data;
     if (!assignment) throw new Error('Assignment not found');
 
     console.log('Found assignment:', assignment);
@@ -419,7 +486,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
     // Case 1: Non-recurring assignment - mark as deleted
     if (!assignment.is_recurring) {
       console.log('Handling non-recurring assignment deletion');
-      const { error } = await supabase
+      const updateResponse = await supabase
         .from('producer_assignments')
         .update({ 
           is_deleted: true,
@@ -427,7 +494,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
         })
         .eq('id', id);
         
-      if (error) throw error;
+      if (updateResponse.error) throw updateResponse.error;
       return {
         success: true,
         message: 'Assignment deleted successfully'
@@ -443,7 +510,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       console.log('Creating skip for week:', skipWeekStart);
 
       // Create a skip entry for this week
-      const { data: skipData, error: createError } = await supabase
+      const skipResponse = await supabase
         .from('producer_assignment_skips')
         .insert({
           assignment_id: id,
@@ -453,12 +520,12 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
         .select()
         .single();
 
-      if (createError) {
-        console.error('Error creating skip entry:', createError);
-        throw createError;
+      if (skipResponse.error) {
+        console.error('Error creating skip entry:', skipResponse.error);
+        throw skipResponse.error;
       }
 
-      console.log('Created skip entry:', skipData);
+      console.log('Created skip entry:', skipResponse.data);
       
       return {
         success: true,
@@ -484,7 +551,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
         viewingWeekStart
       });
 
-      const { error: updateError } = await supabase
+      const updateResponse = await supabase
         .from('producer_assignments')
         .update({ 
           end_date: endDate,
@@ -492,9 +559,9 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
         })
         .eq('id', id);
 
-      if (updateError) {
-        console.error('Error updating assignment end date:', updateError);
-        throw updateError;
+      if (updateResponse.error) {
+        console.error('Error updating assignment end date:', updateResponse.error);
+        throw updateResponse.error;
       }
 
       console.log('Successfully updated assignment end date');
@@ -509,7 +576,7 @@ export const deleteProducerAssignment = async (id: string, deleteMode: 'current'
       success: false,
       message: 'Invalid delete mode specified'
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting producer assignment:", error);
     throw new Error(error instanceof Error ? error.message : 'Failed to delete assignment');
   }

@@ -37,10 +37,12 @@ export type ProducerAssignment = {
   week_start: string;
   notes?: string | null;
   is_recurring?: boolean;
+  end_date?: string | null;
+  is_deleted?: boolean | null;
   created_at?: string;
   updated_at?: string;
-  worker?: Worker;
-  slot?: ScheduleSlot;
+  worker?: Worker | null;
+  slot?: ScheduleSlot | null;
 };
 
 export type Worker = {
