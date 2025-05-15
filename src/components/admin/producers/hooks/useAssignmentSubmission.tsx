@@ -102,7 +102,7 @@ export const useAssignmentSubmission = ({
             // Pass the current week's start date to ensure the recurring assignment
             // only applies from this week forward
             const success = await createRecurringProducerAssignment(
-              currentSlot.id,
+              currentSlot!.id,
               form.workerId,
               roleName,
               formattedWeekStart // Pass the current week start date
@@ -112,13 +112,14 @@ export const useAssignmentSubmission = ({
               // Create a placeholder assignment to update the UI
               const newAssignment: ProducerAssignment = {
                 id: `temp-${Date.now()}-${Math.random()}`,
-                slot_id: currentSlot.id,
+                slot_id: currentSlot!.id,
                 worker_id: form.workerId,
                 role: roleName,
                 week_start: formattedWeekStart,
                 is_recurring: true,
                 notes: form.additionalText || null,
                 created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
                 worker: workerDetails,
                 slot: currentSlot
               };
@@ -133,9 +134,9 @@ export const useAssignmentSubmission = ({
         // Handle multi-day assignments
         else if (selectedDays.length > 0) {
           // Handle current slot if its day is selected
-          if (selectedDays.includes(currentSlot.day_of_week)) {
+          if (selectedDays.includes(currentSlot!.day_of_week)) {
             const result = await createSingleAssignment(
-              currentSlot.id,
+              currentSlot!.id,
               form.workerId,
               roleName,
               formattedWeekStart,
@@ -151,8 +152,8 @@ export const useAssignmentSubmission = ({
           }
           
           // Process other selected days
-          const currentTime = currentSlot.start_time;
-          const applicableDays = selectedDays.filter(day => day !== currentSlot.day_of_week);
+          const currentTime = currentSlot!.start_time;
+          const applicableDays = selectedDays.filter(day => day !== currentSlot!.day_of_week);
           
           for (const dayIndex of applicableDays) {
             const key = `${dayIndex}-${currentTime}`;
@@ -181,7 +182,7 @@ export const useAssignmentSubmission = ({
         // Handle single assignment
         else {
           const result = await createSingleAssignment(
-            currentSlot.id,
+            currentSlot!.id,
             form.workerId,
             roleName,
             formattedWeekStart,
@@ -246,7 +247,10 @@ export const useAssignmentSubmission = ({
         role: roleName,
         week_start: weekStart,
         is_recurring: false,
-        notes: notes || undefined
+        notes: notes || undefined,
+        // Add these properties to match the Omit<ProducerAssignment, 'id'> type
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       console.log(`Creating single assignment for worker ${workerId} with role ${roleName}`);

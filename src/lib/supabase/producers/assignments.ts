@@ -16,8 +16,8 @@ type ProducerAssignment = Tables['producer_assignments']['Row'] & {
     id: string;
     show_name: string;
     host_name?: string;
-    start_time: string;
-    end_time: string;
+    start_time: string; // Ensure start_time is defined here
+    end_time: string;   // Ensure end_time is defined here
     day_of_week: number;
   } | null;
 };
@@ -256,7 +256,9 @@ export const getAllMonthlyAssignments = async (year: number, month: number) => {
           id,
           show_name,
           host_name,
-          day_of_week
+          day_of_week,
+          start_time,
+          end_time
         )
       `)
       .gte('week_start', startDateStr)
@@ -278,7 +280,6 @@ export const getAllMonthlyAssignments = async (year: number, month: number) => {
               show_name: assignment.slot.show_name,
               host_name: assignment.slot.host_name,
               day_of_week: assignment.slot.day_of_week,
-              // Add required properties that may not be present in the server response
               start_time: assignment.slot.start_time || '',
               end_time: assignment.slot.end_time || ''
             }
@@ -295,7 +296,7 @@ export const getAllMonthlyAssignments = async (year: number, month: number) => {
   }
 };
 
-export const createProducerAssignment = async (assignment: Omit<ProducerAssignment, 'id'>) => {
+export const createProducerAssignment = async (assignment: Omit<ProducerAssignment, 'id' | 'created_at' | 'updated_at'>) => {
   try {
     console.log('Attempting to create assignment with data:', assignment);
     
@@ -327,9 +328,13 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     const { data, error } = await supabase
       .from('producer_assignments')
       .insert([{
-        ...assignment,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        slot_id: assignment.slot_id,
+        worker_id: assignment.worker_id,
+        role: assignment.role,
+        week_start: assignment.week_start,
+        is_recurring: assignment.is_recurring || false,
+        notes: assignment.notes,
+        is_deleted: false
       }])
       .select()
       .single();
