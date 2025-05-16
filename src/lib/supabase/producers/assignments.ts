@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { format, startOfWeek, isBefore, addDays, parseISO, isEqual } from 'date-fns';
 import type { Database } from '../types/producer.types';
@@ -55,17 +54,6 @@ export const getProducerAssignments = async (weekStart: Date) => {
     const count = countResponse.count;
     console.log('Total assignments in database (RLS check):', count);
     
-    // Debug: Get table structure
-    const sampleResponse = await supabase
-      .from('producer_assignments')
-      .select('*')
-      .limit(1)
-      .single();
-
-    const sampleRow = sampleResponse.data;
-    console.log('Sample row to check table structure:', sampleRow);
-    console.log('Available columns:', sampleRow ? Object.keys(sampleRow) : 'No rows found');
-    
     // Get weekly (non-recurring) assignments for this specific week
     const weeklyResponse = await supabase
       .from('producer_assignments')
@@ -97,20 +85,7 @@ export const getProducerAssignments = async (weekStart: Date) => {
     }
 
     const weeklyAssignments = weeklyResponse.data || [];
-    console.log('Weekly assignments query:', {
-      week_start: formattedDate,
-      is_recurring: false,
-      results: weeklyAssignments
-    });
-
-    // Get ALL recurring assignments to debug
-    const allRecurringResponse = await supabase
-      .from('producer_assignments')
-      .select('*')
-      .eq('is_recurring', true);
-
-    const allRecurring = allRecurringResponse.data;
-    console.log('ALL recurring assignments (no filters):', allRecurring);
+    console.log('Weekly assignments query results:', weeklyAssignments);
 
     // Get recurring assignments
     const recurringResponse = await supabase
@@ -214,8 +189,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
               id: assignment.slot.id,
               show_name: assignment.slot.show_name,
               host_name: assignment.slot.host_name,
-              start_time: assignment.slot.start_time,
-              end_time: assignment.slot.end_time,
+              start_time: assignment.slot.start_time || '',
+              end_time: assignment.slot.end_time || '',
               day_of_week: assignment.slot.day_of_week
             }
           : null
@@ -318,30 +293,57 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     console.log('Existing assignments found:', existing);
     
     if (existing && existing.length > 0) {
-      console.log("Assignment already exists, not creating duplicate:", existing[0]);
+      console.log("Assignment already exists, returning existing assignment:", existing[0]);
+      // Return the existing assignment instead of trying to create a new one
       return existing[0];
     }
     
     // If no duplicate, create the new assignment
     console.log("Creating new producer assignment:", assignment);
     
+    const insertData = {
+      slot_id: assignment.slot_id,
+      worker_id: assignment.worker_id,
+      role: assignment.role,
+      week_start: assignment.week_start,
+      is_recurring: assignment.is_recurring || false,
+      notes: assignment.notes,
+      is_deleted: false,
+      // Add created_at and updated_at to satisfy TypeScript
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
     const { data, error } = await supabase
       .from('producer_assignments')
-      .insert([{
-        slot_id: assignment.slot_id,
-        worker_id: assignment.worker_id,
-        role: assignment.role,
-        week_start: assignment.week_start,
-        is_recurring: assignment.is_recurring || false,
-        notes: assignment.notes,
-        is_deleted: false
-      }])
+      .insert([insertData])
       .select()
       .single();
       
     if (error) {
-      console.error('Error inserting new assignment:', error);
-      throw error;
+      // Handle duplicate key constraint violation
+      if (error.code === '23505') {
+        console.warn('Duplicate assignment detected, fetching existing record instead');
+        
+        // Fetch the existing assignment
+        const { data: existingData, error: fetchError } = await supabase
+          .from('producer_assignments')
+          .select('*')
+          .eq('slot_id', assignment.slot_id)
+          .eq('worker_id', assignment.worker_id)
+          .eq('week_start', assignment.week_start)
+          .single();
+          
+        if (fetchError) {
+          console.error('Error fetching existing assignment after conflict:', fetchError);
+          throw fetchError;
+        }
+        
+        return existingData;
+      } else {
+        console.error('Error inserting new assignment:', error);
+        throw error;
+      }
     }
     
     if (!data) {
@@ -425,6 +427,12 @@ export const createRecurringProducerAssignment = async (
       .select();
       
     if (error) {
+      // Handle duplicate key constraint violation
+      if (error.code === '23505') {
+        console.warn('Duplicate recurring assignment detected, this is still a success');
+        return true;
+      }
+      
       console.error('Error creating recurring assignment:', error);
       throw error;
     }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -12,7 +13,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { 
   deleteProducerAssignment,
   getProducerAssignments,
@@ -44,6 +46,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { saveScrollPosition, restoreScrollPosition, setIsScrollLocked } = useScroll();
   const [producerDivisionId, setProducerDivisionId] = useState<string | undefined>(undefined);
   
@@ -83,16 +86,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     }
   });
   
-  useEffect(() => {
-    // Format date consistently for logging
-    const formattedDate = format(currentWeek, 'yyyy-MM-dd');
-    console.log("WeeklyAssignments: Loading data for week", formattedDate);
-    
-    saveScrollPosition();
-    loadData();
-  }, [currentWeek, refreshTrigger, producerDivisionId]);
-  
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Use a consistent date format for the week start
@@ -133,12 +127,29 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
       
       // Restore scroll position after a short delay to ensure the content is rendered
       setTimeout(() => {
         restoreScrollPosition();
       }, 50);
     }
+  }, [currentWeek, producerDivisionId, toast, restoreScrollPosition]);
+  
+  useEffect(() => {
+    // Format date consistently for logging
+    const formattedDate = format(currentWeek, 'yyyy-MM-dd');
+    console.log("WeeklyAssignments: Loading data for week", formattedDate);
+    
+    saveScrollPosition();
+    loadData();
+  }, [currentWeek, refreshTrigger, producerDivisionId, loadData, saveScrollPosition]);
+  
+  // Function to manually refresh assignments
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    saveScrollPosition();
+    loadData();
   };
   
   // Get assignments for a slot
@@ -249,7 +260,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     slotsByDayAndTime,
     onSuccess: handleNewAssignments,
     assignments,
-    producers // Make sure to pass the producers state here
+    producers
   });
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
@@ -262,7 +273,19 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-medium">סידור שבועי</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">סידור שבועי</h3>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleRefresh} 
+          disabled={isRefreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          רענן נתונים
+        </Button>
+      </div>
       
       {!producers || producers.length === 0 ? (
         <Alert>
@@ -295,47 +318,55 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {timeslots.map((time, timeIndex) => (
-                <TableRow key={`time-row-${time}-${timeIndex}`}>
-                  <TableCell className="font-medium">{time}</TableCell>
-                  {/* Days in RTL order (Sunday to Saturday) */}
-                  {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
-                    const key = `${dayIndex}-${time}`;
-                    const slotsForCell = slotsByDayAndTime[key] || [];
-                    
-                    return (
-                      <TableCell 
-                        key={`cell-${dayIndex}-${time}-${timeIndex}`} 
-                        className="p-2 align-top cursor-pointer hover:bg-gray-50"
-                      >
-                        {slotsForCell.length > 0 ? (
-                          <div>
-                            {slotsForCell.map((slot, slotIndex) => {
-                              const slotAssignments = getAssignmentsForSlot(slot.id);
-                              
-                              return (
-                                <SlotAssignments
-                                  key={`slot-${slot.id}-${time}-${slotIndex}`}
-                                  slot={slot}
-                                  slotAssignments={slotAssignments}
-                                  onAssign={(slot) => {
-                                    handleAssignProducer(slot, slotAssignments);
-                                  }}
-                                  onDeleteAssignment={handleDeleteAssignment}
-                                />
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-center text-gray-400 text-xs">
-                            אין תוכניות
-                          </div>
-                        )}
-                      </TableCell>
-                    );
-                  })}
+              {timeslots.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-4">
+                    לא נמצאו משבצות שידור לשבוע זה
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                timeslots.map((time, timeIndex) => (
+                  <TableRow key={`time-row-${time}-${timeIndex}`}>
+                    <TableCell className="font-medium">{time}</TableCell>
+                    {/* Days in RTL order (Sunday to Saturday) */}
+                    {[0, 1, 2, 3, 4, 5, 6].map(dayIndex => {
+                      const key = `${dayIndex}-${time}`;
+                      const slotsForCell = slotsByDayAndTime[key] || [];
+                      
+                      return (
+                        <TableCell 
+                          key={`cell-${dayIndex}-${time}-${timeIndex}`} 
+                          className="p-2 align-top cursor-pointer hover:bg-gray-50"
+                        >
+                          {slotsForCell.length > 0 ? (
+                            <div>
+                              {slotsForCell.map((slot, slotIndex) => {
+                                const slotAssignments = getAssignmentsForSlot(slot.id);
+                                
+                                return (
+                                  <SlotAssignments
+                                    key={`slot-${slot.id}-${time}-${slotIndex}`}
+                                    slot={slot}
+                                    slotAssignments={slotAssignments}
+                                    onAssign={(slot) => {
+                                      handleAssignProducer(slot, slotAssignments);
+                                    }}
+                                    onDeleteAssignment={handleDeleteAssignment}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center text-gray-400 text-xs">
+                              אין תוכניות
+                            </div>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

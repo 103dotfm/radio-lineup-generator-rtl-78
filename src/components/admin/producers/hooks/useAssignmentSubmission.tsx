@@ -247,8 +247,8 @@ export const useAssignmentSubmission = ({
         role: roleName,
         week_start: weekStart,
         is_recurring: false,
-        notes: notes || undefined,
-        // Add these properties to match the Omit<ProducerAssignment, 'id'> type
+        notes: notes || null,
+        // Include created_at and updated_at to match the expected type
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -267,7 +267,16 @@ export const useAssignmentSubmission = ({
       
       return result as ProducerAssignment;
     } catch (error: any) {
+      // Log the error but don't throw - we'll continue with other assignments
       console.error("Error creating producer assignment:", error);
+      
+      // For unique constraint violations, inform that this is already assigned
+      if (error.code === '23505') {
+        console.log("Assignment already exists, continuing with next one");
+        return null;
+      }
+      
+      // For other errors, return null but continue the process
       return null;
     }
   };
