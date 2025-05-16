@@ -404,7 +404,7 @@ export const createRecurringProducerAssignment = async (
       return true;
     }
     
-    // Create a new recurring assignment
+    // Create a new recurring assignment with explicit timestamp fields
     const newAssignment = {
       slot_id: slotId,
       worker_id: workerId,
