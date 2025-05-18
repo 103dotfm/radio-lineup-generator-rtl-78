@@ -65,7 +65,9 @@ export const getProducerAssignments = async (weekStart: Date) => {
           host_name,
           start_time,
           end_time,
-          day_of_week
+          day_of_week,
+          is_prerecorded,
+          is_collection
         )
       `)
       .eq('week_start', formattedDate)
@@ -80,7 +82,16 @@ export const getProducerAssignments = async (weekStart: Date) => {
     console.log('Weekly assignments query:', {
       week_start: formattedDate,
       is_recurring: false,
-      results: weeklyAssignments
+      results: weeklyAssignments?.map(a => ({
+        id: a.id,
+        worker: a.worker?.name,
+        slot: {
+          show: a.slot?.show_name,
+          time: a.slot?.start_time,
+          day: a.slot?.day_of_week
+        },
+        role: a.role
+      }))
     });
 
     // Get ALL recurring assignments to debug
@@ -109,7 +120,9 @@ export const getProducerAssignments = async (weekStart: Date) => {
           host_name,
           start_time,
           end_time,
-          day_of_week
+          day_of_week,
+          is_prerecorded,
+          is_collection
         )
       `)
       .eq('is_recurring', true)
