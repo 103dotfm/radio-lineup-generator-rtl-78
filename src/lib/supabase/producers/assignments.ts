@@ -128,14 +128,33 @@ export const getProducerAssignments = async (weekStart: Date) => {
       .eq('is_recurring', true)
       .lte('week_start', formattedDate)
       .is('is_deleted', null)
-      .or(`end_date.is.null,and(end_date.gte.${formattedDate})`);
+      .or(`end_date.is.null,end_date.gte.${formattedDate}`);
 
     if (recurringError) {
       console.error('Error fetching recurring assignments:', recurringError);
       throw recurringError;
     }
 
-    console.log('Recurring assignments before filtering:', recurringAssignments);
+    console.log('Recurring assignments query:', {
+      conditions: {
+        is_recurring: true,
+        week_start_lte: formattedDate,
+        is_deleted: null,
+        end_date_condition: `is null OR >= ${formattedDate}`
+      },
+      results: recurringAssignments?.map(a => ({
+        id: a.id,
+        worker: a.worker?.name,
+        slot: {
+          show: a.slot?.show_name,
+          time: a.slot?.start_time,
+          day: a.slot?.day_of_week
+        },
+        role: a.role,
+        week_start: a.week_start,
+        end_date: a.end_date
+      }))
+    });
 
     // Get skips for recurring assignments
     const recurringIds = (recurringAssignments || []).map(a => a.id);
@@ -169,7 +188,9 @@ export const getProducerAssignments = async (weekStart: Date) => {
         skip.assignment_id === assignment.id && 
         normalizeDate(skip.week_start).getTime() === currentWeekDate.getTime()
       );
-      const isEnded = endDate ? isBefore(currentWeekDate, endDate) : false;
+
+      // Fix: An assignment is ended if it has an end_date and the current week is AFTER that end date
+      const isEnded = endDate ? currentWeekDate.getTime() > endDate.getTime() : false;
       const hasStarted = !isBefore(currentWeekDate, assignmentStartDate);
       
       const isValid = hasStarted && !isSkipped && !isEnded;
@@ -182,6 +203,9 @@ export const getProducerAssignments = async (weekStart: Date) => {
         end_date: assignment.end_date,
         week_start: assignment.week_start,
         currentWeek: formattedDate,
+        endDateNormalized: endDate ? format(endDate, 'yyyy-MM-dd') : null,
+        currentWeekNormalized: format(currentWeekDate, 'yyyy-MM-dd'),
+        comparison: endDate ? `${currentWeekDate.getTime()} > ${endDate.getTime()}` : 'no end date',
         skips: skips.filter(s => s.assignment_id === assignment.id).map(s => s.week_start)
       });
       
