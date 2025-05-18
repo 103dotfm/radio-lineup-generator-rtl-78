@@ -35,18 +35,45 @@ const ProducersCreditsComponent = ({
       
       // Check if the assignment's day matches our showDate's day of week
       const showDayOfWeek = showDate.getDay();
-      return assignment.slot.day_of_week === showDayOfWeek;
+      const assignmentDayOfWeek = assignment.slot.day_of_week;
+      
+      console.log('Comparing days:', {
+        showDay: showDayOfWeek,
+        assignmentDay: assignmentDayOfWeek,
+        slotTime: assignment.slot.start_time,
+        showTime: showTime,
+        assignmentId: assignment.id,
+        workerName: assignment.worker?.name,
+        role: assignment.role
+      });
+      
+      return assignmentDayOfWeek === showDayOfWeek;
     });
 
+    console.log('Day assignments:', dayAssignments);
+
     // Further filter based on time slot
-    return dayAssignments.filter(assignment => {
+    const timeAssignments = dayAssignments.filter(assignment => {
       if (!assignment.slot) return false;
       
       // Check if the time matches (checking only hours and minutes for simplicity)
       const slotTime = assignment.slot.start_time?.substring(0, 5);
       const currentTime = showTime?.substring(0, 5);
+      
+      console.log('Comparing times:', {
+        slotTime,
+        currentTime,
+        matches: slotTime === currentTime,
+        assignmentId: assignment.id,
+        workerName: assignment.worker?.name
+      });
+      
       return slotTime === currentTime;
     });
+
+    console.log('Time filtered assignments:', timeAssignments);
+    
+    return timeAssignments;
   }, [assignments, showDate, showTime]);
 
   // Categorize producers while preserving original order
