@@ -26,9 +26,11 @@ const isOnOrAfter = (date: Date, compareToDate: Date): boolean => {
 
 export const getProducerAssignments = async (weekStart: Date) => {
   try {
+    console.log('getProducerAssignments input date:', weekStart);
     const normalizedWeekStart = normalizeDate(weekStart);
+    console.log('Normalized input date:', normalizedWeekStart);
     const formattedDate = format(normalizedWeekStart, 'yyyy-MM-dd');
-    console.log('Fetching assignments for week:', formattedDate);
+    console.log('Formatted normalized date:', formattedDate);
 
     // Debug: Check RLS policies by getting raw count
     const { count, error: countError } = await supabase
@@ -36,6 +38,15 @@ export const getProducerAssignments = async (weekStart: Date) => {
       .select('*', { count: 'exact', head: true });
 
     console.log('Total assignments in database (RLS check):', count);
+    
+    // Debug: Get all non-recurring assignments to check RLS
+    const { data: allNonRecurring, error: nonRecurringError } = await supabase
+      .from('producer_assignments')
+      .select('*')
+      .eq('is_recurring', false)
+      .is('is_deleted', null);
+      
+    console.log('All non-recurring assignments in database:', allNonRecurring);
     
     // Debug: Get table structure
     const { data: sampleRow, error: sampleError } = await supabase
@@ -47,8 +58,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
     console.log('Sample row to check table structure:', sampleRow);
     console.log('Available columns:', sampleRow ? Object.keys(sampleRow) : 'No rows found');
     
-    // Get weekly (non-recurring) assignments for this specific week
-    const { data: weeklyAssignments, error: weeklyError } = await supabase
+    // Get all assignments with explicit conditions
+    const { data: allAssignments, error: allError } = await supabase
       .from('producer_assignments')
       .select(`
         *,
@@ -70,15 +81,14 @@ export const getProducerAssignments = async (weekStart: Date) => {
           is_collection
         )
       `)
-      .eq('week_start', formattedDate)
-      .eq('is_recurring', false)
-      .is('is_deleted', null);
-      
-    if (weeklyError) {
-      console.error('Error fetching weekly assignments:', weeklyError);
-      throw weeklyError;
+      .or('is_deleted.is.null,is_deleted.eq.false');  // Accept both null and false as "not deleted"
+
+    if (allError) {
+      console.error('Error fetching all assignments:', allError);
+      throw allError;
     }
 
+<<<<<<< Updated upstream
     console.log('Weekly assignments query:', {
       week_start: formattedDate,
       is_recurring: false,
@@ -92,7 +102,55 @@ export const getProducerAssignments = async (weekStart: Date) => {
         },
         role: a.role
       }))
+=======
+    // Log all assignments with their types
+    console.log('All fetched assignments:', allAssignments?.map(a => ({
+      id: a.id,
+      week_start: a.week_start,
+      role: a.role,
+      is_recurring: a.is_recurring,
+      is_recurring_type: typeof a.is_recurring,
+      is_deleted: a.is_deleted,
+      worker: a.worker?.name,
+      slot: {
+        show: a.slot?.show_name,
+        day: a.slot?.day_of_week
+      }
+    })));
+
+    // Filter weekly assignments in code with detailed logging
+    const weeklyAssignments = (allAssignments || []).filter(a => {
+      const isNotRecurring = a.is_recurring === false;  // Explicit comparison
+      const matchesWeek = a.week_start === formattedDate;
+      const isNotDeleted = a.is_deleted === null || a.is_deleted === false;
+      
+      console.log('Filtering assignment:', {
+        id: a.id,
+        week_start: a.week_start,
+        formattedDate,
+        is_recurring: a.is_recurring,
+        is_recurring_type: typeof a.is_recurring,
+        is_deleted: a.is_deleted,
+        isNotRecurring,
+        matchesWeek,
+        isNotDeleted,
+        included: isNotRecurring && matchesWeek && isNotDeleted
+      });
+      
+      return isNotRecurring && matchesWeek && isNotDeleted;
+>>>>>>> Stashed changes
     });
+
+    // Log the filtered assignments
+    console.log('Weekly assignments after filtering:', weeklyAssignments.map(a => ({
+      id: a.id,
+      week_start: a.week_start,
+      role: a.role,
+      is_recurring: a.is_recurring,
+      is_recurring_type: typeof a.is_recurring,
+      is_deleted: a.is_deleted,
+      worker: a.worker?.name
+    })));
 
     // Get ALL recurring assignments to debug
     const { data: allRecurring, error: allRecurringError } = await supabase
@@ -128,7 +186,11 @@ export const getProducerAssignments = async (weekStart: Date) => {
       .eq('is_recurring', true)
       .lte('week_start', formattedDate)
       .is('is_deleted', null)
+<<<<<<< Updated upstream
       .or(`end_date.is.null,end_date.gte.${formattedDate}`);
+=======
+      .or(`end_date.is.null,and(end_date.gte.${formattedDate},week_start.lte.${formattedDate})`);
+>>>>>>> Stashed changes
 
     if (recurringError) {
       console.error('Error fetching recurring assignments:', recurringError);
@@ -140,7 +202,11 @@ export const getProducerAssignments = async (weekStart: Date) => {
         is_recurring: true,
         week_start_lte: formattedDate,
         is_deleted: null,
+<<<<<<< Updated upstream
         end_date_condition: `is null OR >= ${formattedDate}`
+=======
+        end_date_condition: `is null OR (>= ${formattedDate} AND week_start <= ${formattedDate})`
+>>>>>>> Stashed changes
       },
       results: recurringAssignments?.map(a => ({
         id: a.id,
@@ -152,7 +218,12 @@ export const getProducerAssignments = async (weekStart: Date) => {
         },
         role: a.role,
         week_start: a.week_start,
+<<<<<<< Updated upstream
         end_date: a.end_date
+=======
+        end_date: a.end_date,
+        slot_day: a.slot?.day_of_week
+>>>>>>> Stashed changes
       }))
     });
 
@@ -189,10 +260,19 @@ export const getProducerAssignments = async (weekStart: Date) => {
         normalizeDate(skip.week_start).getTime() === currentWeekDate.getTime()
       );
 
+<<<<<<< Updated upstream
       // Fix: An assignment is ended if it has an end_date and the current week is AFTER that end date
       const isEnded = endDate ? currentWeekDate.getTime() > endDate.getTime() : false;
       const hasStarted = !isBefore(currentWeekDate, assignmentStartDate);
       
+=======
+      // An assignment is valid if:
+      // 1. It has started (current week is on or after start week)
+      // 2. It hasn't ended (no end date OR current week is not after end date)
+      // 3. It's not skipped for this week
+      const hasStarted = assignmentStartDate.getTime() <= currentWeekDate.getTime();
+      const isEnded = endDate ? currentWeekDate.getTime() > endDate.getTime() : false;
+>>>>>>> Stashed changes
       const isValid = hasStarted && !isSkipped && !isEnded;
       
       console.log(`Filtering recurring assignment ${assignment.id}:`, {
@@ -205,8 +285,21 @@ export const getProducerAssignments = async (weekStart: Date) => {
         currentWeek: formattedDate,
         endDateNormalized: endDate ? format(endDate, 'yyyy-MM-dd') : null,
         currentWeekNormalized: format(currentWeekDate, 'yyyy-MM-dd'),
+<<<<<<< Updated upstream
         comparison: endDate ? `${currentWeekDate.getTime()} > ${endDate.getTime()}` : 'no end date',
         skips: skips.filter(s => s.assignment_id === assignment.id).map(s => s.week_start)
+=======
+        startDateNormalized: format(assignmentStartDate, 'yyyy-MM-dd'),
+        dateComparisons: {
+          hasStarted: `${assignmentStartDate.getTime()} <= ${currentWeekDate.getTime()}`,
+          isEnded: endDate ? `${currentWeekDate.getTime()} > ${endDate.getTime()}` : 'no end date'
+        },
+        skips: skips.filter(s => s.assignment_id === assignment.id).map(s => s.week_start),
+        slot: {
+          day: assignment.slot?.day_of_week,
+          time: assignment.slot?.start_time
+        }
+>>>>>>> Stashed changes
       });
       
       return isValid;
@@ -268,17 +361,45 @@ export const getAllMonthlyAssignments = async (year: number, month: number) => {
 
 export const createProducerAssignment = async (assignment: Omit<ProducerAssignment, 'id'>) => {
   try {
-    console.log('Attempting to create assignment with data:', assignment);
+    console.log('createProducerAssignment input:', {
+      ...assignment,
+      week_start_type: typeof assignment.week_start,
+      is_recurring_type: typeof assignment.is_recurring,
+      is_recurring_value: assignment.is_recurring
+    });
+    
+    // Normalize the week_start date to ensure consistency
+    const normalizedWeekStart = format(normalizeDate(assignment.week_start), 'yyyy-MM-dd');
+    const normalizedAssignment = {
+      slot_id: assignment.slot_id,
+      worker_id: assignment.worker_id,
+      role: assignment.role,
+      week_start: normalizedWeekStart,
+      is_recurring: false,  // Explicitly set to false for non-recurring assignments
+      notes: assignment.notes || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_deleted: null,
+      end_date: null
+    };
+    
+    console.log('Normalized assignment:', {
+      ...normalizedAssignment,
+      week_start_type: typeof normalizedAssignment.week_start,
+      is_recurring_type: typeof normalizedAssignment.is_recurring,
+      is_recurring_value: normalizedAssignment.is_recurring
+    });
     
     // Check if a duplicate assignment already exists
     const { data: existing, error: checkError } = await supabase
       .from('producer_assignments')
       .select('*')
-      .eq('slot_id', assignment.slot_id)
-      .eq('worker_id', assignment.worker_id)
-      .eq('role', assignment.role)
-      .eq('week_start', assignment.week_start)
-      .is('is_deleted', null);  // Only check non-deleted assignments
+      .eq('slot_id', normalizedAssignment.slot_id)
+      .eq('worker_id', normalizedAssignment.worker_id)
+      .eq('role', normalizedAssignment.role)
+      .eq('week_start', normalizedAssignment.week_start)
+      .eq('is_recurring', false)  // Only check for non-recurring duplicates
+      .is('is_deleted', null);
       
     if (checkError) {
       console.error('Error checking for existing assignment:', checkError);
@@ -293,20 +414,58 @@ export const createProducerAssignment = async (assignment: Omit<ProducerAssignme
     }
     
     // If no duplicate, create the new assignment
-    console.log("Creating new producer assignment:", assignment);
+    console.log("Creating new producer assignment:", normalizedAssignment);
     
+    // First try to insert without joins to debug
+    const { data: rawInsert, error: rawError } = await supabase
+      .from('producer_assignments')
+      .insert([normalizedAssignment])
+      .select();
+
+    if (rawError) {
+      console.error('Error in raw insert:', rawError);
+      throw rawError;
+    }
+
+    if (!rawInsert || rawInsert.length === 0) {
+      console.error('No data returned from insert');
+      throw new Error('Failed to create assignment - no data returned from insert');
+    }
+
+    console.log('Raw insert successful:', rawInsert);
+
+    // Verify the insert was successful
+    const { data: verification, error: verifyError } = await supabase
+      .from('producer_assignments')
+      .select('*')
+      .eq('id', rawInsert[0].id)
+      .single();
+
+    if (verifyError) {
+      console.error('Error verifying insert:', verifyError);
+      throw verifyError;
+    }
+
+    if (!verification) {
+      console.error('Could not verify insert - assignment not found');
+      throw new Error('Failed to verify assignment creation');
+    }
+
+    console.log('Insert verified:', verification);
+
+    // Now get the full record with joins
     const { data, error } = await supabase
       .from('producer_assignments')
-      .insert([{
-        ...assignment,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
+      .select(`
+        *,
+        worker:worker_id (*),
+        slot:slot_id (*)
+      `)
+      .eq('id', rawInsert[0].id)
       .single();
       
     if (error) {
-      console.error('Error inserting new assignment:', error);
+      console.error('Error getting inserted assignment with joins:', error);
       throw error;
     }
     
