@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ScheduleSlot } from '@/types/schedule';
@@ -102,6 +101,7 @@ export const ScheduleView = ({
   );
 
   const handleSaveSlot = async (slotData: any) => {
+    console.log('ScheduleView handleSaveSlot - using selectedDateState:', selectedDateState);
     try {
       if (slotData.id) {
         console.log("Handling update for existing slot:", slotData.id);
@@ -114,7 +114,7 @@ export const ScheduleView = ({
           updates
         });
       } else {
-        console.log("Creating new slot:", slotData);
+        console.log("Creating new slot for selectedDateState:", selectedDateState);
         await createSlot(slotData);
       }
       setShowSlotDialog(false);

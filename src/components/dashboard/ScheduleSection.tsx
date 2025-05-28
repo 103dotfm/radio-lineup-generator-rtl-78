@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ScheduleView } from '@/components/schedule/ScheduleView';
 import { startOfWeek, addWeeks, subWeeks } from 'date-fns';
@@ -25,6 +24,7 @@ const ScheduleSection = ({ isAdmin }: { isAdmin: boolean }) => {
 
   const handleSaveSlot = async (slotData: any) => {
     console.log('Attempting to save weekly schedule slot:', slotData);
+    console.log('Using currentDate for slot creation:', currentDate);
     try {
       // Check if this is an update or a new slot
       if (slotData.id) {
@@ -33,11 +33,11 @@ const ScheduleSection = ({ isAdmin }: { isAdmin: boolean }) => {
           id,
           ...updates
         } = slotData;
-        await updateScheduleSlot(id, updates, false); // false = not master schedule
+        await updateScheduleSlot(id, updates, false, currentDate); // Pass currentDate as selectedDate
         console.log('Weekly schedule slot updated successfully');
       } else {
-        console.log("Creating new weekly slot");
-        await createScheduleSlot(slotData, false); // false = not master schedule
+        console.log("Creating new weekly slot for date:", currentDate);
+        await createScheduleSlot(slotData, false, currentDate); // Pass currentDate as selectedDate
         console.log('Weekly schedule slot created successfully');
       }
 
