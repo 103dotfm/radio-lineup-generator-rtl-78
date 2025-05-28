@@ -88,21 +88,6 @@ export const getProducerAssignments = async (weekStart: Date) => {
       throw allError;
     }
 
-<<<<<<< Updated upstream
-    console.log('Weekly assignments query:', {
-      week_start: formattedDate,
-      is_recurring: false,
-      results: weeklyAssignments?.map(a => ({
-        id: a.id,
-        worker: a.worker?.name,
-        slot: {
-          show: a.slot?.show_name,
-          time: a.slot?.start_time,
-          day: a.slot?.day_of_week
-        },
-        role: a.role
-      }))
-=======
     // Log all assignments with their types
     console.log('All fetched assignments:', allAssignments?.map(a => ({
       id: a.id,
@@ -138,7 +123,6 @@ export const getProducerAssignments = async (weekStart: Date) => {
       });
       
       return isNotRecurring && matchesWeek && isNotDeleted;
->>>>>>> Stashed changes
     });
 
     // Log the filtered assignments
@@ -186,11 +170,7 @@ export const getProducerAssignments = async (weekStart: Date) => {
       .eq('is_recurring', true)
       .lte('week_start', formattedDate)
       .is('is_deleted', null)
-<<<<<<< Updated upstream
-      .or(`end_date.is.null,end_date.gte.${formattedDate}`);
-=======
       .or(`end_date.is.null,and(end_date.gte.${formattedDate},week_start.lte.${formattedDate})`);
->>>>>>> Stashed changes
 
     if (recurringError) {
       console.error('Error fetching recurring assignments:', recurringError);
@@ -202,11 +182,7 @@ export const getProducerAssignments = async (weekStart: Date) => {
         is_recurring: true,
         week_start_lte: formattedDate,
         is_deleted: null,
-<<<<<<< Updated upstream
-        end_date_condition: `is null OR >= ${formattedDate}`
-=======
         end_date_condition: `is null OR (>= ${formattedDate} AND week_start <= ${formattedDate})`
->>>>>>> Stashed changes
       },
       results: recurringAssignments?.map(a => ({
         id: a.id,
@@ -218,12 +194,8 @@ export const getProducerAssignments = async (weekStart: Date) => {
         },
         role: a.role,
         week_start: a.week_start,
-<<<<<<< Updated upstream
-        end_date: a.end_date
-=======
         end_date: a.end_date,
         slot_day: a.slot?.day_of_week
->>>>>>> Stashed changes
       }))
     });
 
@@ -260,19 +232,12 @@ export const getProducerAssignments = async (weekStart: Date) => {
         normalizeDate(skip.week_start).getTime() === currentWeekDate.getTime()
       );
 
-<<<<<<< Updated upstream
-      // Fix: An assignment is ended if it has an end_date and the current week is AFTER that end date
-      const isEnded = endDate ? currentWeekDate.getTime() > endDate.getTime() : false;
-      const hasStarted = !isBefore(currentWeekDate, assignmentStartDate);
-      
-=======
       // An assignment is valid if:
       // 1. It has started (current week is on or after start week)
       // 2. It hasn't ended (no end date OR current week is not after end date)
       // 3. It's not skipped for this week
       const hasStarted = assignmentStartDate.getTime() <= currentWeekDate.getTime();
       const isEnded = endDate ? currentWeekDate.getTime() > endDate.getTime() : false;
->>>>>>> Stashed changes
       const isValid = hasStarted && !isSkipped && !isEnded;
       
       console.log(`Filtering recurring assignment ${assignment.id}:`, {
@@ -285,10 +250,6 @@ export const getProducerAssignments = async (weekStart: Date) => {
         currentWeek: formattedDate,
         endDateNormalized: endDate ? format(endDate, 'yyyy-MM-dd') : null,
         currentWeekNormalized: format(currentWeekDate, 'yyyy-MM-dd'),
-<<<<<<< Updated upstream
-        comparison: endDate ? `${currentWeekDate.getTime()} > ${endDate.getTime()}` : 'no end date',
-        skips: skips.filter(s => s.assignment_id === assignment.id).map(s => s.week_start)
-=======
         startDateNormalized: format(assignmentStartDate, 'yyyy-MM-dd'),
         dateComparisons: {
           hasStarted: `${assignmentStartDate.getTime()} <= ${currentWeekDate.getTime()}`,
@@ -299,7 +260,6 @@ export const getProducerAssignments = async (weekStart: Date) => {
           day: assignment.slot?.day_of_week,
           time: assignment.slot?.start_time
         }
->>>>>>> Stashed changes
       });
       
       return isValid;
