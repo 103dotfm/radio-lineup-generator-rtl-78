@@ -23,7 +23,7 @@ interface UseAssignmentSubmissionProps {
   selectedDays: number[];
   isPermanent: boolean;
   onClose: () => void;
-  producers: any[]; // Added producers property to fix the TypeScript error
+  producers: any[];
 }
 
 export const useAssignmentSubmission = ({
@@ -38,7 +38,7 @@ export const useAssignmentSubmission = ({
   selectedDays,
   isPermanent,
   onClose,
-  producers // Make sure to receive producers here
+  producers
 }: UseAssignmentSubmissionProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -119,6 +119,7 @@ export const useAssignmentSubmission = ({
                 is_recurring: true,
                 notes: form.additionalText || null,
                 created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
                 worker: workerDetails,
                 slot: currentSlot
               };
@@ -246,7 +247,9 @@ export const useAssignmentSubmission = ({
         role: roleName,
         week_start: weekStart,
         is_recurring: false,
-        notes: notes || undefined
+        notes: notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
       console.log(`Creating single assignment for worker ${workerId} with role ${roleName}`);
