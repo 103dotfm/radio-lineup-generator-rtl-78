@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { ScheduleSlot } from "@/types/schedule";
 import { addDays, startOfWeek, isSameDay, isAfter, isBefore, startOfDay, format, addWeeks, parseISO, isEqual } from 'date-fns';
@@ -163,60 +162,42 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
 
     console.log('All existing slots for this day/time:', existingSlots);
 
-    // Check for existing slots in THIS specific week
-    const currentWeekStartStr = format(currentWeekStart, 'yyyy-MM-dd');
-    const currentWeekEndStr = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
-    
-    // Filter to only slots that affect the current week
-    const conflictingSlots = (existingSlots || []).filter(existingSlot => {
-      if (existingSlot.is_recurring) {
-        // Recurring slots always affect this week unless there's a deletion marker
-        return true;
-      } else {
-        // Non-recurring slots only affect this week if they were created this week
-        const slotCreationWeek = format(startOfWeek(new Date(existingSlot.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd');
-        return slotCreationWeek === currentWeekStartStr;
-      }
-    });
-
-    console.log('Slots affecting current week:', conflictingSlots);
-
-    // Check if there's a deletion marker for this slot in the current week
-    const deletionMarker = conflictingSlots.find(s => 
-      !s.is_recurring && 
-      s.is_deleted &&
-      format(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd') === currentWeekStartStr
-    );
-    
-    if (deletionMarker) {
-      console.log('Found deletion marker for current week, allowing new slot creation');
+    if (existingSlots && existingSlots.length > 0) {
+      // Check if we already have a non-recurring slot for this exact week
+      const currentWeekStartStr = format(currentWeekStart, 'yyyy-MM-dd');
       
-      // Delete the deletion marker since we're adding a new slot
-      await supabase
-        .from('schedule_slots_old')
-        .delete()
-        .eq('id', deletionMarker.id);
-    } else {
-      // Check if there's any active (non-deleted) slot for this time in this week
-      const activeSlots = conflictingSlots.filter(s => {
-        if (s.is_recurring) {
-          // Check if there's a deletion marker for this recurring slot in current week
-          const hasCurrentWeekDeletion = conflictingSlots.some(deletionSlot => 
-            !deletionSlot.is_recurring && 
-            deletionSlot.is_deleted &&
-            format(startOfWeek(new Date(deletionSlot.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd') === currentWeekStartStr
-          );
-          return !hasCurrentWeekDeletion; // Recurring slot is active if no deletion marker for this week
-        } else {
-          return !s.is_deleted; // Non-recurring slot is active if not deleted
-        }
+      const currentWeekSlot = existingSlots.find(existingSlot => {
+        if (existingSlot.is_recurring) return false; // Ignore recurring slots
+        
+        const slotCreationWeek = format(startOfWeek(new Date(existingSlot.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd');
+        return slotCreationWeek === currentWeekStartStr && !existingSlot.is_deleted;
       });
 
-      console.log('Active slots for current week:', activeSlots);
-      
-      if (activeSlots.length > 0) {
-        console.error('Active slot conflict found for this week:', activeSlots[0]);
+      if (currentWeekSlot) {
+        console.error('Non-recurring slot already exists for this week:', currentWeekSlot);
         throw new Error('משבצת שידור כבר קיימת בזמן זה');
+      }
+
+      // Check if there's a recurring slot and no deletion marker for this week
+      const recurringSlot = existingSlots.find(s => s.is_recurring);
+      if (recurringSlot) {
+        const deletionMarker = existingSlots.find(s => 
+          !s.is_recurring && 
+          s.is_deleted &&
+          format(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd') === currentWeekStartStr
+        );
+        
+        if (!deletionMarker) {
+          console.error('Recurring slot exists and no deletion marker found for current week:', recurringSlot);
+          throw new Error('משבצת שידור כבר קיימת בזמן זה');
+        } else {
+          console.log('Found deletion marker for recurring slot, allowing new slot creation');
+          // Delete the deletion marker since we're adding a new slot
+          await supabase
+            .from('schedule_slots_old')
+            .delete()
+            .eq('id', deletionMarker.id);
+        }
       }
     }
   } else {
