@@ -166,8 +166,10 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
       // Check if we already have a non-recurring slot for this exact week
       const currentWeekStartStr = format(currentWeekStart, 'yyyy-MM-dd');
       
+      // Only check for conflicts with non-recurring slots in the same week
+      // Recurring slots (master schedule) should NOT be considered conflicts for weekly schedule
       const currentWeekSlot = existingSlots.find(existingSlot => {
-        if (existingSlot.is_recurring) return false; // Ignore recurring slots
+        if (existingSlot.is_recurring) return false; // IGNORE recurring slots - they don't conflict with weekly schedule
         
         const slotCreationWeek = format(startOfWeek(new Date(existingSlot.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd');
         return slotCreationWeek === currentWeekStartStr && !existingSlot.is_deleted;
@@ -178,27 +180,9 @@ export const createScheduleSlot = async (slot: Omit<ScheduleSlot, 'id' | 'create
         throw new Error('משבצת שידור כבר קיימת בזמן זה');
       }
 
-      // Check if there's a recurring slot and no deletion marker for this week
-      const recurringSlot = existingSlots.find(s => s.is_recurring);
-      if (recurringSlot) {
-        const deletionMarker = existingSlots.find(s => 
-          !s.is_recurring && 
-          s.is_deleted &&
-          format(startOfWeek(new Date(s.created_at), { weekStartsOn: 0 }), 'yyyy-MM-dd') === currentWeekStartStr
-        );
-        
-        if (!deletionMarker) {
-          console.error('Recurring slot exists and no deletion marker found for current week:', recurringSlot);
-          throw new Error('משבצת שידור כבר קיימת בזמן זה');
-        } else {
-          console.log('Found deletion marker for recurring slot, allowing new slot creation');
-          // Delete the deletion marker since we're adding a new slot
-          await supabase
-            .from('schedule_slots_old')
-            .delete()
-            .eq('id', deletionMarker.id);
-        }
-      }
+      // For weekly schedule, we don't need to check for recurring slot conflicts
+      // because weekly slots are meant to override the master schedule
+      console.log('No weekly schedule conflicts found, allowing slot creation');
     }
   } else {
     // For master schedule, check for recurring conflicts only
