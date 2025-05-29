@@ -125,7 +125,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   // Generate all days of the week based on selectedDate
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
-  // Get ALL time slots from scheduleSlots and sort them properly (midnight at end)
+  // Get ALL time slots from scheduleSlots and sort them properly
   const allTimeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
     .sort((a, b) => {
       // Special handling for midnight (00:00) - put it last
@@ -153,14 +153,14 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
 
   return (
     <div className="space-y-6 print:space-y-2" dir="rtl">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold print:text-2xl text-gray-800">
+      <div className="digital-work-arrangement-header">
+        <h1 className="digital-work-arrangement-title">
           סידור עבודה עורכים ומפיקים
         </h1>
-        <h2 className="text-xl print:text-lg text-gray-600">
+        <h2 className="digital-work-arrangement-title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
           רדיו 103FM
         </h2>
-        <div className="text-lg print:text-base text-gray-600">
+        <div className="digital-work-arrangement-date">
           שבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
         </div>
       </div>
@@ -184,30 +184,6 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
             </thead>
             <tbody>
               {allTimeSlots.map((timeSlot, timeIndex) => {
-                // Check if this time slot should be skipped because it's part of a merged cell
-                const shouldSkip = allTimeSlots.some((prevTimeSlot, prevIndex) => {
-                  if (prevIndex >= timeIndex) return false;
-                  
-                  return [0, 1, 2, 3, 4, 5, 6].some(dayIndex => {
-                    const prevKey = `${dayIndex}-${prevTimeSlot}`;
-                    const prevSlotsForCell = slotsByDayAndTime[prevKey] || [];
-                    
-                    return prevSlotsForCell.some(prevSlot => {
-                      const duration = getShowDuration(prevSlot.start_time, prevSlot.end_time);
-                      if (duration < 2) return false;
-                      
-                      // Check if current timeSlot falls within the duration of prevSlot
-                      const prevStartTime = new Date(`2000-01-01T${prevSlot.start_time}`);
-                      const currentTime = new Date(`2000-01-01T${timeSlot}`);
-                      const prevEndTime = new Date(`2000-01-01T${prevSlot.end_time}`);
-                      
-                      return currentTime > prevStartTime && currentTime < prevEndTime;
-                    });
-                  });
-                });
-                
-                if (shouldSkip) return null;
-
                 return (
                   <tr key={`timeslot-${timeSlot}`}>
                     <td className="time-cell">
