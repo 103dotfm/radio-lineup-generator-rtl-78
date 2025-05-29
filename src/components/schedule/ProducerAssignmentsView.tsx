@@ -125,7 +125,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   // Generate all days of the week based on selectedDate
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
-  // Get ALL time slots from scheduleSlots and include all slots, not just unique start times
+  // Get ALL time slots from scheduleSlots and sort them properly (midnight at end)
   const allTimeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
     .sort((a, b) => {
       // Special handling for midnight (00:00) - put it last
@@ -137,7 +137,7 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   console.log('All time slots:', allTimeSlots);
   console.log('All schedule slots:', scheduleSlots);
 
-  // Group slots by day and time for easier lookup, but keep ALL slots
+  // Group slots by day and time for easier lookup
   const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
   
   scheduleSlots.forEach(slot => {
@@ -151,39 +151,15 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
 
   console.log('Slots grouped by day and time:', slotsByDayAndTime);
 
-  // Filter assignments by producer division
-  const validAssignments = assignments.filter(assignment => 
-    assignment.slot && 
-    (producerWorkerIds.length === 0 || producerWorkerIds.includes(assignment.worker_id))
-  );
-  
-  const hasAnyAssignments = validAssignments.length > 0;
-  
-  if (!hasAnyAssignments) {
-    return (
-      <div className="space-y-6 print:space-y-2" dir="rtl">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold print:text-xl">
-            סידור עבודה עורכים ומפיקים
-          </h1>
-          <div className="text-lg print:text-base text-gray-600">
-            שבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
-          </div>
-        </div>
-        
-        <div className="text-center py-8">
-          אין שיבוצים לשבוע זה
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 print:space-y-2" dir="rtl">
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold print:text-xl">
+        <h1 className="text-3xl font-bold print:text-2xl text-gray-800">
           סידור עבודה עורכים ומפיקים
         </h1>
+        <h2 className="text-xl print:text-lg text-gray-600">
+          רדיו 103FM
+        </h2>
         <div className="text-lg print:text-base text-gray-600">
           שבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
         </div>
@@ -217,9 +193,6 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                     const prevSlotsForCell = slotsByDayAndTime[prevKey] || [];
                     
                     return prevSlotsForCell.some(prevSlot => {
-                      const prevSlotAssignments = getAssignmentsForSlot(prevSlot.id);
-                      if (prevSlotAssignments.length === 0) return false;
-                      
                       const duration = getShowDuration(prevSlot.start_time, prevSlot.end_time);
                       if (duration < 2) return false;
                       
