@@ -1,4 +1,5 @@
 
+
 /* Producer Assignments Table Styles */
 .producer-assignments-table {
   border-collapse: separate;
@@ -81,6 +82,28 @@
   color: #111827;
 }
 
+/* Digital Work Arrangement Header Styles */
+.digital-work-arrangement-header {
+  background-color: #60a5fa;
+  padding: 24px;
+  text-align: center;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.digital-work-arrangement-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: white;
+  margin: 0 0 8px 0;
+}
+
+.digital-work-arrangement-date {
+  font-size: 1.25rem;
+  color: white;
+  margin: 0;
+}
+
 /* Print styles */
 @media print {
   .producer-assignments-table {
@@ -103,5 +126,11 @@
   
   .producer-assignments-table .assignment-role {
     font-size: 0.6rem;
+  }
+  
+  .digital-work-arrangement-header {
+    background-color: #60a5fa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
