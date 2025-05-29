@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap');
+@import url('./styles/digital-work-arrangement.css');
+@import url('./styles/producer-assignments.css');
 
 @tailwind base;
 @tailwind components;

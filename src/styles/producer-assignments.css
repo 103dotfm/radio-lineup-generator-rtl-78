@@ -1,0 +1,107 @@
+
+/* Producer Assignments Table Styles */
+.producer-assignments-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.producer-assignments-table th,
+.producer-assignments-table td {
+  border: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.producer-assignments-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.producer-assignments-table .time-cell {
+  background-color: #f1f5f9;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 80px;
+  width: 80px;
+}
+
+.producer-assignments-table .day-cell {
+  min-width: 140px;
+  width: 140px;
+  padding: 8px;
+}
+
+.producer-assignments-table .show-card {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 4px;
+}
+
+.producer-assignments-table .show-card.long-show {
+  background-color: #eff6ff;
+  border-color: #93c5fd;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+}
+
+.producer-assignments-table .show-title {
+  font-weight: 600;
+  color: #1e40af;
+  text-align: center;
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+}
+
+.producer-assignments-table .show-time {
+  font-size: 0.75rem;
+  color: #475569;
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.producer-assignments-table .assignment-role {
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.producer-assignments-table .assignment-role .role-name {
+  font-weight: 600;
+  color: #374151;
+}
+
+.producer-assignments-table .assignment-role .worker-names {
+  color: #111827;
+}
+
+/* Print styles */
+@media print {
+  .producer-assignments-table {
+    font-size: 10px;
+  }
+  
+  .producer-assignments-table th,
+  .producer-assignments-table td {
+    padding: 4px;
+  }
+  
+  .producer-assignments-table .show-card {
+    margin-bottom: 2px;
+    padding: 4px;
+  }
+  
+  .producer-assignments-table .show-title {
+    font-size: 0.75rem;
+  }
+  
+  .producer-assignments-table .assignment-role {
+    font-size: 0.6rem;
+  }
+}
