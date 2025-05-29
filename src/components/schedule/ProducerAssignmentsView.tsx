@@ -14,7 +14,7 @@ import { getProducerAssignments } from '@/lib/supabase/producers';
 import { ScheduleSlot, ProducerAssignment } from '@/types/schedule';
 import { useScheduleSlots } from './hooks/useScheduleSlots';
 import { getCombinedShowDisplay } from '@/utils/showDisplay';
-import { useFilterWorkersByDivision } from '@/hooks/useWorkerDivisions';
+import { useFilterWorkersByDivision } from '@/hooks/useFilterWorkersByDivision';
 import { getDivisions } from '@/lib/supabase/divisions';
 
 interface ProducerAssignmentsViewProps {
@@ -125,30 +125,31 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   // Generate all days of the week based on selectedDate
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(selectedDate, i));
   
-  // Get time slots from scheduleSlots - extract unique start_time values and sort them
-  const timeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
-    .sort((a, b) => a.localeCompare(b));
+  // Get ALL time slots from scheduleSlots and include all slots, not just unique start times
+  const allTimeSlots = [...new Set(scheduleSlots.map(slot => slot.start_time))]
+    .sort((a, b) => {
+      // Special handling for midnight (00:00) - put it last
+      if (a === '00:00:00' && b !== '00:00:00') return 1;
+      if (b === '00:00:00' && a !== '00:00:00') return -1;
+      return a.localeCompare(b);
+    });
 
-  // Group slots by day and time for easier lookup
+  console.log('All time slots:', allTimeSlots);
+  console.log('All schedule slots:', scheduleSlots);
+
+  // Group slots by day and time for easier lookup, but keep ALL slots
   const slotsByDayAndTime: { [key: string]: ScheduleSlot[] } = {};
-  
-  // Use a set to track unique show-time-day combinations
-  const uniqueSlotKeys = new Set<string>();
   
   scheduleSlots.forEach(slot => {
     const key = `${slot.day_of_week}-${slot.start_time}`;
-    const uniqueKey = `${slot.day_of_week}-${slot.start_time}-${slot.show_name}-${slot.host_name}`;
     
-    // Only process this slot if we haven't seen a duplicate already
-    if (!uniqueSlotKeys.has(uniqueKey)) {
-      uniqueSlotKeys.add(uniqueKey);
-      
-      if (!slotsByDayAndTime[key]) {
-        slotsByDayAndTime[key] = [];
-      }
-      slotsByDayAndTime[key].push(slot);
+    if (!slotsByDayAndTime[key]) {
+      slotsByDayAndTime[key] = [];
     }
+    slotsByDayAndTime[key].push(slot);
   });
+
+  console.log('Slots grouped by day and time:', slotsByDayAndTime);
 
   // Filter assignments by producer division
   const validAssignments = assignments.filter(assignment => 
@@ -161,12 +162,14 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
   if (!hasAnyAssignments) {
     return (
       <div className="space-y-6 print:space-y-2" dir="rtl">
-        <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
-          סידור עבודה - הפקה ועריכה
-          <div className="text-base font-normal print:text-sm">
-            לשבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold print:text-xl">
+            סידור עבודה עורכים ומפיקים
+          </h1>
+          <div className="text-lg print:text-base text-gray-600">
+            שבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
           </div>
-        </h2>
+        </div>
         
         <div className="text-center py-8">
           אין שיבוצים לשבוע זה
@@ -177,34 +180,36 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
 
   return (
     <div className="space-y-6 print:space-y-2" dir="rtl">
-      <h2 className="text-xl font-bold text-center mb-4 print:text-lg">
-        סידור עבודה - הפקה ועריכה
-        <div className="text-base font-normal print:text-sm">
-          לשבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-bold print:text-xl">
+          סידור עבודה עורכים ומפיקים
+        </h1>
+        <div className="text-lg print:text-base text-gray-600">
+          שבוע {format(selectedDate, 'dd/MM/yyyy', { locale: he })} - {format(addDays(selectedDate, 6), 'dd/MM/yyyy', { locale: he })}
         </div>
-      </h2>
+      </div>
       
       <Card className="mb-4 print:mb-2 print:shadow-none print:border">
         <div className="overflow-x-auto">
-          <Table className="print:text-xs table-fixed w-full">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="print:py-1 w-20 text-center font-bold border">זמן</TableHead>
+          <table className="producer-assignments-table w-full">
+            <thead>
+              <tr>
+                <th className="time-cell">זמן</th>
                 {/* Keep days in the correct order for RTL layout */}
                 {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => (
-                  <TableHead key={`day-${dayIndex}`} className="print:py-1 text-center w-32 font-bold border">
-                    <div className="flex flex-col items-center">
+                  <th key={`day-${dayIndex}`} className="day-cell">
+                    <div className="text-center">
                       <div className="font-bold">{dayNames[dayIndex]}</div>
                       <div className="text-sm opacity-80">{format(addDays(selectedDate, dayIndex), 'dd/MM', { locale: he })}</div>
                     </div>
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {timeSlots.map((timeSlot, timeIndex) => {
+              </tr>
+            </thead>
+            <tbody>
+              {allTimeSlots.map((timeSlot, timeIndex) => {
                 // Check if this time slot should be skipped because it's part of a merged cell
-                const shouldSkip = timeSlots.some((prevTimeSlot, prevIndex) => {
+                const shouldSkip = allTimeSlots.some((prevTimeSlot, prevIndex) => {
                   if (prevIndex >= timeIndex) return false;
                   
                   return [0, 1, 2, 3, 4, 5, 6].some(dayIndex => {
@@ -231,84 +236,70 @@ const ProducerAssignmentsView: React.FC<ProducerAssignmentsViewProps> = ({ selec
                 if (shouldSkip) return null;
 
                 return (
-                  <TableRow key={`timeslot-${timeSlot}`} className="border">
-                    <TableCell className="print:py-1 font-medium text-center border bg-gray-50 w-20">
-                      {timeSlot}
-                    </TableCell>
+                  <tr key={`timeslot-${timeSlot}`}>
+                    <td className="time-cell">
+                      {timeSlot.substring(0, 5)}
+                    </td>
                     {/* Days in correct order for RTL */}
                     {[0, 1, 2, 3, 4, 5, 6].map((dayIndex) => {
                       const key = `${dayIndex}-${timeSlot}`;
                       const slotsForCell = slotsByDayAndTime[key] || [];
                       
                       return (
-                        <TableCell key={`cell-${dayIndex}-${timeSlot}`} className="print:py-1 border align-top w-32 p-2">
+                        <td key={`cell-${dayIndex}-${timeSlot}`} className="day-cell">
                           {slotsForCell.map((slot) => {
                             // Find assignments for this specific slot
                             const slotAssignments = getAssignmentsForSlot(slot.id);
-                            if (slotAssignments.length === 0) return null;
                             
+                            // Show the slot even if there are no assignments, to display all shows
                             const duration = getShowDuration(slot.start_time, slot.end_time);
                             const isLong = duration >= 2;
                             
-                            // Group assignments by role
-                            const assignmentsByRole: Record<string, ProducerAssignment[]> = {};
-                            
-                            // Make sure we properly handle the grouping by role
-                            slotAssignments.forEach(assignment => {
-                              const role = assignment.role || 'ללא תפקיד';
-                              if (!assignmentsByRole[role]) {
-                                assignmentsByRole[role] = [];
-                              }
-                              assignmentsByRole[role].push(assignment);
-                            });
-                            
                             return (
                               <div 
-                                key={`assignment-slot-${slot.id}-${timeSlot}`} 
-                                className={`text-sm border rounded p-2 mb-1 last:mb-0 ${
-                                  isLong ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
-                                }`}
-                                style={isLong ? { 
-                                  minHeight: `${Math.ceil(duration) * 60}px`,
-                                  position: 'relative'
-                                } : {}}
+                                key={`slot-${slot.id}-${timeSlot}`} 
+                                className={`show-card ${isLong ? 'long-show' : ''}`}
                               >
-                                <div className="font-semibold text-center mb-2 text-blue-800 border-b border-blue-200 pb-1">
+                                <div className="show-title">
                                   {getCombinedShowDisplay(slot.show_name, slot.host_name)}
                                 </div>
                                 
-                                {isLong && (
-                                  <div className="text-xs text-center text-blue-600 mb-2 font-medium">
-                                    {slot.start_time} - {slot.end_time}
+                                {slotAssignments.length > 0 && (
+                                  <div className="space-y-1">
+                                    {/* Group assignments by role */}
+                                    {Object.entries(
+                                      slotAssignments.reduce((acc, assignment) => {
+                                        const role = assignment.role || 'ללא תפקיד';
+                                        if (!acc[role]) acc[role] = [];
+                                        acc[role].push(assignment);
+                                        return acc;
+                                      }, {} as Record<string, ProducerAssignment[]>)
+                                    ).map(([role, roleAssignments]) => (
+                                      <div key={`role-${role}-${slot.id}`} className="assignment-role">
+                                        <span className="role-name">{role}: </span>
+                                        <span className="worker-names">
+                                          {roleAssignments.map((a, idx) => (
+                                            <span key={`worker-${a.id}-${idx}`}>
+                                              {a.worker?.name}
+                                              {idx < roleAssignments.length - 1 ? ", " : ""}
+                                            </span>
+                                          ))}
+                                        </span>
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
-                                
-                                <div className="space-y-1">
-                                  {Object.entries(assignmentsByRole).map(([role, roleAssignments]) => (
-                                    <div key={`role-${role}-${slot.id}`} className="text-xs">
-                                      <span className="font-semibold text-gray-700">{role}: </span>
-                                      <span className="text-gray-900">
-                                        {roleAssignments.map((a, idx) => (
-                                          <span key={`worker-${a.id}-${idx}`}>
-                                            {a.worker?.name}
-                                            {idx < roleAssignments.length - 1 ? ", " : ""}
-                                          </span>
-                                        ))}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
                               </div>
                             );
                           })}
-                        </TableCell>
+                        </td>
                       );
                     })}
-                  </TableRow>
+                  </tr>
                 );
               })}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>
