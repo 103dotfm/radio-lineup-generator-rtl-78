@@ -5,19 +5,12 @@ import { Button } from '@/components/ui/button';
 import { X, Building2 } from 'lucide-react';
 
 const MovingAnnouncementPopup = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true); // Force show for testing
 
   useEffect(() => {
-    // Check if popup was already dismissed
-    const dismissed = localStorage.getItem('moving-announcement-dismissed');
-    if (!dismissed) {
-      // Show popup after a short delay when component mounts
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
+    // Clear localStorage for testing
+    localStorage.removeItem('moving-announcement-dismissed');
+    console.log('MovingAnnouncementPopup mounted, isOpen:', isOpen);
   }, []);
 
   const handleRedirect = () => {
