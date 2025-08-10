@@ -7,7 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ScrollProvider } from "./contexts/ScrollContext";
 import AppRoutes from "./AppRoutes";
-import DigitalWorkArrangementEditor from "./components/admin/DigitalWorkArrangementEditor";
+import MovingAnnouncementPopup from "./components/MovingAnnouncementPopup";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +25,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <MovingAnnouncementPopup />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>
