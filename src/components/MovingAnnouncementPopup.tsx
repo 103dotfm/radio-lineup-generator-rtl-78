@@ -14,7 +14,7 @@ const MovingAnnouncementPopup = () => {
   }, []);
 
   const handleRedirect = () => {
-    window.open('https://l.103.fm:8080', '_blank');
+    window.open('http://l.103.fm:8080', '_blank');
     setIsOpen(false);
   };
 
@@ -53,12 +53,12 @@ const MovingAnnouncementPopup = () => {
               <p>
                 מערכת הליינאפים עברה לכתובת חדשה:{' '}
                 <a 
-                  href="https://l.103.fm:8080" 
+                  href="http://l.103.fm:8080" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 underline font-medium"
                 >
-                  https://l.103.fm:8080
+                  http://l.103.fm:8080
                 </a>
                 .
               </p>
