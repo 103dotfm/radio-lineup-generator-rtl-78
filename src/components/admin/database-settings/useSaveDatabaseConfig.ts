@@ -10,32 +10,16 @@ export const useSaveDatabaseConfig = (form: UseFormReturn<DatabaseFormValues>) =
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const runDbSchemaScript = async (config: DatabaseFormValues): Promise<boolean> => {
-    try {
-      // Construct a PostgreSQL connection string
-      const connectionString = `postgres://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`;
-      
-      // Call a server-side function to run the SQL (this would need to be implemented)
-      const { data, error } = await supabase.functions.invoke('execute-sql', {
-        body: { 
-          connectionString,
-          sql: dbSchemaSQL
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error initializing database schema:', error);
-      toast({
-        title: "שגיאה ביצירת סכמת בסיס הנתונים",
-        description: "אירעה שגיאה בעת יצירת הטבלאות. ראה את לוג המערכת לפרטים נוספים.",
-        variant: "destructive",
-      });
-      return false;
-    }
+    // SECURITY: Database schema execution has been disabled for security reasons
+    console.log('Database schema script execution disabled for security');
+    
+    toast({
+      title: "פונקציה מושבתת",
+      description: "הפונקציה להרצת סקריפט בסיס נתונים הושבתה מסיבות אבטחה. יש להשתמש במיגרציות רגילות.",
+      variant: "destructive",
+    });
+    
+    return false;
   };
 
   const handleSubmit = form.handleSubmit(async (values) => {

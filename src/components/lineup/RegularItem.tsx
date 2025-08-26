@@ -9,6 +9,7 @@ import { getInterviewees } from '@/lib/supabase/interviewees';
 import { toast } from 'sonner';
 import IntervieweeForm from './interviewees/IntervieweeForm';
 import { getShowDisplay } from '@/utils/showDisplay';
+import { sanitizeRichHtml } from "@/lib/sanitize";
 
 interface RegularItemProps {
   id: string;
@@ -191,7 +192,7 @@ const RegularItem = ({
         </div>
       </td>
       <td className={`py-2 px-4 border border-gray-200 align-top ${minHeightClass}`}>
-        <div className={`${contentMinHeightClass}`} dangerouslySetInnerHTML={{ __html: details }} />
+        <div className={`${contentMinHeightClass}`} dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(details || '') }} />
       </td>
       {isAuthenticated && (
         <td className={`py-2 px-4 border border-gray-200 ${minHeightClass}`}>

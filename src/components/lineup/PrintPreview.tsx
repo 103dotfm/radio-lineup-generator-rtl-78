@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShowItem, Interviewee } from '@/types/show';
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { sanitizeRichHtml } from "@/lib/sanitize";
 
 interface PrintPreviewProps {
   showName: string;
@@ -115,7 +116,7 @@ const PrintPreview = ({
                     return (
                       <TableRow key={item.id} className="noteRow print-avoid-break">
                         <TableCell colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
-                          <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
+                          <div dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(item.details || '') }} />
                         </TableCell>
                       </TableRow>
                     );
@@ -132,7 +133,7 @@ const PrintPreview = ({
                         <TableCell 
                           className="py-3 px-4 border border-gray-200 details-column prose prose-sm max-w-none col-print-details" 
                           rowSpan={intervieweeCount + 1}
-                          dangerouslySetInnerHTML={{ __html: item.details }} 
+                          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(item.details || '') }} 
                         />
                         {isAuthenticated && (
                           <TableCell className="py-3 px-4 border border-gray-200 text-base whitespace-nowrap col-print-phone">
@@ -184,7 +185,7 @@ const PrintPreview = ({
       {editorContent && (
         <div 
           className="credits mt-8 pt-4 border-t border-gray-200 text-base text-black text-center print-avoid-break"
-          dangerouslySetInnerHTML={{ __html: editorContent }}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(editorContent) }}
         />
       )}
     </div>

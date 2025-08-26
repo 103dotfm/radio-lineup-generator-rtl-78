@@ -13,6 +13,7 @@ import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { sanitizeRichHtml } from "@/lib/sanitize";
 
 interface EmailSettingsType {
   id: string;
@@ -1218,7 +1219,7 @@ const EmailSettings: React.FC = () => {
                         <p><strong>נושא:</strong> {processTemplate(settings.subject_template)}</p>
                         <div className="border rounded-md p-4 mt-2 bg-white">
                           <p><strong>תצוגה מקדימה כפי שתופיע בדוא"ל:</strong></p>
-                          <div className="mt-2" dangerouslySetInnerHTML={{ __html: htmlPreview }} />
+                          <div className="mt-2" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(htmlPreview) }} />
                         </div>
                       </div>
                     </AlertDescription>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Editor, EditorContent } from '@tiptap/react';
 import { Input } from "@/components/ui/input";
 import { Trash2, GripVertical } from "lucide-react";
+import { sanitizeRichHtml } from "@/lib/sanitize";
 
 interface NoteItemProps {
   id: string;
@@ -40,7 +41,7 @@ const NoteItem = ({
                 {editor && <EditorContent editor={editor} />}
               </div>
             ) : (
-              <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
+              <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(editor?.getHTML() || '') }} />
             )}
           </td>
           <td className="py-2 px-4 border border-gray-200 text-center w-24">
@@ -76,7 +77,7 @@ const NoteItem = ({
                 {editor && <EditorContent editor={editor} />}
               </div>
             ) : (
-              <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: editor?.getHTML() || '' }} />
+              <div className="prose prose-sm max-w-none text-center" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(editor?.getHTML() || '') }} />
             )}
           </td>
           <td className="py-2 px-4 border border-gray-200">

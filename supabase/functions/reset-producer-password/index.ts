@@ -113,18 +113,8 @@ serve(async (req) => {
       );
     }
     
-    // Update the readable password in worker record
-    console.log("Updating worker record with new password");
-    const { error: updateError } = await supabaseClient
-      .from('workers')
-      .update({ password_readable: newPassword })
-      .eq('id', worker_id);
-    
-    if (updateError) {
-      console.error("Error updating worker record:", updateError);
-      // This is not a critical error, the password was reset but we couldn't save it
-      // We can still return success with a warning
-    }
+    // SECURITY: No longer store readable passwords - removed for security
+    console.log("Password reset successful - not storing readable password for security");
     
     // Check and ensure user entry exists in the users table
     const { data: userExists, error: userCheckError } = await supabaseClient

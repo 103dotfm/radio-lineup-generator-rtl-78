@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { Show } from "@/types/show";
 import { SortOption } from './types';
 import { Button } from "@/components/ui/button";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface LineupCardsProps {
   shows: Show[];
@@ -67,7 +68,7 @@ const LineupCards = ({ shows, isAdmin, handleDelete, sortBy, setSortBy, isLoadin
                     <p 
                       className="mt-2 text-sm text-gray-600 line-clamp-2" 
                       dangerouslySetInnerHTML={{
-                        __html: show.notes
+                        __html: sanitizeHtml(show.notes || '')
                       }} 
                     />
                   )}
