@@ -9,6 +9,10 @@ export interface ProducerAssignment {
   notes?: string | null;
   created_at: string;
   updated_at: string;
+  // New fields for robust recurring assignment matching
+  day_of_week?: number;
+  start_time?: string;
+  show_name?: string;
 }
 
 export interface ProducerAssignmentSkip {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +61,7 @@ const FTPXMLSettings = () => {
       try {
         // Load FTP settings
         const { data: ftpData, error: ftpError } = await supabase
-          .from('system_settings')
+          .from('system-settings')
           .select('value')
           .eq('key', 'ftp_settings')
           .maybeSingle();
@@ -102,7 +101,7 @@ const FTPXMLSettings = () => {
   const loadXmlPreview = async () => {
     try {
       const { data: xmlData, error: xmlError } = await supabase
-        .from('system_settings')
+        .from('system-settings')
         .select('value, updated_at')
         .eq('key', 'schedule_xml')
         .maybeSingle();
@@ -134,7 +133,7 @@ const FTPXMLSettings = () => {
       };
       
       const { error } = await supabase
-        .from('system_settings')
+        .from('system-settings')
         .upsert({ 
           key: 'ftp_settings', 
           value: JSON.stringify(settings)
@@ -247,7 +246,7 @@ const FTPXMLSettings = () => {
         };
         
         await supabase
-          .from('system_settings')
+          .from('system-settings')
           .upsert({ 
             key: 'ftp_settings', 
             value: JSON.stringify(updatedSettings)

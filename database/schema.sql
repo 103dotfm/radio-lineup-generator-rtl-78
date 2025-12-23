@@ -1,4 +1,3 @@
-
 -- Create UUID extension if not exists
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
@@ -42,12 +41,21 @@ $$;
 -- Table: users
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  email TEXT,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   full_name TEXT,
   username TEXT,
+  role TEXT DEFAULT 'user',
   is_admin BOOLEAN DEFAULT FALSE,
+  title TEXT,
+  avatar_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
+
+-- Create initial admin user with password 'admin123'
+INSERT INTO users (email, password_hash, full_name, role, is_admin)
+VALUES ('admin@example.com', '$2b$10$3IxkPwz1GwUe9m5WFLhYpOxCxnMj6TyqGQtGZQwfFQLzuPqRNkJHe', 'Admin User', 'admin', true)
+ON CONFLICT (email) DO NOTHING;
 
 -- Table: profiles
 CREATE TABLE profiles (
@@ -85,7 +93,7 @@ CREATE TABLE shows (
 -- Table: show_items
 CREATE TABLE show_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  show_id UUID REFERENCES shows_backup(id),
+  show_id UUID REFERENCES shows(id) ON DELETE CASCADE,
   position INTEGER NOT NULL,
   name TEXT NOT NULL,
   title TEXT,
@@ -151,6 +159,7 @@ CREATE TABLE day_notes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date TEXT NOT NULL,
   note TEXT NOT NULL,
+  is_bottom_note BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -184,6 +193,7 @@ CREATE TABLE email_settings (
   gmail_token_expiry TIMESTAMP WITH TIME ZONE,
   mailgun_domain TEXT,
   mailgun_api_key TEXT,
+  is_eu_region BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -282,6 +292,24 @@ CREATE TABLE workers (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Table: producer_work_arrangements
+CREATE TABLE IF NOT EXISTS producer_work_arrangements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  week_start DATE NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Table: worker_divisions
+CREATE TABLE IF NOT EXISTS worker_divisions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  worker_id UUID NOT NULL,
+  division_id UUID NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
 -- Create triggers for updated_at timestamps
 CREATE TRIGGER handle_schedule_slots_updated_at
 BEFORE UPDATE ON schedule_slots
@@ -319,6 +347,14 @@ CREATE TRIGGER digital_shift_custom_rows_updated_at
 BEFORE UPDATE ON digital_shift_custom_rows
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER producer_work_arrangements_updated_at
+BEFORE UPDATE ON producer_work_arrangements
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER worker_divisions_updated_at
+BEFORE UPDATE ON worker_divisions
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Insert initial system settings
 INSERT INTO system_settings (key, value) VALUES 
 ('schedule_xml_refresh_interval', '10'),
@@ -344,9 +380,10 @@ BEGIN
             s.show_name, 
             s.host_name 
         FROM 
-            schedule_slots_old s
+            schedule_slots s
         WHERE 
-            s.is_deleted = FALSE
+            s.is_master = true
+            AND s.is_deleted = FALSE
         ORDER BY 
             s.day_of_week, s.start_time
     ) LOOP
@@ -366,9 +403,6 @@ BEGIN
     
     -- Close XML document
     xml_content := xml_content || '</schedule>';
-    
-    -- Update system settings with the generated XML
-    UPDATE system_settings SET value = xml_content, updated_at = now() WHERE key = 'schedule_xml';
     
     RETURN xml_content;
 END;

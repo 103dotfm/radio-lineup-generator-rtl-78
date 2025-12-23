@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,9 +28,9 @@ export const useDatabaseConfig = () => {
       try {
         // Try to get saved database configuration from system_settings
         const { data, error } = await supabase
-          .from('system_settings')
-          .select('*')
-          .eq('key', 'database_config')
+          .from('system-settings')
+          .select('key, value')
+          .match({ key: 'database_config' })
           .single();
 
         if (data && !error) {

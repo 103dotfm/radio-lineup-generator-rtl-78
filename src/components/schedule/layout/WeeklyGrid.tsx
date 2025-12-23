@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScheduleSlot, DayNote } from '@/types/schedule';
 import TimeCell from './TimeCell';
@@ -13,6 +12,7 @@ interface WeeklyGridProps {
   handleSlotClick: (slot: ScheduleSlot) => void;
   handleEditSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
   handleDeleteSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
+  handleCreateSlot?: (dayIndex: number, time: string, duration?: number) => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
   hideHeaderDates: boolean;
@@ -27,6 +27,9 @@ interface WeeklyGridProps {
   handleSaveBottomNote: (date: Date, noteText: string, noteId?: string) => Promise<void>;
   handleDeleteBottomNote: (noteId: string) => Promise<void>;
   handleBottomNoteEdit: (date: Date) => void;
+  isMasterSchedule?: boolean;
+  deletingSlots?: Set<string>;
+  isProducer?: boolean;
 }
 
 const WeeklyGrid: React.FC<WeeklyGridProps> = ({
@@ -37,6 +40,7 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   handleSlotClick,
   handleEditSlot,
   handleDeleteSlot,
+  handleCreateSlot,
   isAdmin,
   isAuthenticated,
   hideHeaderDates,
@@ -50,11 +54,14 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
   handleBottomNoteAdd,
   handleSaveBottomNote,
   handleDeleteBottomNote,
-  handleBottomNoteEdit
+  handleBottomNoteEdit,
+  isMasterSchedule = false,
+  deletingSlots = new Set(),
+  isProducer = false
 }) => {
   return (
-    <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
-      <div className="p-2 font-bold text-center border-b border-r bg-gray-100">
+    <div className="grid grid-cols-[auto,repeat(7,1fr)] bg-white/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-slate-200 premium-shadow" dir="rtl">
+      <div className="p-4 font-bold text-center border-b border-l bg-slate-100/80 text-slate-600 text-xs uppercase tracking-widest">
         שעה
       </div>
       {dates.map((date, index) => (
@@ -73,36 +80,43 @@ const WeeklyGrid: React.FC<WeeklyGridProps> = ({
       ))}
       {timeSlots.map((time, timeIndex) => (
         <React.Fragment key={`weekly-time-${time}-${timeIndex}`}>
-          <div className="p-2 text-center border-b border-r bg-gray-50">
+          <div className="p-3 text-center border-b border-l bg-slate-50/50 text-slate-500 font-medium text-sm">
             {time}
           </div>
-          {dates.map((date, dayIndex) => (
-            <TimeCell
-              key={`weekly-cell-${date.toISOString()}-${time}-${dayIndex}-${timeIndex}`}
-              dayIndex={date.getDay()}
-              time={time}
-              cellKey={`weekly-cell-${date.toISOString()}-${time}-${dayIndex}-${timeIndex}`}
-              scheduleSlots={scheduleSlots}
-              handleSlotClick={handleSlotClick}
-              handleEditSlot={handleEditSlot}
-              handleDeleteSlot={handleDeleteSlot}
-              isAdmin={isAdmin}
-              isAuthenticated={isAuthenticated}
-            />
-          ))}
+          {dates.map((date, dayIndex) => {
+            return (
+              <TimeCell
+                key={`weekly-cell-${date.toISOString()}-${time}-${dayIndex}-${timeIndex}`}
+                dayIndex={date.getDay()}
+                time={time}
+                cellKey={`weekly-cell-${date.toISOString()}-${time}-${dayIndex}-${timeIndex}`}
+                scheduleSlots={scheduleSlots}
+                handleSlotClick={handleSlotClick}
+                handleEditSlot={handleEditSlot}
+                handleDeleteSlot={handleDeleteSlot}
+                handleCreateSlot={handleCreateSlot}
+                isAdmin={isAdmin}
+                isAuthenticated={isAuthenticated}
+                isMasterSchedule={isMasterSchedule}
+                deletingSlots={deletingSlots}
+              />
+            );
+          })}
         </React.Fragment>
       ))}
-      
-      {/* Bottom notes section - only visible for admins */}
-      {isAdmin && (
+
+      {/* Bottom notes section - visible for admins and authenticated non-admin users (read-only for non-admins), not in master schedule */}
+      {/* Hide bottom notes for unauthenticated users (public schedule page) */}
+      {isAuthenticated && (isAdmin || isProducer) && !isMasterSchedule && (
         <BottomNotes
           dates={dates}
-          bottomNotes={bottomNotes} 
+          bottomNotes={bottomNotes}
           editingBottomNoteDate={editingBottomNoteDate}
           onBottomNoteAdd={handleBottomNoteAdd}
           onSaveBottomNote={handleSaveBottomNote}
           onDeleteBottomNote={handleDeleteBottomNote}
           onBottomNoteEdit={handleBottomNoteEdit}
+          readOnly={isProducer && !isAdmin}
         />
       )}
     </div>

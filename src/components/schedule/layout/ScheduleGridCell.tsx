@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScheduleSlot } from '@/types/schedule';
 import { SlotContent } from './SlotContent';
@@ -12,6 +11,8 @@ interface ScheduleGridCellProps {
   handleDeleteSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
+  isMasterSchedule?: boolean;
+  deletingSlots?: Set<string>;
 }
 
 export default function ScheduleGridCell({
@@ -20,17 +21,28 @@ export default function ScheduleGridCell({
   handleEditSlot,
   handleDeleteSlot,
   isAdmin,
-  isAuthenticated
+  isAuthenticated,
+  isMasterSchedule = false,
+  deletingSlots = new Set()
 }: ScheduleGridCellProps) {
-  const slotClickHandler = isAuthenticated ? () => handleSlotClick(slot) : undefined;
+  // Only enable click handler if authenticated AND not in master schedule
+  const slotClickHandler = isAuthenticated && !isMasterSchedule ? () => handleSlotClick(slot) : undefined;
 
   // Generate a stable key for this cell
   const cellKey = `slot-${slot.id}-${slot.day_of_week}-${slot.start_time}`;
+  
+  // Check if this slot is being deleted
+  const isDeleting = deletingSlots.has(slot.id);
+  
+  // Debug logging
+  if (isDeleting) {
+    console.log('🎭 Applying slide-out animation to slot:', slot.id, 'Classes:', isDeleting ? 'opacity-0 scale-50 -translate-x-full rotate-12' : 'opacity-100 scale-100 translate-x-0 rotate-0');
+  }
 
   return (
     <div 
       onClick={slotClickHandler} 
-      className={`p-2 rounded ${isAuthenticated ? 'cursor-pointer' : ''} hover:opacity-80 transition-colors group schedule-cell ${getSlotColor(slot)}`} 
+      className={`p-2 rounded ${isAuthenticated && !isMasterSchedule ? 'cursor-pointer' : ''} hover:opacity-80 transition-all duration-500 ease-in-out group schedule-cell ${getSlotColor(slot)} ${isDeleting ? 'opacity-0 scale-50 -translate-x-full rotate-12' : 'opacity-100 scale-100 translate-x-0 rotate-0'}`} 
       style={{
         height: getSlotHeight(slot),
         position: 'absolute',
@@ -42,7 +54,7 @@ export default function ScheduleGridCell({
       data-slot-id={slot.id}
       data-cell-key={cellKey}
     >
-      <SlotContent slot={slot} />
+      <SlotContent slot={slot} isMasterSchedule={isMasterSchedule} />
       
       {isAdmin && (
         <SlotActions 

@@ -42,7 +42,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
 
   useEffect(() => {
     if (editingItem) {
-      setName(editingItem.name);
+      setName(editingItem.name.trim());
       setTitle(editingItem.title);
       setDetails(editingItem.details || '');
       setPhone(editingItem.phone);
@@ -52,10 +52,13 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Trim the name field to remove extra spaces
+    const trimmedName = name.trim();
+
     try {
       await addGuest({
-        name,
+        name: trimmedName,
         title,
         phone
       });
@@ -63,17 +66,17 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       console.error('Error saving guest:', error);
     }
 
-    const newItem = { 
-      name, 
-      title, 
-      details, 
-      phone, 
+    const newItem = {
+      name: trimmedName,
+      title,
+      details,
+      phone,
       duration,
       is_break: false,
       is_note: false,
       is_divider: false
     };
-    
+
     console.log('Adding regular item:', newItem);
     onAdd(newItem);
     clearForm();
@@ -88,7 +91,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
   };
 
   const handleBreakAdd = () => {
-    const breakItem = { 
+    const breakItem = {
       name: 'פרסומות',
       title: '',
       details: '',
@@ -103,7 +106,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       is_note: breakItem.is_note,
       is_divider: breakItem.is_divider
     });
-    
+
     onAdd(breakItem);
     setDuration(5);
   };
@@ -124,7 +127,7 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
       is_note: noteItem.is_note,
       is_divider: noteItem.is_divider
     });
-    
+
     onAdd(noteItem);
   };
 
@@ -143,75 +146,110 @@ const LineupForm = ({ onAdd, onNameChange, editingItem, onBackToDashboard, onDiv
         is_note: false,
         is_divider: true
       };
-      
+
       console.log('Adding divider item with flags:', {
         is_break: dividerItem.is_break,
         is_note: dividerItem.is_note,
         is_divider: dividerItem.is_divider
       });
-      
+
       onAdd(dividerItem);
     }
   };
 
   const handleGuestSelect = (guest: { name: string; title: string; phone: string }) => {
-    setName(guest.name);
+    setName(guest.name.trim());
     setTitle(guest.title);
     setPhone(guest.phone);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="lineup-form space-y-4">      
-      <div className="lineup-form-inputs">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <GuestSearch 
-            value={name}
-            onNameChange={(newName) => {
-              setName(newName);
-              onNameChange(newName);
-            }}
-            onGuestSelect={handleGuestSelect}
-          />
-          <Input
-            placeholder="קרדיט"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            autoComplete="off"
-            name="guest-title"
-            className="lineup-form-input-title"
-          />
+    <div className="glass-card p-10 rounded-[2.5rem] border-none premium-shadow space-y-8 animate-in" dir="rtl">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
+          {editingItem ? '✎' : '+'}
         </div>
-        <div className="mb-4">
-          <BasicEditor
-            content={details}
-            onChange={setDetails}
-            placeholder="פרטים"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <PhoneInput value={phone} onChange={setPhone} />
-          <Input
-            placeholder="משך בדקות"
-            type="number"
-            min="1"
-            value={duration}
-            onChange={(e) => setDuration(parseInt(e.target.value) || 5)}
-            required
-            name="duration"
-            className="lineup-form-input-duration"
-          />
-        </div>
+        <h2 className="text-2xl font-black text-slate-800">
+          {editingItem ? 'עריכת אייטם' : 'הוספת אייטם חדש'}
+        </h2>
       </div>
-      
-      <FormActions
-        onSubmit={handleSubmit}
-        onBreakAdd={handleBreakAdd}
-        onNoteAdd={handleNoteAdd}
-        onDividerAdd={handleDividerAdd}
-        isEditing={!!editingItem}
-      />
-    </form>
+
+      <form onSubmit={handleSubmit} className="lineup-form space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-500 px-1">שם המרואיינ/ת</label>
+            <GuestSearch
+              value={name}
+              onNameChange={(newName) => {
+                setName(newName);
+                onNameChange(newName);
+              }}
+              onGuestSelect={handleGuestSelect}
+              className="rounded-2xl h-14 bg-white/50 border-slate-100 focus:border-primary/30 font-bold transition-all"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-500 px-1">קרדיט / תפקיד</label>
+            <Input
+              placeholder="למשל: כתבנו הצבאי, ח״כ וכו׳"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoComplete="off"
+              name="guest-title"
+              className="rounded-2xl h-14 bg-white/50 border-slate-100 focus:border-primary/30 font-bold transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-500 px-1">פרטים ותוכן השיחה</label>
+          <div className="rounded-[1.5rem] border border-slate-100 bg-white/50 overflow-hidden focus-within:ring-4 focus-within:ring-primary/5 transition-all">
+            <BasicEditor
+              content={details}
+              onChange={setDetails}
+              placeholder="על מה נדבר בשיחה? נקודות חשובות..."
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-500 px-1">מספר טלפון</label>
+            <PhoneInput
+              value={phone}
+              onChange={setPhone}
+              className="rounded-2xl h-14 bg-white/50 border-slate-100 focus:border-primary/30 font-bold transition-all"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-500 px-1">משך זמן (דקות)</label>
+            <Input
+              placeholder="5"
+              type="number"
+              min="1"
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value) || 5)}
+              required
+              name="duration"
+              className="rounded-2xl h-14 bg-white/50 border-slate-100 focus:border-primary/30 font-bold transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <FormActions
+            onSubmit={handleSubmit}
+            onBreakAdd={handleBreakAdd}
+            onNoteAdd={handleNoteAdd}
+            onDividerAdd={handleDividerAdd}
+            isEditing={!!editingItem}
+          />
+        </div>
+      </form>
+    </div>
   );
 };
 

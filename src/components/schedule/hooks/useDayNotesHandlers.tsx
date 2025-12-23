@@ -1,8 +1,7 @@
-
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { DayNote } from '@/types/schedule';
-import { createDayNote, updateDayNote, deleteDayNote } from '@/lib/supabase/dayNotes';
+import { createDayNote, updateDayNote, deleteDayNote } from '@/lib/db/dayNotes';
 
 export const useDayNotesHandlers = (dayNotes: DayNote[], onDayNoteChange: () => void) => {
   const [editingNoteDate, setEditingNoteDate] = useState<Date | null>(null);

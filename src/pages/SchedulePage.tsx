@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parse, startOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { Calendar } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 import ScheduleHeader from '@/components/schedule/ScheduleHeader';
 import WeekNavigation from '@/components/schedule/WeekNavigation';
@@ -26,6 +26,7 @@ interface ArrangementFile {
 const SchedulePage = () => {
   const { weekDate } = useParams<{ weekDate: string }>();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [currentWeek, setCurrentWeek] = useState<Date>(() => {
     if (weekDate) {
       try {
@@ -46,6 +47,8 @@ const SchedulePage = () => {
     digital: null
   });
   const [selectedTab, setSelectedTab] = useState("schedule");
+  const [isLoadingArrangements, setIsLoadingArrangements] = useState(false);
+  const [arrangementsError, setArrangementsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchArrangements();
@@ -63,14 +66,23 @@ const SchedulePage = () => {
 
   const fetchArrangements = async () => {
     const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
+    console.log(`Fetching arrangements for week: ${weekStartStr}`);
+    setIsLoadingArrangements(true);
+    setArrangementsError(null);
+    
     try {
-      const { data, error } = await supabase
-        .from('work_arrangements')
-        .select('*')
-        .eq('week_start', weekStartStr);
+      // Ensure weekStart is in full ISO format with time if required by server
+      const weekStartISO = `${weekStartStr}T00:00:00.000Z`;
+      const { data, error } = await api.query('work-arrangements', {
+        where: JSON.stringify({
+          week_start: weekStartISO
+        }),
+        order: JSON.stringify({ created_at: 'desc' })
+      });
         
       if (error) {
         console.error('Error fetching arrangements:', error);
+        setArrangementsError(`שגיאה בטעינת סידורי העבודה: ${error.message}`);
         return;
       }
       
@@ -81,18 +93,28 @@ const SchedulePage = () => {
       };
       
       if (data && data.length > 0) {
+        console.log('Found arrangements:', data);
         data.forEach(item => {
           const arrangementItem = item as unknown as ArrangementFile;
           if (arrangementItem.type === 'producers' || arrangementItem.type === 'engineers' || arrangementItem.type === 'digital') {
-            arrangementsRecord[arrangementItem.type] = arrangementItem;
+            // Take the first (latest by created_at desc) per type
+            if (!arrangementsRecord[arrangementItem.type]) {
+              arrangementsRecord[arrangementItem.type] = arrangementItem;
+              console.log(`Set latest ${arrangementItem.type} arrangement:`, arrangementItem);
+            }
           }
         });
+      } else {
+        console.log('No arrangements found for week:', weekStartStr);
       }
       
-      console.log('Fetched arrangements:', arrangementsRecord);
+      console.log('Final arrangements record:', arrangementsRecord);
       setArrangements(arrangementsRecord);
     } catch (error) {
       console.error('Error in fetchArrangements:', error);
+      setArrangementsError('שגיאה בטעינת סידורי העבודה');
+    } finally {
+      setIsLoadingArrangements(false);
     }
   };
 
@@ -120,10 +142,13 @@ const SchedulePage = () => {
         onPrint={handlePrint}
       />
 
+
+
       <DesktopTabs 
         currentWeek={currentWeek}
         weekDate={weekDate}
         arrangements={arrangements}
+        isAdmin={isAdmin}
       />
       
       <MobileTabs
@@ -133,6 +158,7 @@ const SchedulePage = () => {
         currentWeek={currentWeek}
         weekDate={weekDate}
         arrangements={arrangements}
+        isAdmin={isAdmin}
       />
     </div>
   );

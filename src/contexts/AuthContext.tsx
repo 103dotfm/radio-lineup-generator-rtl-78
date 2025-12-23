@@ -1,253 +1,295 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { toast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../lib/api-client';
 
 interface User {
   id: string;
   email: string;
-  username?: string;
-  full_name?: string;
-  title?: string; // Add the missing title property
-  avatar_url?: string;
+  role: string;
   is_admin: boolean;
+  full_name?: string;
+  title?: string;
+  avatar_url?: string;
 }
 
 interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  error: Error | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshToken: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  user: User | null;
-  login: (email: string, password: string) => Promise<{ error: any }>;
-  logout: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
 }
 
-// Create the context with a default value that matches the shape
 const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  error: null,
+  signIn: async () => {},
+  signOut: async () => {},
+  refreshToken: async () => {},
   isAuthenticated: false,
   isAdmin: false,
-  user: null,
-  login: async () => ({ error: null }),
-  logout: async () => {},
-  refreshProfile: async () => {},
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const lastUserCheckRef = useRef<number>(0);
-  const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const checkUserRole = async (userId: string, force: boolean = false) => {
-    const now = Date.now();
-    if (!force && lastUserCheckRef.current && (now - lastUserCheckRef.current < CACHE_DURATION)) {
-      console.log('Using cached user data');
-      return;
-    }
-
-    try {
-      // First check if this user is a producer by looking up in workers table
-      const { data: workerData, error: workerError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        console.log('AuthContext: checking session, calling /auth/verify');
+        const storedUser = localStorage.getItem('user');
         
-      if (workerError && workerError.code !== 'PGRST116') {
-        console.error('Error checking worker data:', workerError);
-      }
-      
-      // If the user is a producer (exists in workers table)
-      const isProducerUser = !!workerData;
-      
-      // Get the basic user info
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to prevent errors when no record is found
-      
-      if (userError && userError.code !== 'PGRST116') {
-        console.error('Error fetching user data:', userError);
-      }
-      
-      // Then get profile info
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error fetching profile data:', profileError);
-      }
-      
-      // Try to get user details from auth metadata as fallback
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (!userData) {
-        console.warn('No user data found for ID:', userId);
+        // Try to verify session
+        const { data: verifyResp, error: verifyError } = await api.query('/auth/verify');
         
-        if (authUser) {
-          // Create basic user object from auth data, enhanced with worker data if available
-          const basicUser: User = {
-            id: authUser.id,
-            email: authUser.email || '',
-            username: workerData?.name || authUser.email?.split('@')[0] || '',
-            full_name: workerData?.name || authUser.user_metadata?.full_name || authUser.email,
-            title: workerData?.position || profileData?.title || '',
-            is_admin: false,
-            avatar_url: profileData?.avatar_url || workerData?.photo_url || ''
-          };
-          
-          setUser(basicUser);
-          setIsAdmin(false);
-          
-          // Attempt to create user record if it doesn't exist
-          if (!isProducerUser) { // Only for non-producer users
-            try {
-              await supabase.from('users').insert([{
-                id: authUser.id,
-                email: authUser.email,
-                username: authUser.email?.split('@')[0] || '',
-                full_name: authUser.user_metadata?.full_name || '',
-                is_admin: false
-              }]);
-              console.log('Created missing user record');
-            } catch (createError) {
-              console.error('Failed to create missing user record:', createError);
+        if (verifyError) {
+          // Handle verification error
+          if (verifyError.status === 401 || verifyError.status === 403) {
+            // Authentication error, clear session
+            setUser(null);
+            localStorage.removeItem('user');
+          } else {
+            // Network or other error, try to use stored user if available
+            if (storedUser) {
+              console.log('Using stored user due to verification error');
+              setUser(JSON.parse(storedUser));
             }
           }
+          setError(verifyError as Error);
+        } else {
+          const sessionValid = verifyResp && verifyResp.valid;
+          
+          if (sessionValid) {
+            if (storedUser) {
+              setUser(JSON.parse(storedUser));
+            } else {
+              // Fetch user info from backend
+              const { data: userData, error: userError } = await api.query('/auth/me');
+              if (userError) {
+                console.error('Error fetching user data:', userError);
+                setError(userError as Error);
+              } else if (userData) {
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+              }
+            }
+          } else {
+            // Session is invalid, clear everything
+            setUser(null);
+            localStorage.removeItem('user');
+          }
         }
-        return;
+      } catch (error) {
+        console.error('Error checking session:', error);
+        
+        // Don't immediately clear the session on network errors
+        // Only clear if it's an authentication error
+        if (error && typeof error === 'object' && 'status' in error) {
+          const status = (error as any).status;
+          if (status === 401 || status === 403) {
+            setUser(null);
+            localStorage.removeItem('user');
+          }
+        }
+        
+        setError(error as Error);
+      } finally {
+        setLoading(false);
       }
-      
-      // We found user data in the users table
-      // Create a User object with the correct type, explicitly including the title property
-      const userWithTitle: User = {
-        id: userData.id,
-        email: userData.email || '',
-        username: userData.username || '',
-        full_name: userData.full_name || '',
-        is_admin: userData.is_admin || false,
-        // Add the title property safely, with fallbacks
-        title: profileData?.title || workerData?.position || '',
-        avatar_url: profileData?.avatar_url || workerData?.photo_url || ''
-      };
-      
-      // Combine user data with profile data and worker data if available
-      const combinedUserData = {
-        ...userWithTitle,
-        ...(profileData || {}),
-        // If worker data exists, prioritize those fields
-        full_name: workerData?.name || userWithTitle.full_name || '',
-        title: workerData?.position || userWithTitle.title || '',
-        avatar_url: profileData?.avatar_url || workerData?.photo_url || userWithTitle.avatar_url || ''
-      };
-      
-      setUser(combinedUserData);
-      setIsAdmin(userData.is_admin || false);
-      lastUserCheckRef.current = now;
-    } catch (error) {
-      console.error('Error in checkUserRole:', error);
-      toast({
-        title: "שגיאה",
-        description: "אירעה שגיאה בטעינת פרטי המשתמש",
-        variant: "destructive"
-      });
-    }
-  };
+    };
 
-  const refreshProfile = async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session?.user) {
-      await checkUserRole(data.session.user.id, true);
-    }
-  };
+    checkSession();
+  }, []);
 
+  // Set up automatic token refresh
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
+    if (!user) return;
+
+    // Refresh token every hour to keep session active
+    const refreshInterval = setInterval(async () => {
+      try {
+        await api.mutate('/auth/refresh', {});
+        console.log('Token refreshed automatically');
+      } catch (error) {
+        console.error('Failed to refresh token:', error);
+        // Don't log out user on refresh failure, let them continue
       }
+    }, 60 * 60 * 1000); // 1 hour
+
+    return () => clearInterval(refreshInterval);
+  }, [user]);
+
+  // Add visibility change listener to refresh token when user returns to tab
+  useEffect(() => {
+    if (!user) return;
+
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        try {
+          // Check if session is still valid when user returns to tab
+          const { data: verifyResp, error: verifyError } = await api.query('/auth/verify');
+          if (verifyError || !verifyResp?.valid) {
+            console.log('Session expired, logging out user');
+            setUser(null);
+            localStorage.removeItem('user');
+          }
+        } catch (error) {
+          console.error('Error checking session on visibility change:', error);
+          // Don't log out user on network errors, let them continue
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
+
+  // Add activity tracking to extend session
+  useEffect(() => {
+    if (!user) return;
+
+    let activityTimeout: NodeJS.Timeout;
+
+    const resetActivityTimeout = () => {
+      clearTimeout(activityTimeout);
+      // Set timeout for 30 minutes of inactivity
+      activityTimeout = setTimeout(async () => {
+        try {
+          // Refresh token on user activity
+          await api.mutate('/auth/refresh', {});
+          console.log('Token refreshed due to user activity');
+        } catch (error) {
+          console.error('Failed to refresh token on activity:', error);
+        }
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+
+    // Track user activity
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetActivityTimeout, true);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setIsAuthenticated(true);
-        checkUserRole(session.user.id, true);
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setUser(null);
-        lastUserCheckRef.current = 0;
-      }
-    });
+    // Initial timeout
+    resetActivityTimeout();
+
+    return () => {
+      clearTimeout(activityTimeout);
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetActivityTimeout, true);
+      });
+    };
+  }, [user]);
+
+  // Listen for user data updates from profile changes
+  useEffect(() => {
+    const handleUserDataUpdate = (event: CustomEvent) => {
+      console.log('AuthContext: Received user data update event', event.detail);
+      setUser(event.detail);
+    };
+
+    window.addEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
     
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener('userDataUpdated', handleUserDataUpdate as EventListener);
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      setLoading(true);
+      setError(null);
+
+      // Make a real authentication request
+      const { data: userData, error: authError } = await api.mutate('/auth/login', {
         email,
-        password,
+        password
       });
 
-      if (error) {
-        console.error('Login error:', error);
-        return { error };
+      if (authError) {
+        throw new Error(authError.message || 'Authentication failed');
       }
 
-      if (data.user) {
-        await checkUserRole(data.user.id, true);
+      if (!userData) {
+        throw new Error('No user data received');
       }
 
-      return { error: null };
+      // In development, store the token in localStorage
+      if (process.env.NODE_ENV !== 'production' && userData.token) {
+        localStorage.setItem('auth_token', userData.token);
+        // Remove token from userData before storing
+        const { token, ...userDataWithoutToken } = userData;
+        setUser(userDataWithoutToken);
+        localStorage.setItem('user', JSON.stringify(userDataWithoutToken));
+      } else {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
     } catch (error) {
-      console.error('Unexpected login error:', error);
-      return { error };
+      console.error('Error signing in:', error);
+      setError(error as Error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = async () => {
+  const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      setIsAuthenticated(false);
-      setIsAdmin(false);
+      setLoading(true);
+      setError(null);
+
+      // Call the logout endpoint to clear server-side session
+      await api.mutate('/auth/logout', {});
+      
       setUser(null);
-      lastUserCheckRef.current = 0;
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error signing out:', error);
+      setError(error as Error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Provide the actual values to the context
-  const contextValue: AuthContextType = {
-    isAuthenticated, 
-    isAdmin, 
-    user, 
-    login, 
-    logout,
-    refreshProfile
+  const refreshToken = async () => {
+    try {
+      const { error: refreshError } = await api.mutate('/auth/refresh', {});
+      if (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        throw refreshError;
+      }
+      console.log('Token refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      error,
+      signIn,
+      signOut,
+      refreshToken,
+      isAuthenticated: !!user,
+      isAdmin: user?.is_admin || false
+    }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export function useAuth() {
+  return useContext(AuthContext);
+}

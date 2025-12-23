@@ -1,5 +1,4 @@
-
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api-client';
 import { format } from 'date-fns';
 
 interface NextShowInfo {
@@ -8,7 +7,7 @@ interface NextShowInfo {
 }
 
 /**
- * Gets the next show for the specified date by looking ONLY at the daily schedule
+ * Gets the next show for the specified date by looking at the same day's schedule only
  */
 export const getNextShow = async (
   currentShowDate: Date,
@@ -20,53 +19,83 @@ export const getNextShow = async (
       return null;
     }
     
-    // Format the date to match the DB format (YYYY-MM-DD)
-    const formattedDate = format(currentShowDate, 'yyyy-MM-dd');
-    console.log('Finding next show for date:', formattedDate, 'after time:', currentShowTime);
+    // Use local date formatting to avoid timezone conversion issues
+    const currentDateString = format(currentShowDate, 'yyyy-MM-dd');
+    console.log('Finding next show for date:', currentDateString, 'after time:', currentShowTime);
     
-    // Debug: Log the query we're about to make
-    console.log(`Running query: SELECT * FROM shows_backup WHERE date = '${formattedDate}' ORDER BY time ASC`);
+    // Use the same API endpoint that the dashboard uses to get schedule for the specific date
+    const { data: dailyShows, error } = await api.query('/schedule/slots', {
+      selectedDate: currentDateString,
+      isMasterSchedule: false
+    });
     
-    // Query the shows table for all shows on this specific date
-    const { data: showsOnDate, error: showsError } = await supabase
-      .from('shows_backup')
-      .select('id, name, time, date')
-      .eq('date', formattedDate)
-      .order('time', { ascending: true });
-    
-    if (showsError) {
-      console.error('Error fetching shows for date:', showsError);
+    if (error) {
+      console.error('Error fetching daily schedule:', error);
       return null;
     }
     
-    if (!showsOnDate || showsOnDate.length === 0) {
-      console.log('No shows found for date:', formattedDate);
+    if (!dailyShows || dailyShows.length === 0) {
+      console.log('No shows found for the day:', currentDateString);
       return null;
     }
 
-    console.log('All shows on date:', showsOnDate);
+    console.log('All shows for the day:', dailyShows);
     
-    // Find the first show that comes after the current show time
-    const nextShow = showsOnDate.find(show => show.time > currentShowTime);
+    // Find the first show that comes after the current show on the same day
+    const currentShowDateTime = new Date(`${currentDateString}T${currentShowTime}`);
+    
+    console.log('Current show datetime:', currentShowDateTime);
+    console.log('Looking for shows after:', currentShowDateTime.toISOString());
+    
+    // Filter shows for the current day only
+    // The slot_date is in UTC, so we need to convert it to local date for comparison
+    const showsForCurrentDay = dailyShows.filter(show => {
+      try {
+        // Parse the UTC timestamp and convert to local date
+        const slotDate = new Date(show.slot_date);
+        const slotDateLocal = format(slotDate, 'yyyy-MM-dd');
+        const isSameDay = slotDateLocal === currentDateString;
+        
+        console.log(`Show: ${show.show_name}, slot_date: ${show.slot_date}, local_date: ${slotDateLocal}, isSameDay: ${isSameDay}`);
+        
+        return isSameDay;
+      } catch (error) {
+        console.error('Error parsing slot_date:', error, show);
+        return false;
+      }
+    });
+    
+    console.log(`Shows for current day (${currentDateString}):`, 
+      showsForCurrentDay.map(show => ({
+        name: show.show_name,
+        host: show.host_name,
+        time: show.start_time,
+        slot_date: show.slot_date
+      }))
+    );
+    
+    // Find the next show on the same day
+    const nextShow = showsForCurrentDay.find(show => {
+      try {
+        const showDateTime = new Date(`${currentDateString}T${show.start_time}`);
+        return showDateTime > currentShowDateTime;
+      } catch (error) {
+        console.error('Error comparing show datetime:', error, show);
+        return false;
+      }
+    });
     
     if (!nextShow) {
-      console.log('No next show found after time:', currentShowTime);
+      console.log('No next show found on the same day after:', currentShowDateTime);
       return null;
     }
     
-    console.log('Found next show:', nextShow.name, 'at', nextShow.time);
+    console.log('Found next show on same day:', nextShow.show_name, 'with host:', nextShow.host_name, 'at', nextShow.start_time);
     
-    // Extract name and host if applicable
-    const hostMatch = nextShow.name.match(/(.*?)\s+עם\s+(.*)/);
-    if (hostMatch) {
-      return {
-        name: hostMatch[1].trim(),
-        host: hostMatch[2].trim()
-      };
-    }
-    
+    // Return the show name and host separately
     return {
-      name: nextShow.name
+      name: nextShow.show_name,
+      host: nextShow.host_name || undefined
     };
     
   } catch (error) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,7 @@ const ScheduleXMLSettings = () => {
       try {
         // Fetch refresh interval
         const { data: intervalData, error: intervalError } = await supabase
-          .from('system_settings')
+          .from('system-settings')
           .select('value')
           .eq('key', 'schedule_xml_refresh_interval')
           .maybeSingle();
@@ -33,7 +32,7 @@ const ScheduleXMLSettings = () => {
         
         // Fetch XML data and last updated timestamp
         const { data: xmlData, error: xmlError } = await supabase
-          .from('system_settings')
+          .from('system-settings')
           .select('value, updated_at')
           .eq('key', 'schedule_xml')
           .maybeSingle();
@@ -73,7 +72,7 @@ const ScheduleXMLSettings = () => {
       console.log('Saving refresh interval:', refreshInterval);
       
       const { error } = await supabase
-        .from('system_settings')
+        .from('system-settings')
         .upsert({ 
           key: 'schedule_xml_refresh_interval', 
           value: refreshInterval 
@@ -106,7 +105,7 @@ const ScheduleXMLSettings = () => {
       const intervalNum = parseInt(refreshInterval);
       if (!isNaN(intervalNum) && intervalNum >= 1) {
         await supabase
-          .from('system_settings')
+          .from('system-settings')
           .upsert({ 
             key: 'schedule_xml_refresh_interval', 
             value: refreshInterval 
@@ -161,7 +160,7 @@ const ScheduleXMLSettings = () => {
       
       // Get the updated XML and timestamp
       const { data: updatedData, error: getError } = await supabase
-        .from('system_settings')
+        .from('system-settings')
         .select('value, updated_at')
         .eq('key', 'schedule_xml')
         .maybeSingle();

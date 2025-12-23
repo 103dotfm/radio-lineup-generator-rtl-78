@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Download, Upload } from 'lucide-react';
+import React from 'react';
+import { Download, Upload, Database, RefreshCw } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -9,12 +9,15 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Tabs removed; controlled by sidebar sub param
+import { useSearchParams } from 'react-router-dom';
 import ExportDataTab from './export/ExportDataTab';
 import ImportDataTab from './ImportDataTab';
+import BackupRestoreTab from './backup/BackupRestoreTab';
 
 const DataManagement = () => {
-  const [activeTab, setActiveTab] = useState("export");
+  const [searchParams] = useSearchParams();
+  const sub = (searchParams.get('sub') as 'export' | 'import' | 'backup') || 'export';
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -26,26 +29,21 @@ const DataManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-          <Tabs defaultValue="export" className="space-y-3 sm:space-y-4" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="export" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                <Download className="h-3 w-3 sm:h-4 sm:w-4 ms-1 sm:ms-2" />
-                <span className="truncate">ייצוא נתונים</span>
-              </TabsTrigger>
-              <TabsTrigger value="import" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                <Upload className="h-3 w-3 sm:h-4 sm:w-4 ms-1 sm:ms-2" />
-                <span className="truncate">ייבוא נתונים</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="export" className="space-y-3 sm:space-y-4 pt-2">
+          {sub === 'export' && (
+            <div className="space-y-3 sm:space-y-4 pt-2">
               <ExportDataTab />
-            </TabsContent>
-            
-            <TabsContent value="import" className="space-y-3 sm:space-y-4 pt-2">
+            </div>
+          )}
+          {sub === 'import' && (
+            <div className="space-y-3 sm:space-y-4 pt-2">
               <ImportDataTab />
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
+          {sub === 'backup' && (
+            <div className="space-y-3 sm:space-y-4 pt-2">
+              <BackupRestoreTab />
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex justify-between p-4 sm:p-6 pt-0 sm:pt-0">
           <div className="text-xs sm:text-sm text-gray-500">

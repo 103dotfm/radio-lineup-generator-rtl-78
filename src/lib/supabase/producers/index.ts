@@ -6,5 +6,5 @@ export * from './arrangements';
 export { getProducersByDivision, getProducers } from './workers';
 // Export getProducerRoles from roles.ts (this takes precedence)
 export { getProducerRoles, ensureProducerRoles } from './roles';
-export * from './users';
+
 export type { ProducerAssignment, ProducerRole, ProducerWorkArrangement } from '../types/producer.types';

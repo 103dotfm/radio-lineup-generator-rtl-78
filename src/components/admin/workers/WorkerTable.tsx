@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Worker } from '@/lib/supabase/workers';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +18,6 @@ interface WorkerTableProps {
   error: any;
   onEdit: (worker: Worker) => void;
   onDelete: (id: string) => void;
-  onSelect: (worker: Worker) => void;
 }
 
 const WorkerTable: React.FC<WorkerTableProps> = ({
@@ -27,8 +25,7 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
   loading,
   error,
   onEdit,
-  onDelete,
-  onSelect
+  onDelete
 }) => {
   const [workerDivisions, setWorkerDivisions] = useState<Record<string, Division[]>>({});
   const [divisionsLoaded, setDivisionsLoaded] = useState(false);
@@ -107,6 +104,11 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
     return <div className="text-center py-4">לא נמצאו עובדים</div>;
   }
   
+  if (!Array.isArray(workers)) {
+    console.error('Workers is not an array:', workers);
+    return <div className="text-center py-4 text-red-500">שגיאה: נתוני העובדים אינם תקינים</div>;
+  }
+  
   return (
     <div className="w-full overflow-auto">
       <Table dir="rtl">
@@ -128,9 +130,7 @@ const WorkerTable: React.FC<WorkerTableProps> = ({
             return (
               <TableRow key={worker.id}>
                 <TableCell className="font-medium text-right">
-                  <Button variant="ghost" className="p-0 h-auto hover:bg-transparent hover:underline text-right" onClick={() => onSelect(worker)}>
-                    {worker.name}
-                  </Button>
+                  {worker.name}
                 </TableCell>
                 <TableCell className="text-right">{divisionNames || worker.department || '-'}</TableCell>
                 <TableCell className="text-right">{worker.position}</TableCell>

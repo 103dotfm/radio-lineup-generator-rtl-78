@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, getDaysInMonth, parseISO, getMonth, getYear } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -56,7 +55,7 @@ const MonthlySummary = () => {
     const summary: Record<string, { producer: any, roles: Record<string, number> }> = {};
     
     // Initialize with all producers
-    producers.forEach(producer => {
+    Array.isArray(producers) && producers.forEach(producer => {
       summary[producer.id] = {
         producer,
         roles: {}
@@ -64,7 +63,7 @@ const MonthlySummary = () => {
     });
     
     // Count assignments
-    assignments.forEach(assignment => {
+    Array.isArray(assignments) && assignments.forEach(assignment => {
       if (!summary[assignment.worker_id]) return;
       
       if (!summary[assignment.worker_id].roles[assignment.role]) {
@@ -80,7 +79,7 @@ const MonthlySummary = () => {
   // Get all unique roles from assignments
   const getAllRoles = () => {
     const roles = new Set<string>();
-    assignments.forEach(assignment => {
+    Array.isArray(assignments) && assignments.forEach(assignment => {
       roles.add(assignment.role);
     });
     return Array.from(roles);

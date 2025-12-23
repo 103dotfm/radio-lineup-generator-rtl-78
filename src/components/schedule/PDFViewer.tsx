@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { getStorageUrl } from "@/lib/supabase";
+import { storageService } from "@/lib/storage";
 
 interface PdfViewerProps {
   url: string | null;
@@ -17,12 +17,11 @@ export default function PdfViewer({ url }: PdfViewerProps) {
   }
   
   // Make sure we have a proper URL to the file
-  const storageUrl = getStorageUrl();
   const validatedUrl = url.startsWith('http') 
     ? url 
-    : `${storageUrl}/${url.replace(/^\/+/, '')}`;
+    : storageService.getFileUrl(url);
   
-  console.log("Rendering PDF with URL:", validatedUrl);
+  
   
   return (
     <div className="w-full h-screen md:h-[800px]">

@@ -357,39 +357,48 @@ export type Database = {
       producer_assignments: {
         Row: {
           created_at: string | null
+          day_of_week: number | null
           end_date: string | null
           id: string
           is_deleted: boolean | null
           is_recurring: boolean | null
           notes: string | null
           role: string
+          show_name: string | null
           slot_id: string
+          start_time: string | null
           updated_at: string | null
           week_start: string
           worker_id: string
         }
         Insert: {
           created_at?: string | null
+          day_of_week?: number | null
           end_date?: string | null
           id?: string
           is_deleted?: boolean | null
           is_recurring?: boolean | null
           notes?: string | null
           role: string
+          show_name?: string | null
           slot_id: string
+          start_time?: string | null
           updated_at?: string | null
           week_start: string
           worker_id: string
         }
         Update: {
           created_at?: string | null
+          day_of_week?: number | null
           end_date?: string | null
           id?: string
           is_deleted?: boolean | null
           is_recurring?: boolean | null
           notes?: string | null
           role?: string
+          show_name?: string | null
           slot_id?: string
+          start_time?: string | null
           updated_at?: string | null
           week_start?: string
           worker_id?: string
@@ -1283,3 +1292,18 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+export type ScheduleSlot = {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  show_name: string;
+  host_name: string;
+  is_recurring: boolean;
+  is_master: boolean;
+  parent_slot_id: string | null;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+};

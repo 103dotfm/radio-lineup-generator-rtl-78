@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Key } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { User } from './types';
 import { 
@@ -14,12 +14,19 @@ interface UserActionsProps {
   user: User;
   onEdit: (user: User) => void;
   onDelete: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
 }
 
-const UserActions: React.FC<UserActionsProps> = ({ user, onEdit, onDelete }) => {
+const UserActions: React.FC<UserActionsProps> = ({ user, onEdit, onDelete, onResetPassword }) => {
   const handleDelete = () => {
     if (window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) {
       onDelete(user.id);
+    }
+  };
+
+  const handleResetPassword = () => {
+    if (window.confirm('האם אתה בטוח שברצונך לאפס את הסיסמה של משתמש זה?')) {
+      onResetPassword(user.id);
     }
   };
 
@@ -38,6 +45,23 @@ const UserActions: React.FC<UserActionsProps> = ({ user, onEdit, onDelete }) => 
           </TooltipTrigger>
           <TooltipContent>
             <p>ערוך משתמש</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleResetPassword}
+            >
+              <Key className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>איפוס סיסמה</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

@@ -3,16 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// Tabs removed; routing is driven by sidebar sub params
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Trash, Plus, Send, AlertCircle, ExternalLink, RefreshCw, Copy, Check, Info } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { sanitizeEmailContent } from '@/utils/sanitize';
 
 interface EmailSettingsType {
   id: string;
@@ -24,7 +25,7 @@ interface EmailSettingsType {
   sender_name: string;
   subject_template: string;
   body_template: string;
-  email_method: 'smtp' | 'gmail_api' | 'mailgun';
+  email_method: 'smtp' | 'gmail_api' | 'mailgun' | 'internal_server';
   gmail_client_id: string;
   gmail_client_secret: string;
   gmail_refresh_token: string;
@@ -38,9 +39,8 @@ interface EmailSettingsType {
 
 const EmailSettings: React.FC = () => {
   const { toast } = useToast();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const sub = (searchParams.get('sub') as 'recipients' | 'settings' | 'template') || 'recipients';
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,14 +110,12 @@ const EmailSettings: React.FC = () => {
         throw new Error("חסרות הגדרות חשובות (URI הפניה, מזהה לקוח או סוד לקוח)");
       }
       
-      const { data, error } = await supabase.functions.invoke('gmail-auth', {
-        body: { 
-          code,
-          redirectUri: settings.gmail_redirect_uri,
-          clientId: settings.gmail_client_id,
-          clientSecret: settings.gmail_client_secret
-        }
-      });
+      const { data, error } = await api.mutate('/email/gmail-auth', { 
+        code,
+        redirectUri: settings.gmail_redirect_uri,
+        clientId: settings.gmail_client_id,
+        clientSecret: settings.gmail_client_secret
+      }, 'POST');
       
       if (error) {
         console.error('Error from gmail-auth function:', error);
@@ -182,13 +180,11 @@ const EmailSettings: React.FC = () => {
       setAuthorizingGmail(true);
       setErrorDetails(null);
       
-      const { data, error } = await supabase.functions.invoke('gmail-auth', {
-        body: { 
-          refreshToken: manualTokenInput,
-          clientId: settings.gmail_client_id,
-          clientSecret: settings.gmail_client_secret
-        }
-      });
+      const { data, error } = await api.mutate('/email/gmail-auth', { 
+        refreshToken: manualTokenInput,
+        clientId: settings.gmail_client_id,
+        clientSecret: settings.gmail_client_secret
+      }, 'POST');
       
       if (error) throw error;
       
@@ -223,7 +219,7 @@ const EmailSettings: React.FC = () => {
       });
       
       toast({
-        title: "��גיאה בעיבוד הטוקן",
+        title: "שגיאה בעיבוד הטוקן",
         description: error.message || 'אירעה שגיאה בעיבוד הטוקן',
         variant: "destructive"
       });
@@ -276,14 +272,11 @@ const EmailSettings: React.FC = () => {
 
   const saveGmailTokens = async (updatedSettings: EmailSettingsType) => {
     try {
-      const { error } = await supabase
-        .from('email_settings')
-        .update({
-          gmail_refresh_token: updatedSettings.gmail_refresh_token,
-          gmail_access_token: updatedSettings.gmail_access_token,
-          gmail_token_expiry: updatedSettings.gmail_token_expiry
-        })
-        .eq('id', updatedSettings.id);
+      const { error } = await api.mutate('/email/email-settings/tokens', {
+        gmail_refresh_token: updatedSettings.gmail_refresh_token,
+        gmail_access_token: updatedSettings.gmail_access_token,
+        gmail_token_expiry: updatedSettings.gmail_token_expiry
+      }, 'POST');
 
       if (error) throw error;
       
@@ -296,16 +289,10 @@ const EmailSettings: React.FC = () => {
 
   const loadSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('email_settings')
-        .select('*')
-        .limit(1)
-        .single();
-
+      const { data, error } = await api.query('/email/email-settings');
       if (error) throw error;
-      
-      if (data) {
-        setSettings(data as EmailSettingsType);
+      if (data && Array.isArray(data.data) && data.data.length > 0) {
+        setSettings(data.data[0] as EmailSettingsType);
       }
     } catch (error) {
       console.error('Error loading email settings:', error);
@@ -321,15 +308,12 @@ const EmailSettings: React.FC = () => {
 
   const loadRecipients = async () => {
     try {
-      const { data, error } = await supabase
-        .from('email_recipients')
-        .select('*')
-        .order('created_at', { ascending: true });
-
+      const { data, error } = await api.query('/email/email-recipients');
       if (error) throw error;
-      
-      if (data) {
-        setRecipients(data);
+      if (data && Array.isArray(data.data)) {
+        setRecipients(data.data);
+      } else {
+        setRecipients([]);
       }
     } catch (error) {
       console.error('Error loading email recipients:', error);
@@ -343,13 +327,7 @@ const EmailSettings: React.FC = () => {
 
   const loadLatestShow = async () => {
     try {
-      const { data, error } = await supabase
-        .from('shows_backup')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
+      const { data, error } = await api.query('/shows/latest');
       if (error) throw error;
       
       if (data) {
@@ -364,30 +342,7 @@ const EmailSettings: React.FC = () => {
     try {
       setSaving(true);
       
-      const { error } = await supabase
-        .from('email_settings')
-        .upsert({
-          id: settings.id,
-          smtp_host: settings.smtp_host,
-          smtp_port: settings.smtp_port,
-          smtp_user: settings.smtp_user,
-          smtp_password: settings.smtp_password,
-          sender_email: settings.sender_email,
-          sender_name: settings.sender_name,
-          subject_template: settings.subject_template,
-          body_template: settings.body_template,
-          email_method: settings.email_method,
-          gmail_client_id: settings.gmail_client_id,
-          gmail_client_secret: settings.gmail_client_secret,
-          gmail_refresh_token: settings.gmail_refresh_token,
-          gmail_redirect_uri: settings.gmail_redirect_uri,
-          gmail_access_token: settings.gmail_access_token,
-          gmail_token_expiry: settings.gmail_token_expiry,
-          is_eu_region: settings.is_eu_region,
-          mailgun_api_key: settings.mailgun_api_key,
-          mailgun_domain: settings.mailgun_domain
-        });
-
+      const { data, error } = await api.mutate('/email/email-settings', settings, 'POST');
       if (error) throw error;
       
       toast({
@@ -417,14 +372,10 @@ const EmailSettings: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('email_recipients')
-        .insert({ email: newEmail })
-        .select();
-
+      const { data, error } = await api.mutate('/email/email-recipients', { email: newEmail }, 'POST');
       if (error) throw error;
       
-      setRecipients([...recipients, data[0]]);
+      setRecipients([...recipients, data]);
       setNewEmail('');
       
       toast({
@@ -443,11 +394,7 @@ const EmailSettings: React.FC = () => {
 
   const removeRecipient = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('email_recipients')
-        .delete()
-        .match({ id });
-
+      const { data, error } = await api.mutate(`/email/email-recipients/${id}`, {}, 'DELETE');
       if (error) throw error;
       
       setRecipients(recipients.filter(r => r.id !== id));
@@ -483,12 +430,10 @@ const EmailSettings: React.FC = () => {
       
       console.log(`Sending test email for show: ${latestShow.id} to: ${testEmailAddress}`);
       
-      const { data, error } = await supabase.functions.invoke('send-lineup-email', {
-        body: { 
-          showId: latestShow.id,
-          testEmail: testEmailAddress  
-        }
-      });
+      const { data, error } = await api.mutate('/email/send-test-email', { 
+        showId: latestShow.id,
+        testEmail: testEmailAddress  
+      }, 'POST');
       
       console.log('Test email response:', data);
       
@@ -567,13 +512,11 @@ const EmailSettings: React.FC = () => {
       setAuthorizingGmail(true);
       setErrorDetails(null);
       
-      const { data, error } = await supabase.functions.invoke('gmail-auth', {
-        body: { 
-          refreshToken: settings.gmail_refresh_token,
-          clientId: settings.gmail_client_id,
-          clientSecret: settings.gmail_client_secret
-        }
-      });
+      const { data, error } = await api.mutate('/email/gmail-auth', { 
+        refreshToken: settings.gmail_refresh_token,
+        clientId: settings.gmail_client_id,
+        clientSecret: settings.gmail_client_secret
+      }, 'POST');
       
       if (error) throw error;
       
@@ -612,10 +555,10 @@ const EmailSettings: React.FC = () => {
   };
 
   const processTemplate = (template: string) => {
-    if (!latestShow) return template;
+    if (!latestShow) return template || '';
     
-    let processed = template;
-    const formattedDate = latestShow.date ? new Date(latestShow.date).toLocaleDateString('he-IL') : "";
+    let processed = template || '';
+    const formattedDate = latestShow.date ? new Date(latestShow.date).toLocaleDateString('he-IL') : '';
     
     processed = processed.replace(/{{show_name}}/g, latestShow.name || '');
     processed = processed.replace(/{{show_date}}/g, formattedDate);
@@ -628,7 +571,7 @@ const EmailSettings: React.FC = () => {
     if (!latestShow) return '';
     
     const formattedDate = latestShow.date ? new Date(latestShow.date).toLocaleDateString('he-IL') : "";
-    const dummyLink = "https://example.com/lineup";
+    const dummyLink = "https://example.com/print";
     
     let intervieweesList = "<ul style='direction: rtl; text-align: right; padding-right: 20px; margin-right: 0;'>";
     intervieweesList += "<li style='direction: rtl; text-align: right;'>דוגמה לשם מרואיין, תפקיד</li>";
@@ -636,11 +579,11 @@ const EmailSettings: React.FC = () => {
     intervieweesList += "</ul>";
     
     const viewLineupButton = `<div style="text-align: center; margin-top: 30px;">
-      <a href="${dummyLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
+      <a href="${dummyLink}" style="display: inline-block; background-color: #5e0e1c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
     </div>`;
     
-    let processedBody = settings.body_template
-      .replace(/{{show_name}}/g, latestShow.name || 'שם התו��נית')
+    let processedBody = (settings.body_template || '')
+      .replace(/{{show_name}}/g, latestShow.name || 'שם התוכנית')
       .replace(/{{show_date}}/g, formattedDate)
       .replace(/{{show_time}}/g, latestShow.time || '00:00')
       .replace(/{{interviewees_list}}/g, intervieweesList)
@@ -707,18 +650,7 @@ const EmailSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">הגדרות דואר אלקטרוני</h2>
-      </div>
-      
-      <Tabs defaultValue="recipients" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="recipients">נמענים</TabsTrigger>
-          <TabsTrigger value="settings">הגדרות שליחה</TabsTrigger>
-          <TabsTrigger value="template">תבנית הודעה</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="recipients">
+      {sub === 'recipients' && (
           <Card>
             <CardHeader>
               <CardTitle>רשימת נמענים</CardTitle>
@@ -806,7 +738,7 @@ const EmailSettings: React.FC = () => {
                           <AlertDescription className="text-amber-700">
                             <p className="mb-2">חשבון ה-Outlook שלך אינו מאפשר אימות SMTP. יש לבצע אחת מהפעולות הבאות:</p>
                             <ol className="list-decimal list-inside space-y-1 mb-2">
-                              <li>ה��על אימות SMTP בחשבון Outlook שלך</li>
+                              <li>העל אימות SMTP בחשבון Outlook שלך</li>
                               <li>השתמש בשירות דואר אחר כמו Gmail</li>
                               <li>השתמש בחשבון Outlook אחר שבו מופעלת האפשרות</li>
                             </ol>
@@ -838,9 +770,8 @@ const EmailSettings: React.FC = () => {
               )}
             </CardFooter>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="settings">
+      )}
+      {sub === 'settings' && (
           <Card>
             <CardHeader>
               <CardTitle>הגדרות שליחת דואר אלקטרוני</CardTitle>
@@ -876,12 +807,12 @@ const EmailSettings: React.FC = () => {
                   <h3 className="text-lg font-medium">שיטת שליחה</h3>
                   <RadioGroup 
                     value={settings.email_method} 
-                    onValueChange={(value) => setSettings({...settings, email_method: value as 'smtp' | 'gmail_api' | 'mailgun'})}
+                    onValueChange={(value) => setSettings({...settings, email_method: value as 'smtp' | 'gmail_api' | 'mailgun' | 'internal_server'})}
                     className="space-y-4"
                   >
                     <div className="flex items-center space-x-2 space-x-reverse">
                       <RadioGroupItem value="smtp" id="email-method-smtp" />
-                      <Label htmlFor="email-method-smtp" className="mr-2 cursor-pointer">שרת SMTP (שיטה סטנ��רטית)</Label>
+                      <Label htmlFor="email-method-smtp" className="mr-2 cursor-pointer">שרת SMTP (שיטה סטנדרטית)</Label>
                     </div>
                     <div className="flex items-center space-x-2 space-x-reverse">
                       <RadioGroupItem value="gmail_api" id="email-method-gmail" />
@@ -890,6 +821,10 @@ const EmailSettings: React.FC = () => {
                     <div className="flex items-center space-x-2 space-x-reverse">
                       <RadioGroupItem value="mailgun" id="email-method-mailgun" />
                       <Label htmlFor="email-method-mailgun" className="mr-2 cursor-pointer">Mailgun API (מומלץ)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <RadioGroupItem value="internal_server" id="email-method-internal" />
+                      <Label htmlFor="email-method-internal" className="mr-2 cursor-pointer">שרת פנימי (שימוש במשאבי השרת)</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -916,7 +851,7 @@ const EmailSettings: React.FC = () => {
                           dir="ltr"
                           type="number"
                           placeholder="587"
-                          value={settings.smtp_port.toString()}
+                          value={settings.smtp_port ? settings.smtp_port.toString() : '587'}
                           onChange={(e) => setSettings({...settings, smtp_port: parseInt(e.target.value) || 587})}
                         />
                       </div>
@@ -1133,7 +1068,43 @@ const EmailSettings: React.FC = () => {
                       <AlertTitle>כתובת ה-from בדומיין Mailgun</AlertTitle>
                       <AlertDescription>
                         <p className="text-sm">
-                          ודא שכתובת השולח (כתובת ה-from) תואמת את הדומיין המאומת שלך. אחרת, המשלוח עלו�� להיכשל.
+                          ודא שכתובת השולח (כתובת ה-from) תואם את הדומיין המאומת שלך. אחרת, המשלוח עלול להיכשל.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+                
+                {/* Internal Server Settings */}
+                {settings.email_method === 'internal_server' && (
+                  <div className="space-y-4 border p-4 rounded-md">
+                    <h3 className="text-lg font-medium">הגדרות שרת פנימי</h3>
+                    <Alert className="mb-4">
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>שליחה דרך שרת פנימי</AlertTitle>
+                      <AlertDescription>
+                        <p className="text-sm mt-1">
+                          שיטה זו משתמשת במשאבי השרת הפנימי לשליחת דואר אלקטרוני. אין צורך בהגדרות נוספות.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div className="p-4 bg-green-50 rounded-md border border-green-200">
+                      <h4 className="font-medium mb-2 text-green-800">יתרונות השימוש בשרת פנימי:</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-green-700">
+                        <li>אין צורך בשירותי צד שלישי</li>
+                        <li>שליטה מלאה על תהליך השליחה</li>
+                        <li>אין עלויות נוספות</li>
+                        <li>מתאים לשרתים עם תמיכה ב-SMTP</li>
+                      </ul>
+                    </div>
+                    
+                    <Alert variant="warning" className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>דרישות מערכת</AlertTitle>
+                      <AlertDescription>
+                        <p className="text-sm">
+                          ודא שהשרת שלך מוגדר לשליחת דואר אלקטרוני וכי אין חסימות על פורט 25 או 587.
                         </p>
                       </AlertDescription>
                     </Alert>
@@ -1146,23 +1117,18 @@ const EmailSettings: React.FC = () => {
                   <AlertDescription>
                     <p className="mb-2"><strong>שרת SMTP:</strong> שיטה סטנדרטית לשליחת דואר אלקטרוני. מתאימה לרוב השירותים אך עלולה להיתקל בחסימות.</p>
                     <p className="mb-2"><strong>ממשק API של Gmail:</strong> שיטה מתקדמת לשליחת דואר דרך חשבון Google. מתאימה במיוחד אם נתקלת בבעיות עם SMTP של Gmail או Outlook.</p>
-                    <p><strong>Mailgun API:</strong> ��יטה מומלצת לשליחת דואר אלקטרוני, מסייעת במניעת סיווג כספאם ומספקת ניתוח משלוחים. דורשת יצירת חשבון Mailgun והגדרת Domain.</p>
+                    <p className="mb-2"><strong>Mailgun API:</strong> שיטה מומלצת לשליחת דואר אלקטרוני, מסייעת במניעת סיווג כספאם ומספקת ניתוח משלוחים. דורשת יצירת חשבון Mailgun והגדרת Domain.</p>
+                    <p><strong>שרת פנימי:</strong> שימוש במשאבי השרת הפנימי לשליחת דואר אלקטרוני. מתאים לשרתים עם תמיכה ב-SMTP ואין צורך בשירותי צד שלישי.</p>
                   </AlertDescription>
                 </Alert>
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
-                onClick={saveSettings} 
-                disabled={saving}
-              >
-                {saving ? "שומר..." : "שמור הגדרות"}
-              </Button>
+              <Button onClick={saveSettings} disabled={saving}>{saving ? "שומר..." : "שמור הגדרות"}</Button>
             </CardFooter>
           </Card>
-        </TabsContent>
-        
-        <TabsContent value="template">
+      )}
+      {sub === 'template' && (
           <Card>
             <CardHeader>
               <CardTitle>תבנית הודעת דואר אלקטרוני</CardTitle>
@@ -1218,7 +1184,7 @@ const EmailSettings: React.FC = () => {
                         <p><strong>נושא:</strong> {processTemplate(settings.subject_template)}</p>
                         <div className="border rounded-md p-4 mt-2 bg-white">
                           <p><strong>תצוגה מקדימה כפי שתופיע בדוא"ל:</strong></p>
-                          <div className="mt-2" dangerouslySetInnerHTML={{ __html: htmlPreview }} />
+                          <div className="mt-2" dangerouslySetInnerHTML={{ __html: sanitizeEmailContent(htmlPreview || '') }} />
                         </div>
                       </div>
                     </AlertDescription>
@@ -1227,16 +1193,10 @@ const EmailSettings: React.FC = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button
-                onClick={saveSettings}
-                disabled={saving}
-              >
-                {saving ? "שומר..." : "שמור תבנית"}
-              </Button>
+              <Button onClick={saveSettings} disabled={saving}>{saving ? "שומר..." : "שמור תבנית"}</Button>
             </CardFooter>
           </Card>
-        </TabsContent>
-      </Tabs>
+      )}
     </div>
   );
 };

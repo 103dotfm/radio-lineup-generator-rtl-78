@@ -50,7 +50,7 @@ export const prepareEmailContent = (
   // Make sure the button is a single self-contained element
   const viewLineupButton = `
     <div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
-      <a href="${lineupLink}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
+      <a href="${lineupLink}" style="display: inline-block; background-color: #5e0e1c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">לצפייה בליינאפ</a>
     </div>`;
   
   // Process the body template
@@ -117,7 +117,7 @@ export const prepareEmailContent = (
     }
     .button {
       display: inline-block;
-      background-color: #4CAF50;
+      background-color: #5e0e1c;
       color: white !important;
       padding: 10px 20px;
       text-decoration: none;

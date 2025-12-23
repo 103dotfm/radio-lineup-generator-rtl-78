@@ -1,18 +1,16 @@
-
 import { ScheduleSlot } from '@/types/schedule';
 
 export const getSlotColor = (slot: ScheduleSlot): string => {
-  console.log('Getting color for slot:', {
-    name: slot.show_name,
-    color: slot.color,
-    is_prerecorded: slot.is_prerecorded,
-    is_collection: slot.is_collection,
-    is_modified: slot.is_modified
-  });
+  // console.log('Getting color for slot:', {
+  //   name: slot.show_name,
+  //   color: slot.color,
+  //   is_prerecorded: slot.is_prerecorded,
+  //   is_collection: slot.is_collection,
+  //   is_modified: slot.is_modified
+  // });
 
-  // First priority: user-selected color (if explicitly set)
-  if (slot.color) {
-    console.log('Using user-selected color:', slot.color);
+  if (slot.color && slot.color !== 'default') {
+    // console.log('Using user-selected color:', slot.color);
     switch (slot.color) {
       case 'green':
         return 'bg-[#eff4ec]';
@@ -27,21 +25,23 @@ export const getSlotColor = (slot: ScheduleSlot): string => {
     }
   }
 
-  // Second priority: prerecorded or collection (blue)
-  if (slot.is_prerecorded || slot.is_collection) {
-    console.log('Using blue for prerecorded/collection');
-    return 'bg-[#D3E4FD]';
+  if (slot.is_prerecorded) {
+    // console.log('Using prerecorded color: purple');
+    return 'bg-[#D3E4FD]'; // Blue for prerecorded
   }
 
-  // Third priority: modified from master schedule (yellow)
+  if (slot.is_collection) {
+    // console.log('Using collection color: teal');
+    return 'bg-[#D3E4FD]'; // Blue for collection
+  }
+
   if (slot.is_modified) {
-    console.log('Using yellow for modified slot');
-    return 'bg-[#FEF7CD]';
+    // console.log('Using modified color: orange');
+    return 'bg-[#FEF7CD]'; // Yellow for modified
   }
 
-  // Default: regular programming (green)
-  console.log('Using default green color');
-  return 'bg-[#eff4ec]';
+  // console.log('Using default color: green');
+  return 'bg-[#eff4ec]'; // Default green
 };
 
 export const getSlotHeight = (slot: ScheduleSlot): string => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -10,16 +9,14 @@ import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const DomainSettings = () => {
-  const [domain, setDomain] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [domain, setDomain] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchDomain = async () => {
-      setLoading(true);
       try {
         const { data, error } = await supabase
           .from('system_settings')
@@ -31,14 +28,17 @@ const DomainSettings = () => {
           if (error.code !== 'PGRST116') { // PGRST116 = not found
             console.error('Error fetching domain setting:', error);
           }
+          setDomain(''); // Set empty string if no domain is found
         } else if (data) {
           setDomain(data.value);
+        } else {
+          setDomain(''); // Set empty string if no data
         }
       } catch (error) {
         console.error('Error:', error);
+        setDomain(''); // Set empty string on error
       } finally {
         setLoading(false);
-        setInitialLoad(false);
       }
     };
 
@@ -60,11 +60,12 @@ const DomainSettings = () => {
     // Remove any protocol prefixes for validation
     const cleanDomain = domainValue.replace(/^(https?:\/\/)/, '').replace(/\/$/, '');
     
-    // Simple domain validation regex
-    const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+    // Enhanced domain validation regex that allows ports
+    // Matches: domain.com, domain.com:8080, sub.domain.com:1234
+    const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(:\d+)?$/;
     
     if (!domainRegex.test(cleanDomain)) {
-      setValidationError("אנא הזן דומיין תקין (לדוגמה: myapp.example.com)");
+      setValidationError("אנא הזן דומיין תקין (לדוגמה: myapp.example.com או myapp.example.com:8080)");
       return false;
     }
     
@@ -72,6 +73,8 @@ const DomainSettings = () => {
   };
 
   const saveDomain = async () => {
+    if (!domain) return;
+
     // Validate the domain before saving
     if (!validateDomain(domain)) {
       if (!validationError) {
@@ -118,6 +121,19 @@ const DomainSettings = () => {
     }
   };
 
+  // Don't render anything while loading
+  if (loading || domain === null) {
+    return (
+      <Card className="w-full" dir="rtl">
+        <CardContent className="py-6">
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full" dir="rtl">
       <CardHeader>
@@ -131,25 +147,25 @@ const DomainSettings = () => {
           <div className="space-y-2">
             <Label htmlFor="domain">דומיין האפליקציה</Label>
             <div className="flex items-center space-x-2">
-              <Input
-                id="domain"
-                placeholder="myapp.example.com"
-                value={domain}
-                onChange={(e) => {
-                  setDomain(e.target.value);
-                  // Clear validation errors when user types
-                  if (validationError) {
-                    setValidationError(null);
-                  }
-                }}
-                className="flex-1 ml-2"
-                disabled={loading || saving}
-                dir="ltr"
-              />
-            </div>
-            <p className="text-sm text-gray-500">
-              הזן את הדומיין ללא פרוטוקול (http:// או https://)
-            </p>
+                          <Input
+              id="domain"
+              placeholder="l.103.fm:8080"
+              value={domain}
+              onChange={(e) => {
+                setDomain(e.target.value);
+                // Clear validation errors when user types
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
+              className="flex-1 ml-2"
+              disabled={saving}
+              dir="ltr"
+            />
+          </div>
+          <p className="text-sm text-gray-500">
+            הזן את הדומיין ללא פרוטוקול (http:// או https://). ניתן להוסיף פורט (לדוגמה: l.103.fm:8080)
+          </p>
             
             {validationError && (
               <Alert variant="destructive" className="mt-2">
@@ -177,7 +193,7 @@ const DomainSettings = () => {
       <CardFooter className="flex justify-start">
         <Button 
           onClick={saveDomain} 
-          disabled={loading || saving || (domain === '' && initialLoad) || !!validationError}
+          disabled={saving || !domain || !!validationError}
         >
           {saving ? (
             <>

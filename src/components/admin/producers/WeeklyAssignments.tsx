@@ -26,20 +26,23 @@ import AssignmentDialog from './components/AssignmentDialog';
 import SlotAssignments from './components/SlotAssignments';
 import { useAssignmentDialog } from './hooks/useAssignmentDialog';
 import { useScroll } from '@/contexts/ScrollContext';
+import { api } from '@/lib/api-client';
 
 interface WeeklyAssignmentsProps {
   currentWeek: Date;
   onAssignmentChange?: () => void;
   refreshTrigger?: number;
+  initialProducers?: any[];
 }
 
 const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({ 
   currentWeek, 
   onAssignmentChange,
-  refreshTrigger = 0
+  refreshTrigger = 0,
+  initialProducers
 }) => {
   // Important: use false for isMasterSchedule to get the weekly schedule instead of master
-  const { scheduleSlots, isLoading: slotsLoading } = useScheduleSlots(currentWeek, false);
+  const { slots: scheduleSlots, loading: slotsLoading } = useScheduleSlots(currentWeek, false);
   const [assignments, setAssignments] = useState<ProducerAssignment[]>([]);
   const [producers, setProducers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -51,10 +54,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   useEffect(() => {
     const cachedId = localStorage.getItem('producer-division-id');
     if (cachedId) {
-      console.log('Found cached producer division ID:', cachedId);
       setProducerDivisionId(cachedId);
-    } else {
-      console.log('No cached producer division ID found');
     }
   }, []);
 
@@ -66,28 +66,27 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   // Create a map of unique slots to prevent duplicates
   const uniqueSlotsMap: { [key: string]: boolean } = {};
   
-  scheduleSlots.forEach(slot => {
-    const day = slot.day_of_week;
-    const time = slot.start_time;
-    const key = `${day}-${time}`;
-    const uniqueKey = `${day}-${time}-${slot.show_name}-${slot.host_name}`;
-    
-    // Only process this slot if we haven't seen a duplicate already
-    if (!uniqueSlotsMap[uniqueKey]) {
-      uniqueSlotsMap[uniqueKey] = true;
+  // Add null check to prevent forEach error when scheduleSlots is undefined
+  if (scheduleSlots && Array.isArray(scheduleSlots)) {
+    scheduleSlots.forEach(slot => {
+      const day = slot.day_of_week;
+      const time = slot.start_time;
+      const key = `${day}-${time}`;
+      const uniqueKey = `${day}-${time}-${slot.show_name}-${slot.host_name}`;
       
-      if (!slotsByDayAndTime[key]) {
-        slotsByDayAndTime[key] = [];
+      // Only process this slot if we haven't seen a duplicate already
+      if (!uniqueSlotsMap[uniqueKey]) {
+        uniqueSlotsMap[uniqueKey] = true;
+        
+        if (!slotsByDayAndTime[key]) {
+          slotsByDayAndTime[key] = [];
+        }
+        slotsByDayAndTime[key].push(slot);
       }
-      slotsByDayAndTime[key].push(slot);
-    }
-  });
+    });
+  }
   
   useEffect(() => {
-    // Format date consistently for logging
-    const formattedDate = format(currentWeek, 'yyyy-MM-dd');
-    console.log("WeeklyAssignments: Loading data for week", formattedDate);
-    
     saveScrollPosition();
     loadData();
   }, [currentWeek, refreshTrigger, producerDivisionId]);
@@ -98,31 +97,44 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       // Use a consistent date format for the week start
       const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
       const formattedDate = format(weekStartDate, 'yyyy-MM-dd');
-      console.log("WeeklyAssignments: Loading data for week", formattedDate);
       
-      // Get assignments
+      // Get assignments using the proper function that handles recurring assignments and skips
       const assignmentsData = await getProducerAssignments(weekStartDate);
-      console.log("WeeklyAssignments: Loaded assignments:", assignmentsData);
-      setAssignments(assignmentsData || []);
+      setAssignments(assignmentsData);
       
-      // Get roles - get them sorted by display_order
-      const rolesData = await getProducerRoles();
-      console.log("WeeklyAssignments: Loaded roles:", rolesData);
-      setRoles(rolesData || []);
+      // Get roles using local API - get them sorted by display_order
+      const rolesResponse = await api.query('/producer-roles', {
+        order: { display_order: 'asc' }
+      });
+      const rolesData = rolesResponse.data || [];
+      setRoles(rolesData);
       
-      // Get producers filtered by division or department
-      console.log("Fetching producers with ID:", producerDivisionId);
-      const producersData = await getProducersByDivision(producerDivisionId || 'producers-default');
-      console.log(`WeeklyAssignments: Loaded ${producersData?.length || 0} producers:`);
-      setProducers(producersData || []);
-      
-      if (!producersData?.length) {
-        console.warn("No producers found! This is unexpected.");
-        toast({
-          title: "שים לב",
-          description: "לא נמצאו מפיקים במערכת. ייתכן שיש בעיה בהגדרות המחלקה",
-          variant: "default"
+      // Use producers from props if available, otherwise fetch from API
+      if (initialProducers && initialProducers.length > 0) {
+        setProducers(initialProducers);
+      } else {
+        // Fetch producers filtered by department
+        const producersResponse = await api.query('/workers', {
+          where: { 
+            or: [
+              { 'department ILIKE': '%מפיקים%' },
+              { 'department ILIKE': '%מפיק%' },
+              { 'department ILIKE': '%הפקה%' },
+              { 'department ILIKE': '%producers%' },
+              { 'department ILIKE': '%Production staff%' }
+            ]
+          }
         });
+        const producersData = producersResponse.data || [];
+        setProducers(producersData);
+        
+        if (!producersData.length) {
+          toast({
+            title: "שים לב",
+            description: "לא נמצאו מפיקים במערכת. ייתכן שיש בעיה בהגדרות המחלקה",
+            variant: "default"
+          });
+        }
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -141,10 +153,87 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     }
   };
   
+  // Helper function to match recurring assignments to slots
+  const matchRecurringAssignmentToSlot = useCallback((assignment: ProducerAssignment, targetSlot: ScheduleSlot): boolean => {
+    // For recurring assignments, we need to determine if they should apply to this slot
+    // Since we don't have the original slot details, we'll use a more targeted approach
+    
+    // Check if this is a Friday slot (day_of_week === 5)
+    if (targetSlot.day_of_week === 5) {
+      // For Friday slots, we need to match based on the time and show characteristics
+      // Let's check if this assignment is for a Friday slot by looking at the time
+      
+      // For 6AM Friday slot
+      if (targetSlot.start_time === '06:00:00' && targetSlot.show_name === 'למבוגרים בלבד') {
+        // Check if this assignment is for the 6AM Friday slot
+        // We can identify this by checking if the assignment has the right role and worker
+        return assignment.role === 'עריכה' || assignment.role === 'הפקה';
+      }
+      
+      // For 7AM Friday slot
+      if (targetSlot.start_time === '07:00:00' && targetSlot.show_name === 'התוכנית החברתית') {
+        // Check if this assignment is for the 7AM Friday slot
+        return assignment.role === 'עריכה' || assignment.role === 'הפקה';
+      }
+    }
+    
+    return false;
+  }, []);
+
   // Get assignments for a slot
   const getAssignmentsForSlot = useCallback((slotId: string): ProducerAssignment[] => {
-    return assignments.filter((assignment) => assignment.slot_id === slotId);
-  }, [assignments]);
+    // First, find the slot details to get day, time, and show name
+    const slot = scheduleSlots?.find(s => s.id === slotId);
+    
+    if (!slot) {
+      console.log(`getAssignmentsForSlot: Slot ${slotId} not found in scheduleSlots`);
+      return [];
+    }
+    
+    // Match assignments by slot_id first (for weekly assignments)
+    const directMatches = assignments.filter((assignment) => assignment.slot_id === slotId);
+    
+    // For recurring assignments, match by day_of_week, start_time, and show_name
+    const recurringMatches = assignments.filter((assignment) => {
+      if (!assignment.is_recurring) return false;
+      return (
+        (assignment as any).day_of_week === slot.day_of_week &&
+        (assignment as any).start_time === slot.start_time &&
+        (assignment as any).show_name === slot.show_name
+      );
+    });
+    
+    // For weekly assignments, also match by slot characteristics if slot_id doesn't match
+    // This handles cases where assignments were created for different slot IDs but same show
+    const characteristicMatches = assignments.filter((assignment) => {
+      if (assignment.is_recurring) return false; // Skip recurring assignments (already handled above)
+      
+      // Check if this assignment matches the slot characteristics
+      const matchesCharacteristics = (
+        (assignment as any).day_of_week === slot.day_of_week &&
+        (assignment as any).start_time === slot.start_time &&
+        (assignment as any).show_name === slot.show_name
+      );
+      
+      // Only include if it matches characteristics and wasn't already found by slot_id
+      return matchesCharacteristics && !directMatches.some(direct => direct.id === assignment.id);
+    });
+    
+    // Combine all types of matches, avoiding duplicates
+    const allMatches = [...directMatches];
+    recurringMatches.forEach(recurringMatch => {
+      if (!allMatches.some(match => match.id === recurringMatch.id)) {
+        allMatches.push(recurringMatch);
+      }
+    });
+    characteristicMatches.forEach(charMatch => {
+      if (!allMatches.some(match => match.id === charMatch.id)) {
+        allMatches.push(charMatch);
+      }
+    });
+    
+    return allMatches;
+  }, [assignments, scheduleSlots]);
   
   const handleDeleteAssignment = async (assignmentId: string, deleteMode: 'current' | 'future' = 'current') => {
     saveScrollPosition();
@@ -161,14 +250,14 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
       const weekStartDate = startOfWeek(currentWeek, { weekStartsOn: 0 });
       const formattedWeekStart = format(weekStartDate, 'yyyy-MM-dd');
       
-      const success = await deleteProducerAssignment(assignmentId, deleteMode, formattedWeekStart);
+      const result = await deleteProducerAssignment(assignmentId, deleteMode, formattedWeekStart);
       
-      if (success) {
+      if (result && result.success) {
         toast({
           title: "נמחק בהצלחה",
-          description: deleteMode === 'future' 
+          description: result.message || (deleteMode === 'future' 
             ? "השיבוץ נמחק מכל השבועות העתידיים" 
-            : "השיבוץ נמחק משבוע זה בלבד"
+            : "השיבוץ נמחק משבוע זה בלבד")
         });
         
         // Update local state instead of reloading everything
@@ -203,28 +292,33 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   const handleNewAssignments = useCallback((newAssignments: ProducerAssignment[]) => {
     if (newAssignments.length === 0) return;
     
-    console.log('Locally updating assignments with new data:', newAssignments);
+    // Check if any of the new assignments are recurring (permanent)
+    const hasRecurringAssignments = newAssignments.some(assignment => assignment.is_recurring);
     
-    setAssignments(prevAssignments => {
-      // Filter out any existing assignments that might be duplicates
-      const filteredPrevAssignments = prevAssignments.filter(existing => 
-        !newAssignments.some(newAssign => 
-          newAssign.slot_id === existing.slot_id && 
-          newAssign.worker_id === existing.worker_id && 
-          newAssign.role === existing.role
-        )
-      );
-      
-      // Combine with the new assignments
-      return [...filteredPrevAssignments, ...newAssignments];
-    });
+    if (hasRecurringAssignments) {
+      // For recurring assignments, reload the data from the database to get the actual assignments
+      loadData();
+    } else {
+      setAssignments(prevAssignments => {
+        // Filter out any existing assignments that might be duplicates
+        const filteredPrevAssignments = prevAssignments.filter(existing => 
+          !newAssignments.some(newAssign => 
+            newAssign.slot_id === existing.slot_id && 
+            newAssign.worker_id === existing.worker_id && 
+            newAssign.role === existing.role
+          )
+        );
+        
+        // Combine with the new assignments
+        return [...filteredPrevAssignments, ...newAssignments];
+      });
+    }
     
     // Notify parent without triggering a full data reload
     if (onAssignmentChange) {
-      console.log("Notifying parent component about assignment change");
       onAssignmentChange();
     }
-  }, [onAssignmentChange]);
+  }, [onAssignmentChange, loadData]);
   
   // Use the custom hook for dialog management and assignment operations
   const {
@@ -235,6 +329,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
     updateProducerForm,
     visibleWorkerCount,
     addWorkerForm,
+    removeWorkerForm,
     selectedDays,
     toggleDay,
     isPermanent,
@@ -254,7 +349,9 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
   
   const dayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
   // Sort timeslots to display them in chronological order
-  const timeslots = [...new Set(scheduleSlots.map(slot => slot.start_time))].sort();
+  const timeslots = scheduleSlots && Array.isArray(scheduleSlots) 
+    ? [...new Set(scheduleSlots.map(slot => slot.start_time))].sort()
+    : [];
   
   if (isLoading || slotsLoading) {
     return <div className="text-center py-4">טוען...</div>;
@@ -318,8 +415,8 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
                                   key={`slot-${slot.id}-${time}-${slotIndex}`}
                                   slot={slot}
                                   slotAssignments={slotAssignments}
-                                  onAssign={(slot) => {
-                                    handleAssignProducer(slot, slotAssignments);
+                                  onAssign={async (slot) => {
+                                    await handleAssignProducer(slot, slotAssignments);
                                   }}
                                   onDeleteAssignment={handleDeleteAssignment}
                                 />
@@ -352,6 +449,7 @@ const WeeklyAssignments: React.FC<WeeklyAssignmentsProps> = ({
         updateProducerForm={updateProducerForm}
         visibleWorkerCount={visibleWorkerCount}
         addWorkerForm={addWorkerForm}
+        removeWorkerForm={removeWorkerForm}
         selectedDays={selectedDays}
         toggleDay={toggleDay}
         isPermanent={isPermanent}

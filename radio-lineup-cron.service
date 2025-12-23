@@ -1,0 +1,25 @@
+[Unit]
+Description=Radio Lineup Generator Cron Service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=iteam
+Group=iteam
+WorkingDirectory=/home/iteam/radio-lineup-generator-rtl-78
+Environment=NODE_ENV=production
+Environment=DB_TYPE=local
+Environment=DB_USER=radiouser
+Environment=DB_PASSWORD=radio123
+Environment=DB_HOST=localhost
+Environment=DB_PORT=5432
+Environment=DB_NAME=radiodb
+ExecStart=/usr/bin/node server/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

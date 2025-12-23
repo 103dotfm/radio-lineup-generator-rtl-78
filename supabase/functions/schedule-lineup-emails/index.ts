@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -13,6 +12,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   
+  // DISABLED: This function is disabled to prevent duplicate email sending
+  // The server-side email scheduler (server/services/email-scheduler.js) handles email sending
+  console.log(`[DISABLED] schedule-lineup-emails function called but disabled to prevent duplicates`);
+  
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: "Email scheduling is handled by server-side scheduler to prevent duplicates",
+      disabled: true
+    }),
+    {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  
+  /* DISABLED CODE - KEPT FOR REFERENCE
   try {
     const functionStart = new Date();
     console.log(`Function execution started at: ${functionStart.toISOString()}`);
@@ -100,40 +118,19 @@ serve(async (req) => {
     }
     console.log(`Final adjusted day with offset ${timezoneOffset}: ${adjustedDay}`);
     
-    // Query for schedule slots - ALWAYS use schedule_slots_old table
-    console.log("Querying schedule_slots_old table...");
+    // Query for schedule slots - ALWAYS use schedule_slots table
+    console.log("Querying schedule_slots table...");
     const { data: scheduleSlots, error: scheduleSlotsError } = await supabase
-      .from("schedule_slots_old")
-      .select(`
-        id,
-        day_of_week,
-        start_time,
-        end_time,
-        show_name,
-        host_name,
-        shows_backup (id, name, date)
-      `)
-      .eq("day_of_week", adjustedDay)
-      .gte("start_time", startTime)
-      .lt("start_time", endTime)
-      .order("start_time");
+      .from("schedule_slots")
+      .select("*")
+      .eq("is_master", true)
+      .eq("is_deleted", false)
+      .order("day_of_week", { ascending: true })
+      .order("start_time", { ascending: true });
     
     if (scheduleSlotsError) {
-      console.error("Error fetching schedule slots from schedule_slots_old:", scheduleSlotsError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: "Failed to fetch schedule slots",
-          error: scheduleSlotsError
-        }),
-        { 
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      console.error("Error fetching schedule slots from schedule_slots:", scheduleSlotsError);
+      throw scheduleSlotsError;
     }
     
     console.log(`Found ${scheduleSlots?.length || 0} schedule slots in the current time range`);
@@ -290,12 +287,12 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in schedule-lineup-emails function:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
+      JSON.stringify({
+        success: false,
         message: "Error in schedule-lineup-emails function",
         error: error.message
       }),
-      { 
+      {
         status: 500,
         headers: {
           ...corsHeaders,
@@ -304,4 +301,5 @@ serve(async (req) => {
       }
     );
   }
+  */ // END DISABLED CODE
 });

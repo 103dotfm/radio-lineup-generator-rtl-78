@@ -1,6 +1,5 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/api-client';
 import { User, NewUser } from '../types';
 import { useToast } from "@/hooks/use-toast";
 
@@ -10,43 +9,18 @@ export const useUserMutations = () => {
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: NewUser) => {
-      // Get the app domain for the redirect URL
-      const appDomain = window.location.origin;
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email!,
-        password: userData.password,
-        options: {
-          data: {
-            username: userData.username,
-            full_name: userData.full_name,
-            is_admin: userData.is_admin,
-          },
-          emailRedirectTo: `${appDomain}/login`
+      const { data, error } = await api.mutate('/auth/users', userData);
+      if (error) {
+        // Handle specific error cases
+        if (error.response?.status === 409) {
+          throw new Error('משתמש עם כתובת אימייל זו כבר קיים במערכת');
+        } else if (error.response?.data?.error) {
+          throw new Error(error.response.data.error);
+        } else {
+          throw new Error('שגיאה ביצירת המשתמש');
         }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('No user data returned');
-
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([
-          {
-            id: authData.user.id,
-            email: userData.email,
-            username: userData.username,
-            full_name: userData.full_name,
-            is_admin: userData.is_admin,
-          },
-        ]);
-
-      if (profileError) {
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw profileError;
       }
-
-      return authData.user;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -55,7 +29,7 @@ export const useUserMutations = () => {
     onError: (error: Error) => {
       toast({
         title: "שגיאה",
-        description: "שגיאה ביצירת המשתמש: " + error.message,
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -63,18 +37,8 @@ export const useUserMutations = () => {
 
   const updateUserMutation = useMutation({
     mutationFn: async (userData: Partial<User>) => {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          email: userData.email,
-          username: userData.username,
-          full_name: userData.full_name,
-          is_admin: userData.is_admin,
-        })
-        .eq('id', userData.id);
-
-      if (error) throw error;
-      return userData;
+      const { data } = await api.mutate(`/auth/users/${userData.id}`, userData, 'PUT');
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -89,8 +53,30 @@ export const useUserMutations = () => {
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data } = await api.mutate(`/auth/users/${userId}/reset-password`, {}, 'POST');
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ 
+        title: "הסיסמה אופסה בהצלחה",
+        description: `הסיסמה החדשה: ${data.password}`
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "שגיאה",
+        description: "שגיאה באיפוס הסיסמה: " + error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return {
     createUserMutation,
-    updateUserMutation
+    updateUserMutation,
+    resetPasswordMutation
   };
 };

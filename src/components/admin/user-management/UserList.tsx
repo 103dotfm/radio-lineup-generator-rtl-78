@@ -16,6 +16,7 @@ interface UserListProps {
   users: User[];
   onEdit: (user: User) => void;
   onDelete: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
   isLoading: boolean;
 }
 
@@ -23,6 +24,7 @@ const UserList: React.FC<UserListProps> = ({
   users, 
   onEdit, 
   onDelete,
+  onResetPassword,
   isLoading
 }) => {
   if (isLoading) {
@@ -67,6 +69,7 @@ const UserList: React.FC<UserListProps> = ({
               user={user}
               onEdit={onEdit}
               onDelete={onDelete}
+              onResetPassword={onResetPassword}
             />
           ))
         )}

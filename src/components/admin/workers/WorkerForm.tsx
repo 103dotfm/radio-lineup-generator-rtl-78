@@ -4,6 +4,10 @@ import { Worker } from '@/lib/supabase/workers';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { UserPlus, Key, UserCheck, AlertCircle, Info } from 'lucide-react';
 import { DIVISION_TRANSLATIONS } from '@/hooks/useWorkerDivisions';
 import { getDivisions } from '@/lib/supabase/divisions';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -19,16 +23,25 @@ interface WorkerFormProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDivisionsChange?: (divisions: string[]) => void;
   selectedDivisions?: string[];
+  onCreateUserAccount?: (email: string) => Promise<void>;
+  onResetPassword?: () => Promise<void>;
+  isCreatingUser?: boolean;
+  isResettingPassword?: boolean;
 }
 
 const WorkerForm: React.FC<WorkerFormProps> = ({ 
   formData, 
   onChange,
   onDivisionsChange,
-  selectedDivisions = []
+  selectedDivisions = [],
+  onCreateUserAccount,
+  onResetPassword,
+  isCreatingUser = false,
+  isResettingPassword = false
 }) => {
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState(formData.email || '');
 
   // Define the translation function BEFORE using it in useMemo
   const getDivisionTranslation = (name: string) => {
@@ -95,6 +108,18 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       onDivisionsChange([...selectedDivisions, divisionId]);
     } else {
       onDivisionsChange(selectedDivisions.filter(id => id !== divisionId));
+    }
+  };
+
+  const handleCreateUserAccount = async () => {
+    if (onCreateUserAccount && userEmail) {
+      await onCreateUserAccount(userEmail);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (onResetPassword) {
+      await onResetPassword();
     }
   };
 
@@ -188,6 +213,87 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           placeholder="https://example.com/photo.jpg"
         />
       </div>
+
+      {/* User Account Management Section */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-lg">חשבון משתמש</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!formData.user_id ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="user_email" className="text-right">אימייל למשתמש</Label>
+                <Input
+                  id="user_email"
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  className="col-span-3"
+                  placeholder="הזן כתובת אימייל עבור המשתמש"
+                />
+              </div>
+              
+              <Button 
+                onClick={handleCreateUserAccount}
+                disabled={isCreatingUser || !userEmail}
+                className="w-full"
+              >
+                {isCreatingUser ? (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4 animate-spin" />
+                    יוצר חשבון...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    יצירת חשבון משתמש
+                  </>
+                )}
+              </Button>
+              
+              <p className="text-sm text-gray-500 text-center">
+                יצירת חשבון תשלח לכתובת האימייל הזו סיסמה זמנית.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Alert>
+                <UserCheck className="h-4 w-4" />
+                <AlertDescription>
+                  לעובד זה יש חשבון משתמש פעיל במערכת.
+                </AlertDescription>
+              </Alert>
+              
+              <Button 
+                onClick={handleResetPassword}
+                disabled={isResettingPassword}
+                variant="outline"
+                className="w-full"
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Key className="mr-2 h-4 w-4 animate-spin" />
+                    מאפס סיסמה...
+                  </>
+                ) : (
+                  <>
+                    <Key className="mr-2 h-4 w-4" />
+                    איפוס סיסמה
+                  </>
+                )}
+              </Button>
+              
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  הסיסמה הזמנית תוצג רק פעם אחת בעת יצירת החשבון או איפוס הסיסמה.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

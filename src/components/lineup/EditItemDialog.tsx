@@ -92,7 +92,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   const handleSave = () => {
     const updatedItem = {
       ...item,
-      name: formState.name,
+      name: formState.name.trim(),
       title: formState.title,
       phone: formState.phone,
       duration: formState.duration,
@@ -128,7 +128,7 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="w-[90vw] max-w-[500px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-right">עריכת פריט</DialogTitle>
             <button 
@@ -140,132 +140,101 @@ const EditItemDialog = ({ open, onOpenChange, item, onSave }: EditItemDialogProp
             </button>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div className="w-full">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="text-right pb-2">
-                      <label className="text-sm font-medium">שם</label>
-                    </th>
-                    <th className="text-right pb-2">
-                      <label className="text-sm font-medium">קרדיט</label>
-                    </th>
-                    <th className="text-right pb-2">
-                      <label className="text-sm font-medium">טלפון</label>
-                    </th>
-                    <th className="w-[80px]"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td className="py-2">
-                      <Input 
-                        value={formState.name} 
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className="text-base" 
-                      />
-                    </td>
-                    <td className="py-2 pl-2">
-                      <Input 
-                        value={formState.title} 
-                        onChange={(e) => handleInputChange('title', e.target.value)}
-                        className="text-base" 
-                      />
-                    </td>
-                    <td className="py-2 pl-2">
-                      <Input 
-                        value={formState.phone} 
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className="text-base" 
-                      />
-                    </td>
-                    <td></td>
-                  </tr>
-                  {item.interviewees?.map((interviewee) => (
-                    <tr key={interviewee.id} className="border-t">
-                      <td className="py-2">
-                        <div className="text-base">{interviewee.name}</div>
-                      </td>
-                      <td className="py-2 pl-2">
-                        <div className="text-base">{interviewee.title}</div>
-                      </td>
-                      <td className="py-2 pl-2">
-                        <div className="text-base">{interviewee.phone}</div>
-                      </td>
-                      <td className="py-2 pl-2">
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleEditInterviewee(interviewee.id, {
-                              name: prompt('שם חדש:', interviewee.name) || interviewee.name,
-                              title: prompt('תפקיד חדש:', interviewee.title) || interviewee.title,
-                              phone: prompt('טלפון חדש:', interviewee.phone) || interviewee.phone,
-                            })}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleDeleteInterviewee(interviewee.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="mt-4">
-                <label className="text-sm font-medium text-right block mb-2">פרטים</label>
-                <BasicEditor
-                  content={formState.details}
-                  onChange={(html) => handleInputChange('details', html)}
-                  align="right"
+            {/* Form fields with improved mobile layout */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 items-center">
+                <label className="text-sm font-medium text-right sm:col-span-1">שם:</label>
+                <Input
+                  value={formState.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="sm:col-span-3"
+                  placeholder="שם הפריט"
                 />
               </div>
-
-              <div className="mt-4">
-                <label className="text-sm font-medium">משך בדקות</label>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 items-center">
+                <label className="text-sm font-medium text-right sm:col-span-1">כותרת:</label>
+                <Input
+                  value={formState.title}
+                  onChange={(e) => handleInputChange('title', e.target.value)}
+                  className="sm:col-span-3"
+                  placeholder="כותרת הפריט"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 items-center">
+                <label className="text-sm font-medium text-right sm:col-span-1">טלפון:</label>
+                <Input
+                  value={formState.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="sm:col-span-3"
+                  placeholder="מספר טלפון"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 items-center">
+                <label className="text-sm font-medium text-right sm:col-span-1">משך (דקות):</label>
                 <Input
                   type="number"
-                  min="1"
                   value={formState.duration}
-                  onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 5)}
-                  className="w-24"
+                  onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
+                  className="sm:col-span-3"
+                  placeholder="0"
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button onClick={handleClose} variant="outline">ביטול</Button>
-              <Button onClick={handleSave} disabled={!hasChanges}>שמור</Button>
+
+            {/* Details editor with improved mobile layout */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-right block">פרטים:</label>
+              <div className="border rounded-md">
+                <BasicEditor
+                  content={formState.details}
+                  onChange={(content) => handleInputChange('details', content)}
+                  placeholder="הוסף פרטים על הפריט..."
+                />
+              </div>
+            </div>
+
+            {/* Action buttons with improved mobile layout */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 pt-4">
+              <Button 
+                onClick={handleSave} 
+                className="w-full sm:w-auto"
+                disabled={!formState.name.trim()}
+              >
+                שמור
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleClose}
+                className="w-full sm:w-auto"
+              >
+                ביטול
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Unsaved changes dialog */}
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>לסגור בלי לשמור?</AlertDialogTitle>
+            <AlertDialogTitle>שינויים לא נשמרו</AlertDialogTitle>
             <AlertDialogDescription>
-              יש שינויים שלא נשמרו. האם אתה בטוח שברצונך לסגור את החלון בלי לשמור?
+              יש לך שינויים שלא נשמרו. האם אתה בטוח שברצונך לצאת?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowUnsavedDialog(false)}>
-              ביטול
+              המשך עריכה
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => {
               setShowUnsavedDialog(false);
               onOpenChange(false);
-            }} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
-              סגור בלי לשמור
+            }}>
+              צא ללא שמירה
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

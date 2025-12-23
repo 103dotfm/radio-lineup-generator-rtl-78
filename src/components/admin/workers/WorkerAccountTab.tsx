@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Worker } from '@/lib/supabase/workers';
-import { AlertCircle, UserPlus, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertCircle, UserPlus, RefreshCw, Loader2, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -108,15 +108,13 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
                 <p>המשתמש יכול להתחבר למערכת עם כתובת האימייל: <strong>{worker.email}</strong></p>
               </div>
               
-              {worker.password_readable && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>סיסמה זמנית</AlertTitle>
-                  <AlertDescription className="font-mono">
-                    {worker.password_readable}
-                  </AlertDescription>
-                </Alert>
-              )}
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>מידע</AlertTitle>
+                <AlertDescription>
+                  הסיסמה הזמנית תוצג רק פעם אחת בעת יצירת החשבון או איפוס הסיסמה.
+                </AlertDescription>
+              </Alert>
               
               <div>
                 <Button 
@@ -175,12 +173,12 @@ const WorkerAccountTab: React.FC<WorkerAccountTabProps> = ({
             </form>
           )}
           
-          {worker.user_id && !worker.password_readable && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>אזהרה</AlertTitle>
+          {worker.user_id && (
+            <Alert className="mt-4">
+              <Info className="h-4 w-4" />
+              <AlertTitle>מידע</AlertTitle>
               <AlertDescription>
-                אין גישה לסיסמה הנוכחית. יש ללחוץ על "איפוס סיסמה" כדי לייצר סיסמה חדשה.
+                הסיסמה מאוחסנת בצורה מוצפנת במערכת. יש ללחוץ על "איפוס סיסמה" כדי לייצר סיסמה חדשה.
               </AlertDescription>
             </Alert>
           )}

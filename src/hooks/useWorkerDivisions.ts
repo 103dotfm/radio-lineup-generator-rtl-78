@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/divisions';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 // Cache for divisions to prevent redundant API calls
 const divisionsCache: {
@@ -269,20 +270,84 @@ export const useFilterWorkersByDivision = (divisionId?: string) => {
         console.log(`useFilterWorkersByDivision: Loading workers for division ${divisionId}`);
         setLoading(true);
         
-        const { data, error } = await supabase
-          .from('worker_divisions')
-          .select('worker_id')
-          .eq('division_id', divisionId);
+        // First, get the division name to map to department
+        const { data: divisionData, error: divisionError } = await api.query('/divisions', {
+          where: { id: divisionId }
+        });
+        
+        if (divisionError) {
+          throw divisionError;
+        }
+        
+        const division = divisionData?.[0];
+        if (!division) {
+          console.log('Division not found');
+          setWorkers([]);
+          return;
+        }
+        
+        console.log(`useFilterWorkersByDivision: Found division: ${division.name}`);
+        
+        // Map division name to department patterns
+        const departmentPatterns = [];
+        if (division.name.toLowerCase().includes('producers') || 
+            division.name.toLowerCase().includes('מפיקים') ||
+            division.name.toLowerCase().includes('הפקה')) {
+          departmentPatterns.push('producers', 'מפיקים', 'הפקה', 'Production staff');
+          console.log(`useFilterWorkersByDivision: Found producers division, using patterns:`, departmentPatterns);
+        } else if (division.name.toLowerCase().includes('engineers') || 
+                   division.name.toLowerCase().includes('טכנאים') ||
+                   division.name.toLowerCase().includes('טכני')) {
+          departmentPatterns.push('engineers', 'טכנאים', 'טכני', 'Engineering staff');
+          console.log(`useFilterWorkersByDivision: Found engineers division, using patterns:`, departmentPatterns);
+        } else {
+          console.log(`useFilterWorkersByDivision: Unknown division type: ${division.name}`);
+        }
+        
+        // Get workers by department
+        let departmentWorkers: string[] = [];
+        if (departmentPatterns.length > 0) {
+          const { data: workersData, error: workersError } = await api.query('/workers', {
+            where: { 
+              or: departmentPatterns.map(pattern => ({ 'department ILIKE': `%${pattern}%` }))
+            },
+            select: 'id, name, department'
+          });
+          
+          if (workersError) {
+            throw workersError;
+          }
+          
+          if (workersData && Array.isArray(workersData)) {
+            departmentWorkers = workersData.map(worker => worker.id);
+            console.log(`useFilterWorkersByDivision: Found ${departmentWorkers.length} workers by department:`, workersData.map(w => ({ id: w.id, name: w.name, department: w.department })));
+          }
+        }
+        
+        // Also get workers from worker-divisions table
+        const { data, error } = await api.query('/worker-divisions', {
+          where: { division_id: divisionId },
+          select: 'worker_id'
+        });
           
         if (error) {
           throw error;
         }
         
-        console.log(`useFilterWorkersByDivision: Found ${data.length} workers for division ${divisionId}`);
-        setWorkers(data.map(item => item.worker_id));
+        let divisionWorkers: string[] = [];
+        if (data && Array.isArray(data)) {
+          divisionWorkers = data.map(item => item.worker_id);
+          console.log(`useFilterWorkersByDivision: Found ${divisionWorkers.length} workers by division assignment:`, divisionWorkers);
+        }
+        
+        // Combine both lists and remove duplicates
+        const allWorkers = [...new Set([...departmentWorkers, ...divisionWorkers])];
+        console.log(`useFilterWorkersByDivision: Total unique workers: ${allWorkers.length}`);
+        setWorkers(allWorkers);
       } catch (err: any) {
         console.error('Error loading workers by division:', err);
         setError(err.message || 'אירעה שגיאה בטעינת עובדים לפי מחלקה');
+        setWorkers([]);
       } finally {
         setLoading(false);
       }

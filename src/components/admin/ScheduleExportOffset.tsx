@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,7 @@ export function ScheduleExportOffset() {
 
   const loadCurrentOffset = async () => {
     const { data, error } = await supabase
-      .from('system_settings')
+      .from('system-settings')
       .select('value')
       .eq('key', 'schedule_data_offset')
       .single();
@@ -69,7 +68,7 @@ export function ScheduleExportOffset() {
     try {
       // Save offset setting
       const { error: settingError } = await supabase
-        .from('system_settings')
+        .from('system-settings')
         .upsert({
           key: 'schedule_data_offset',
           value: offset.toString(),

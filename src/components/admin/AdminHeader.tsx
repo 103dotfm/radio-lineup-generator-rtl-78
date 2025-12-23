@@ -2,7 +2,7 @@
 import React from 'react';
 import { H1 } from '@/components/ui/typography';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Calendar, Settings, Users } from 'lucide-react';
+import { BarChart3, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const AdminHeader = () => {
@@ -30,16 +30,6 @@ const AdminHeader = () => {
       </div>
       
       <div className="flex gap-2">
-        <Button variant="outline" onClick={goToStaffPage}>
-          <Users className="mr-2 h-4 w-4" />
-          ניהול עובדים
-        </Button>
-        
-        <Button variant="outline" onClick={() => navigate('/schedule')}>
-          <Calendar className="mr-2 h-4 w-4" />
-          לוח שידורים
-        </Button>
-        
         <Button variant="outline" onClick={() => navigate('/dashboard')}>
           <BarChart3 className="mr-2 h-4 w-4" />
           לוח בקרה

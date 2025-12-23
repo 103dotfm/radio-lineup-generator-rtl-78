@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabase";
 import { 
   EDITING_ROLE_ID, 
   PRODUCTION_ROLE_ID, 
@@ -6,6 +5,7 @@ import {
   EVENING_PRODUCTION_ROLE_ID 
 } from "@/components/admin/producers/components/AssignmentDialog";
 import { ProducerRole } from "@/lib/supabase/types/producer.types";
+import { apiClient } from "@/lib/api-client";
 
 // Ensure that all the required roles exist in the database with correct display order
 export const ensureProducerRoles = async () => {
@@ -18,46 +18,8 @@ export const ensureProducerRoles = async () => {
       { id: EVENING_PRODUCTION_ROLE_ID, name: 'הפקת ערב', display_order: 4 },
     ];
 
-    // Get existing roles
-    const { data: existingRoles, error: fetchError } = await supabase
-      .from('producer_roles')
-      .select('id');
-
-    if (fetchError) {
-      console.error("Error fetching existing roles:", fetchError);
-      throw fetchError;
-    }
-
-    // Find roles that don't exist yet
-    const existingIds = new Set(existingRoles?.map(role => role.id) || []);
-    const rolesToInsert = requiredRoles.filter(role => !existingIds.has(role.id));
-
-    // Insert only missing roles
-    if (rolesToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('producer_roles')
-        .insert(rolesToInsert);
-
-      if (insertError) {
-        console.error("Error inserting roles:", insertError);
-        throw insertError;
-      }
-    }
-
-    // Update all roles to ensure correct names and display order
-    for (const role of requiredRoles) {
-      const { error: updateError } = await supabase
-        .from('producer_roles')
-        .update({ name: role.name, display_order: role.display_order })
-        .eq('id', role.id);
-
-      if (updateError) {
-        console.error(`Error updating role ${role.name}:`, updateError);
-        throw updateError;
-      }
-    }
-
-    return true;
+    const response = await apiClient.post('/producer-roles/ensure', { roles: requiredRoles });
+    return response.data.success;
   } catch (error) {
     console.error("Error ensuring producer roles:", error);
     return false;
@@ -67,17 +29,8 @@ export const ensureProducerRoles = async () => {
 // Get producer roles ordered by display_order
 export const getProducerRoles = async (): Promise<ProducerRole[]> => {
   try {
-    const { data, error } = await supabase
-      .from('producer_roles')
-      .select('*')
-      .order('display_order');
-
-    if (error) {
-      console.error("Error fetching producer roles:", error);
-      throw error;
-    }
-
-    return data || [];
+    const response = await apiClient.get('/producer-roles');
+    return response.data;
   } catch (error) {
     console.error("Error fetching producer roles:", error);
     throw error;

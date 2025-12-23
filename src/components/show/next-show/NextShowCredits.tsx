@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Editor } from '@tiptap/react';
 import { X } from 'lucide-react';
+import { sanitizeCredits } from '@/utils/sanitize';
 
 interface NextShowCreditsProps {
   editor: Editor;
@@ -26,12 +27,18 @@ const NextShowCredits = ({
   const [isAdded, setIsAdded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
+  // Debug logging
+  console.log('NextShowCredits received:', { nextShowName, nextShowHost });
+
   const nextShowText = useMemo(() => {
-    const displayName = nextShowHost
+    // If show name and host name are the same, show only one
+    const displayName = nextShowHost && nextShowHost !== nextShowName
       ? `${nextShowName} עם ${nextShowHost}`
       : nextShowName;
     
-    return `<strong>אחרי החדשות: </strong>${displayName}`;
+    const text = `<strong>מיד אחרינו: </strong>${displayName}`;
+    console.log('NextShowCredits final text:', text);
+    return text;
   }, [nextShowName, nextShowHost]);
 
   // Check if current editor content already includes this credit line
@@ -117,6 +124,8 @@ const NextShowCredits = ({
     }, 250);
   };
 
+
+
   if (!isVisible || allCreditsAdded) {
     return null;
   }
@@ -124,7 +133,7 @@ const NextShowCredits = ({
   return (
     <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       <div className="flex justify-between items-center">
-        <div className="flex-1 text-right" dangerouslySetInnerHTML={{ __html: nextShowText }}></div>
+        <div className="flex-1 text-right" dangerouslySetInnerHTML={{ __html: sanitizeCredits(nextShowText || '') }}></div>
         <div className="flex items-center space-x-2 space-x-reverse rtl shrink-0 mr-2">
           {!isAdded ? (
             <>

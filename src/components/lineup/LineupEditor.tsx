@@ -1,4 +1,3 @@
-
 import React, { memo } from 'react';
 import { Editor } from '@tiptap/react';
 import HeaderSection from './editor/HeaderSection';
@@ -20,6 +19,7 @@ interface LineupEditorProps {
   onShare: () => Promise<void>;
   onPrint: () => void;
   onExportPDF: () => void;
+  onExportWord: () => void;
   onAdd: (item: any) => void;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -36,6 +36,7 @@ interface LineupEditorProps {
   nextShowName?: string;
   nextShowHost?: string;
   onRemoveNextShowLine?: () => void;
+  isBackupShow?: boolean;
 }
 
 // Using React.memo to prevent unnecessary re-renders
@@ -53,6 +54,7 @@ const LineupEditor = memo(({
   onShare,
   onPrint,
   onExportPDF,
+  onExportWord,
   onAdd,
   onDelete,
   onDurationChange,
@@ -68,7 +70,8 @@ const LineupEditor = memo(({
   isSaving,
   nextShowName,
   nextShowHost,
-  onRemoveNextShowLine
+  onRemoveNextShowLine,
+  isBackupShow
 }: LineupEditorProps) => {
   return (
     <div className="print:hidden lineup-editor">
@@ -83,6 +86,7 @@ const LineupEditor = memo(({
         showName={showName}
         showDate={showDate}
         onBackToDashboard={onBackToDashboard}
+        isBackupShow={isBackupShow}
       />
       
       <MainContent
@@ -99,6 +103,7 @@ const LineupEditor = memo(({
         onShare={onShare}
         onPrint={onPrint}
         onExportPDF={onExportPDF}
+        onExportWord={onExportWord}
         onAdd={onAdd}
         onDelete={onDelete}
         onDurationChange={onDurationChange}
@@ -114,6 +119,8 @@ const LineupEditor = memo(({
         nextShowName={nextShowName}
         nextShowHost={nextShowHost}
         onRemoveNextShowLine={onRemoveNextShowLine}
+        isBackupShow={isBackupShow}
+        isSaving={isSaving}
       />
 
       <FooterSection />

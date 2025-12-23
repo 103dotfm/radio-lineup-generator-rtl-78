@@ -1,0 +1,12 @@
+name = "l-103-fm-proxy"
+main = "cloudflare-worker.js"
+compatibility_date = "2025-01-10"
+
+[env.production]
+name = "l103fm-proxy"
+route = "l.103.fm/*"
+zone_id = "ead350236a5d0395aa1b104b0c27a7f4"
+account_id = "4cb8ea1fba2e7bb3ffc6ef86b7f0295d"
+
+[env.production.vars]
+TARGET_URL = "http://212.179.162.102:8080"

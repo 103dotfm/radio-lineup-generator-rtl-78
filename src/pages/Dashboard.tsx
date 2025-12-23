@@ -1,10 +1,12 @@
-
 import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { getShows, searchShows, deleteShow } from '@/lib/supabase/shows';
 import { SortOption } from '@/components/dashboard/types';
+import { Search as DashboardSearchIcon } from "lucide-react";
+import UserMenu from "@/components/UserMenu";
+import { Button } from '@/components/ui/button';
 
 // Import the extracted components
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -13,6 +15,8 @@ import DashboardSearch from '@/components/dashboard/DashboardSearch';
 import SearchResultsTable from '@/components/dashboard/SearchResultsTable';
 import ScheduleSection from '@/components/dashboard/ScheduleSection';
 import LineupCards from '@/components/dashboard/LineupCards';
+import { StorageWarning } from '@/components/dashboard/StorageWarning';
+import { getStorageUsage } from '@/lib/api/storage-management';
 
 const Dashboard = () => {
   const { isAdmin } = useAuth();
@@ -20,18 +24,33 @@ const Dashboard = () => {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const queryClient = useQueryClient();
-  
+
   // Refs for scroll functionality
   const scheduleRef = useRef<HTMLDivElement>(null);
   const lineupsRef = useRef<HTMLDivElement>(null);
-  
+
   const { data: shows, isLoading } = useQuery({
     queryKey: ['shows', searchQuery],
-    queryFn: () => searchQuery ? searchShows(searchQuery) : getShows(),
+    queryFn: () => {
+      if (searchQuery && searchQuery.trim().length >= 2) {
+        return searchShows(searchQuery);
+      } else {
+        return getShows(20); // Fetch at least 20 shows to ensure we have enough for the latest 6
+      }
+    },
     staleTime: 30000, // 30 seconds stale time to reduce frequent refetches
     refetchOnWindowFocus: true
   });
-  
+
+  // Fetch storage usage for admins
+  const { data: storageUsage } = useQuery({
+    queryKey: ['storage-usage-dashboard'],
+    queryFn: getStorageUsage,
+    enabled: isAdmin,
+    refetchInterval: 300000, // Refetch every 5 minutes
+    staleTime: 60000 // 1 minute stale time
+  });
+
   const deleteShowMutation = useMutation({
     mutationFn: (showId: string) => deleteShow(showId),
     onSuccess: () => {
@@ -50,26 +69,26 @@ const Dashboard = () => {
       console.error('Error deleting show:', error);
     }
   });
-  
+
   const handleDelete = (showId: string) => {
     if (window.confirm('האם אתה בטוח שברצונך למחוק ליינאפ זה?')) {
       deleteShowMutation.mutate(showId);
     }
   };
-  
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
-  
+
   // Scroll handlers
   const scrollToSchedule = () => {
     scheduleRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-  
+
   const scrollToLineups = () => {
     lineupsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-  
+
   const toggleSearch = () => {
     setIsSearchVisible(prev => !prev);
     if (!isSearchVisible) {
@@ -77,12 +96,12 @@ const Dashboard = () => {
       setSearchQuery('');
     }
   };
-  
+
   const sortedShows = React.useMemo(() => {
     if (!shows) return [];
-    
+
     console.log("Sorting shows, total count:", shows.length);
-    
+
     const sortedData = [...shows];
     switch (sortBy) {
       case 'date':
@@ -98,33 +117,46 @@ const Dashboard = () => {
         return sortedData.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
     }
   }, [shows, sortBy]);
-  
+
   return (
-    <div className="container mx-auto py-8 px-4">
-      <DashboardHeader isAdmin={isAdmin} />
+    <div className="space-y-8 animate-in">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">סקירה כללית</h1>
+        <div className="flex items-center gap-4">
+          <Button onClick={toggleSearch} variant="ghost" size="icon" className="rounded-full hover:bg-white/50">
+            <DashboardSearchIcon className="h-5 w-5" />
+          </Button>
+          <UserMenu />
+        </div>
+      </div>
 
-      {/* Navigation section */}
-      <DashboardNav 
-        onScrollToSchedule={scrollToSchedule}
-        onScrollToLineups={scrollToLineups}
-        onToggleSearch={toggleSearch}
-        searchVisible={isSearchVisible}
-      />
+      {/* Storage Warning for Admins */}
+      {isAdmin && storageUsage && (
+        <StorageWarning usagePercent={storageUsage.usePercent} />
+      )}
 
-      <DashboardSearch 
-        searchQuery={searchQuery} 
-        handleSearch={handleSearch} 
+      <DashboardSearch
+        searchQuery={searchQuery}
+        handleSearch={handleSearch}
         isVisible={isSearchVisible}
       />
 
-      {searchQuery && isSearchVisible && <SearchResultsTable shows={sortedShows} isLoading={isLoading && searchQuery.length > 0} />}
+      {searchQuery && searchQuery.trim().length >= 2 && isSearchVisible && (
+        <SearchResultsTable shows={sortedShows} isLoading={isLoading && searchQuery.length > 0} />
+      )}
+
+      {searchQuery && searchQuery.trim().length === 1 && isSearchVisible && (
+        <div className="mb-8 text-center py-8 text-gray-500">
+          אנא הקלד לפחות 2 תווים לחיפוש
+        </div>
+      )}
 
       <div ref={scheduleRef} className="mb-12">
         <ScheduleSection isAdmin={isAdmin} />
       </div>
 
       <div ref={lineupsRef} className="mb-12">
-        <LineupCards 
+        <LineupCards
           shows={sortedShows}
           isAdmin={isAdmin}
           handleDelete={handleDelete}
@@ -132,10 +164,6 @@ const Dashboard = () => {
           setSortBy={setSortBy}
           isLoading={isLoading}
         />
-      </div>
-      
-      <div className="flex justify-center mt-12">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12 opacity-50 dashboard-logo footer-logo" />
       </div>
     </div>
   );

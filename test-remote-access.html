@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Client Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        function log(message) {
+            const results = document.getElementById('results');
+            results.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        // Test API client configuration
+        log('Current URL: ' + window.location.href);
+        log('Hostname: ' + window.location.hostname);
+        log('Port: ' + window.location.port);
+        
+        // Test API call
+        const currentHost = window.location.hostname;
+        let apiUrl;
+        
+        if (currentHost === '212.179.162.102' || currentHost === 'logger.103.fm' || currentHost === 'l.103.fm') {
+            apiUrl = `http://${currentHost}:8080/api/auth/verify`;
+        } else if (currentHost === '192.168.10.121' || currentHost === 'localhost') {
+            apiUrl = `http://${currentHost}:5174/api/auth/verify`;
+        } else {
+            apiUrl = '/api/auth/verify';
+        }
+        
+        log('Testing API URL: ' + apiUrl);
+        
+        fetch(apiUrl, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            log('Response status: ' + response.status);
+            return response.json();
+        })
+        .then(data => {
+            log('Response data: ' + JSON.stringify(data));
+        })
+        .catch(error => {
+            log('Error: ' + error.message);
+        });
+    </script>
+</body>
+</html> 

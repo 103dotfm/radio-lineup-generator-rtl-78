@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from "@/components/ui/use-toast";
@@ -34,7 +33,7 @@ const TimezoneSettings = ({ timezoneOffset, setTimezoneOffset, serverTime }: Tim
       setSavingOffset(true);
 
       const { data: existingData, error: checkError } = await supabase
-        .from('system_settings')
+        .from('system-settings')
         .select('id')
         .eq('key', 'timezone_offset')
         .single();
@@ -47,14 +46,14 @@ const TimezoneSettings = ({ timezoneOffset, setTimezoneOffset, serverTime }: Tim
 
       if (existingData) {
         const { error } = await supabase
-          .from('system_settings')
+          .from('system-settings')
           .update({ value: timezoneOffset.toString() })
           .eq('key', 'timezone_offset');
         
         saveError = error;
       } else {
         const { error } = await supabase
-          .from('system_settings')
+          .from('system-settings')
           .insert({ key: 'timezone_offset', value: timezoneOffset.toString() });
         
         saveError = error;

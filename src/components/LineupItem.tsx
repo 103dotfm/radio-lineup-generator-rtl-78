@@ -1,6 +1,5 @@
-
 import React, { useEffect } from 'react';
-import { Draggable } from 'react-beautiful-dnd';
+import { Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '../contexts/AuthContext';
 import { useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -19,6 +18,15 @@ interface LineupItemProps {
   is_break?: boolean;
   is_note?: boolean;
   is_divider?: boolean;
+  interviewees?: Array<{
+    id: string;
+    item_id: string;
+    name: string;
+    title?: string;
+    phone?: string;
+    duration?: number;
+    created_at?: string;
+  }>;
   index: number;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -26,6 +34,7 @@ interface LineupItemProps {
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange?: (id: string, details: string) => void;
   showMinutes?: boolean;
+  isBackupShow?: boolean;
 }
 
 const LineupItem = ({
@@ -38,13 +47,15 @@ const LineupItem = ({
   is_break,
   is_note,
   is_divider,
+  interviewees,
   index,
   onDelete,
   onDurationChange,
   onEdit,
   onBreakTextChange,
   onDetailsChange,
-  showMinutes = false
+  showMinutes = false,
+  isBackupShow
 }: LineupItemProps) => {
   const { isAuthenticated } = useAuth();
 
@@ -98,6 +109,7 @@ const LineupItem = ({
               onBreakTextChange={onBreakTextChange}
               isAuthenticated={isAuthenticated}
               showMinutes={showMinutes}
+              isBackupShow={isBackupShow}
             />
           ) : isNote ? (
             <NoteItem
@@ -109,6 +121,7 @@ const LineupItem = ({
               onEdit={onEdit}
               isAuthenticated={isAuthenticated}
               showMinutes={showMinutes}
+              isBackupShow={isBackupShow}
             />
           ) : (
             <RegularItem
@@ -118,11 +131,13 @@ const LineupItem = ({
               details={details}
               phone={phone}
               duration={duration}
+              interviewees={interviewees}
               onDelete={onDelete}
               onDurationChange={onDurationChange}
               onEdit={onEdit}
               isAuthenticated={isAuthenticated}
               showMinutes={showMinutes}
+              isBackupShow={isBackupShow}
             />
           )}
         </tr>

@@ -1,4 +1,3 @@
-
 export interface Interviewee {
   id: string;
   item_id: string;
@@ -34,4 +33,5 @@ export interface Show {
   created_at?: string;
   slot_id?: string;
   items?: ShowItem[];
+  is_backup?: boolean;
 }

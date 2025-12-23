@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TableCell, TableRow } from "@/components/ui/table";
 import { User } from './types';
@@ -9,9 +8,10 @@ interface UserRowProps {
   user: User;
   onEdit: (user: User) => void;
   onDelete: (userId: string) => void;
+  onResetPassword: (userId: string) => void;
 }
 
-const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete }) => {
+const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete, onResetPassword }) => {
   // Determine if this user is linked to a worker account
   const isProducerAccount = user.id && (
     user.title?.toLowerCase().includes('producer') || 
@@ -26,7 +26,7 @@ const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete }) => {
       <TableCell>{user.full_name || '-'}</TableCell>
       <TableCell>
         {user.title ? user.title : '-'}
-        {user.id.startsWith('00000000-0000-0000-0000') && (
+        {user.id && user.id.startsWith('00000000-0000-0000-0000') && (
           <Badge variant="outline" className="ml-2">מערכת</Badge>
         )}
         {isProducerAccount && (
@@ -44,6 +44,7 @@ const UserRow: React.FC<UserRowProps> = ({ user, onEdit, onDelete }) => {
           user={user} 
           onEdit={onEdit} 
           onDelete={onDelete} 
+          onResetPassword={onResetPassword}
         />
       </TableCell>
     </TableRow>

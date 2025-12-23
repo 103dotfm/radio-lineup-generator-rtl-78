@@ -31,6 +31,7 @@ interface AssignmentDialogProps {
   updateProducerForm: (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => void;
   visibleWorkerCount: number;
   addWorkerForm: () => void;
+  removeWorkerForm?: (index: number) => void;
   selectedDays: number[];
   toggleDay: (day: number) => void;
   isPermanent: boolean;
@@ -51,6 +52,7 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
   updateProducerForm,
   visibleWorkerCount,
   addWorkerForm,
+  removeWorkerForm,
   selectedDays,
   toggleDay,
   isPermanent,
@@ -101,6 +103,8 @@ const AssignmentDialog: React.FC<AssignmentDialogProps> = ({
               role={producerForms[index]?.role || ""}
               additionalText={producerForms[index]?.additionalText}
               updateForm={updateProducerForm}
+              onDelete={removeWorkerForm}
+              canDelete={index > 0} // Only show delete button for 2nd, 3rd, 4th lines (index > 0)
               producers={producers}
               roles={sortedRoles}
             />

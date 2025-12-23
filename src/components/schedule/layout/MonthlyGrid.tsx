@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ScheduleSlot, DayNote } from '@/types/schedule';
 import TimeCell from './TimeCell';
@@ -13,6 +12,8 @@ interface MonthlyGridProps {
   isAdmin: boolean;
   isAuthenticated: boolean;
   dates: Date[];
+  isMasterSchedule?: boolean;
+  deletingSlots?: Set<string>;
 }
 
 const MonthlyGrid: React.FC<MonthlyGridProps> = ({
@@ -24,7 +25,9 @@ const MonthlyGrid: React.FC<MonthlyGridProps> = ({
   handleDeleteSlot,
   isAdmin,
   isAuthenticated,
-  dates
+  dates,
+  isMasterSchedule = false,
+  deletingSlots = new Set()
 }) => {
   return (
     <div className="grid grid-cols-[auto,repeat(7,1fr)]" dir="rtl">
@@ -57,6 +60,8 @@ const MonthlyGrid: React.FC<MonthlyGridProps> = ({
                 handleDeleteSlot={handleDeleteSlot}
                 isAdmin={isAdmin}
                 isAuthenticated={isAuthenticated}
+                isMasterSchedule={isMasterSchedule}
+                deletingSlots={deletingSlots}
               />
             );
           })}

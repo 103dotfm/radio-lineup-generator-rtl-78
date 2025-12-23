@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WorkerTable from './WorkerTable';
 import WorkerDialog from './WorkerDialog';
 import { useToast } from "@/hooks/use-toast";
 import { useWorkers } from '@/hooks/useWorkers';
 import { Worker, createWorker, updateWorker, deleteWorker } from '@/lib/supabase/workers';
-import { createProducerUser, resetProducerPassword } from '@/lib/supabase/producers/users';
+
 import { Button } from "@/components/ui/button";
 import { Plus } from 'lucide-react';
-import WorkerDivisionsTab from './WorkerDivisionsTab';
-import WorkerAccountTab from './WorkerAccountTab';
-import UserManagement from '@/components/admin/user-management/UserManagement';
-import { useScroll } from '@/contexts/ScrollContext';
+
+import { api } from '@/lib/api-client';
 
 const WorkerManagement = () => {
-  const { workers, loading, error, loadWorkers } = useWorkers();
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
-  const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("list");
+
   const [formData, setFormData] = useState({
     name: '',
     department: '',
@@ -30,17 +28,39 @@ const WorkerManagement = () => {
   });
   
   const { toast } = useToast();
-  const { saveScrollPosition, setIsScrollLocked } = useScroll();
   
-  // Prevent scroll jump when selecting a worker
-  useEffect(() => {
-    if (selectedWorker) {
-      setIsScrollLocked(true);
-      setTimeout(() => {
-        setIsScrollLocked(false);
-      }, 100);
+  const loadWorkers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await api.query('/workers');
+      if (error) throw error;
+      console.log('API response for workers:', data);
+      if (data && Array.isArray(data.data)) {
+        setWorkers(data.data);
+      } else if (data && Array.isArray(data)) {
+        setWorkers(data);
+      } else {
+        console.log('No valid data returned from workers query');
+        setWorkers([]);
+      }
+    } catch (err) {
+      console.error('Error loading workers:', err);
+      setError(err instanceof Error ? err : new Error('Failed to load workers'));
+      toast({
+        title: "שגיאה",
+        description: "שגיאה בטעינת רשימת העובדים",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [selectedWorker, setIsScrollLocked]);
+  };
+  
+  useEffect(() => {
+    loadWorkers();
+  }, []);
+  
+  // Removed legacy scroll lock logic tied to undefined selectedWorker
   
   const handleOpenDialog = (worker?: Worker) => {
     if (worker) {
@@ -84,25 +104,19 @@ const WorkerManagement = () => {
       }
       
       if (editingWorker) {
-        const updated = await updateWorker(editingWorker.id, formData);
-        if (updated) {
-          toast({
-            title: "עודכן בהצלחה",
-            description: "פרטי העובד עודכנו בהצלחה",
-          });
-        } else {
-          throw new Error("Failed to update worker");
-        }
+        const { data, error } = await api.mutate(`/workers/${editingWorker.id}`, formData, 'PUT');
+        if (error) throw error;
+        toast({
+          title: "עודכן בהצלחה",
+          description: "פרטי העובד עודכנו בהצלחה",
+        });
       } else {
-        const created = await createWorker(formData);
-        if (created) {
-          toast({
-            title: "נוסף בהצלחה",
-            description: "העובד נוסף בהצלחה",
-          });
-        } else {
-          throw new Error("Failed to create worker");
-        }
+        const { data, error } = await api.mutate('/workers', formData, 'POST');
+        if (error) throw error;
+        toast({
+          title: "נוסף בהצלחה",
+          description: "העובד נוסף בהצלחה",
+        });
       }
       
       setDialogOpen(false);
@@ -120,19 +134,16 @@ const WorkerManagement = () => {
   const handleDeleteWorker = async (id: string) => {
     if (confirm('האם אתה בטוח שברצונך למחוק את העובד?')) {
       try {
-        const success = await deleteWorker(id);
-        if (success) {
-          toast({
-            title: "נמחק בהצלחה",
-            description: "העובד נמחק בהצלחה",
-          });
-          loadWorkers();
-          if (selectedWorker?.id === id) {
-            setSelectedWorker(null);
-            setActiveTab("list");
-          }
-        } else {
-          throw new Error("Failed to delete worker");
+        const { error } = await api.mutate(`/workers/${id}`, {}, 'DELETE');
+        if (error) throw error;
+        toast({
+          title: "נמחק בהצלחה",
+          description: "העובד נמחק בהצלחה",
+        });
+        loadWorkers();
+        if (editingWorker?.id === id) {
+          setEditingWorker(null);
+          setDialogOpen(false);
         }
       } catch (error) {
         console.error('Error deleting worker:', error);
@@ -145,113 +156,107 @@ const WorkerManagement = () => {
     }
   };
   
-  const handleWorkerSelect = (worker: Worker) => {
-    // Save the current scroll position before changing the view
-    saveScrollPosition();
-    
-    // Set the selected worker and change tab
-    setSelectedWorker(worker);
-    setActiveTab("divisions");
-  };
+
   
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
   const handleCreateUserAccount = async (email: string) => {
-    if (!selectedWorker) return;
+    if (!editingWorker) return;
     
     try {
-      console.log(`Creating user account for worker ${selectedWorker.name} with email ${email}`);
+      setIsCreatingUser(true);
+      console.log(`Creating user account for worker ${editingWorker.name} with email ${email}`);
       
       // Show loading toast
       toast({
         title: "יוצר חשבון משתמש...",
-        description: `עבור ${selectedWorker.name}`,
+        description: `עבור ${editingWorker.name}`,
       });
       
-      // Implement better logging and error handling when creating a user account
-      const result = await createProducerUser(selectedWorker.id, email);
+      const { data, error } = await api.mutate(`/workers/${editingWorker.id}/create-user`, { email }, 'POST');
       
-      console.log("User creation result:", result);
+      if (error) throw error;
       
-      if (result.success) {
+      if (data.success) {
         toast({
           title: "משתמש נוצר בהצלחה",
-          description: `סיסמה זמנית: ${result.password}`,
+          description: `סיסמה זמנית: ${data.password}`,
         });
         await loadWorkers(); // Refresh data with await
+        
+        // Update the form data to reflect the new user account
+        setFormData(prev => ({
+          ...prev,
+          user_id: data.user_id || 'temp-user-id', // This will be updated when we reload
+          email: email
+        }));
       } else {
-        console.error("Failed to create user account:", result);
-        
-        // Display more detailed error if available
-        let errorDescription = result.message || "שגיאה ביצירת משתמש";
-        
-        if (result.details) {
-          console.error("Error details:", result.details);
-        }
-        
+        console.error("Failed to create user account:", data);
+        let errorDescription = data.message || "שגיאה ביצירת משתמש";
         toast({
           title: "שגיאה",
           description: errorDescription,
           variant: "destructive",
         });
-        
-        throw new Error(errorDescription); // Throw error to trigger the catch in WorkerAccountTab
+        throw new Error(errorDescription);
       }
     } catch (error) {
       console.error('Error creating user account:', error);
-      
       toast({
         title: "שגיאה",
-        description: `שגיאה ביצירת משתמש: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: "שגיאה ביצירת חשבון משתמש",
         variant: "destructive",
       });
-      
-      // Re-throw the error so the component can handle it and update its state
-      throw error;
+    } finally {
+      setIsCreatingUser(false);
     }
   };
   
   const handleResetPassword = async () => {
-    if (!selectedWorker) return;
+    if (!editingWorker) return;
     
     try {
-      console.log(`Resetting password for worker ${selectedWorker.name}`);
+      setIsResettingPassword(true);
+      console.log(`Resetting password for worker ${editingWorker.name}`);
       
       // Show loading toast
       toast({
         title: "מאפס סיסמה...",
-        description: `עבור ${selectedWorker.name}`,
+        description: `עבור ${editingWorker.name}`,
       });
       
-      const result = await resetProducerPassword(selectedWorker.id);
+      const { data, error } = await api.mutate(`/workers/${editingWorker.id}/reset-password`, {}, 'POST');
       
-      if (result.success) {
+      if (error) throw error;
+      
+      if (data.success) {
         toast({
-          title: "איפוס סיסמה בוצע בהצלחה",
-          description: `סיסמה חדשה: ${result.password}`,
+          title: "סיסמה אופסה",
+          description: `סיסמה חדשה: ${data.password}`,
         });
         await loadWorkers(); // Refresh data with await
+        
+        // Password is now only shown once in the toast, not stored in form data
       } else {
-        console.error("Failed to reset password:", result);
-        
-        // Display more detailed error if available
-        let errorDescription = result.message || "שגיאה באיפוס סיסמה";
-        
-        if (result.details) {
-          console.error("Error details:", result.details);
-        }
-        
+        console.error("Failed to reset password:", data);
+        let errorDescription = data.message || "שגיאה באיפוס סיסמה";
         toast({
           title: "שגיאה",
           description: errorDescription,
           variant: "destructive",
         });
+        throw new Error(errorDescription);
       }
     } catch (error) {
       console.error('Error resetting password:', error);
       toast({
         title: "שגיאה",
-        description: `שגיאה באיפוס סיסמה: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: "שגיאה באיפוס סיסמה",
         variant: "destructive",
       });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
   
@@ -260,71 +265,19 @@ const WorkerManagement = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>ניהול עובדים</CardTitle>
-          {activeTab === "list" && (
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
-              הוספת עובד
-            </Button>
-          )}
-          {activeTab !== "list" && activeTab !== "users" && selectedWorker && (
-            <div className="flex items-center">
-              <span className="mr-2 font-medium">עובד נבחר: {selectedWorker.name}</span>
-              <Button variant="outline" onClick={() => {
-                setSelectedWorker(null);
-                setActiveTab("list");
-              }}>
-                חזרה לרשימה
-              </Button>
-            </div>
-          )}
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" />
+            הוספת עובד
+          </Button>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="list">רשימת עובדים</TabsTrigger>
-              <TabsTrigger value="users">ניהול משתמשים</TabsTrigger>
-              {selectedWorker && (
-                <>
-                  <TabsTrigger value="divisions">שיוך מחלקות</TabsTrigger>
-                  <TabsTrigger value="account">חשבון משתמש</TabsTrigger>
-                </>
-              )}
-            </TabsList>
-            
-            <TabsContent value="list">
-              <WorkerTable 
-                workers={workers}
-                loading={loading}
-                error={error}
-                onEdit={handleOpenDialog}
-                onDelete={handleDeleteWorker}
-                onSelect={handleWorkerSelect}
-              />
-            </TabsContent>
-            
-            <TabsContent value="users">
-              <UserManagement />
-            </TabsContent>
-            
-            {selectedWorker && (
-              <>
-                <TabsContent value="divisions">
-                  <WorkerDivisionsTab 
-                    key={`divisions-${selectedWorker.id}`} 
-                    workerId={selectedWorker.id} 
-                  />
-                </TabsContent>
-                
-                <TabsContent value="account">
-                  <WorkerAccountTab 
-                    worker={selectedWorker}
-                    onCreateAccount={handleCreateUserAccount}
-                    onResetPassword={handleResetPassword}
-                  />
-                </TabsContent>
-              </>
-            )}
-          </Tabs>
+          <WorkerTable 
+            workers={workers}
+            loading={loading}
+            error={error}
+            onEdit={handleOpenDialog}
+            onDelete={handleDeleteWorker}
+          />
         </CardContent>
       </Card>
       
@@ -335,6 +288,10 @@ const WorkerManagement = () => {
         formData={formData}
         onFormChange={handleInputChange}
         onSubmit={handleSubmit}
+        onCreateUserAccount={handleCreateUserAccount}
+        onResetPassword={handleResetPassword}
+        isCreatingUser={isCreatingUser}
+        isResettingPassword={isResettingPassword}
         dialogTitle={editingWorker ? 'עריכת עובד' : 'הוספת עובד חדש'}
         submitLabel={editingWorker ? 'עדכון' : 'הוספה'}
       />

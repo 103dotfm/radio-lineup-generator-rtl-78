@@ -1,54 +1,56 @@
-
 import React from 'react';
-import EditModeDialog from './EditModeDialog';
 import ScheduleSlotDialog from './dialogs/ScheduleSlotDialog';
+import EditModeDialog from './EditModeDialog';
 import { ScheduleSlot } from '@/types/schedule';
 
 interface ScheduleDialogsProps {
   isAdmin: boolean;
   showSlotDialog: boolean;
   showEditModeDialog: boolean;
-  editingSlot?: ScheduleSlot;
-  isMasterSchedule: boolean;
+  editingSlot: ScheduleSlot | null;
+  isMasterSchedule?: boolean;
+  selectedDate?: Date;
   onCloseSlotDialog: () => void;
   onCloseEditModeDialog: () => void;
   onEditCurrent: () => void;
   onEditAll: () => void;
-  onSaveSlot: (slotData: any) => Promise<void>;
+  onSaveSlot: (slotData: any) => Promise<any>;
 }
 
-const ScheduleDialogs = ({
+export default function ScheduleDialogs({
   isAdmin,
   showSlotDialog,
   showEditModeDialog,
   editingSlot,
-  isMasterSchedule,
+  isMasterSchedule = false,
+  selectedDate,
   onCloseSlotDialog,
   onCloseEditModeDialog,
   onEditCurrent,
   onEditAll,
   onSaveSlot
-}: ScheduleDialogsProps) => {
-  if (!isAdmin) return null;
-
+}: ScheduleDialogsProps) {
   return (
     <>
-      <EditModeDialog 
-        isOpen={showEditModeDialog} 
-        onClose={onCloseEditModeDialog} 
-        onEditCurrent={onEditCurrent} 
-        onEditAll={onEditAll} 
+      {/* Schedule Slot Dialog */}
+      <ScheduleSlotDialog
+        isOpen={showSlotDialog}
+        onClose={onCloseSlotDialog}
+        onSave={onSaveSlot}
+        editingSlot={editingSlot}
+        isMasterSchedule={isMasterSchedule}
+        selectedDate={selectedDate}
       />
 
-      <ScheduleSlotDialog 
-        isOpen={showSlotDialog} 
-        onClose={onCloseSlotDialog} 
-        onSave={onSaveSlot} 
-        editingSlot={editingSlot} 
-        isMasterSchedule={isMasterSchedule} 
-      />
+      {/* Edit Mode Dialog - Only show for weekly schedule, not for master schedule */}
+      {!isMasterSchedule && showEditModeDialog && (
+        <EditModeDialog
+          isOpen={showEditModeDialog}
+          onClose={onCloseEditModeDialog}
+          onEditCurrent={onEditCurrent}
+          onEditAll={onEditAll}
+        />
+      )}
     </>
   );
-};
-
-export default ScheduleDialogs;
+}

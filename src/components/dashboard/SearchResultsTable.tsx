@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import { Show } from "@/types/show";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Archive } from "lucide-react";
 
 interface SearchResultsTableProps {
   shows: Show[];
@@ -61,12 +61,22 @@ const SearchResultsTable = ({ shows, isLoading = false }: SearchResultsTableProp
         </TableHeader>
         <TableBody>
           {shows.flatMap(show => 
-            show.items?.filter(item => !item.is_break && !item.is_note).map((item, index) => (
-              <TableRow key={`${show.id}-${index}`}>
+            show.items?.filter(item => !item.is_break && !item.is_note).map((item) => (
+              <TableRow key={`${show.id}-${item.id}`}>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>{item.title}</TableCell>
                 <TableCell>{item.phone}</TableCell>
-                <TableCell>{show.name}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{show.name}</span>
+                    {show.is_backup && (
+                      <div className="flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        <Archive className="h-3 w-3" />
+                        <span>Lovable</span>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   {show.date ? format(new Date(show.date), 'dd/MM/yyyy') : 'ללא תאריך'}
                 </TableCell>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createProducerUser, resetProducerPassword } from "@/lib/supabase/producers";
+
 import WorkerDivisionsManager from './WorkerDivisionsManager';
 import { UserIcon, Key, Mail, AtSign } from 'lucide-react';
 

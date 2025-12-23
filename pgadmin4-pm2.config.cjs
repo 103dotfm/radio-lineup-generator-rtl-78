@@ -1,0 +1,1 @@
+module.exports = { apps: [{ name: "pgadmin4", script: "/usr/pgadmin4/web/pgAdmin4.py", interpreter: "/usr/pgadmin4/venv/bin/python3", env: { PGADMIN_LISTEN_PORT: "5050", PGADMIN_DEFAULT_EMAIL: "yaniv@103.fm", PGADMIN_DEFAULT_PASSWORD: "admin123" } }] }

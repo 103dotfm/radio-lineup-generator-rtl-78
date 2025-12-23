@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,21 +17,29 @@ interface ScheduleSlotDialogProps {
   onSave: (slotData: any) => void;
   editingSlot?: any;
   isMasterSchedule?: boolean;
+  scheduleSlots?: any[];
+  refetchSlots?: () => void;
+  selectedDate?: Date;
 }
 
-export default function ScheduleSlotDialog({ 
-  isOpen, 
-  onClose, 
-  onSave, 
+const ScheduleSlotDialog: React.FC<ScheduleSlotDialogProps> = ({
+  isOpen,
+  onClose,
+  onSave,
   editingSlot,
-  isMasterSchedule = false
-}: ScheduleSlotDialogProps) {
+  isMasterSchedule = false,
+  scheduleSlots = [],
+  refetchSlots,
+  selectedDate
+}) => {
   return (
-    <Dialog open={isOpen} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[425px] z-[9999] bg-white">
-        <DialogHeader>
-          <DialogTitle>{editingSlot ? 'ערוך משבצת' : 'הוסף משבצת'}</DialogTitle>
-          <DialogDescription>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[900px] w-[95vw] max-h-[90vh] overflow-y-auto z-[9999] bg-white">
+        <DialogHeader className="items-end text-right">
+          <DialogTitle className="w-full text-right">
+            {editingSlot ? 'ערוך משבצת שידור' : 'הוסף משבצת שידור'}
+          </DialogTitle>
+          <DialogDescription className="w-full text-right">
             {editingSlot ? 'ערוך את פרטי המשבצת' : 'הוסף משבצת חדשה ללוח הזמנים'}
           </DialogDescription>
         </DialogHeader>
@@ -40,8 +48,13 @@ export default function ScheduleSlotDialog({
           onClose={onClose}
           editingSlot={editingSlot}
           isMasterSchedule={isMasterSchedule}
+          scheduleSlots={scheduleSlots}
+          refetchSlots={refetchSlots}
+          selectedDate={selectedDate}
         />
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default ScheduleSlotDialog;

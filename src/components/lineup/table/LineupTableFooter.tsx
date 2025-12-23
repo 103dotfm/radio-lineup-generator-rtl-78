@@ -11,15 +11,15 @@ const LineupTableFooter: React.FC<LineupTableFooterProps> = ({
   totalMinutes
 }) => {
   return (
-    <tfoot>
+    <tfoot className="bg-slate-50/80 backdrop-blur-md">
       <tr>
-        <td colSpan={isAuthenticated ? 4 : 3} className="py-1 sm:py-2 px-2 sm:px-4 text-right font-bold border border-gray-200 text-xs sm:text-sm">
+        <td colSpan={isAuthenticated ? 4 : 3} className="py-4 px-6 text-right font-black text-slate-800 text-lg rounded-br-2xl border-t border-slate-200">
           סה״כ דקות
         </td>
-        <td className="py-1 sm:py-2 px-1 sm:px-4 text-center font-bold border border-gray-200 text-xs sm:text-sm">
+        <td className="py-4 px-4 text-center font-black text-primary text-xl border-t border-slate-200">
           {totalMinutes}
         </td>
-        <td className="py-1 sm:py-2 px-1 sm:px-4 border border-gray-200"></td>
+        <td className="py-4 px-4 rounded-bl-2xl border-t border-slate-200"></td>
       </tr>
     </tfoot>
   );

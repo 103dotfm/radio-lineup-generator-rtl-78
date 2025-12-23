@@ -81,9 +81,8 @@ export const useAssignmentSubmission = ({
       const newAssignments: ProducerAssignment[] = [];
       
       // Format the week start date once for consistent use throughout the function
-      const formattedWeekStart = format(currentWeek, 'yyyy-MM-dd');
-      console.log("Submitting assignments for week starting:", formattedWeekStart);
-      console.log("Is permanent assignment:", isPermanent);
+      // Use full ISO string format to match database expectations
+      const formattedWeekStart = currentWeek.toISOString();
       
       // Process each valid form entry
       for (const form of validForms) {
@@ -94,43 +93,74 @@ export const useAssignmentSubmission = ({
         const workerDetails = producers.find(p => p.id === form.workerId) || 
           { id: form.workerId, name: 'עובד לא ידוע', position: null, email: null };
         
-        // Handle permanent assignments
+        // Handle permanent assignments (recurring)
         if (isPermanent) {
           try {
-            console.log(`Creating permanent assignment for worker ${form.workerId} with role ${roleName} starting from ${formattedWeekStart}`);
+            // For permanent assignments, we need to create recurring assignments for all selected days
+            // If no days are selected, use the current slot's day
+            const daysToProcess = selectedDays.length > 0 ? selectedDays : [currentSlot.day_of_week];
             
-            // Pass the current week's start date to ensure the recurring assignment
-            // only applies from this week forward
-            const success = await createRecurringProducerAssignment(
-              currentSlot.id,
-              form.workerId,
-              roleName,
-              formattedWeekStart // Pass the current week start date
-            );
-            
-            if (success) {
-              // Create a placeholder assignment to update the UI
-              const newAssignment: ProducerAssignment = {
-                id: `temp-${Date.now()}-${Math.random()}`,
-                slot_id: currentSlot.id,
-                worker_id: form.workerId,
-                role: roleName,
-                week_start: formattedWeekStart,
-                is_recurring: true,
-                notes: form.additionalText || null,
-                created_at: new Date().toISOString(),
-                worker: workerDetails,
-                slot: currentSlot
-              };
+            for (const dayIndex of daysToProcess) {
+              const currentTime = currentSlot.start_time;
+              const key = `${dayIndex}-${currentTime}`;
+              const slotsForDay = slotsByDayAndTime[key] || [];
               
-              newAssignments.push(newAssignment);
-              successCount++;
+              // If no slots found for this day/time, skip
+              if (slotsForDay.length === 0) {
+                continue;
+              }
+              
+              // Create recurring assignment for each slot on this day
+              for (const slot of slotsForDay) {
+                if (!slot || !slot.id) continue;
+                
+                // For recurring assignments, use the slot's week start date, not the currently viewed week
+                // This ensures the assignment starts from the week it was created, not from a past week
+                const slotWeekStart = new Date(currentWeek);
+                // Adjust to the slot's day of week
+                const currentDayOfWeek = slotWeekStart.getDay(); // 0 = Sunday
+                const targetDayOfWeek = dayIndex; // 0 = Sunday
+                const daysDiff = targetDayOfWeek - currentDayOfWeek;
+                slotWeekStart.setDate(slotWeekStart.getDate() + daysDiff);
+                
+                // Format as YYYY-MM-DD for consistent storage
+                const slotWeekStartFormatted = slotWeekStart.toISOString().split('T')[0];
+                
+                const success = await createRecurringProducerAssignment(
+                  slot.id,
+                  form.workerId,
+                  roleName,
+                  slotWeekStartFormatted, // Use the slot's week start date
+                  slot.day_of_week,
+                  slot.start_time,
+                  slot.show_name
+                );
+                
+                if (success) {
+                  // Create a placeholder assignment to update the UI
+                  const newAssignment: ProducerAssignment = {
+                    id: `temp-${Date.now()}-${Math.random()}`,
+                    slot_id: slot.id,
+                    worker_id: form.workerId,
+                    role: roleName,
+                    week_start: slotWeekStartFormatted,
+                    is_recurring: true,
+                    notes: form.additionalText || null,
+                    created_at: new Date().toISOString(),
+                    worker: workerDetails,
+                    slot: slot
+                  };
+                  
+                  newAssignments.push(newAssignment);
+                  successCount++;
+                }
+              }
             }
           } catch (error) {
             console.error("Error creating permanent assignment:", error);
           }
         } 
-        // Handle multi-day assignments
+        // Handle multi-day assignments (non-recurring)
         else if (selectedDays.length > 0) {
           // Handle current slot if its day is selected
           if (selectedDays.includes(currentSlot.day_of_week)) {
@@ -246,10 +276,16 @@ export const useAssignmentSubmission = ({
         role: roleName,
         week_start: weekStart,
         is_recurring: false,
-        notes: notes || undefined
+        notes: notes || undefined,
+        // Include slot characteristics for robust matching
+        day_of_week: slotDetails?.day_of_week,
+        start_time: slotDetails?.start_time,
+        show_name: slotDetails?.show_name,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
-      console.log(`Creating single assignment for worker ${workerId} with role ${roleName}`);
+
       const result = await createProducerAssignment(assignment);
       
       // If we have worker details, enhance the result for UI display

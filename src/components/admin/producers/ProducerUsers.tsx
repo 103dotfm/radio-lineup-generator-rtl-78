@@ -23,12 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { 
-  Worker,
-  getProducers, 
-  createProducerUser, 
-  resetProducerPassword 
-} from '@/lib/supabase/producers';
+import { Worker } from '@/lib/supabase/workers';
+import { api } from '@/lib/api-client';
 
 const ProducerUsers: React.FC = () => {
   const [producers, setProducers] = useState<Worker[]>([]);
@@ -48,8 +44,9 @@ const ProducerUsers: React.FC = () => {
   const loadProducers = async () => {
     setIsLoading(true);
     try {
-      const producersData = await getProducers();
-      setProducers(producersData || []);
+      const { data, error } = await api.query('/workers', 'GET');
+      if (error) throw error;
+      setProducers(data || []);
     } catch (error) {
       console.error("Error loading producers:", error);
       toast({
@@ -76,10 +73,9 @@ const ProducerUsers: React.FC = () => {
     setErrorMessage(null);
     
     try {
-      console.log("Creating user for producer:", selectedProducer.id, "with email:", email);
       
-      const result = await createProducerUser(selectedProducer.id, email);
-      console.log("Create producer user result:", result);
+      const { data: result, error } = await api.mutate(`/workers/${selectedProducer.id}/create-user`, { email }, 'POST');
+      if (error) throw error;
       
       if (result.success && result.password) {
         setGeneratedPassword(result.password);
@@ -123,7 +119,8 @@ const ProducerUsers: React.FC = () => {
       setIsCreating(true);
       setErrorMessage(null);
       
-      const result = await resetProducerPassword(producer.id);
+      const { data: result, error } = await api.mutate(`/workers/${producer.id}/reset-password`, {}, 'POST');
+      if (error) throw error;
       
       if (result.success && result.password) {
         setSelectedProducer(producer);
@@ -204,13 +201,9 @@ const ProducerUsers: React.FC = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  {producer.password_readable ? (
-                    <Badge variant="outline" className="font-mono">
-                      {producer.password_readable}
-                    </Badge>
-                  ) : (
-                    '-'
-                  )}
+                  <Badge variant="outline" className="text-gray-500">
+                    מוצפן
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   {producer.user_id ? (

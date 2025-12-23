@@ -5,9 +5,61 @@ import StarterKit from '@tiptap/starter-kit';
 import { format } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import { toast } from "sonner";
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType } from 'docx';
+import { saveAs } from 'file-saver';
+
+// Helper function to convert HTML to TextRun array for proper formatting
+const convertHtmlToTextRuns = (html: string): TextRun[] => {
+  if (!html) return [new TextRun({ text: "" })];
+  
+  // Split by <br> tags to handle line breaks
+  const parts = html.split(/<br\s*\/?>/gi);
+  const textRuns: TextRun[] = [];
+  
+  parts.forEach((part, index) => {
+    if (index > 0) {
+      textRuns.push(new TextRun({ text: "\n", break: 1 }));
+    }
+    
+    // Remove HTML tags and convert entities
+    const cleanText = part
+      .replace(/<[^>]*>/g, '') // Remove all HTML tags
+      .replace(/&nbsp;/g, ' ') // Convert &nbsp; to space
+      .replace(/&amp;/g, '&') // Convert &amp; to &
+      .replace(/&lt;/g, '<') // Convert &lt; to <
+      .replace(/&gt;/g, '>') // Convert &gt; to >
+      .replace(/&quot;/g, '"') // Convert &quot; to "
+      .trim();
+    
+    if (cleanText) {
+      textRuns.push(new TextRun({ 
+        text: cleanText,
+        font: "Arial"
+      }));
+    }
+  });
+  
+  return textRuns.length > 0 ? textRuns : [new TextRun({ text: "" })];
+};
+
+// Helper function to convert HTML to plain text (for simple cases)
+const convertHtmlToText = (html: string): string => {
+  if (!html) return "";
+  
+  return html
+    .replace(/<br\s*\/?>/gi, '\n') // Convert <br> and <br /> to line breaks
+    .replace(/<[^>]*>/g, '') // Remove all HTML tags
+    .replace(/&nbsp;/g, ' ') // Convert &nbsp; to space
+    .replace(/&amp;/g, '&') // Convert &amp; to &
+    .replace(/&lt;/g, '<') // Convert &lt; to <
+    .replace(/&gt;/g, '>') // Convert &gt; to >
+    .replace(/&quot;/g, '"') // Convert &quot; to "
+    .trim();
+};
+import { v4 as uuidv4 } from 'uuid';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { saveShow, getShowWithItems, getShowsByDate } from '@/lib/supabase/shows';
-import { DropResult } from 'react-beautiful-dnd';
+import { DropResult } from '@hello-pangea/dnd';
 import LineupEditor from '../components/lineup/LineupEditor';
 import PrintPreview from '../components/lineup/PrintPreview';
 import { getNextShow } from '@/lib/getNextShow';
@@ -29,6 +81,7 @@ const Index = () => {
   const [initialState, setInitialState] = useState(null);
   const [showMinutes, setShowMinutes] = useState(false);
   const [nextShowInfo, setNextShowInfo] = useState<{ name: string; host?: string } | null>(null);
+  const [isBackupShow, setIsBackupShow] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const isNewLineup = !showId;
 
@@ -52,6 +105,9 @@ const Index = () => {
     if (showDate && showTime) {
       try {
         console.log('Fetching next show info for exact date:', format(showDate, 'yyyy-MM-dd'), showTime);
+        console.log('showDate object:', showDate);
+        console.log('showDate.toISOString():', showDate.toISOString());
+        console.log('showDate.getTime():', showDate.getTime());
         const nextShow = await getNextShow(showDate, showTime);
         console.log('Next show info result:', nextShow);
         setNextShowInfo(nextShow);
@@ -64,6 +120,8 @@ const Index = () => {
 
   useEffect(() => {
     if (isNewLineup && state) {
+      console.log('Processing new lineup state:', state);
+      
       let displayName;
       if (state.generatedShowName) {
         displayName = state.generatedShowName;
@@ -72,6 +130,12 @@ const Index = () => {
           ? state.hostName
           : `${state.showName} עם ${state.hostName}`;
       }
+      
+      console.log('Setting show name:', displayName);
+      console.log('Setting show time:', state.time);
+      console.log('Setting show date:', state.date);
+      console.log('Setting show date (ISO):', state.date?.toISOString());
+      console.log('Setting show date (day of week):', state.date?.getDay());
       
       setShowName(displayName);
       setShowTime(state.time || '');
@@ -94,17 +158,25 @@ const Index = () => {
     const loadShow = async () => {
       if (showId) {
         try {
+          console.log('Loading show with ID:', showId);
           const result = await getShowWithItems(showId);
+          console.log('Result from getShowWithItems:', result);
+          
           if (!result) {
             toast.error('התוכנית לא נמצאה');
             navigate('/');
             return;
           }
           const { show, items: showItems } = result;
+          console.log('Show data:', show);
+          console.log('Show items count:', showItems?.length);
+          console.log('Show items:', showItems);
+          
           if (show) {
             setShowName(show.name);
             setShowTime(show.time);
             setShowDate(show.date ? new Date(show.date) : new Date());
+            setIsBackupShow(show.is_backup || false);
             if (editor) {
               editor.commands.setContent(show.notes || '');
             }
@@ -117,6 +189,7 @@ const Index = () => {
             });
           }
           if (showItems) {
+            console.log('Setting items in state:', showItems);
             setItems(showItems);
           }
           setHasUnsavedChanges(false);
@@ -270,7 +343,7 @@ const Index = () => {
     } else {
       const item = {
         ...newItem,
-        id: crypto.randomUUID(),
+        id: uuidv4(),
       };
       setItems([...items, item]);
     }
@@ -287,11 +360,37 @@ const Index = () => {
   const handleShare = useCallback(async () => {
     try {
       const shareUrl = `${window.location.origin}/print/${showId}${showMinutes ? '?minutes=true' : ''}`;
-      await navigator.clipboard.writeText(shareUrl);
-      toast.success('קישור לליינאפ הועתק ללוח');
+      
+      // Try modern Clipboard API first
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('קישור לליינאפ הועתק ללוח');
+      } else {
+        // Fallback to older method
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          toast.success('קישור לליינאפ הועתק ללוח');
+        } else {
+          // Last resort: show the URL to the user
+          toast.error('לא ניתן להעתיק אוטומטית. הקישור: ' + shareUrl);
+        }
+      }
     } catch (error) {
       console.error('Error sharing:', error);
-      toast.error('שגיאה בשיתוף הליינאפ');
+      // Fallback: show the URL to the user
+      const shareUrl = `${window.location.origin}/print/${showId}${showMinutes ? '?minutes=true' : ''}`;
+      toast.error('לא ניתן להעתיק אוטומטית. הקישור: ' + shareUrl);
     }
   }, [showId, showMinutes]);
 
@@ -311,6 +410,174 @@ const Index = () => {
       toast.error('נא לשמור את הליינאפ לפני יצירת PDF');
     }
   }, [showId, showMinutes]);
+
+  const handleExportWord = useCallback(async () => {
+    if (!showId) {
+      toast.error('נא לשמור את הליינאפ לפני יצירת Word');
+      return;
+    }
+
+    try {
+      // Create table rows
+      const tableRows = [
+        // Header row
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({ text: "פרטים", bold: true, size: 24, font: "Arial" })],
+                alignment: AlignmentType.RIGHT
+              })]
+            }),
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({ text: "מרואיינ/ת", bold: true, size: 24, font: "Arial" })],
+                alignment: AlignmentType.RIGHT
+              })]
+            }),
+            ...(showMinutes ? [new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({ text: "דק'", bold: true, size: 24, font: "Arial" })],
+                alignment: AlignmentType.CENTER
+              })]
+            })] : [])
+          ]
+        })
+      ];
+
+      // Add data rows
+      items.forEach((item) => {
+        if (!item.is_divider) {
+          if (item.is_break) {
+            tableRows.push(
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({
+                      children: [new TextRun({ text: item.name, bold: true, size: 22, font: "Arial" })],
+                      alignment: AlignmentType.CENTER
+                    })],
+                    columnSpan: showMinutes ? 3 : 2
+                  })
+                ]
+              })
+            );
+          } else if (item.is_note) {
+            tableRows.push(
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({
+                      children: convertHtmlToTextRuns(item.details || ""),
+                      alignment: AlignmentType.CENTER
+                    })],
+                    columnSpan: showMinutes ? 3 : 2
+                  })
+                ]
+              })
+            );
+          } else {
+            // Regular item
+            tableRows.push(
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph({
+                      children: convertHtmlToTextRuns(item.details || ""),
+                      alignment: AlignmentType.RIGHT
+                    })]
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({
+                      children: [
+                        new TextRun({ text: item.name, bold: true, size: 20, font: "Arial" }),
+                        new TextRun({ text: "\n", break: 1 }),
+                        new TextRun({ text: item.title || "", size: 18, font: "Arial" })
+                      ],
+                      alignment: AlignmentType.RIGHT
+                    })]
+                  }),
+                  ...(showMinutes ? [new TableCell({
+                    children: [new Paragraph({
+                      children: [new TextRun({ text: item.duration?.toString() || "", size: 20, font: "Arial" })],
+                      alignment: AlignmentType.CENTER
+                    })]
+                  })] : [])
+                ]
+              })
+            );
+          }
+        }
+      });
+
+      // Add total minutes row if showMinutes is enabled
+      if (showMinutes) {
+        const totalMinutes = items.reduce((total, item) => total + (item.duration || 0), 0);
+        tableRows.push(
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({ text: "סה״כ דקות", bold: true, size: 22, font: "Arial" })],
+                  alignment: AlignmentType.RIGHT
+                })],
+                columnSpan: 2
+              }),
+              new TableCell({
+                children: [new Paragraph({
+                  children: [new TextRun({ text: totalMinutes.toString(), bold: true, size: 22, font: "Arial" })],
+                  alignment: AlignmentType.CENTER
+                })]
+              })
+            ]
+          })
+        );
+      }
+
+      // Create the document with RTL support
+      const doc = new Document({
+        sections: [{
+          children: [
+            // Title
+            new Paragraph({
+              children: [new TextRun({ text: showName, bold: true, size: 36, font: "Arial" })],
+              alignment: AlignmentType.CENTER
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: `${showTime} // ${format(showDate, 'dd.MM.yyyy')}`, size: 24, font: "Arial" })],
+              alignment: AlignmentType.CENTER
+            }),
+            new Paragraph({ children: [new TextRun({ text: "" })] }), // Empty line
+            
+            // Table
+            new Table({
+              rows: tableRows,
+              width: { size: 100, type: WidthType.PERCENTAGE }
+            }),
+            
+            // Credits if available
+            ...(editor?.getHTML() ? [
+              new Paragraph({ children: [new TextRun({ text: "" })] }), // Empty line
+              new Paragraph({
+                children: convertHtmlToTextRuns(editor.getHTML()),
+                alignment: AlignmentType.CENTER
+              })
+            ] : [])
+          ]
+        }]
+      });
+
+      // Generate and download the document
+      const blob = await Packer.toBlob(doc);
+      const fileName = `${showName || 'lineup'}-${format(showDate, 'dd-MM-yyyy')}.docx`;
+      saveAs(blob, fileName);
+      
+      toast.success('הקובץ Word נוצר בהצלחה');
+    } catch (error) {
+      console.error('Error creating Word document:', error);
+      toast.error('שגיאה ביצירת קובץ Word');
+    }
+  }, [showId, showName, showDate, showTime, items, showMinutes, editor]);
 
   const handleNameChange = useCallback((name: string) => {
     setShowName(name);
@@ -368,7 +635,7 @@ const Index = () => {
 
   const handleAddDivider = useCallback(() => {
     const newDivider = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: "שעה שנייה",
       position: items.length,
       is_divider: true,
@@ -403,6 +670,8 @@ const Index = () => {
     setTimeout(fetchNextShowInfo, 100);
   }, [fetchNextShowInfo]);
 
+
+
   return (
     <>
       <div className="container mx-auto py-8 px-4">
@@ -420,6 +689,7 @@ const Index = () => {
           onShare={handleShare}
           onPrint={handlePrint}
           onExportPDF={handleExportPDF}
+          onExportWord={handleExportWord}
           onAdd={handleAdd}
           onDelete={handleDelete}
           onDurationChange={handleDurationChange}
@@ -436,6 +706,7 @@ const Index = () => {
           nextShowName={nextShowInfo?.name}
           nextShowHost={nextShowInfo?.host}
           onRemoveNextShowLine={handleRemoveNextShowLine}
+          isBackupShow={isBackupShow}
         />
 
         <div ref={printRef} className="hidden print:block print:mt-0">
@@ -455,7 +726,7 @@ const Index = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>שינויים לא שמורים</AlertDialogTitle>
             <AlertDialogDescription>
-              יש ��ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
+              יש ך שינויים שלא נשמרו. האם ברצונך לשמור אותם לפני החזרה ללוח הבקרה?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -464,8 +735,10 @@ const Index = () => {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
-                await handleSave();
-                navigate('/');
+                if (!isSaving) {
+                  await handleSave();
+                  navigate('/');
+                }
               }}
             >
               שמור שינויים

@@ -1,18 +1,17 @@
-
-import { useState, useCallback } from 'react';
-import { format } from 'date-fns';
+import { useState } from 'react';
 import { DayNote } from '@/types/schedule';
-import { createDayNote, updateDayNote, deleteDayNote } from '@/lib/supabase/dayNotes';
+import { createDayNote, updateDayNote, deleteDayNote } from '@/lib/api/dayNotes';
+import { format } from 'date-fns';
 
 export const useBottomNotes = (bottomNotes: DayNote[], onBottomNoteChange: () => void) => {
   const [editingBottomNoteDate, setEditingBottomNoteDate] = useState<Date | null>(null);
 
+  // Handle save bottom note
   const handleSaveBottomNote = async (date: Date, noteText: string, noteId?: string) => {
     try {
       if (noteId) {
         await updateDayNote(noteId, noteText);
       } else {
-        // For bottom notes, we pass the is_bottom_note flag as true
         await createDayNote(date, noteText, true);
       }
       onBottomNoteChange();
@@ -22,40 +21,39 @@ export const useBottomNotes = (bottomNotes: DayNote[], onBottomNoteChange: () =>
     }
   };
 
+  // Handle delete bottom note
   const handleDeleteBottomNote = async (noteId: string) => {
     try {
       await deleteDayNote(noteId);
       onBottomNoteChange();
+      setEditingBottomNoteDate(null);
     } catch (error) {
       console.error('Error deleting bottom note:', error);
     }
   };
 
+  // Get bottom notes for a specific date
   const getBottomNotesForDate = (date: Date): DayNote[] => {
     const formattedDate = format(date, 'yyyy-MM-dd');
     return bottomNotes.filter(note => note.date === formattedDate);
   };
 
+  // Handle add bottom note
   const handleBottomNoteAdd = (date: Date) => {
     setEditingBottomNoteDate(date);
   };
 
-  const handleBottomNoteEdit = (date: Date, noteId?: string) => {
-    const noteDate = new Date(date);
-    // Store noteId to know which note we're editing
-    if (noteId) {
-      (noteDate as any).noteId = noteId;
-    }
-    setEditingBottomNoteDate(noteDate);
+  // Handle edit bottom note
+  const handleBottomNoteEdit = (date: Date) => {
+    setEditingBottomNoteDate(date);
   };
 
   return {
     editingBottomNoteDate,
-    setEditingBottomNoteDate,
     handleSaveBottomNote,
     handleDeleteBottomNote,
-    getBottomNotesForDate,
     handleBottomNoteAdd,
-    handleBottomNoteEdit
+    handleBottomNoteEdit,
+    getBottomNotesForDate,
   };
 };

@@ -8,9 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Calendar, RefreshCw } from 'lucide-react';
 import WeeklyAssignments from './WeeklyAssignments';
 import MonthlySummary from './MonthlySummary';
-import { getOrCreateProducerWorkArrangement, updateProducerWorkArrangementNotes } from '@/lib/supabase/producers';
+import { getOrCreateProducerWorkArrangement, updateProducerWorkArrangementNotes, getProducersByDivision } from '@/lib/supabase/producers';
 import { Textarea } from '@/components/ui/textarea';
 import { getDivisions } from '@/lib/supabase/divisions';
+import { api } from '@/lib/api-client';
 
 const ProducerWorkArrangement = () => {
   const [currentWeek, setCurrentWeek] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
@@ -19,6 +20,7 @@ const ProducerWorkArrangement = () => {
   const [arrangementId, setArrangementId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [producers, setProducers] = useState<any[]>([]);
   
   const { toast } = useToast();
   
@@ -32,10 +34,8 @@ const ProducerWorkArrangement = () => {
           // Validate the cached ID to ensure it's a valid UUID
           const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cachedId);
           if (isValidUuid) {
-            console.log('Using cached producer division ID:', cachedId);
             return;
           } else {
-            console.log('Cached producer division ID is invalid, fetching new one');
             localStorage.removeItem('producer-division-id');
           }
         }
@@ -54,9 +54,7 @@ const ProducerWorkArrangement = () => {
         
         if (producerDiv) {
           localStorage.setItem('producer-division-id', producerDiv.id);
-          console.log('Producer division ID saved:', producerDiv.id);
         } else {
-          console.warn('No producer division found in divisions table.');
           // Here we won't create a default ID since that was causing the UUID validation error
         }
       } catch (error) {
@@ -68,16 +66,12 @@ const ProducerWorkArrangement = () => {
   }, []);
   
   useEffect(() => {
-    // Use a consistent date format for debugging
-    const formattedDate = format(currentWeek, 'yyyy-MM-dd');
-    console.log("ProducerWorkArrangement component mounted or week changed, date:", formattedDate);
     loadWorkArrangement();
   }, [currentWeek]);
   
   const loadWorkArrangement = async () => {
     setIsLoading(true);
     try {
-      console.log("Loading producer work arrangement...");
       const arrangement = await getOrCreateProducerWorkArrangement(currentWeek);
       if (arrangement) {
         setNotes(arrangement.notes || "");
@@ -116,8 +110,6 @@ const ProducerWorkArrangement = () => {
   
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newWeek = direction === 'prev' ? subWeeks(currentWeek, 1) : addWeeks(currentWeek, 1);
-    // Use consistent date format for logging
-    console.log(`Navigating to ${direction} week:`, format(newWeek, 'yyyy-MM-dd'));
     setCurrentWeek(newWeek);
   };
   
@@ -148,10 +140,36 @@ const ProducerWorkArrangement = () => {
   
   // This function is now simplified to not cause a full reload
   const triggerRefresh = () => {
-    console.log("Assignment change notification received - no need for full refresh");
   };
   
   const weekDisplay = `${format(currentWeek, 'dd/MM/yyyy', { locale: he })} - ${format(addDays(currentWeek, 6), 'dd/MM/yyyy', { locale: he })}`;
+
+  useEffect(() => {
+    const loadProducers = async () => {
+      try {
+        const workersList = await api.query('/workers', {
+          where: { 
+            or: [
+              { 'department ILIKE': '%מפיקים%' },
+              { 'department ILIKE': '%מפיק%' },
+              { 'department ILIKE': '%הפקה%' },
+              { 'department ILIKE': '%producers%' },
+              { 'department ILIKE': '%Production staff%' }
+            ]
+          }
+        });
+        setProducers(workersList.data || []);
+      } catch (error) {
+        console.error('Error loading producers:', error);
+        toast({
+          title: "שגיאה",
+          description: "לא ניתן לטעון את רשימת המפיקים",
+          variant: "destructive"
+        });
+      }
+    };
+    loadProducers();
+  }, [toast]);
 
   return (
     <div className="space-y-4" dir="rtl">
@@ -218,6 +236,7 @@ const ProducerWorkArrangement = () => {
                   currentWeek={currentWeek} 
                   onAssignmentChange={triggerRefresh} 
                   refreshTrigger={refreshTrigger}
+                  initialProducers={producers}
                 />
               </div>
             </TabsContent>

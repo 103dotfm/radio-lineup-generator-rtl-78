@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { 
   Select,
@@ -9,6 +8,8 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 interface ProducerFormFieldProps {
   index: number;
@@ -16,6 +17,8 @@ interface ProducerFormFieldProps {
   role: string;
   additionalText?: string;
   updateForm: (index: number, field: 'workerId' | 'role' | 'additionalText', value: string) => void;
+  onDelete?: (index: number) => void;
+  canDelete?: boolean;
   producers: any[];
   roles: any[];
 }
@@ -26,13 +29,18 @@ const ProducerFormField = ({
   role,
   additionalText,
   updateForm,
+  onDelete,
+  canDelete = false,
   producers,
   roles
 }: ProducerFormFieldProps) => {
   // Sort producers by name for easier selection
   const sortedProducers = useMemo(() => {
-    // Make a defensive copy to avoid null/undefined issues
-    return [...(producers || [])].sort((a, b) => {
+    // Ensure producers is an array before spreading
+    if (!Array.isArray(producers)) {
+      return [];
+    }
+    return [...producers].sort((a, b) => {
       // Handle potential missing names
       const nameA = a?.name || '';
       const nameB = b?.name || '';
@@ -41,10 +49,22 @@ const ProducerFormField = ({
   }, [producers]);
   
   // Debug
-  console.log(`ProducerFormField: role=${role}, Got ${roles?.length || 0} roles with selected role id: ${role}`);
   
   return (
-    <div className="grid grid-cols-2 gap-3 mb-5" dir="rtl">
+    <div className="grid grid-cols-2 gap-3 mb-5 relative" dir="rtl">
+      {/* Delete button - only show for 2nd, 3rd, 4th lines */}
+      {canDelete && onDelete && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="absolute -top-2 -left-2 h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+          onClick={() => onDelete(index)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
+      
       <div>
         <Label htmlFor={`worker-${index}`} className="mb-2 block text-right">עובד {index + 1}</Label>
         <Select 

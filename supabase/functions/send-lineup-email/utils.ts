@@ -16,7 +16,7 @@ export interface EmailSettings {
   sender_name: string;
   subject_template: string;
   body_template: string;
-  email_method: 'smtp' | 'gmail_api' | 'mailgun';
+  email_method: 'smtp' | 'gmail_api' | 'mailgun' | 'internal_server';
   gmail_client_id?: string;
   gmail_client_secret?: string;
   gmail_refresh_token?: string;
@@ -76,6 +76,9 @@ export const validateEmailSettings = (settings: EmailSettings): string[] => {
     if (!settings.mailgun_domain && !Deno.env.get("MAILGUN_DOMAIN")) {
       missingFields.push('mailgun_domain');
     }
+  } else if (settings.email_method === 'internal_server') {
+    // No additional validation needed for internal server
+    // The server will use its own SMTP configuration
   }
   
   return missingFields;

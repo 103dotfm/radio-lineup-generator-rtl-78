@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { api } from '@/lib/api-client';
 
 // Export the Worker interface so it can be imported by other modules
 export interface Worker {
@@ -9,32 +9,21 @@ export interface Worker {
   email?: string;
   phone?: string;
   user_id?: string;
-  password_readable?: string;
   photo_url?: string;
 }
 
-export const getWorkers = async (): Promise<Worker[]> => {
+export const getWorkers = async (filter?: { department?: string; division?: string }): Promise<Worker[]> => {
   try {
-    console.log('workers.ts: Fetching workers from Supabase...');
+    console.log('workers.ts: Fetching workers from local API...', filter);
     
-    // Add a timeout to detect if the request is hanging
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Request timeout: Supabase query took too long'));
-      }, 10000); // 10 second timeout
-    });
+    let query = '/workers';
+    if (filter && filter.department) {
+      query += `?where={"department":"${filter.department}"}`;
+    } else if (filter && filter.division) {
+      query += `?where={"division":"${filter.division}"}`;
+    }
     
-    // The actual data fetch - include user_id, password_readable and photo_url
-    const fetchPromise = supabase
-      .from('workers')
-      .select('id, name, department, position, email, phone, user_id, password_readable, photo_url')
-      .order('name');
-    
-    // Race the fetch against the timeout
-    const { data, error } = await Promise.race([
-      fetchPromise,
-      timeoutPromise.then(() => { throw new Error('Timeout'); })
-    ]);
+    const { data, error } = await api.query(query);
     
     if (error) {
       console.error('Error in getWorkers query:', error);
@@ -57,7 +46,6 @@ export const getWorkers = async (): Promise<Worker[]> => {
       email: worker.email || '',
       phone: worker.phone || '',
       user_id: worker.user_id || undefined,
-      password_readable: worker.password_readable || undefined,
       photo_url: worker.photo_url || undefined
     }));
   } catch (error) {
@@ -72,17 +60,13 @@ export const createWorker = async (worker: Partial<Worker>): Promise<Worker | nu
       throw new Error('Worker name is required');
     }
 
-    const { data, error } = await supabase
-      .from('workers')
-      .insert({
-        name: worker.name,
-        department: worker.department || null,
-        position: worker.position || null,
-        email: worker.email || null,
-        phone: worker.phone || null
-      })
-      .select()
-      .single();
+    const { data, error } = await api.mutate('/workers', {
+      name: worker.name,
+      department: worker.department || null,
+      position: worker.position || null,
+      email: worker.email || null,
+      phone: worker.phone || null
+    }, 'POST');
     
     if (error) {
       console.error('Error creating worker:', error);
@@ -125,12 +109,7 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
     
     console.log(`Updating worker ${id} with data:`, updateData);
     
-    const { data, error } = await supabase
-      .from('workers')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    const { data, error } = await api.mutate(`/workers/${id}`, updateData, 'PUT');
     
     if (error) {
       console.error('Error updating worker:', error);
@@ -159,10 +138,7 @@ export const updateWorker = async (id: string, worker: Partial<Worker>): Promise
 export const deleteWorker = async (id: string): Promise<boolean> => {
   try {
     console.log(`Deleting worker with ID: ${id}`);
-    const { error } = await supabase
-      .from('workers')
-      .delete()
-      .eq('id', id);
+    const { error } = await api.mutate(`/workers/${id}`, {}, 'DELETE');
     
     if (error) {
       console.error('Error deleting worker:', error);
@@ -185,11 +161,7 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
     }
     
     console.log(`Fetching worker with ID: ${id}`);
-    const { data, error } = await supabase
-      .from('workers')
-      .select('id, name, department, position, email, phone')
-      .eq('id', id)
-      .maybeSingle();
+    const { data, error } = await api.query(`/workers/${id}`);
     
     if (error) {
       console.error(`Error fetching worker with ID ${id}:`, error);
@@ -218,15 +190,14 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
 export const getWorkersByIds = async (ids: string[]): Promise<Worker[]> => {
   try {
     if (!ids || ids.length === 0) {
-      console.warn('getWorkersByIds called with empty ids array');
+      console.warn('getWorkersByIds called with empty or null ids');
       return [];
     }
     
     console.log(`Fetching workers with IDs: ${ids.join(', ')}`);
-    const { data, error } = await supabase
-      .from('workers')
-      .select('id, name, department, position, email, phone')
-      .in('id', ids);
+    const idList = ids.map(id => `"${id}"`).join(',');
+    const query = `/workers?where={"id":{"in":[${idList}]}}`;
+    const { data, error } = await api.query(query);
     
     if (error) {
       console.error('Error fetching workers by IDs:', error);
@@ -234,15 +205,13 @@ export const getWorkersByIds = async (ids: string[]): Promise<Worker[]> => {
     }
     
     if (!data || !Array.isArray(data)) {
-      console.warn('No workers found for the provided IDs');
+      console.warn('No workers found for the given IDs');
       return [];
     }
     
-    console.log(`Found ${data.length} workers for ${ids.length} requested IDs`);
-    
     return data.map(worker => ({
-      id: worker.id,
-      name: worker.name,
+      id: worker.id || '',
+      name: worker.name || '',
       department: worker.department || '',
       position: worker.position || '',
       email: worker.email || '',
@@ -250,6 +219,40 @@ export const getWorkersByIds = async (ids: string[]): Promise<Worker[]> => {
     }));
   } catch (error) {
     console.error('Error fetching workers by IDs:', error);
+    return [];
+  }
+};
+
+export const getWorkersByDivision = async (divisionId: string): Promise<Worker[]> => {
+  try {
+    if (!divisionId) {
+      console.warn('getWorkersByDivision called with empty divisionId');
+      return [];
+    }
+    
+    console.log(`Fetching workers for division ID: ${divisionId}`);
+    const query = `/worker-divisions?where={"division_id":"${divisionId}"}`;
+    const { data, error } = await api.query(query);
+    
+    if (error) {
+      console.error(`Error fetching worker divisions for division ID ${divisionId}:`, error);
+      return [];
+    }
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.log(`No workers found for division ID ${divisionId}`);
+      return [];
+    }
+    
+    const workerIds = data.map(wd => wd.worker_id).filter(id => id);
+    if (workerIds.length === 0) {
+      console.log(`No valid worker IDs found for division ID ${divisionId}`);
+      return [];
+    }
+    
+    return await getWorkersByIds(workerIds);
+  } catch (error) {
+    console.error(`Error fetching workers for division ID ${divisionId}:`, error);
     return [];
   }
 };

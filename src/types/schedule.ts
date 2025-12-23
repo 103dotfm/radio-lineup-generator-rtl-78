@@ -28,22 +28,58 @@ export interface ScheduleSlot {
   host_name?: string;
   start_time: string;
   end_time: string;
-  day_of_week: number;
+  slot_date: string;  // The actual date of the slot
+  day_of_week: number;  // Day of week (0-6, where 0 is Sunday)
   color?: string;
   is_prerecorded?: boolean;
   is_collection?: boolean;
-  is_modified?: boolean;
+  is_master?: boolean;  // Whether this is a template slot
+  is_recurring?: boolean;  // Whether this is a recurring slot
+  parent_slot_id?: string;  // Reference to master slot if this is a copy
   is_deleted?: boolean;
-  is_recurring?: boolean;
   has_lineup?: boolean;
   additional_text?: string;
   is_custom_time?: boolean;
   position?: number;
-  slot_date?: string; // Date for specific slot instances
-  parent_slot_id?: string; // Reference to parent/master slot
   shows?: any[];
   created_at?: string;
   updated_at?: string;
+  is_modified?: boolean;  // Whether this slot has been modified from its template
+  // RDS fields
+  rds_pty?: number;  // Program Type (1=NEWS, 4=SPORTS, 21=PHONE-IN, 26=NATIONAL MUSIC, 17=FINANCE, 0=NONE)
+  rds_ms?: number;   // Music/Speech (0=SPEECH ONLY, 1=MUSIC PROGRAMMING)
+  rds_radio_text?: string;  // Radio Text (up to 64 characters)
+  rds_radio_text_translated?: string;  // Translated radio text
+}
+
+export interface RDSSettings {
+  id: string;
+  send_rds_on_program_change: boolean;
+  rds_rt2: string;
+  rds_rt3: string;
+  default_rt1: string;
+  override_enabled: boolean;
+  override_pty?: number;
+  override_ms?: number;
+  override_rt1?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RDSData {
+  pty: number;
+  ms: number;
+  radio_text: string;
+  rt2: string;
+  rt3: string;
+}
+
+export interface TranslationMapping {
+  id: string;
+  hebrew_text: string;
+  english_text: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ProducerAssignment {

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ViewMode, ScheduleSlot, DayNote } from '@/types/schedule';
 import { timeSlotsList, calculateDates } from '../utils/timeUtils';
@@ -15,6 +14,7 @@ interface ScheduleGridProps {
   handleSlotClick: (slot: ScheduleSlot) => void;
   handleEditSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
   handleDeleteSlot: (slot: ScheduleSlot, e: React.MouseEvent) => void;
+  handleCreateSlot?: (dayIndex: number, time: string, duration?: number) => void;
   isAdmin: boolean;
   isAuthenticated: boolean;
   hideHeaderDates: boolean;
@@ -22,6 +22,9 @@ interface ScheduleGridProps {
   bottomNotes: DayNote[];
   onDayNoteChange: () => void;
   onBottomNoteChange: () => void;
+  isMasterSchedule?: boolean;
+  deletingSlots?: Set<string>;
+  isProducer?: boolean;
 }
 
 export default function ScheduleGrid({
@@ -31,13 +34,17 @@ export default function ScheduleGrid({
   handleSlotClick,
   handleEditSlot,
   handleDeleteSlot,
+  handleCreateSlot,
   isAdmin,
   isAuthenticated,
   hideHeaderDates,
   dayNotes,
   bottomNotes,
   onDayNoteChange,
-  onBottomNoteChange
+  onBottomNoteChange,
+  isMasterSchedule = false,
+  deletingSlots = new Set(),
+  isProducer = false
 }: ScheduleGridProps) {
   const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   const timeSlots = timeSlotsList();
@@ -87,6 +94,9 @@ export default function ScheduleGrid({
             handleSaveBottomNote={handleSaveBottomNote}
             handleDeleteBottomNote={handleDeleteBottomNote}
             handleBottomNoteEdit={handleBottomNoteEdit}
+            isMasterSchedule={isMasterSchedule}
+            deletingSlots={deletingSlots}
+            isProducer={isProducer}
           />
         );
         
@@ -100,6 +110,7 @@ export default function ScheduleGrid({
             handleSlotClick={handleSlotClick}
             handleEditSlot={handleEditSlot}
             handleDeleteSlot={handleDeleteSlot}
+            handleCreateSlot={handleCreateSlot}
             isAdmin={isAdmin}
             isAuthenticated={isAuthenticated}
             hideHeaderDates={hideHeaderDates}
@@ -114,6 +125,9 @@ export default function ScheduleGrid({
             handleSaveBottomNote={handleSaveBottomNote}
             handleDeleteBottomNote={handleDeleteBottomNote}
             handleBottomNoteEdit={handleBottomNoteEdit}
+            isMasterSchedule={isMasterSchedule}
+            deletingSlots={deletingSlots}
+            isProducer={isProducer}
           />
         );
         
@@ -129,6 +143,8 @@ export default function ScheduleGrid({
             isAdmin={isAdmin}
             isAuthenticated={isAuthenticated}
             dates={dates}
+            isMasterSchedule={isMasterSchedule}
+            deletingSlots={deletingSlots}
           />
         );
     }

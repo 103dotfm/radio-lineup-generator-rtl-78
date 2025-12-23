@@ -1,87 +1,340 @@
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { Show } from "@/types/show";
+import { ShowItem } from "@/types/show";
 
-export const getShows = async (): Promise<Show[]> => {
+export const getShows = async (limit?: number): Promise<Show[]> => {
   console.log('Fetching shows...');
-  const { data: showsData, error } = await supabase
-    .from('shows_backup')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
+  try {
+    // Clear cache to ensure we get fresh data
+    localStorage.removeItem('cachedShows');
+    localStorage.removeItem('cachedShowsTimestamp');
+    
+    // If no valid cache, fetch from API
+    const activeShowsResponse = await api.query('/shows', {
+      order: { created_at: 'desc' },
+      limit: limit || 50 // Get more shows by default
+    });
+    
+    // Check if response contains data in the expected format
+    const activeShows = Array.isArray(activeShowsResponse.data) ? activeShowsResponse.data : [];
+    
+    console.log('Fetched shows from API:', activeShows.length);
+    
+    const showIds = activeShows.map(show => show.id);
+    let showItems: ShowItem[] = [];
+    
+    // Split into batches to avoid URI too large errors
+    const batchSize = 50;
+    for (let i = 0; i < showIds.length; i += batchSize) {
+      const batchIds = showIds.slice(i, i + batchSize);
+      const batchItemsResponse = await api.query('/show-items', {
+        where: { show_id: { in: batchIds } }
+      });
+      const batchItems = Array.isArray(batchItemsResponse.data) ? batchItemsResponse.data : [];
+      showItems = showItems.concat(batchItems);
+      console.log(`Fetched batch ${i / batchSize + 1}, items: ${batchItems.length}`);
+    }
+    
+    // Combine current shows (no backup shows since backupShowsData is not defined)
+    const allShows = [...activeShows];
+    
+    // Associate items with their respective shows
+    allShows.forEach(show => {
+      show.items = showItems.filter(item => item.show_id === show.id);
+    });
+    
+    console.log('Fetched shows count:', allShows.length);
+    
+    // Cache the results
+    localStorage.setItem('cachedShows', JSON.stringify(allShows));
+    localStorage.setItem('cachedShowsTimestamp', Date.now().toString());
+    
+    return allShows;
+  } catch (error) {
     console.error('Error fetching shows:', error);
     throw error;
   }
+};
 
-  const shows: Show[] = showsData || [];
-
-  // Fetch items for each show
-  if (shows.length > 0) {
-    const showIds = shows.map(show => show.id);
-    const { data: items, error: itemsError } = await supabase
-      .from('show_items')
-      .select('*, interviewees(*)')
-      .in('show_id', showIds);
-
-    if (itemsError) {
-      console.error('Error fetching show items:', itemsError);
-    } else if (items) {
-      // Associate items with their respective shows
-      shows.forEach(show => {
-        show.items = items.filter(item => item.show_id === show.id);
-      });
-    }
+export const getShowItems = async (showIds: string[]): Promise<ShowItem[]> => {
+  console.log('Fetching show items for shows:', showIds.length);
+  
+  if (!showIds || showIds.length === 0) {
+    return [];
   }
 
-  console.log('Fetched shows count:', shows?.length);
-  return shows;
+  const BATCH_SIZE = 50; // Define a reasonable batch size
+  const results: ShowItem[] = [];
+
+  // Split showIds into smaller batches
+  for (let i = 0; i < showIds.length; i += BATCH_SIZE) {
+    const batch = showIds.slice(i, i + BATCH_SIZE);
+    console.log(`Fetching batch of ${batch.length} shows, starting with ${batch[0].substring(0, 8)}...`);
+    
+    const { data, error } = await api.query('/show-items', {
+      where: { show_id: { in: batch } }
+    });
+
+    if (error) {
+      console.error('Error fetching show items:', error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      results.push(...data);
+    }
+
+    // Add a small delay between requests to avoid overwhelming the server
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  console.log(`Fetched ${results.length} show items for ${showIds.length} shows`);
+  return results;
 };
 
 export const searchShows = async (query: string): Promise<Show[]> => {
   console.log('Searching shows with query:', query);
   
+  if (!query || query.trim().length === 0) {
+    return [];
+  }
+  
   try {
-    // First search for matching items
-    const { data: matchingItems, error: itemsError } = await supabase
-      .from('show_items')
-      .select('*, show_id')
-      .or(`name.ilike.%${query}%,title.ilike.%${query}%`)
-      .not('is_break', 'eq', true)
-      .not('is_note', 'eq', true)
-      .order('created_at', { ascending: false });
+    // Search current show items with improved filtering
+    console.log('Searching current show items with query:', query);
+    
+    // Get all matching items first
+    const { data: allMatchingItems, error: currentItemsError } = await api.query('/show-items', {
+      where: {
+        or: [
+          { name: { ilike: `%${query}%` } },
+          { title: { ilike: `%${query}%` } }
+        ],
+        is_break: false,
+        is_note: false
+      },
+      order: { created_at: 'desc' },
+      limit: 500 // Get more items to sort by relevance
+    });
 
-    if (itemsError) {
-      console.error('Error searching items:', itemsError);
-      throw itemsError;
+    if (currentItemsError) {
+      console.error('Error searching current items:', currentItemsError);
+      throw currentItemsError;
     }
 
-    // If we found matching items, fetch the associated shows
-    if (matchingItems && matchingItems.length > 0) {
-      const showIds = [...new Set(matchingItems.map(item => item.show_id))];
+    // Sort by relevance: exact matches first, then full name matches, then partial matches
+    let currentMatchingItems = allMatchingItems || [];
+    
+    if (currentMatchingItems.length > 0) {
+      const exactMatches = [];
+      const fullNameMatches = [];
+      const partialMatches = [];
       
-      const { data: shows, error: showsError } = await supabase
-        .from('shows_backup')
-        .select('*')
-        .in('id', showIds);
+      const queryLower = query.toLowerCase();
+      
+      currentMatchingItems.forEach(item => {
+        const nameLower = (item.name || '').toLowerCase();
+        const titleLower = (item.title || '').toLowerCase();
         
-      if (showsError) {
-        console.error('Error fetching shows for items:', showsError);
-        throw showsError;
-      }
+        // Exact match
+        if (nameLower === queryLower || titleLower === queryLower) {
+          exactMatches.push(item);
+        }
+        // Full name match (contains the complete query as a substring)
+        else if (nameLower.includes(queryLower) || titleLower.includes(queryLower)) {
+          fullNameMatches.push(item);
+        }
+        // Partial match
+        else {
+          partialMatches.push(item);
+        }
+      });
       
-      if (shows && shows.length > 0) {
-        // Transform results to Show objects with their matching items
-        const showsWithItems = shows.map(show => {
-          const items = matchingItems.filter(item => item.show_id === show.id);
-          return {
-            ...show,
-            items
-          };
+      // Combine results with exact matches first, then full name matches, then partial matches
+      currentMatchingItems = [...exactMatches, ...fullNameMatches, ...partialMatches].slice(0, 200);
+    }
+
+    console.log('Current matching items found:', currentMatchingItems?.length || 0);
+    if (currentMatchingItems?.length > 0) {
+      console.log('Sample current items:', currentMatchingItems.slice(0, 3).map(item => ({
+        name: item.name,
+        title: item.title,
+        created_at: item.created_at
+      })));
+    }
+
+    // Search backup show items using the dedicated endpoint
+    console.log('Searching backup show items...');
+    const { data: backupMatchingItems, error: backupItemsError } = await api.query('/show-items-search/with-shows', {
+      query,
+      limit: 200 // Reduced limit to improve performance and avoid URI length issues
+    });
+
+    if (backupItemsError) {
+      console.error('Error searching backup items:', backupItemsError);
+      // Don't throw error, just log it and continue with current items
+    }
+
+    console.log('Backup matching items found:', backupMatchingItems?.length || 0);
+    if (backupMatchingItems?.length > 0) {
+      console.log('Sample backup items:', backupMatchingItems.slice(0, 3).map(item => ({
+        name: item.name,
+        title: item.title,
+        created_at: item.created_at
+      })));
+    }
+
+    // Process current items and their shows
+    let currentShows: any[] = [];
+    if (currentMatchingItems && currentMatchingItems.length > 0) {
+      const currentShowIds = [...new Set(currentMatchingItems.map(item => item.show_id))];
+      console.log('Current show IDs:', currentShowIds);
+      
+      if (currentShowIds.length > 0) {
+        // Use a Map to avoid duplicates when batching
+        const showMap = new Map();
+        
+        // Split into batches to avoid URI too large errors
+        const batchSize = 50;
+        for (let i = 0; i < currentShowIds.length; i += batchSize) {
+          const batchIds = currentShowIds.slice(i, i + batchSize);
+          const { data: shows, error: showsError } = await api.query('/shows', {
+            where: {
+              id: { in: batchIds }
+            }
+          });
+            
+          if (showsError) {
+            console.error('Error fetching current shows for items:', showsError);
+            throw showsError;
+          }
+          if (shows) {
+            // Add shows to map to avoid duplicates
+            shows.forEach(show => {
+              if (!showMap.has(show.id)) {
+                showMap.set(show.id, show);
+              }
+            });
+          }
+          console.log(`Fetched batch ${i / batchSize + 1}, shows: ${shows?.length || 0}`);
+        }
+        
+        // Convert map back to array
+        currentShows = Array.from(showMap.values());
+        console.log('Total current shows fetched (deduplicated):', currentShows.length);
+      }
+    }
+
+    // Process backup items and their shows
+    let backupShows: any[] = [];
+    if (backupMatchingItems && backupMatchingItems.length > 0) {
+      // Backup items already come with show information, so we need to extract unique shows
+      const backupShowMap = new Map();
+      backupMatchingItems.forEach(item => {
+        if (item.show && !backupShowMap.has(item.show.id)) {
+          backupShowMap.set(item.show.id, { ...item.show, is_backup: true });
+        }
+      });
+      backupShows = Array.from(backupShowMap.values());
+      console.log('Backup shows extracted:', backupShows.length);
+    }
+
+    const allShows = [...currentShows, ...backupShows];
+    console.log('Total shows found:', allShows.length);
+    
+    if (allShows.length > 0) {
+      // Global deduplication: track items by ID across all shows
+      const globalItemMap = new Map();
+      
+      // Transform results to Show objects with ONLY their matching items
+      const showsWithMatchingItems = allShows.map(show => {
+        let matchingItems: any[] = [];
+        
+        if (show.is_backup) {
+          // For backup shows, filter items that match the query and belong to this show
+          matchingItems = (backupMatchingItems || []).filter(item => 
+            item.show_id === show.id && 
+            (item.name?.toLowerCase().includes(query.toLowerCase()) || 
+             item.title?.toLowerCase().includes(query.toLowerCase()))
+          );
+        } else {
+          // For current shows, filter items that match the query and belong to this show
+          matchingItems = (currentMatchingItems || []).filter(item => item.show_id === show.id);
+        }
+        
+        // Deduplicate items globally by ID (each item ID should appear only once across all shows)
+        const uniqueItems = [];
+        
+        matchingItems.forEach(item => {
+          if (!globalItemMap.has(item.id)) {
+            globalItemMap.set(item.id, item);
+            uniqueItems.push(item);
+          }
         });
         
-        console.log('Search results:', showsWithItems);
-        return showsWithItems;
-      }
+        return {
+          ...show,
+          items: uniqueItems // Only include items that match the search query and haven't been seen before
+        };
+      });
+      
+      // Sort by relevance first, then by date (newer first)
+      const queryLower = query.toLowerCase();
+      
+      const sortedShows = showsWithMatchingItems.sort((a, b) => {
+        // Calculate relevance scores for each show
+        const getRelevanceScore = (show) => {
+          if (!show.items || show.items.length === 0) return 0;
+          
+          let maxScore = 0;
+          show.items.forEach(item => {
+            const nameLower = (item.name || '').toLowerCase();
+            const titleLower = (item.title || '').toLowerCase();
+            
+            // Exact match = 100 points
+            if (nameLower === queryLower || titleLower === queryLower) {
+              maxScore = Math.max(maxScore, 100);
+            }
+            // Full name match = 50 points
+            else if (nameLower.includes(queryLower) || titleLower.includes(queryLower)) {
+              maxScore = Math.max(maxScore, 50);
+            }
+            // Partial match = 10 points
+            else {
+              maxScore = Math.max(maxScore, 10);
+            }
+          });
+          return maxScore;
+        };
+        
+        const aScore = getRelevanceScore(a);
+        const bScore = getRelevanceScore(b);
+        
+        // Sort by relevance score first (higher score first)
+        if (aScore !== bScore) {
+          return bScore - aScore;
+        }
+        
+        // If relevance is the same, sort by date (newer first)
+        const aLatestItem = a.items?.sort((x, y) => 
+          new Date(y.created_at || 0).getTime() - new Date(x.created_at || 0).getTime()
+        )[0];
+        const bLatestItem = b.items?.sort((x, y) => 
+          new Date(y.created_at || 0).getTime() - new Date(x.created_at || 0).getTime()
+        )[0];
+        
+        const aDate = aLatestItem ? new Date(aLatestItem.created_at || 0).getTime() : 0;
+        const bDate = bLatestItem ? new Date(bLatestItem.created_at || 0).getTime() : 0;
+        
+        return bDate - aDate; // Newer first
+      });
+      
+      console.log(`Search found ${sortedShows.length} shows with matching items`);
+      console.log('Total matching items across all shows:', 
+        sortedShows.reduce((total, show) => total + (show.items?.length || 0), 0)
+      );
+      
+      return sortedShows;
     }
     
     // If no items matched or no associated shows found, return empty array
@@ -100,42 +353,80 @@ export const getShowWithItems = async (showId: string) => {
     throw new Error('No show ID provided');
   }
 
-  const { data: show, error: showError } = await supabase
-    .from('shows_backup')
-    .select('*')
-    .eq('id', showId)
-    .single();
+  // Try to fetch from current shows first
+  let { data: shows, error: showError } = await api.query('/shows', {
+    where: { id: showId }
+  });
 
-  if (showError) {
-    console.error('Error fetching show:', showError);
+  let isBackup = false;
+
+  // If not found in current shows, try backup shows
+  if (!shows || shows.length === 0) {
+    console.log('Show not found in current shows, trying backup...');
+    const { data: backupShows, error: backupShowError } = await api.query('/shows-backup', {
+      where: { id: showId }
+    });
+
+    if (backupShowError) {
+      console.error('Error fetching backup show:', backupShowError);
+      throw backupShowError;
+    }
+
+    shows = backupShows;
+    isBackup = true;
+  } else if (showError) {
+    console.error('Error fetching current show:', showError);
     throw showError;
   }
 
-  const { data: items, error: itemsError } = await supabase
-    .from('show_items')
-    .select(`
-      *,
-      interviewees(*)
-    `)
-    .eq('show_id', showId)
-    .order('position', { ascending: true });
+  const show = shows?.[0];
+  if (!show) {
+    return null;
+  }
+
+  // Mark backup shows
+  if (isBackup) {
+    show.is_backup = true;
+  }
+
+  const { data: items, error: itemsError } = await api.query('/show-items', {
+    where: { show_id: showId },
+    order: { position: 'asc' }
+  });
 
   if (itemsError) {
     console.error('Error fetching show items:', itemsError);
     throw itemsError;
   }
 
-  console.log('Retrieved items from database:', items?.map(item => ({
-    id: item.id,
-    name: item.name,
-    is_divider: item.is_divider,
-    is_break: item.is_break,
-    is_note: item.is_note
-  })));
+  console.log('Retrieved items from database:', items?.length, 'items');
+
+  // Load interviewees for each item
+  const itemsWithInterviewees = await Promise.all(
+    (items || []).map(async (item) => {
+      try {
+        const { data: interviewees, error: intervieweesError } = await api.query('/interviewees', {
+          where: { item_id: item.id }
+        });
+
+        if (intervieweesError) {
+          console.error('Error fetching interviewees for item:', item.id, intervieweesError);
+          return { ...item, interviewees: [] };
+        }
+
+        return { ...item, interviewees: interviewees || [] };
+      } catch (error) {
+        console.error('Error loading interviewees for item:', item.id, error);
+        return { ...item, interviewees: [] };
+      }
+    })
+  );
+
+  console.log('Loaded interviewees for all items');
 
   return {
     show,
-    items: items || []
+    items: itemsWithInterviewees
   };
 };
 
@@ -143,11 +434,10 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
   console.log('Fetching shows for date:', date);
   
   try {
-    const { data: shows, error } = await supabase
-      .from('shows_backup')
-      .select('*')
-      .eq('date', date)
-      .order('time', { ascending: true });
+    const { data: shows, error } = await api.query('/shows', {
+      where: { date },
+      order: { time: 'asc' }
+    });
 
     if (error) {
       console.error('Error fetching shows by date:', error);
@@ -159,14 +449,10 @@ export const getShowsByDate = async (date: string): Promise<Show[]> => {
     if (shows && shows.length > 0) {
       const showIds = shows.map(show => show.id);
       
-      const { data: items, error: itemsError } = await supabase
-        .from('show_items')
-        .select(`
-          *,
-          interviewees(*)
-        `)
-        .in('show_id', showIds)
-        .order('position', { ascending: true });
+      const { data: items, error: itemsError } = await api.query('/show-items', {
+        where: { show_id: { in: showIds } },
+        order: { position: 'asc' }
+      });
       
       if (itemsError) {
         console.error('Error fetching items for shows:', itemsError);
@@ -219,186 +505,69 @@ export const saveShow = async (
   showId?: string
 ) => {
   try {
-    let finalShowId = showId;
-    let isUpdate = Boolean(showId);
-    console.log('Saving show. Is update?', isUpdate);
-
-    if (isUpdate) {
-      const { data: existingShow, error: checkError } = await supabase
-        .from('shows_backup')
-        .select('id')
-        .eq('id', showId)
-        .single();
-      
-      if (checkError || !existingShow) {
-        console.error('Show does not exist, creating new instead:', checkError);
-        isUpdate = false;
-        finalShowId = undefined;
-      } else {
-        const { error: showError } = await supabase
-          .from('shows_backup')
-          .update({
-            name: show.name,
-            time: show.time,
-            date: show.date,
-            notes: show.notes,
-            slot_id: show.slot_id,
-            created_at: new Date().toISOString()
-          })
-          .eq('id', showId);
-
-        if (showError) throw showError;
-        
-        const { error: deleteError } = await supabase
-          .from('show_items')
-          .delete()
-          .eq('show_id', showId);
-
-        if (deleteError) throw deleteError;
+    // If we're updating an existing show, check if it's a backup show
+    if (showId) {
+      const existingShow = await getShowWithItems(showId);
+      if (existingShow?.show?.is_backup) {
+        throw new Error('Cannot edit backup shows from Lovable. Please create a new lineup instead.');
       }
     }
-      
-    if (!isUpdate) {
-      const newShow = {
-        id: crypto.randomUUID(),
-        name: show.name,
-        time: show.time,
-        date: show.date,
-        notes: show.notes,
-        slot_id: show.slot_id,
+
+    // Create or update show
+    const showData = {
+      ...show
+    } as {
+      name: string;
+      time: string;
+      date: string;
+      notes: string;
+      slot_id?: string;
+      created_at?: string;
+    };
+
+    let savedShow;
+    if (showId) {
+      const { data, error } = await api.mutate(`/shows/${showId}`, showData, 'PUT');
+      if (error) throw error;
+      savedShow = data;
+    } else {
+      showData.created_at = new Date().toISOString();
+      const { data, error } = await api.mutate('/shows', showData, 'POST');
+      if (error) throw error;
+      savedShow = data;
+    }
+
+    // Delete existing items if updating
+    if (showId) {
+      await api.mutate(`/shows/${showId}/items`, {}, 'DELETE');
+    }
+
+    // Create new items
+    const itemPromises = items.map((item, index) => {
+      const itemData = {
+        ...item,
+        show_id: savedShow.id,
+        position: index,
         created_at: new Date().toISOString()
       };
+      return api.mutate('/show-items', itemData, 'POST');
+    });
 
-      const { data: insertedShow, error: createError } = await supabase
-        .from('shows_backup')
-        .insert(newShow)
-        .select()
-        .single();
+    await Promise.all(itemPromises);
 
-      if (createError) {
-        console.error('Error creating show:', createError);
-        throw createError;
-      }
-
-      if (!insertedShow) {
-        console.error('Failed to get ID for newly created show');
-        throw new Error('Failed to create show - no ID returned');
-      }
-
-      console.log('Created new show:', insertedShow);
-      finalShowId = insertedShow.id;
-    }
-
-    if (!finalShowId) {
-      throw new Error('No valid show ID for item insertion');
-    }
-
+    // Update the slot's has_lineup status if slot_id is provided
     if (show.slot_id) {
-      const { error: slotError } = await supabase
-        .from('schedule_slots_old')
-        .update({ 
-          has_lineup: true
-        })
-        .eq('id', show.slot_id);
-
-      if (slotError) throw slotError;
-    }
-
-    if (items.length > 0) {
-      console.log('RAW ITEMS BEFORE PROCESSING:', items.map(item => ({
-        name: item.name,
-        is_divider: item.is_divider,
-        type: typeof item.is_divider,
-        is_break: item.is_break,
-        is_note: item.is_note
-      })));
-
-      const itemsToInsert = items.map((item, index) => {
-        const isDivider = Boolean(item.is_divider);
-        const isBreak = Boolean(item.is_break);
-        const isNote = Boolean(item.is_note);
-        
-        console.log(`DIRECT ACCESS - Item ${index} (${item.name}):`, {
-          isDivider,
-          is_divider_value: item.is_divider,
-          is_divider_type: typeof item.is_divider
-        });
-        
-        const { interviewees, ...itemData } = item;
-        
-        const cleanedItem = {
-          show_id: finalShowId,
-          position: index,
-          name: item.name,
-          title: item.title || null,
-          details: item.details || null,
-          phone: item.phone || null,
-          duration: item.duration || 0,
-          is_break: isBreak,
-          is_note: isNote,
-          is_divider: isDivider
-        };
-        
-        console.log(`Processed item ${index} (${cleanedItem.name}):`, {
-          is_break: cleanedItem.is_break,
-          is_note: cleanedItem.is_note,
-          is_divider: cleanedItem.is_divider,
-          preserved_is_divider: isDivider
-        });
-        
-        return cleanedItem;
-      });
-
-      console.log('Final items to insert:', JSON.stringify(itemsToInsert, null, 2));
-      
-      const { data: insertedItems, error: itemsError } = await supabase
-        .from('show_items')
-        .insert(itemsToInsert)
-        .select();
-
-      if (itemsError) {
-        console.error('Error inserting items:', itemsError);
-        throw itemsError;
-      }
-
-      console.log('Successfully inserted items:', insertedItems?.map(item => ({
-        id: item.id,
-        name: item.name,
-        is_divider: item.is_divider,
-        is_break: item.is_break,
-        is_note: item.is_note
-      })));
-
-      if (insertedItems) {
-        for (let i = 0; i < insertedItems.length; i++) {
-          const item = insertedItems[i];
-          const itemInterviewees = items[i].interviewees;
-          
-          if (itemInterviewees && itemInterviewees.length > 0) {
-            const intervieweesToInsert = itemInterviewees.map(interviewee => ({
-              item_id: item.id,
-              name: interviewee.name,
-              title: interviewee.title || null,
-              phone: interviewee.phone || null,
-              duration: interviewee.duration || null
-            }));
-
-            console.log(`Inserting ${intervieweesToInsert.length} interviewees for item ${item.id}:`, intervieweesToInsert);
-            
-            const { error: intervieweesError } = await supabase
-              .from('interviewees')
-              .insert(intervieweesToInsert);
-
-            if (intervieweesError) {
-              console.error('Error inserting interviewees:', intervieweesError);
-              throw intervieweesError;
-            }
-          }
-        }
+      try {
+        console.log('Updating slot has_lineup status for slot_id:', show.slot_id);
+        await api.mutate(`/schedule/slots/${show.slot_id}/has-lineup`, { has_lineup: true }, 'PUT');
+        console.log('Successfully updated slot has_lineup status');
+      } catch (error) {
+        console.error('Error updating slot has_lineup status:', error);
+        // Don't throw here - the lineup was saved successfully, just the slot update failed
       }
     }
 
-    return { id: finalShowId };
+    return savedShow;
   } catch (error) {
     console.error('Error saving show:', error);
     throw error;
@@ -406,12 +575,38 @@ export const saveShow = async (
 };
 
 export const deleteShow = async (showId: string) => {
-  const { error } = await supabase
-    .from('shows_backup')
-    .delete()
-    .eq('id', showId);
-
-  if (error) {
+  try {
+    // Get the show first to check if it has a slot_id
+    const { data: shows, error: showError } = await api.query('/shows', {
+      where: { id: showId }
+    });
+    
+    if (showError) throw showError;
+    
+    const show = shows?.[0];
+    const slotId = show?.slot_id;
+    
+    // Delete show items first
+    await api.mutate(`/shows/${showId}/items`, null, 'DELETE');
+    
+    // Then delete the show
+    const { error } = await api.mutate(`/shows/${showId}`, {}, 'DELETE');
+    if (error) throw error;
+    
+    // Update the slot's has_lineup status to false if slot_id exists
+    if (slotId) {
+      try {
+        console.log('Updating slot has_lineup status to false for slot_id:', slotId);
+        await api.mutate(`/schedule/slots/${slotId}/has-lineup`, { has_lineup: false }, 'PUT');
+        console.log('Successfully updated slot has_lineup status to false');
+      } catch (error) {
+        console.error('Error updating slot has_lineup status:', error);
+        // Don't throw here - the lineup was deleted successfully, just the slot update failed
+      }
+    }
+    
+    return true;
+  } catch (error) {
     console.error('Error deleting show:', error);
     throw error;
   }

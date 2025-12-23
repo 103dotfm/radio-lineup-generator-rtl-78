@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DateRangeSelector from './DateRangeSelector';
 import TableSelector from './TableSelector';
 import { useExportData } from '@/lib/data-export/useExportData';
+import { supabase } from '@/lib/supabase';
 
 // Define available table names as a type
 type ValidTableName = 

@@ -1,0 +1,6 @@
+    key     |         value         
+------------+-----------------------
+ app_domain | http://localhost:8080
+ app_domain | 103fm.myradio.co.il
+(2 rows)
+

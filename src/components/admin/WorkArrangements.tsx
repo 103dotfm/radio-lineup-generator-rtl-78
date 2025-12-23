@@ -1,5 +1,5 @@
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,21 +9,27 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuShortcut, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Copy, Check, Upload, FileText } from "lucide-react";
 import { format, addWeeks, subWeeks, startOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { supabase, getStorageUrl } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
+import { storageService } from "@/lib/storage";
 import DigitalWorkArrangement from "./DigitalWorkArrangement";
 import ProducerWorkArrangement from "./producers/ProducerWorkArrangement";
 import { ScrollProvider } from "@/contexts/ScrollContext";
+
+type WorkArrangementMode = "producers" | "engineers" | "digital";
+
+interface WorkArrangementsProps {
+  mode?: WorkArrangementMode;
+}
 
 const formSchema = z.object({
   week_start: z.date(),
@@ -31,14 +37,18 @@ const formSchema = z.object({
   pdf_file: z.any().refine(files => files?.length > 0, "PDF File is required.").refine(files => files?.[0]?.size <= 2000000, `Max file size is 2MB.`).refine(files => files?.[0]?.type === "application/pdf", "Only PDF files are accepted.")
 });
 
-export default function WorkArrangements() {
+export default function WorkArrangements({ mode = "producers" }: WorkArrangementsProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [filename, setFilename] = useState<string | null>(null);
-  const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">("producers");
+  const [fileType, setFileType] = useState<"producers" | "engineers" | "digital">(
+    mode === "engineers" ? "engineers" : mode === "digital" ? "digital" : "producers"
+  );
   const [weekDate, setWeekDate] = useState<Date>(startOfWeek(new Date(), {
     weekStartsOn: 0
   }));
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const {
     toast
   } = useToast();
@@ -59,6 +69,17 @@ export default function WorkArrangements() {
       pdf_file: null
     }
   });
+  
+  // Keep fileType in sync with selected mode and form state
+  useEffect(() => {
+    const nextType = mode === "engineers" ? "engineers" : mode === "digital" ? "digital" : "producers";
+    setFileType(nextType);
+    form.setValue("type", nextType);
+  }, [mode]);
+
+  useEffect(() => {
+    form.setValue("type", fileType);
+  }, [fileType]);
   useEffect(() => {
     generatePublicLinks(weekDate);
   }, [weekDate]);
@@ -105,37 +126,23 @@ export default function WorkArrangements() {
   const handleFileUpload = async (file: File) => {
     try {
       const weekStartStr = format(weekDate, 'yyyy-MM-dd');
-      const fileName = `${fileType}_${weekStartStr}_${Date.now()}.pdf`;
-      const filePath = `work-arrangements/${fileType}/${weekStartStr}/${fileName}`;
-      console.log("Attempting to upload file to:", filePath);
-      const {
-        data,
-        error
-      } = await supabase.storage.from('lovable').upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
-      if (error) {
-        console.error("Error uploading file:", error);
-        toast({
-          title: "Error",
-          description: `Failed to upload file: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-      const fileUrl = `${getStorageUrl()}/${filePath}`;
-      console.log("File uploaded successfully, URL:", fileUrl);
-      setFileUrl(fileUrl);
-      setFilename(fileName);
-      const {
-        error: dbError
-      } = await supabase.from('work_arrangements').insert({
-        filename: fileName,
-        url: filePath,
+      console.log("Attempting to upload file using new storage system");
+      
+      // Upload file using the new storage service
+      const uploadResult = await storageService.uploadFile(file, 'work-arrangements');
+      
+      console.log("File uploaded successfully:", uploadResult);
+      setFileUrl(uploadResult.path);
+      setFilename(uploadResult.filename);
+      
+      // Save to database with the new path
+      const { error: dbError } = await api.mutate('/work-arrangements', {
+        filename: uploadResult.originalName,
+        url: uploadResult.path,
         type: fileType,
         week_start: weekStartStr
       });
+      
       if (dbError) {
         console.error("Error saving file info to database:", dbError);
         toast({
@@ -158,136 +165,203 @@ export default function WorkArrangements() {
       });
     }
   };
-  return <div className="container mx-auto py-10">
+
+  // Drag and drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const pdfFile = files.find(file => file.type === 'application/pdf');
+    
+    if (pdfFile) {
+      setSelectedFile(pdfFile);
+      form.setValue("pdf_file", [pdfFile]);
+      toast({
+        title: "File selected",
+        description: `Selected: ${pdfFile.name}`
+      });
+    } else {
+      toast({
+        title: "Invalid file",
+        description: "Please select a PDF file",
+        variant: "destructive"
+      });
+    }
+  }, [form, toast]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type === 'application/pdf') {
+        setSelectedFile(file);
+        form.setValue("pdf_file", [file]);
+        toast({
+          title: "File selected",
+          description: `Selected: ${file.name}`
+        });
+      } else {
+        toast({
+          title: "Invalid file",
+          description: "Please select a PDF file",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [form, toast]);
+
+  const renderEngineersUpload = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>העלאת קובץ PDF</CardTitle>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <FormField control={form.control} name="week_start" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>בחר שבוע</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="icon" onClick={() => navigateWeek('prev')}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button variant={"outline"} className="w-[240px] justify-start text-left font-normal bg-white border">
+                      <CalendarIcon className="ml-2 h-4 w-4" />
+                      {format(weekDate, "dd/MM/yyyy") + " - " + format(addWeeks(weekDate, 1), "dd/MM/yyyy")}
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" onClick={() => navigateWeek('next')}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+              {/* Hidden type field - force engineers */}
+              <FormField control={form.control} name="type" render={({ field }) => (
+                <FormItem className="hidden">
+                  <FormControl>
+                    <Input type="hidden" value={"engineers"} readOnly />
+                  </FormControl>
+                </FormItem>
+              )} />
+              
+              <FormField control={form.control} name="pdf_file" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>קובץ PDF</FormLabel>
+                  <FormControl>
+                    <div
+                      className={cn(
+                        "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
+                        isDragOver 
+                          ? "border-blue-500 bg-blue-50" 
+                          : "border-gray-300 hover:border-gray-400",
+                        selectedFile ? "border-green-500 bg-green-50" : ""
+                      )}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      <div className="flex flex-col items-center space-y-4">
+                        {selectedFile ? (
+                          <>
+                            <FileText className="h-12 w-12 text-green-500" />
+                            <div>
+                              <p className="text-sm font-medium text-green-600">{selectedFile.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                form.setValue("pdf_file", null);
+                              }}
+                            >
+                              החלף קובץ
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-12 w-12 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">
+                                גרור קובץ PDF לכאן או לחץ לבחירה
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                רק קבצי PDF עד 2MB
+                              </p>
+                            </div>
+                            <Input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                              id="file-upload"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => document.getElementById('file-upload')?.click()}
+                            >
+                              בחר קובץ
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              
+              <Button 
+                type="submit" 
+                disabled={!selectedFile}
+                className="w-full"
+              >
+                העלאה
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+      </CardHeader>
+    </Card>
+  );
+
+  return (
+    <div className="container mx-auto py-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-center">סידורי עבודה</h1>
       </div>
-
       <div className="py-6">
-        <Tabs defaultValue="producers">
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="producers" className="direction-rtl">עורך סידור הפקה</TabsTrigger>
-            <TabsTrigger value="file-upload" className="direction-rtl">העלאת קובץ PDF</TabsTrigger>
-            <TabsTrigger value="digital-editor">עורך סידור דיגיטל</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="file-upload" className="py-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload Work Arrangement PDF</CardTitle>
-                <CardContent>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                      <FormField control={form.control} name="week_start" render={({
-                      field
-                    }) => <FormItem>
-                            <FormLabel>Select Week</FormLabel>
-                            <div className="flex items-center gap-2">
-                              <Button type="button" variant="outline" size="icon" onClick={() => navigateWeek('prev')}>
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
-                              <Button variant={"outline"} className="w-[240px] justify-start text-left font-normal bg-white border">
-                                <CalendarIcon className="ml-2 h-4 w-4" />
-                                {format(weekDate, "dd/MM/yyyy") + " - " + format(addWeeks(weekDate, 1), "dd/MM/yyyy")}
-                              </Button>
-                              <Button type="button" variant="outline" size="icon" onClick={() => navigateWeek('next')}>
-                                <ChevronLeft className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <FormMessage />
-                          </FormItem>} />
-                      <FormField control={form.control} name="type" render={({
-                      field
-                    }) => <FormItem>
-                            <FormLabel>Type</FormLabel>
-                            <Select onValueChange={value => {
-                        field.onChange(value);
-                        setFileType(value as "producers" | "engineers" | "digital");
-                      }} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="producers">עורכים ומפיקים</SelectItem>
-                                <SelectItem value="engineers">טכנאים</SelectItem>
-                                <SelectItem value="digital">דיגיטל (לא בשימוש)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>} />
-                      <FormField control={form.control} name="pdf_file" render={({
-                      field
-                    }) => <FormItem>
-                            <FormLabel>PDF File</FormLabel>
-                            <FormControl>
-                              <Input type="file" accept="application/pdf" onChange={e => {
-                          const files = e.target.files;
-                          if (files) {
-                            field.onChange(files);
-                          }
-                        }} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>} />
-                      <Button type="submit">העלאה</Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </CardHeader>
-              
-              <CardFooter className="flex flex-col items-start">
-                <CardTitle className="mb-3 text-lg">קישורים לעמודי לוח שידורים</CardTitle>
-                <div className="space-y-2 w-full">
-                  <div className="flex items-center justify-between">
-                    <span>השבוע הקודם:</span>
-                    <div className="flex items-center">
-                      <a href={publicLinks.previous} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline mr-2">
-                        {publicLinks.previous}
-                      </a>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(publicLinks.previous)} className="h-8 w-8 p-0">
-                        {copiedLink === publicLinks.previous ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>השבוע הנוכחי:</span>
-                    <div className="flex items-center">
-                      <a href={publicLinks.current} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline mr-2">
-                        {publicLinks.current}
-                      </a>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(publicLinks.current)} className="h-8 w-8 p-0">
-                        {copiedLink === publicLinks.current ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>השבוע הבא:</span>
-                    <div className="flex items-center">
-                      <a href={publicLinks.next} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline mr-2">
-                        {publicLinks.next}
-                      </a>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(publicLinks.next)} className="h-8 w-8 p-0">
-                        {copiedLink === publicLinks.next ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="producers" className="py-4">
+        {mode === "engineers" && renderEngineersUpload()}
+        {mode === "producers" && (
+          <div className="py-4">
             <ScrollProvider>
               <ProducerWorkArrangement />
             </ScrollProvider>
-          </TabsContent>
-          
-          <TabsContent value="digital-editor" className="py-4">
+          </div>
+        )}
+        {mode === "digital" && (
+          <div className="py-4">
             <DigitalWorkArrangement />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
-    </div>;
+    </div>
+  );
 }

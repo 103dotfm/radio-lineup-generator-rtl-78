@@ -1,0 +1,43 @@
+# Postfix Configuration to Force Port 587 for External Delivery
+# This configuration bypasses the TLS policy approach and directly configures
+# Postfix to use submission port (587) for all external domains
+
+# Basic configuration
+myhostname = localhost
+mydomain = localhost
+myorigin = $mydomain
+inet_interfaces = loopback-only
+inet_protocols = ipv4
+
+# Queue settings
+queue_directory = /var/spool/postfix
+command_directory = /usr/sbin
+daemon_directory = /usr/libexec/postfix
+data_directory = /var/lib/postfix
+
+# Mail delivery settings
+mydestination = $myhostname, localhost.$mydomain, localhost, $mydomain
+mynetworks = 127.0.0.0/8, ::1/128
+relayhost = 
+home_mailbox = Maildir/
+
+# TLS Configuration - Force port 587 for external delivery
+smtp_tls_security_level = may
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+
+# Force submission port (587) for external delivery
+smtp_host_lookup = dns, native
+smtp_address_preference = ipv4
+
+# Use submission port for all external domains
+smtp_tls_policy_maps = hash:/etc/postfix/tls_policy
+smtp_tls_policy_maps_default = hash:/etc/postfix/tls_policy_default
+
+# Alternative approach: Configure relayhost to use submission
+# relayhost = [smtp.gmail.com]:587
+# smtp_sasl_auth_enable = yes
+# smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+# smtp_sasl_security_options = noanonymous
+# smtp_tls_security_level = encrypt
+# smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt 

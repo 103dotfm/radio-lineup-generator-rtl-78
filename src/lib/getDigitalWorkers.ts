@@ -1,5 +1,5 @@
 
-import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { getWorkersByIds } from "@/lib/supabase/workers";
 
 const formatTime = (timeString: string): string => {
@@ -31,8 +31,10 @@ export interface DigitalShift {
 
 export const getDigitalWorkersForShow = async (date: Date, timeString: string) => {
   try {
-    // Format date as YYYY-MM-DD for database query
-    const formattedDate = date.toISOString().split('T')[0];
+    // Format date as YYYY-MM-DD for database query (use local date, not UTC)
+    const formattedDate = date.getFullYear() + '-' + 
+      String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(date.getDate()).padStart(2, '0');
     console.log(`Finding digital workers for exact date ${formattedDate} at time ${timeString}`);
     
     // Format time for comparison
@@ -49,12 +51,11 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
     const targetTimeInMinutes = getMinutes(formattedTime);
     
     // First, get the digital work arrangement for this specific date
-    const { data: arrangements, error: arrangementError } = await supabase
-      .from('digital_work_arrangements')
-      .select('id')
-      .lte('week_start', formattedDate)
-      .order('week_start', { ascending: false })
-      .limit(1);
+    const { data: arrangements, error: arrangementError } = await api.query('/digital-work-arrangements', {
+      where: { week_start: { lte: formattedDate } },
+      order: { week_start: 'desc' },
+      limit: 1
+    });
     
     if (arrangementError) {
       console.error('Error fetching digital work arrangement:', arrangementError);
@@ -70,12 +71,13 @@ export const getDigitalWorkersForShow = async (date: Date, timeString: string) =
     console.log(`Found arrangement ${arrangementId} for date ${formattedDate}`);
     
     // Now get shifts from this arrangement
-    const { data: shifts, error: shiftsError } = await supabase
-      .from('digital_shifts')
-      .select('*')
-      .eq('arrangement_id', arrangementId)
-      .not('person_name', 'is', null)
-      .not('is_hidden', 'eq', true);
+    const { data: shifts, error: shiftsError } = await api.query('/digital-shifts', {
+      where: { 
+        arrangement_id: arrangementId,
+        person_name: { neq: null },
+        is_hidden: { neq: true }
+      }
+    });
     
     if (shiftsError) {
       console.error('Error fetching digital shifts:', shiftsError);

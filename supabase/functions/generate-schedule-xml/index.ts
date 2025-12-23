@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -49,19 +48,12 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
     
     // Get all slots (both recurring and non-recurring)
     const { data: slots, error } = await supabase
-      .from('schedule_slots_old')
-      .select(`
-        *,
-        shows:shows_backup (
-          id,
-          name,
-          time,
-          date,
-          notes,
-          created_at,
-          slot_id
-        )
-      `);
+      .from('schedule_slots')
+      .select('*')
+      .eq('is_master', true)
+      .eq('is_deleted', false)
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
     
     if (error) {
       console.error("Error fetching slots:", error);
@@ -73,7 +65,7 @@ async function getScheduleSlots(supabase: any, startDate: Date) {
     // Process slots to match dashboard logic – always starting from TODAY with offset
     const processedSlots = [];
     const currentDate = new Date(startDate);
-    const processedDaySlots = new Map(); // Track processed slots by day and time
+    const processedDaySlots = new Map();
     
     while (currentDate <= endDate) {
       const currentDayOfWeek = currentDate.getDay();

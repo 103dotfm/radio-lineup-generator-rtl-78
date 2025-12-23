@@ -14,6 +14,7 @@ import { prepareEmailContent } from "./email-content.ts";
 import { sendViaGmailApi } from "./gmail-api-sender.ts";
 import { sendViaSmtp } from "./smtp-sender.ts";
 import { sendViaMailgun } from "./mailgun-sender.ts";
+import { sendViaInternalServer } from "./internal-server-sender.ts";
 import { sendViaWhatsApp, WhatsAppSettings } from "./whatsapp-sender.ts";
 
 async function handleRequest(req: Request) {
@@ -512,6 +513,56 @@ async function handleRequest(req: Request) {
                 
                 return new Response(
                   JSON.stringify({ error: `Failed to send email via Gmail API`, details: errorLog }),
+                  { 
+                    status: 500, 
+                    headers: corsHeaders 
+                  }
+                );
+              }
+            } else if (emailSettings.email_method === 'internal_server') {
+              try {
+                console.log("Sending email via internal server...");
+                
+                results.emailResult = await sendViaInternalServer(
+                  emailSettings as EmailSettings,
+                  recipientEmails,
+                  subject,
+                  body
+                );
+                
+                if (!testEmail) {
+                  const { error: logError } = await supabase
+                    .from("show_email_logs")
+                    .upsert({
+                      show_id: show.id,
+                      success: true,
+                      error_message: null
+                    });
+                    
+                  if (logError) {
+                    console.error("Error logging email success:", logError);
+                  }
+                }
+              } catch (internalServerError) {
+                console.error("Internal server error (caught at top level):", internalServerError);
+                const errorLog = internalServerError.errorLog || createErrorLog("INTERNAL_SERVER_SEND", internalServerError);
+                
+                if (!testEmail) {
+                  const { error: logError } = await supabase
+                    .from("show_email_logs")
+                    .upsert({
+                      show_id: show.id,
+                      success: false,
+                      error_message: errorLog.message
+                    });
+                    
+                  if (logError) {
+                    console.error("Error logging email failure:", logError);
+                  }
+                }
+                
+                return new Response(
+                  JSON.stringify({ error: `Failed to send email via internal server`, details: errorLog }),
                   { 
                     status: 500, 
                     headers: corsHeaders 

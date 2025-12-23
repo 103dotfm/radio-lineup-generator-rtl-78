@@ -1,11 +1,11 @@
-
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Printer } from 'lucide-react';
+import { Printer, Calendar, Users, Wrench, Monitor } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 import ScheduleView from './ScheduleView';
 import ProducerAssignmentsView from './ProducerAssignmentsView';
+import EngineerAssignmentsView from './EngineerAssignmentsView';
 import DigitalWorkArrangementView from './DigitalWorkArrangementView';
 
 interface MobileTabsProps {
@@ -19,6 +19,7 @@ interface MobileTabsProps {
     engineers: { url: string; filename: string } | null;
     digital: { url: string; filename: string } | null;
   };
+  isAdmin: boolean;
 }
 
 const MobileTabs: React.FC<MobileTabsProps> = ({
@@ -27,43 +28,68 @@ const MobileTabs: React.FC<MobileTabsProps> = ({
   onPrint,
   currentWeek,
   weekDate,
-  arrangements
+  arrangements,
+  isAdmin
 }) => {
   return (
-    <div className="md:hidden space-y-4">
-      <div className="flex justify-between items-center">
-        <Tabs value={selectedTab} onValueChange={onSelectTab} className="w-full">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="schedule" className="text-xs py-1 px-1">לוח</TabsTrigger>
-            <TabsTrigger value="producers" className="text-xs py-1 px-1">הפקה</TabsTrigger>
-            <TabsTrigger value="engineers" className="text-xs py-1 px-1">טכני</TabsTrigger>
-            <TabsTrigger value="digital" className="text-xs py-1 px-1">דיגיטל</TabsTrigger>
+    <div className="md:hidden space-y-6 animate-in fade-in duration-700">
+      <div className="flex items-center gap-2">
+        <Tabs value={selectedTab} onValueChange={onSelectTab} className="flex-grow">
+          <TabsList className="grid grid-cols-4 w-full bg-slate-100/50 p-1.5 rounded-2xl backdrop-blur-sm border border-slate-200/50 shadow-inner h-14">
+            <TabsTrigger
+              value="schedule"
+              className="text-[10px] h-11 flex flex-col items-center justify-center gap-0.5 rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all"
+            >
+              <Calendar className="h-4 w-4" />
+              <span>לוח</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="producers"
+              className="text-[10px] h-11 flex flex-col items-center justify-center gap-0.5 rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all"
+            >
+              <Users className="h-4 w-4" />
+              <span>הפקה</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="engineers"
+              className="text-[10px] h-11 flex flex-col items-center justify-center gap-0.5 rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all"
+            >
+              <Wrench className="h-4 w-4" />
+              <span>טכני</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="digital"
+              className="text-[10px] h-11 flex flex-col items-center justify-center gap-0.5 rounded-xl font-black data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md transition-all"
+            >
+              <Monitor className="h-4 w-4" />
+              <span>דיגיטל</span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button variant="outline" size="sm" onClick={onPrint} className="ml-2">
-          <Printer className="h-4 w-4" />
+        <Button
+          variant="default"
+          size="icon"
+          onClick={onPrint}
+          className="h-14 w-14 rounded-2xl bg-slate-900 text-white shadow-xl shadow-slate-200 shrink-0"
+        >
+          <Printer className="h-5 w-5" />
         </Button>
       </div>
 
       {selectedTab === 'schedule' && (
         <ScheduleView
-          selectedDate={currentWeek}
-          hideHeaderDates={true}
+          selectedDate={new Date()}
+          hideHeaderDates={false}
           hideDateControls={true}
+          isAdmin={isAdmin}
+          showAddButton={true}
         />
       )}
-      
+
       {selectedTab === 'producers' && (
-        arrangements.producers ? (
-          <PDFViewer
-            url={arrangements.producers.url}
-            filename={arrangements.producers.filename}
-          />
-        ) : (
-          <ProducerAssignmentsView selectedDate={currentWeek} />
-        )
+        <ProducerAssignmentsView selectedDate={currentWeek} />
       )}
-      
+
       {selectedTab === 'engineers' && (
         arrangements.engineers ? (
           <PDFViewer
@@ -71,22 +97,12 @@ const MobileTabs: React.FC<MobileTabsProps> = ({
             filename={arrangements.engineers.filename}
           />
         ) : (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium mb-2">סידור עבודה לא זמין</h3>
-            <p className="text-muted-foreground text-sm">סידור עבודה לטכנאים לשבוע זה עדיין לא הועלה למערכת.</p>
-          </div>
+          <EngineerAssignmentsView selectedDate={currentWeek} />
         )
       )}
-      
+
       {selectedTab === 'digital' && (
-        arrangements.digital ? (
-          <PDFViewer
-            url={arrangements.digital.url}
-            filename={arrangements.digital.filename}
-          />
-        ) : (
-          <DigitalWorkArrangementView selectedDate={currentWeek} />
-        )
+        <DigitalWorkArrangementView selectedDate={currentWeek} />
       )}
     </div>
   );

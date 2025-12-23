@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown, Loader2, AlertCircle } from "lucide-react";
@@ -21,6 +20,7 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
+import { api } from '@/lib/api-client';
 
 interface WorkerSelectorProps {
   value: string | null;
@@ -54,7 +54,7 @@ export const WorkerSelector = ({
   const { toast } = useToast();
   
   // Find the selected worker name
-  const selectedWorker = workers.find(worker => worker.id === value);
+  const selectedWorker = Array.isArray(workers) ? workers.find(worker => worker.id === value) : null;
   const displayValue = selectedWorker ? selectedWorker.name : "";
   
   // Fetch workers from database
@@ -63,46 +63,57 @@ export const WorkerSelector = ({
       setLoading(true);
       setError(null);
       try {
-        console.log('WorkerSelector: Fetching workers');
+    
         let data;
         
         // Fetch workers based on department if specified
         if (department) {
-          console.log(`WorkerSelector: Filtering by department "${department}"`);
+  
           
           // Use multiple possible department values for producers
           if (department === 'מפיקים' || department === 'producers') {
-            console.log('WorkerSelector: Using producer departments filter');
-            const { data: departmentWorkers, error } = await supabase
-              .from('workers')
-              .select('*')
-              .or('department.eq.מפיקים,department.eq.מפיק,department.eq.הפקה,department.eq.producers,department.eq.Production staff')
-              .order('name');
-              
-            if (error) {
-              console.error('Error fetching producers:', error);
-              throw error;
-            }
+
+            const response = await api.query('/workers', {
+              where: { 
+                or: [
+                  { 'department ILIKE': '%מפיקים%' },
+                  { 'department ILIKE': '%מפיק%' },
+                  { 'department ILIKE': '%הפקה%' },
+                  { 'department ILIKE': '%producers%' },
+                  { 'department ILIKE': '%Production staff%' }
+                ]
+              }
+            });
+            data = response.data || [];
+
+          } else if (department === 'digital') {
+            // For digital department, try multiple possible values
             
-            console.log(`WorkerSelector: Found ${departmentWorkers?.length || 0} producers`);
-            data = departmentWorkers;
+            const response = await api.query('/workers', {
+              where: { 
+                or: [
+                  { 'department ILIKE': '%digital%' },
+                  { 'department ILIKE': '%Digital%' },
+                  { 'department ILIKE': '%דיגיטל%' }
+                ]
+              }
+            });
+            data = response.data || [];
+            
           } else {
-            // For other departments, use exact matching
-            const { data: departmentWorkers, error } = await supabase
-              .from('workers')
-              .select('*')
-              .eq('department', department)
-              .order('name');
-              
-            if (error) throw error;
-            data = departmentWorkers;
+            // For other departments, use pattern matching
+            const response = await api.query('/workers', {
+              where: { department: { ilike: `%${department}%` } }
+            });
+            data = response.data || [];
           }
         } else {
-          data = await getWorkers();
+          const response = await api.query('/workers');
+          data = response.data || [];
         }
         
-        console.log(`WorkerSelector: Fetched ${data?.length || 0} workers`);
-        setWorkers(data || []);
+        
+        setWorkers(Array.isArray(data) ? data : []);
         // Reset retry count on success
         setRetryCount(0);
       } catch (error) {
@@ -111,7 +122,7 @@ export const WorkerSelector = ({
         
         // If we haven't retried too many times, try again
         if (retryCount < 3) {
-          console.log(`Retrying worker fetch (attempt ${retryCount + 1})...`);
+  
           setRetryCount(prev => prev + 1);
           setTimeout(() => {
             fetchWorkers();
@@ -156,9 +167,9 @@ export const WorkerSelector = ({
     setLoading(true);
     const fetchWorkers = async () => {
       try {
-        console.log('WorkerSelector: Retrying fetch workers');
+
         const data = await getWorkers();
-        console.log(`WorkerSelector: Retried fetch ${data.length} workers`);
+        
         setWorkers(data || []);
         setError(null);
       } catch (error) {
@@ -243,7 +254,7 @@ export const WorkerSelector = ({
           </SelectValue>
         </SelectTrigger>
         <SelectContent position="popper">
-          {workers.map((worker) => (
+          {Array.isArray(workers) && workers.map((worker) => (
             <SelectItem key={worker.id} value={worker.id}>
               {worker.name}
               {worker.department && (
@@ -305,7 +316,7 @@ export const WorkerSelector = ({
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredWorkers.map((worker) => (
+                  {Array.isArray(filteredWorkers) && filteredWorkers.map((worker) => (
                     <button
                       key={worker.id}
                       type="button"

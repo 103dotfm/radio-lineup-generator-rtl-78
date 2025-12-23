@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Draggable } from 'react-beautiful-dnd';
+import { Draggable } from '@hello-pangea/dnd';
 import LineupItem from '../../LineupItem';
 import DividerItem from '../DividerItem';
 import LineupTableHeader from './LineupTableHeader';
@@ -18,6 +17,7 @@ interface LineupTableGroupProps {
   onBreakTextChange: (id: string, text: string) => void;
   onDetailsChange: (id: string, details: string) => void;
   calculateTotalMinutes: () => number;
+  isBackupShow?: boolean;
 }
 
 const LineupTableGroup: React.FC<LineupTableGroupProps> = ({
@@ -31,7 +31,8 @@ const LineupTableGroup: React.FC<LineupTableGroupProps> = ({
   onEdit,
   onBreakTextChange,
   onDetailsChange,
-  calculateTotalMinutes
+  calculateTotalMinutes,
+  isBackupShow
 }) => {
   // CRITICAL: Strictly check for boolean true
   const startsWithDivider = group[0]?.is_divider === true;
@@ -56,6 +57,7 @@ const LineupTableGroup: React.FC<LineupTableGroupProps> = ({
                   onEdit={onEdit}
                   isAuthenticated={isAuthenticated}
                   showMinutes={showMinutes}
+                  isBackupShow={isBackupShow}
                 />
               </tbody>
             </table>
@@ -89,7 +91,8 @@ const LineupTableGroup: React.FC<LineupTableGroupProps> = ({
               onEdit={onEdit} 
               onBreakTextChange={onBreakTextChange}
               onDetailsChange={onDetailsChange}
-              showMinutes={showMinutes} 
+              showMinutes={showMinutes}
+              isBackupShow={isBackupShow}
             />
           ))}
         </tbody>

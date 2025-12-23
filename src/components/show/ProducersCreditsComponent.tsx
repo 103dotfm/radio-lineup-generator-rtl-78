@@ -3,6 +3,7 @@ import { Editor } from '@tiptap/react';
 import { Button } from "@/components/ui/button";
 import { ProducerAssignment } from '@/lib/supabase/producers';
 import { X } from 'lucide-react';
+import { sanitizeCredits } from '@/utils/sanitize';
 
 interface ProducersCreditsComponentProps {
   editor: Editor;
@@ -31,47 +32,48 @@ const ProducersCreditsComponent = ({
 
     // Filter assignments for the current date and time slot
     const dayAssignments = assignments.filter(assignment => {
-      if (!assignment.slot) return false;
-      
       // Check if the assignment's day matches our showDate's day of week
       const showDayOfWeek = showDate.getDay();
-      const assignmentDayOfWeek = assignment.slot.day_of_week;
       
-      console.log('Comparing days:', {
-        showDay: showDayOfWeek,
-        assignmentDay: assignmentDayOfWeek,
-        slotTime: assignment.slot.start_time,
-        showTime: showTime,
-        assignmentId: assignment.id,
-        workerName: assignment.worker?.name,
-        role: assignment.role
-      });
+      // Check both slot.day_of_week and direct day_of_week field
+      const assignmentDayOfWeek = assignment.slot?.day_of_week ?? (assignment as any).day_of_week;
+      
+      // Commenting out console.log to reduce log clutter
+      // console.log('Comparing days:', {
+      //   showDay: showDayOfWeek,
+      //   assignmentDay: assignmentDayOfWeek,
+      //   slotTime: assignment.slot?.start_time || (assignment as any).start_time,
+      //   showTime: showTime,
+      //   assignmentId: assignment.id,
+      //   workerName: assignment.worker?.name,
+      //   role: assignment.role,
+      //   hasSlot: !!assignment.slot,
+      //   directDayOfWeek: (assignment as any).day_of_week
+      // });
       
       return assignmentDayOfWeek === showDayOfWeek;
     });
 
-    console.log('Day assignments:', dayAssignments);
+    // console.log('Day assignments:', dayAssignments);
 
     // Further filter based on time slot
     const timeAssignments = dayAssignments.filter(assignment => {
-      if (!assignment.slot) return false;
-      
       // Check if the time matches (checking only hours and minutes for simplicity)
-      const slotTime = assignment.slot.start_time?.substring(0, 5);
+      const slotTime = (assignment.slot?.start_time || (assignment as any).start_time)?.substring(0, 5);
       const currentTime = showTime?.substring(0, 5);
       
-      console.log('Comparing times:', {
-        slotTime,
-        currentTime,
-        matches: slotTime === currentTime,
-        assignmentId: assignment.id,
-        workerName: assignment.worker?.name
-      });
+      // console.log('Comparing times:', {
+      //   slotTime,
+      //   currentTime,
+      //   matches: slotTime === currentTime,
+      //   assignmentId: assignment.id,
+      //   workerName: assignment.worker?.name
+      // });
       
       return slotTime === currentTime;
     });
 
-    console.log('Time filtered assignments:', timeAssignments);
+    // console.log('Time filtered assignments:', timeAssignments);
     
     return timeAssignments;
   }, [assignments, showDate, showTime]);
@@ -228,6 +230,8 @@ const ProducersCreditsComponent = ({
     }, 250);
   };
 
+
+
   if (!producersText || !isVisible || allCreditsAdded) {
     return null;
   }
@@ -235,7 +239,7 @@ const ProducersCreditsComponent = ({
   return (
     <div className={`text-sm bg-white rounded p-3 border transition-all duration-250 ${isAdded ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       <div className="flex justify-between items-center">
-        <div className="flex-1 text-right whitespace-pre-line" dangerouslySetInnerHTML={{ __html: producersText }}></div>
+        <div className="flex-1 text-right whitespace-pre-line" dangerouslySetInnerHTML={{ __html: sanitizeCredits(producersText || '') }}></div>
         <div className="flex items-center space-x-2 space-x-reverse rtl shrink-0 mr-2">
           {!isAdded ? (
             <>

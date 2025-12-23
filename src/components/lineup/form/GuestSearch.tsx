@@ -2,17 +2,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { searchGuests } from '@/lib/supabase/guests';
+import { cn } from "@/lib/utils";
 
 interface GuestSearchProps {
   onGuestSelect: (guest: { name: string; title: string; phone: string }) => void;
   onNameChange: (name: string) => void;
   value?: string;
   clearValue?: () => void;
+  className?: string;
 }
 
-const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: GuestSearchProps) => {
+const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue, className }: GuestSearchProps) => {
   const [open, setOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<Array<{ name: string; title: string; phone: string; created_at: string }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ name: string; title: string; phone: string }>>([]);
   const [isTyping, setIsTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -61,7 +63,7 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
         autoComplete="new-password"
         aria-autocomplete="none"
         name="off"
-        className="w-full"
+        className={cn("w-full", className)}
         onFocus={() => setIsTyping(true)}
       />
       {open && searchResults.length > 0 && (
@@ -69,7 +71,7 @@ const GuestSearch = ({ onGuestSelect, onNameChange, value = '', clearValue }: Gu
           <div className="p-2">
             {searchResults.map((guest) => (
               <div
-                key={`${guest.created_at}-${guest.name}`}
+                key={guest.name}
                 className="flex flex-col p-2 hover:bg-gray-100 cursor-pointer rounded"
                 onClick={() => handleSelect(guest)}
               >

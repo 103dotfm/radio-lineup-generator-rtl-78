@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -29,16 +28,16 @@ export const useExportData = () => {
       // If date range is specified, first get the IDs of shows within that range
       if (exportStartDate || exportEndDate) {
         try {
-          let showsQuery = supabase.from('shows_backup').select('id');
+          let showsQuery = supabase.from('schedule_slots').select('id');
           
           if (exportStartDate) {
             const formattedStartDate = format(exportStartDate, 'yyyy-MM-dd');
-            showsQuery = showsQuery.gte('date', formattedStartDate);
+            showsQuery = showsQuery.gte('created_at', formattedStartDate);
           }
           
           if (exportEndDate) {
             const formattedEndDate = format(exportEndDate, 'yyyy-MM-dd');
-            showsQuery = showsQuery.lte('date', formattedEndDate);
+            showsQuery = showsQuery.lte('created_at', formattedEndDate);
           }
           
           const { data: filteredShows, error: showsError } = await showsQuery;

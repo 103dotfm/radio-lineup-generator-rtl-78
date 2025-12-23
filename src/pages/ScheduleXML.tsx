@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -6,10 +5,10 @@ const ScheduleXML = () => {
   useEffect(() => {
     const fetchXmlContent = async () => {
       try {
-        console.log("Fetching XML content from system_settings");
-        // Get XML content from system_settings
+        console.log("Fetching XML content from system-settings");
+        // Get XML content from system-settings
         const { data, error } = await supabase
-          .from('system_settings')
+          .from('system-settings')
           .select('value, updated_at')
           .eq('key', 'schedule_xml')
           .maybeSingle();

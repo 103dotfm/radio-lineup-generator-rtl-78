@@ -13,6 +13,10 @@ interface WorkerDialogProps {
   formData: Partial<Worker>;
   onFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (selectedDivisions?: string[]) => Promise<void>;
+  onCreateUserAccount?: (email: string) => Promise<void>;
+  onResetPassword?: () => Promise<void>;
+  isCreatingUser?: boolean;
+  isResettingPassword?: boolean;
   dialogTitle: string;
   submitLabel: string;
 }
@@ -24,6 +28,10 @@ const WorkerDialog: React.FC<WorkerDialogProps> = ({
   formData,
   onFormChange,
   onSubmit,
+  onCreateUserAccount,
+  onResetPassword,
+  isCreatingUser = false,
+  isResettingPassword = false,
   dialogTitle,
   submitLabel
 }) => {
@@ -119,12 +127,16 @@ const WorkerDialog: React.FC<WorkerDialogProps> = ({
         {isLoading ? (
           <div className="py-4 text-center">טוען נתונים...</div>
         ) : (
-          <WorkerForm 
-            formData={formData} 
-            onChange={onFormChange}
-            onDivisionsChange={setSelectedDivisions}
-            selectedDivisions={selectedDivisions}
-          />
+                  <WorkerForm
+          formData={formData}
+          onChange={onFormChange}
+          onDivisionsChange={setSelectedDivisions}
+          selectedDivisions={selectedDivisions}
+          onCreateUserAccount={onCreateUserAccount}
+          onResetPassword={onResetPassword}
+          isCreatingUser={isCreatingUser}
+          isResettingPassword={isResettingPassword}
+        />
         )}
         
         <DialogFooter>

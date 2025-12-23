@@ -1,8 +1,6 @@
-
-import { supabase } from "@/lib/supabase";
-import { format, startOfWeek, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { api } from "@/lib/api-client";
 import { getProducersByDivision, getProducers as fetchProducers, getProducerRoles as fetchProducerRoles } from './producers/workers';
-import { createProducerUser, resetProducerPassword } from './producers/users';
 import { 
   getProducerAssignments, 
   getAllMonthlyAssignments,
@@ -11,8 +9,35 @@ import {
   deleteProducerAssignment
 } from './producers/assignments';
 
-// Re-export functions from the users module
-export { createProducerUser, resetProducerPassword };
+// Provide client-side implementations for user-related actions (placeholder)
+export const createProducerUser = async (workerId: string, email: string): Promise<{ success: boolean; password?: string; message?: string; }> => {
+  try {
+    const res = await fetch('/api/admin/producer-users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ worker_id: workerId, email })
+    });
+    const data = await res.json();
+    return data;
+  } catch (e: any) {
+    return { success: false, message: e?.message || 'Failed to create user' };
+  }
+};
+
+export const resetProducerPassword = async (workerId: string): Promise<{ success: boolean; password?: string; message?: string; }> => {
+  try {
+    const res = await fetch(`/api/admin/producer-users/${encodeURIComponent(workerId)}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+    const data = await res.json();
+    return data;
+  } catch (e: any) {
+    return { success: false, message: e?.message || 'Failed to reset password' };
+  }
+};
 
 // Re-export functions from the workers module
 export const getProducers = fetchProducers;
@@ -50,7 +75,6 @@ export type Worker = {
   email?: string;
   phone?: string;
   user_id?: string | null;
-  password_readable?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -70,26 +94,19 @@ export const getOrCreateProducerWorkArrangement = async (weekStart: Date) => {
     const formattedDate = format(weekStart, 'yyyy-MM-dd');
     
     // First try to get existing arrangement
-    const { data, error } = await supabase
-      .from('producer_work_arrangements')
-      .select('*')
-      .eq('week_start', formattedDate)
-      .single();
+    const { data, error } = await api.query('/producer-work-arrangements', {
+      where: { week_start: formattedDate },
+      single: true
+    });
       
     if (error) {
-      if (error.code === 'PGRST116') {
-        // PGRST116 means no rows returned - create a new arrangement
-        const { data: newArrangement, error: createError } = await supabase
-          .from('producer_work_arrangements')
-          .insert({ week_start: formattedDate })
-          .select()
-          .single();
+      // If no arrangement exists, create a new one
+      const { data: newArrangement, error: createError } = await api.mutate('/producer-work-arrangements', {
+        week_start: formattedDate
+      }, 'POST');
           
-        if (createError) throw createError;
-        return newArrangement;
-      } else {
-        throw error;
-      }
+      if (createError) throw createError;
+      return newArrangement;
     }
     
     return data;
@@ -101,10 +118,7 @@ export const getOrCreateProducerWorkArrangement = async (weekStart: Date) => {
 
 export const updateProducerWorkArrangementNotes = async (id: string, notes: string) => {
   try {
-    const { error } = await supabase
-      .from('producer_work_arrangements')
-      .update({ notes })
-      .eq('id', id);
+    const { error } = await api.mutate(`/producer-work-arrangements/${id}`, { notes }, 'PUT');
       
     if (error) throw error;
     return true;

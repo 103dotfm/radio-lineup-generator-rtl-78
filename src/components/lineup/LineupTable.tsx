@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import { useAuth } from '../../contexts/AuthContext';
 import MinutesToggle from './table/MinutesToggle';
 import LineupTableGroup from './table/LineupTableGroup';
+import { sanitizeShowDetails } from '@/utils/sanitize';
 
 interface LineupTableProps {
   items: Array<{
@@ -16,6 +16,15 @@ interface LineupTableProps {
     is_break?: boolean;
     is_note?: boolean;
     is_divider?: boolean;
+    interviewees?: Array<{
+      id: string;
+      item_id: string;
+      name: string;
+      title?: string;
+      phone?: string;
+      duration?: number;
+      created_at?: string;
+    }>;
   }>;
   onDelete: (id: string) => void;
   onDurationChange: (id: string, duration: number) => void;
@@ -25,6 +34,7 @@ interface LineupTableProps {
   onDragEnd: (result: any) => void;
   showMinutes?: boolean;
   onToggleMinutes?: (show: boolean) => void;
+  isBackupShow?: boolean;
 }
 
 const LineupTable = ({
@@ -36,7 +46,8 @@ const LineupTable = ({
   onDetailsChange,
   onDragEnd,
   showMinutes = false,
-  onToggleMinutes
+  onToggleMinutes,
+  isBackupShow
 }: LineupTableProps) => {
   const [showMinutesLocal, setShowMinutesLocal] = useState(showMinutes);
   const { isAuthenticated } = useAuth();
@@ -79,7 +90,8 @@ const LineupTable = ({
         onToggleMinutes={handleToggleMinutes} 
       />
 
-      <div className="lineup-table-wrapper">
+      {/* Desktop table */}
+      <div className="hidden md:block lineup-table-wrapper">
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="lineup">
             {provided => (
@@ -98,14 +110,41 @@ const LineupTable = ({
                     onBreakTextChange={onBreakTextChange}
                     onDetailsChange={onDetailsChange}
                     calculateTotalMinutes={calculateTotalMinutes}
+                    isBackupShow={isBackupShow}
                   />
                 ))}
-                
                 {provided.placeholder}
               </div>
             )}
           </Droppable>
         </DragDropContext>
+      </div>
+
+      {/* Mobile list view */}
+      <div className="md:hidden space-y-2">
+        {items.map((item, index) => (
+          <div key={item.id} className="rounded border p-3 bg-white">
+            <div className="flex justify-between items-center">
+              <div className="font-semibold text-sm">{item.name || (item.is_break ? 'הפסקה' : item.is_note ? 'הערה' : '')}</div>
+              {showMinutesLocal && (
+                <div className="text-xs text-slate-600">{item.duration || 0} דק'</div>
+              )}
+            </div>
+            {item.title && (
+              <div className="text-xs text-slate-700 mt-1">{item.title}</div>
+            )}
+            {item.details && (
+              <div className="prose prose-sm rtl text-xs mt-2" dangerouslySetInnerHTML={{ __html: sanitizeShowDetails(item.details) }} />
+            )}
+            {isAuthenticated && item.phone && (
+              <div className="text-xs text-slate-600 mt-2">טלפון: {item.phone}</div>
+            )}
+            <div className="flex justify-end gap-2 mt-2">
+              <button className="text-xs px-2 py-1 border rounded" onClick={() => onEdit(item.id, item)}>ערוך</button>
+              <button className="text-xs px-2 py-1 border rounded" onClick={() => onDelete(item.id)}>מחק</button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

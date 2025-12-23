@@ -1,18 +1,18 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
-import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Edit, LogOut } from "lucide-react";
+import { ArrowLeft, Edit, LogOut, Monitor, User } from "lucide-react";
+
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useState, useEffect, useRef } from "react";
+import { storageService } from "@/lib/storage";
 
 const Profile = () => {
-  const { user, refreshProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -23,16 +23,26 @@ const Profile = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const defaultAvatarUrl = "/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png";
+
+  const defaultAvatarUrl = "/storage/uploads/avatars/default-avatar.png";
+
+  const getNormalizedUrl = (raw: string) => storageService.getFileUrl(raw || "");
   const [googleIdentity, setGoogleIdentity] = useState(null);
+
+  // Add state for password change form
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState("");
 
   useEffect(() => {
     if (user) {
       setName(user.full_name || "");
       setTitle(user.title || "");
-      setAvatarUrl(user.avatar_url || defaultAvatarUrl);
-      
+      const raw = user.avatar_url || defaultAvatarUrl;
+      setAvatarUrl(getNormalizedUrl(raw));
+
       // Check if user has Google connected
       checkGoogleConnection();
     }
@@ -40,26 +50,10 @@ const Profile = () => {
 
   const checkGoogleConnection = async () => {
     try {
-      const { data, error } = await supabase.auth.getUser();
-      
-      if (error) {
-        console.error("Error checking identity providers:", error);
-        return;
-      }
-      
-      // Check if the user has identities and if Google is among them
-      const identities = data.user?.identities || [];
-      const googleIdentityFound = identities.find(identity => 
-        identity.provider === 'google'
-      );
-      
-      if (googleIdentityFound) {
-        setIsGoogleConnected(true);
-        setGoogleIdentity(googleIdentityFound);
-      } else {
-        setIsGoogleConnected(false);
-        setGoogleIdentity(null);
-      }
+      // Simplified check for Google connection as direct Supabase auth identity check may not be available
+      setIsGoogleConnected(false);
+      setGoogleIdentity(null);
+      console.log("Google connection check not implemented in this context");
     } catch (error) {
       console.error("Error checking Google connection:", error);
     }
@@ -67,13 +61,12 @@ const Profile = () => {
 
   const handleConnectGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/profile`
-        }
+      // Placeholder for Google OAuth connection
+      toast({
+        title: "חיבור לגוגל אינו זמין כרגע",
+        description: "פונקציונליות זו אינה זמינה בסביבה זו",
+        variant: "destructive"
       });
-      if (error) throw error;
     } catch (error) {
       toast({
         title: "שגיאה בהתחברות לגוגל",
@@ -82,33 +75,14 @@ const Profile = () => {
       });
     }
   };
-  
+
   const handleDisconnectGoogle = async () => {
     try {
-      // Check that we have the Google identity
-      if (!googleIdentity) {
-        await checkGoogleConnection();
-        if (!googleIdentity) {
-          throw new Error("Google account not connected");
-        }
-      }
-
-      // Unlink the Google identity with complete identity object
-      const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
-      
-      if (error) throw error;
-      
       setIsGoogleConnected(false);
       setGoogleIdentity(null);
-      
       toast({
         title: "חשבון גוגל נותק בהצלחה"
       });
-      
-      // Refresh profile to update user data
-      if (refreshProfile) {
-        await refreshProfile();
-      }
     } catch (error) {
       console.error('Error disconnecting Google account:', error);
       toast({
@@ -118,7 +92,68 @@ const Profile = () => {
       });
     }
   };
-  
+
+  // Add function to handle password change
+  const handleChangePassword = async () => {
+    try {
+      setPasswordChangeLoading(true);
+      setPasswordChangeError("");
+
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        setPasswordChangeError("כל השדות נדרשים");
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        setPasswordChangeError("הסיסמאות החדשות אינן תואמות");
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        setPasswordChangeError("הסיסמה החדשה חייבת להיות באורך של לפחות 8 תווים");
+        return;
+      }
+
+      // Make API call to change password
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        }),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'שגיאה בשינוי הסיסמה');
+      }
+
+      toast({
+        title: "סיסמה שונתה בהצלחה"
+      });
+
+      // Clear form fields
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordChangeError(error.message || 'שגיאה בשינוי הסיסמה');
+      toast({
+        title: "שגיאה בשינוי הסיסמה",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setPasswordChangeLoading(false);
+    }
+  };
+
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
@@ -126,30 +161,72 @@ const Profile = () => {
   const uploadAvatar = async (event) => {
     try {
       setUploading(true);
-      
+
       if (!event.target.files || event.target.files.length === 0) {
         throw new Error('You must select an image to upload.');
       }
-      
+
       const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
-      const filePath = `${fileName}`;
-      
-      // Upload the file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-        
-      if (uploadError) throw uploadError;
-      
-      // Get the public URL
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-        
-      setAvatarUrl(data.publicUrl);
-      
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Upload file to server
+      const uploadResponse = await fetch('/api/storage/upload/avatars', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Failed to upload file');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const newAvatarUrl = uploadResult.data.path;
+
+      // Update the avatar URL state
+      setAvatarUrl(getNormalizedUrl(newAvatarUrl));
+
+      // Immediately update the profile with the new avatar URL
+      const profileResponse = await fetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          full_name: name,
+          title: title,
+          avatar_url: newAvatarUrl
+        }),
+        credentials: 'include'
+      });
+
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json();
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
+
+      // Refresh user data to update the context
+      const refreshResponse = await fetch('/api/auth/refresh-user-data', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (refreshResponse.ok) {
+        const refreshedUserData = await refreshResponse.json();
+        console.log('Refreshed user data:', refreshedUserData);
+        // Update local storage with the new user data
+        localStorage.setItem('user', JSON.stringify(refreshedUserData));
+        // Trigger a custom event to notify AuthContext to refresh
+        window.dispatchEvent(new CustomEvent('userDataUpdated', { detail: refreshedUserData }));
+      }
+
       toast({
         title: "התמונה הועלתה בהצלחה"
       });
@@ -168,59 +245,53 @@ const Profile = () => {
   const handleUpdateProfile = async () => {
     try {
       setLoading(true);
-      
-      // Check if the user is a producer by looking if they have a record in the workers table
-      const { data: workerData, error: workerError } = await supabase
-        .from('workers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-      
-      // Determine if this is a producer user
-      const isProducerUser = !!workerData;
-      
-      const updates = {
-        id: user?.id, // Ensure ID is included for the update
-        full_name: name,
-        title,
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString(),
-      };
-      
-      // Update the appropriate table based on user type
-      // For producers, we need to update both workers and profiles tables
-      if (isProducerUser) {
-        console.log("Updating producer profile in workers table");
-        const { error: workerUpdateError } = await supabase
-          .from('workers')
-          .update({
-            name: name,
-            position: title,
-            email: user?.email,
-            photo_url: avatarUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user?.id);
-          
-        if (workerUpdateError) throw workerUpdateError;
+
+      console.log('Attempting to update profile with data:', { name, title, avatarUrl });
+      // Make API call to update profile
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          full_name: name,
+          title: title,
+          avatar_url: avatarUrl
+        }),
+        credentials: 'include'
+      });
+
+      console.log('Profile update response status:', response.status);
+      const data = await response.json();
+      console.log('Profile update response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'שגיאה בעדכון הפרופיל');
       }
-      
-      // Always update the profiles table too
-      console.log("Updating profile in profiles table");
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(updates);
-        
-      if (profileError) throw profileError;
+
+      // Fetch the latest user data to update the context
+      const refreshResponse = await fetch('/api/auth/refresh-user-data', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (refreshResponse.ok) {
+        const refreshedUserData = await refreshResponse.json();
+        console.log('Refreshed user data:', refreshedUserData);
+        // Update local storage with the new user data to ensure consistency with AuthContext
+        localStorage.setItem('user', JSON.stringify(refreshedUserData));
+        // Trigger a custom event to notify AuthContext to refresh
+        window.dispatchEvent(new CustomEvent('userDataUpdated', { detail: refreshedUserData }));
+      } else {
+        console.error('Failed to refresh user data:', refreshResponse.status);
+      }
 
       toast({
-        title: "הפרופיל עודכן בהצלחה"
+        title: "פרופיל עודכן בהצלחה"
       });
-      
-      // Refresh user profile data in context
-      if (refreshProfile) {
-        await refreshProfile();
-      }
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -239,112 +310,214 @@ const Profile = () => {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate('/')} 
-        className="mb-6 flex items-center gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        חזרה ללוח הבקרה
-      </Button>
-      
-      <Card className="max-w-md mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">אזור אישי</h1>
-        
-        <div className="flex justify-center mb-6">
-          <div 
-            className="relative cursor-pointer" 
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-            onClick={handleAvatarClick}
-          >
-            <Avatar className="h-24 w-24">
-              {avatarUrl ? (
-                <AvatarImage src={avatarUrl} alt={name || "Profile"} />
-              ) : (
-                <AvatarImage src={defaultAvatarUrl} alt="Default Avatar" />
-              )}
-              <AvatarFallback>{name ? name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-            </Avatar>
-            
-            {isHovering && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                <Edit className="h-8 w-8 text-white" />
+    <div className="container mx-auto py-12 px-6 max-w-5xl animate-in fade-in duration-1000" dir="rtl">
+      <div className="flex justify-between items-center mb-10">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight">פרופיל משתמש</h1>
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          <span className="font-bold">חזור</span>
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left column */}
+        <div className="md:col-span-1 space-y-6">
+          <div className="glass-card p-8 flex flex-col items-center bg-white/60 backdrop-blur-xl border-none premium-shadow rounded-[2.5rem]">
+            <div
+              className="relative group cursor-pointer"
+              onClick={handleAvatarClick}
+            >
+              <div className="absolute -inset-1 bg-gradient-to-tr from-primary/20 to-transparent rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <Avatar className="w-32 h-32 border-4 border-white shadow-2xl relative z-10">
+                <AvatarImage src={avatarUrl} alt={name || "User Avatar"} className="object-cover" />
+                <AvatarFallback className="bg-slate-100 text-slate-400 text-3xl font-black">{name?.charAt(0) || "U"}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 rounded-full opacity-0 group-hover:opacity-100 transition-all z-20 scale-95 group-hover:scale-100">
+                <Edit className="text-white w-8 h-8" />
               </div>
-            )}
-            
-            <input 
+            </div>
+
+            <input
               type="file"
               ref={fileInputRef}
               className="hidden"
               accept="image/*"
               onChange={uploadAvatar}
-              disabled={uploading}
             />
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <div>
-            <Label>שם מלא</Label>
-            <Input 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="הזן את שמך המלא"
-            />
-          </div>
-          
-          <div>
-            <Label>כתובת אימייל</Label>
-            <Input value={user.email} disabled />
+
+            <div className="mt-6 text-center">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">{name || "שם משתמש"}</h2>
+              <p className="text-slate-400 font-bold mt-1 uppercase tracking-widest text-[10px]">{title || "תפקיד לא מוגדר"}</p>
+            </div>
+
+            {uploading && (
+              <div className="mt-4 px-4 py-1.5 bg-primary/10 text-primary text-[10px] font-black rounded-full animate-pulse">
+                מעלה תמונה...
+              </div>
+            )}
           </div>
 
-          <div>
-            <Label>תפקיד</Label>
-            <Input 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="הזן את תפקידך"
-            />
-          </div>
+          {/* Google Account Connection */}
+          <div className="glass-card p-8 bg-white/60 backdrop-blur-xl border-none premium-shadow rounded-[2.5rem]">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                <Monitor className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">חשבון גוגל</h2>
+            </div>
 
-          <Button 
-            onClick={handleUpdateProfile}
-            className="w-full"
-            disabled={loading}
-          >
-            עדכן פרופיל
-          </Button>
+            <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
+              חיבור חשבון גוגל מאפשר גישה לקבצים משותפים ולוחות שנה של המערכת
+            </p>
 
-          <div className="pt-4">
             {isGoogleConnected ? (
-              <Button
-                variant="outline"
-                onClick={handleDisconnectGoogle}
-                className="w-full flex items-center gap-2 text-red-500 border-red-300 hover:bg-red-50"
-              >
-                <LogOut className="h-4 w-4" />
-                נתק חשבון Google
-              </Button>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 mb-4">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-xs font-black uppercase tracking-wider">מחובר בהצלחה</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  className="w-full h-12 rounded-xl border border-red-100 text-red-500 hover:bg-red-50 font-bold"
+                  onClick={handleDisconnectGoogle}
+                >
+                  נתק חשבון גוגל
+                </Button>
+              </div>
             ) : (
               <Button
-                variant="outline"
+                variant="default"
+                className="w-full h-12 rounded-xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 onClick={handleConnectGoogle}
-                className="w-full flex items-center gap-2"
               >
-                <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                  <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
-                  <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
-                  <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
-                  <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
-                </svg>
-                חבר חשבון Google
+                חבר חשבון גוגל
               </Button>
             )}
           </div>
         </div>
-      </Card>
+
+        {/* Right column */}
+        <div className="md:col-span-2 space-y-8">
+          <div className="glass-card p-10 bg-white/60 backdrop-blur-xl border-none premium-shadow rounded-[2.5rem]">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
+                <User className="h-5 w-5" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">פרטי מזהה</h2>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8">
+              <div className="space-y-3">
+                <Label htmlFor="name" className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">שם מלא</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-12 bg-white/50 border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 transition-all font-bold"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="title" className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">תפקיד במערכת</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="h-12 bg-white/50 border-slate-200 rounded-xl focus:ring-4 focus:ring-primary/10 transition-all font-bold"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="email" className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">כתובת דוא"ל</Label>
+                <Input
+                  id="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="h-12 bg-slate-50/50 border-slate-100 rounded-xl font-medium text-slate-400"
+                />
+              </div>
+            </div>
+
+            <div className="mt-10 flex justify-end">
+              <Button
+                onClick={handleUpdateProfile}
+                disabled={loading}
+                className="h-14 px-10 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+              >
+                {loading ? "שומר..." : "שמור שינויים"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Password Change Card */}
+          <div className="glass-card p-10 bg-white/60 backdrop-blur-xl border-none premium-shadow rounded-[2.5rem]">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="h-10 w-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+                <LogOut className="h-5 w-5 rotate-180" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">שינוי סיסמה</h2>
+            </div>
+
+            {passwordChangeError && (
+              <div className="mb-8 p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 text-sm font-bold animate-in shake-in-1">
+                {passwordChangeError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-8">
+              <div className="space-y-3">
+                <Label htmlFor="currentPassword" title="סיסמה נוכחית" className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">סיסמה נוכחית</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="h-12 bg-white/50 border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-900/10 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="newPassword" title="סיסמה חדשה" className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">סיסמה חדשה</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="h-12 bg-white/50 border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-900/10 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="confirmNewPassword" title="אישור סיסמה חדשה" className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">אישור סיסמה חדשה</Label>
+                  <Input
+                    id="confirmNewPassword"
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="h-12 bg-white/50 border-slate-200 rounded-xl focus:ring-4 focus:ring-slate-900/10 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 flex justify-end">
+              <Button
+                onClick={handleChangePassword}
+                disabled={passwordChangeLoading}
+                variant="ghost"
+                className="h-14 px-10 border border-slate-200 text-slate-800 font-black rounded-2xl hover:bg-slate-50 transition-all"
+              >
+                {passwordChangeLoading ? "משנה סיסמה..." : "שנה סיסמה"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

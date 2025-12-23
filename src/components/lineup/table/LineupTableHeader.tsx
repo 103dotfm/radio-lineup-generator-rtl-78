@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { cn } from "@/lib/utils";
 
 interface LineupTableHeaderProps {
   isAuthenticated: boolean;
@@ -10,15 +11,17 @@ const LineupTableHeader: React.FC<LineupTableHeaderProps> = ({
   isAuthenticated,
   showMinutes
 }) => {
+  const cellClass = "py-4 px-4 text-right font-black text-slate-500 text-xs uppercase tracking-widest border-b border-slate-100 bg-slate-50/50 backdrop-blur-sm first:rounded-tr-2xl last:rounded-tl-2xl";
+
   return (
-    <thead>
+    <thead className="relative z-10">
       <tr>
-        <th className="py-1 sm:py-2 px-2 sm:px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200 text-xs sm:text-sm">שם</th>
-        <th className="py-1 sm:py-2 px-2 sm:px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200 text-xs sm:text-sm">קרדיט</th>
-        <th className="py-1 sm:py-2 px-2 sm:px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200 text-xs sm:text-sm">פרטים</th>
-        {isAuthenticated && <th className="py-1 sm:py-2 px-2 sm:px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200 text-xs sm:text-sm">טלפון</th>}
-        {showMinutes && <th className="py-1 sm:py-2 px-1 sm:px-4 text-center border font-bold bg-slate-300 hover:bg-slate-200 text-xs sm:text-sm">דק'</th>}
-        <th className="py-1 sm:py-2 px-1 sm:px-4 text-right border font-bold bg-slate-300 hover:bg-slate-200 text-xs sm:text-sm">פעולות</th>
+        <th className={cellClass}>שם</th>
+        <th className={cellClass}>קרדיט</th>
+        <th className={cellClass}>פרטים</th>
+        {isAuthenticated && <th className={cellClass}>טלפון</th>}
+        {showMinutes && <th className={cn(cellClass, "text-center")}>דק'</th>}
+        <th className={cn(cellClass, "text-center")}>פעולות</th>
       </tr>
     </thead>
   );

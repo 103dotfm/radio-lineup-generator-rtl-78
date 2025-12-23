@@ -5,7 +5,7 @@ import { useUserDeleteMutations } from './useUserDeleteMutations';
 
 export const useUsers = () => {
   const { data: users, isLoading, error } = useGetUsers();
-  const { createUserMutation, updateUserMutation } = useUserMutations();
+  const { createUserMutation, updateUserMutation, resetPasswordMutation } = useUserMutations();
   const { deleteUserMutation, deleteUserByEmailMutation } = useUserDeleteMutations();
 
   return {
@@ -14,6 +14,7 @@ export const useUsers = () => {
     error,
     createUserMutation,
     updateUserMutation,
+    resetPasswordMutation,
     deleteUserMutation,
     deleteUserByEmailMutation
   };

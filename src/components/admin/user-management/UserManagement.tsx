@@ -20,11 +20,15 @@ const UserManagement = () => {
     is_admin: false,
   });
 
-  const { users, isLoading, deleteUserMutation } = useUsers();
+  const { users, isLoading, deleteUserMutation, resetPasswordMutation } = useUsers();
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setIsEditUserOpen(true);
+  };
+
+  const handleResetPassword = (userId: string) => {
+    resetPasswordMutation.mutate(userId);
   };
 
   return (
@@ -49,6 +53,7 @@ const UserManagement = () => {
         users={users || []}
         onEdit={handleEditUser}
         onDelete={(userId) => deleteUserMutation.mutate(userId)}
+        onResetPassword={handleResetPassword}
         isLoading={isLoading}
       />
     </Card>

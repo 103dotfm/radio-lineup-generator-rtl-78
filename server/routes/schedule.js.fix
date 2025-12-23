@@ -1,0 +1,901 @@
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import xml2js from 'xml2js';
+import { format, addDays, startOfWeek, parseISO } from 'date-fns';
+import { query } from '../../src/lib/db.js';
+
+const router = express.Router();
+
+// Get directory name for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Helper function to get a date by day of week
+function getDateByDayOfWeek(baseDate, dayOfWeek) {
+  const currentDate = new Date(baseDate);
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // 0 = Sunday
+  return addDays(weekStart, dayOfWeek);
+}
+
+// Get schedule slots
+router.get('/slots', async (req, res) => {
+  try {
+    const { selectedDate, isMasterSchedule } = req.query;
+    console.log('Fetching slots with params:', { selectedDate, isMasterSchedule });
+    
+    let queryStr;
+    let params = [];
+
+    // Convert isMasterSchedule to boolean
+    const isMaster = isMasterSchedule === 'true' || isMasterSchedule === true;
+    console.log('isMaster:', isMaster);
+
+    if (isMaster) {
+      // Master schedule: fetch only master slots
+      queryStr = `
+        SELECT 
+          id, slot_date, start_time, end_time, show_name, host_name,
+          has_lineup, color, is_prerecorded, is_collection, is_master,
+          day_of_week, is_recurring, created_at, updated_at
+        FROM schedule_slots
+        WHERE is_deleted = false 
+        AND is_master = true
+        ORDER BY day_of_week, start_time
+      `;
+    } else {
+      // Weekly schedule: fetch slots for the selected week
+      if (!selectedDate) {
+        console.error('selectedDate is required for weekly schedule');
+        return res.status(400).json({ error: 'selectedDate is required for weekly schedule' });
+      }
+
+      const weekStartDate = startOfWeek(new Date(selectedDate), { weekStartsOn: 0 });
+      const weekEndDate = addDays(weekStartDate, 6);
+      
+      // Format dates for SQL query
+      const formattedStartDate = format(weekStartDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(weekEndDate, 'yyyy-MM-dd');
+      
+      console.log('Weekly schedule date range:', { 
+        formattedStartDate, 
+        formattedEndDate,
+        selectedDate
+      });
+      
+      // Simple query to get both weekly slots and master slots
+      queryStr = `
+        SELECT * FROM schedule_slots
+        WHERE is_deleted = false 
+        AND (
+          (is_master = false AND slot_date BETWEEN $1::date AND $2::date)
+          OR
+          (is_master = true)
+        )
+        ORDER BY day_of_week, start_time
+      `;
+      params = [formattedStartDate, formattedEndDate];
+    }
+
+    console.log('Executing query:', { queryStr, params });
+    const result = await query(queryStr, params);
+    if (result.error) {
+      console.error('Database error:', result.error);
+      throw result.error;
+    }
+
+    console.log('Query result:', { 
+      rowCount: result.data?.length,
+      firstRow: result.data?.[0],
+      lastRow: result.data?.[result.data.length - 1]
+    });
+
+    // Check if we're getting any data from the database
+    if (!result.data || result.data.length === 0) {
+      console.log('No slots found in database. Checking table structure...');
+      const tableInfo = await query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'schedule_slots'
+      `);
+      console.log('Table structure:', tableInfo.data);
+
+      // Check if we have any rows at all
+      const countResult = await query('SELECT COUNT(*) FROM schedule_slots');
+      console.log('Total rows in schedule_slots:', countResult.data[0].count);
+
+      // Check if we have any master slots
+      const masterCountResult = await query(`
+        SELECT COUNT(*) 
+        FROM schedule_slots 
+        WHERE is_master = true AND is_deleted = false
+      `);
+      console.log('Master slots count:', masterCountResult.data[0].count);
+    }
+
+    res.json(result.data);
+  } catch (error) {
+    console.error('Error fetching schedule slots:', error);
+    res.status(500).json({ error: 'Failed to fetch schedule slots' });
+  }
+});
+
+// Create schedule slot
+router.post('/slots', async (req, res) => {
+  try {
+    const { 
+      start_time, end_time, show_name, host_name, has_lineup,
+      color, is_prerecorded, is_collection, slot_date,
+      isMasterSchedule, day_of_week, is_recurring
+    } = req.body;
+    
+    // Convert isMasterSchedule to boolean for clarity
+    const is_master = isMasterSchedule === true || isMasterSchedule === 'true';
+    
+    console.log('Creating slot with data:', {
+      start_time, end_time, show_name, host_name, has_lineup,
+      color, is_prerecorded, is_collection, slot_date,
+      isMasterSchedule, is_master, day_of_week, is_recurring
+    });
+    
+    // Validate slot_date
+    if (!slot_date) {
+      console.error('slot_date is required');
+      return res.status(400).json({ error: 'slot_date is required' });
+    }
+
+    // Validate day_of_week
+    if (day_of_week === undefined || day_of_week === null) {
+      console.error('day_of_week is required');
+      return res.status(400).json({ error: 'day_of_week is required' });
+    }
+
+    // For master schedule, use the current week's start date
+    const actualDate = is_master
+      ? format(startOfWeek(new Date(), { weekStartsOn: 0 }), 'yyyy-MM-dd')
+      : slot_date;
+    
+    console.log('Using actual date:', actualDate);
+    
+    // First, check if the slot already exists
+    const existingSlot = await query(
+      `SELECT id FROM schedule_slots 
+       WHERE day_of_week = $1 
+       AND start_time = $2 
+       AND is_master = $3 
+       AND is_deleted = false`,
+      [day_of_week, start_time, is_master]
+    );
+    
+    if (existingSlot.error) {
+      console.error('Error checking for existing slot:', existingSlot.error);
+      throw existingSlot.error;
+    }
+    
+    if (existingSlot.data && existingSlot.data.length > 0) {
+      console.log('Slot already exists:', existingSlot.data[0]);
+      return res.status(400).json({ error: 'A slot already exists for this day and time' });
+    }
+    
+    // Ensure is_master is explicitly set based on isMasterSchedule
+    console.log('Creating slot with is_master =', is_master);
+    
+    // Create the slot
+    const result = await query(
+      `INSERT INTO schedule_slots (
+        slot_date, start_time, end_time, show_name, host_name,
+        has_lineup, color, is_prerecorded, is_collection,
+        is_master, day_of_week, is_recurring, is_deleted, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, CURRENT_TIMESTAMP)
+      RETURNING *`,
+      [
+        actualDate,
+        start_time,
+        end_time,
+        show_name,
+        host_name,
+        has_lineup,
+        color || 'green',
+        is_prerecorded || false,
+        is_collection || false,
+        is_master, // Use the explicit boolean value
+        day_of_week,
+        is_recurring || false,
+        false
+      ]
+    );
+    
+    if (result.error) {
+      console.error('Error creating slot:', result.error);
+      throw result.error;
+    }
+
+    const insertedSlot = result.data[0];
+    console.log('Slot created:', insertedSlot);
+
+    // Verify the slot was created with correct is_master flag
+    const verifyResult = await query(
+      `SELECT * FROM schedule_slots WHERE id = $1`,
+      [insertedSlot.id]
+    );
+    
+    if (verifyResult.error) {
+      console.error('Error verifying slot:', verifyResult.error);
+      throw verifyResult.error;
+    }
+    
+    const verifiedSlot = verifyResult.data[0];
+    console.log('Verified slot:', verifiedSlot);
+    
+    // Double-check if is_master was set correctly
+    if (is_master !== verifiedSlot.is_master) {
+      console.error('is_master flag mismatch. Expected:', is_master, 'Actual:', verifiedSlot.is_master);
+      // Fix the flag if it wasn't set correctly
+      await query(
+        `UPDATE schedule_slots SET is_master = $1 WHERE id = $2 RETURNING *`,
+        [is_master, insertedSlot.id]
+      );
+      console.log('Fixed is_master flag for slot:', insertedSlot.id);
+    }
+
+    // If this is a master slot, create instances for future weeks
+    if (is_master) {
+      const createdSlot = result.data[0];
+      const currentDate = new Date();
+      const currentWeekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+      
+      console.log('Creating weekly instances for master slot:', createdSlot.id);
+      
+      // Create instances for the next 12 weeks
+      for (let i = 0; i <= 12; i++) {
+        // Skip the current week (i=0) if we're in the past
+        if (i === 0 && currentDate < new Date()) {
+          continue;
+        }
+        
+        // Calculate the date for this specific day in this week
+        const futureWeekStart = addDays(currentWeekStart, i * 7);
+        const slotDate = addDays(futureWeekStart, parseInt(day_of_week));
+        const futureDate = format(slotDate, 'yyyy-MM-dd');
+        
+        console.log(`Creating instance for week ${i}, day ${day_of_week} (${futureDate})`);
+        
+        try {
+          const weeklySlotResult = await query(
+            `INSERT INTO schedule_slots (
+              slot_date, start_time, end_time, show_name, host_name,
+              has_lineup, color, is_prerecorded, is_collection,
+              is_master, day_of_week, parent_slot_id, is_recurring, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10, $11, $12, CURRENT_TIMESTAMP)
+            RETURNING id`,
+            [
+              futureDate,
+              start_time,
+              end_time,
+              show_name,
+              host_name,
+              has_lineup,
+              color || 'green',
+              is_prerecorded || false,
+              is_collection || false,
+              day_of_week,
+              createdSlot.id,
+              is_recurring || false
+            ]
+          );
+          
+          if (weeklySlotResult.error) {
+            console.error('Error creating weekly instance for master slot:', weeklySlotResult.error);
+          } else {
+            console.log('Created weekly instance for week', i, 'with ID:', weeklySlotResult.data[0].id);
+          }
+        } catch (error) {
+          console.error(`Error creating instance for week ${i}, day ${day_of_week}:`, error);
+          // Continue creating other instances even if one fails
+        }
+      }
+      
+      console.log('Finished creating weekly instances for master slot');
+    }
+    
+    res.json(insertedSlot);
+  } catch (error) {
+    console.error('Error creating schedule slot:', error);
+    res.status(500).json({ 
+      error: 'Failed to create schedule slot',
+      details: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Update schedule slot
+router.put('/slots/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isMasterSchedule, slot_date, selectedDate, ...updates } = req.body;
+    
+    // Convert isMasterSchedule to boolean for clarity
+    const is_master = isMasterSchedule === true || isMasterSchedule === 'true';
+    
+    console.log('Updating slot:', { 
+      id, 
+      isMasterSchedule, 
+      is_master, 
+      slot_date,
+      selectedDate: selectedDate ? selectedDate : 'not provided',
+      updates 
+    });
+    
+    // Validate updates object
+    const requiredFields = ['start_time', 'end_time', 'show_name', 'is_recurring'];
+    const missingFields = requiredFields.filter(field => !(field in updates));
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
+      return res.status(400).json({ error: `Missing required fields: ${missingFields.join(', ')}` });
+    }
+    
+    // Get the original slot
+    const originalSlot = await query(
+      'SELECT * FROM schedule_slots WHERE id = $1',
+      [id]
+    );
+
+    if (originalSlot.error || !originalSlot.data.length) {
+      console.error('Slot not found:', { id });
+      throw new Error('Slot not found');
+    }
+
+    const slot = originalSlot.data[0];
+    console.log('Found original slot:', {
+      id: slot.id,
+      show_name: slot.show_name,
+      day_of_week: slot.day_of_week, 
+      slot_date: slot.slot_date,
+      is_master: slot.is_master,
+      parent_slot_id: slot.parent_slot_id
+    });
+    
+    // Check if this slot should be a master slot but isn't marked as one
+    if (is_master && !slot.is_master) {
+      console.log('Fixing is_master flag on slot:', id);
+      await query(
+        'UPDATE schedule_slots SET is_master = true WHERE id = $1',
+        [id]
+      );
+      slot.is_master = true;
+    }
+
+    // For master schedule, update the master slot and all its instances
+    if (is_master) {
+      // Update master slot
+      const setClauses = [];
+      const values = [id];
+      let paramIndex = 2;
+      
+      for (const [key, value] of Object.entries(updates)) {
+        if (key !== 'id' && key !== 'slot_date' && key !== 'is_master' && key !== 'selectedDate') {
+          setClauses.push(`${key} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      }
+      
+      // Always ensure is_master=true for master schedule slots
+      setClauses.push('is_master = true');
+      
+      const updateQuery = `UPDATE schedule_slots 
+         SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+         RETURNING *`;
+      
+      console.log('Executing update query for master slot:', {
+        query: updateQuery,
+        values
+      });
+      
+      const result = await query(updateQuery, values);
+      
+      if (result.error) {
+        console.error('Error updating master slot:', result.error);
+        throw result.error;
+      }
+      
+      console.log('Successfully updated master slot:', result.data[0]);
+
+      // Update all instances - exclude is_master from setClauses for instances
+      const instanceSetClauses = setClauses.filter(clause => !clause.includes('is_master = true'));
+      
+      if (instanceSetClauses.length > 0) {
+        const updateInstancesQuery = `UPDATE schedule_slots 
+           SET ${instanceSetClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP
+           WHERE parent_slot_id = $1
+           AND slot_date >= CURRENT_DATE
+           RETURNING id`;
+        
+        console.log('Updating instances with query:', {
+          query: updateInstancesQuery,
+          masterSlotId: id
+        });
+        
+        const instancesResult = await query(updateInstancesQuery, values);
+        
+        if (instancesResult.error) {
+          console.error('Error updating instances:', instancesResult.error);
+        } else {
+          console.log(`Updated ${instancesResult.data.length} instances`);
+        }
+      }
+      
+      // Handle recurring slots
+      if (slot.is_recurring) {
+        const recurringResult = await query(
+          `UPDATE schedule_slots 
+           SET start_time = $1, end_time = $2, show_name = $3, is_recurring = $4
+           WHERE day_of_week = $5 
+           AND slot_date >= CURRENT_DATE
+           AND is_deleted = false
+           RETURNING *`,
+          [updates.start_time, updates.end_time, updates.show_name, updates.is_recurring, slot.day_of_week, slot.updated_at]
+        );
+        
+        if (recurringResult.error) {
+          console.error('Error updating recurring slots:', recurringResult.error);
+          throw recurringResult.error;
+        } else {
+          console.log(`Updated ${recurringResult.data.length} recurring slots`);
+        }
+      }
+      
+      res.json(result.data[0]);
+    } else {
+      // For non-master slots, just update the specific instance
+      const setClauses = [];
+      const values = [id];
+      let paramIndex = 2;
+      
+      for (const [key, value] of Object.entries(updates)) {
+        if (key !== 'id' && key !== 'selectedDate') {
+          setClauses.push(`${key} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      }
+      
+      // If this is a derived slot from a master slot, mark it as modified
+      if (slot.parent_slot_id) {
+        setClauses.push('is_modified = true');
+      }
+      
+      const updateQuery = `UPDATE schedule_slots 
+         SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+         RETURNING *`;
+      
+      console.log('Executing update query for weekly slot:', {
+        query: updateQuery,
+        values
+      });
+      
+      const result = await query(updateQuery, values);
+      
+      if (result.error) {
+        console.error('Error updating slot:', result.error);
+        throw result.error;
+      }
+      
+      console.log('Successfully updated weekly slot:', result.data[0]);
+      res.json(result.data[0]);
+    }
+  } catch (error) {
+    console.error('Error updating schedule slot:', error);
+    res.status(500).json({ error: 'Failed to update schedule slot' });
+  }
+});
+
+// Delete schedule slot
+router.delete('/slots/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isMasterSchedule } = req.query;
+    
+    if (isMasterSchedule === 'true') {
+      // For master slots, delete the master and all its instances
+      const result = await query(
+        `UPDATE schedule_slots 
+         SET is_deleted = true, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 OR parent_slot_id = $1
+         RETURNING *`,
+        [id]
+      );
+      
+      if (result.error) {
+        throw result.error;
+      }
+    } else {
+      // For non-master slots, just delete the specific instance
+      const result = await query(
+        `UPDATE schedule_slots 
+         SET is_deleted = true, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+         RETURNING *`,
+        [id]
+      );
+      
+      if (result.error) {
+        throw result.error;
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting schedule slot:', error);
+    res.status(500).json({ error: 'Failed to delete schedule slot' });
+  }
+});
+
+// Generate schedule XML
+router.post('/generate-xml', async (req, res) => {
+  try {
+    console.log('Generating schedule XML...');
+    const { previewOffset } = req.body || {};
+    
+    // Query database to get offset setting or use provided preview offset
+    let offset = 0;
+    if (previewOffset !== undefined) {
+      offset = parseInt(previewOffset);
+    } else {
+      const offsetResult = await query(
+        "SELECT value FROM system_settings WHERE key = 'schedule_data_offset'"
+      );
+      
+      if (offsetResult.data && offsetResult.data.length > 0) {
+        offset = parseInt(offsetResult.data[0].value) || 0;
+      }
+    }
+    
+    console.log(`Using offset: ${offset} days`);
+    
+    // Get schedule data from database
+    const scheduleSlotsResult = await query(
+      `SELECT 
+        id, day_of_week, start_time, end_time, show_name, host_name, has_lineup, 
+        color, is_prerecorded, is_collection
+       FROM 
+        schedule_slots
+       WHERE 
+        is_master = true
+        AND is_deleted = false
+       ORDER BY 
+        day_of_week, start_time`
+    );
+    
+    if (scheduleSlotsResult.error) {
+      throw scheduleSlotsResult.error;
+    }
+    
+    // Generate XML
+    const builder = new xml2js.Builder({
+      rootName: 'schedule',
+      headless: true,
+      renderOpts: {
+        pretty: true,
+        indent: '  ',
+        newline: '\n'
+      }
+    });
+    
+    // Apply offset to dates if needed
+    const today = new Date();
+    if (offset !== 0) {
+      today.setDate(today.getDate() + offset);
+    }
+    
+    // Create XML structure
+    const xmlObj = {
+      show: scheduleSlotsResult.data.map(slot => {
+        // Calculate the date for this slot based on day of week
+        const slotDate = getDateByDayOfWeek(today, slot.day_of_week);
+        
+        return {
+          day: slot.day_of_week,
+          date: format(slotDate, 'yyyy-MM-dd'),
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          name: slot.show_name,
+          host: slot.host_name || '',
+          combined: slot.host_name ? `${slot.show_name} עם ${slot.host_name}` : slot.show_name,
+          has_lineup: slot.has_lineup ? 'true' : 'false'
+        };
+      })
+    };
+    
+    // Convert to XML
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + builder.buildObject(xmlObj);
+    
+    // Store in database if this is not a preview
+    if (previewOffset === undefined) {
+      await query(
+        'UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2',
+        [xml, 'schedule_xml']
+      );
+      
+      // If schedule_xml doesn't exist, insert it
+      const result = await query(
+        'SELECT COUNT(*) FROM system_settings WHERE key = $1',
+        ['schedule_xml']
+      );
+      
+      if (result.data && parseInt(result.data[0].count) === 0) {
+        await query(
+          'INSERT INTO system_settings (key, value) VALUES ($1, $2)',
+          ['schedule_xml', xml]
+        );
+      }
+    }
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Error generating schedule XML:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate schedule XML',
+      details: error.message 
+    });
+  }
+});
+
+// Generate schedule JSON
+router.post('/generate-json', async (req, res) => {
+  try {
+    console.log('Generating schedule JSON...');
+    const { previewOffset } = req.body || {};
+    
+    // Query database to get offset setting or use provided preview offset
+    let offset = 0;
+    if (previewOffset !== undefined) {
+      offset = parseInt(previewOffset);
+    } else {
+      const offsetResult = await query(
+        "SELECT value FROM system_settings WHERE key = 'schedule_data_offset'"
+      );
+      
+      if (offsetResult.data && offsetResult.data.length > 0) {
+        offset = parseInt(offsetResult.data[0].value) || 0;
+      }
+    }
+    
+    console.log(`Using offset: ${offset} days`);
+    
+    // Get schedule data from database
+    const scheduleSlotsResult = await query(
+      `SELECT 
+        id, day_of_week, start_time, end_time, show_name, host_name, has_lineup, 
+        color, is_prerecorded, is_collection
+       FROM 
+        schedule_slots
+       WHERE 
+        is_master = true
+        AND is_deleted = false
+       ORDER BY 
+        day_of_week, start_time`
+    );
+    
+    if (scheduleSlotsResult.error) {
+      throw scheduleSlotsResult.error;
+    }
+    
+    // Apply offset to dates if needed
+    const today = new Date();
+    if (offset !== 0) {
+      today.setDate(today.getDate() + offset);
+    }
+    
+    // Create JSON structure
+    const schedule = scheduleSlotsResult.data.map(slot => {
+      // Calculate the date for this slot based on day of week
+      const slotDate = getDateByDayOfWeek(today, slot.day_of_week);
+      
+      return {
+        id: slot.id,
+        day: slot.day_of_week,
+        date: format(slotDate, 'yyyy-MM-dd'),
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        show_name: slot.show_name,
+        host_name: slot.host_name || '',
+        has_lineup: slot.has_lineup,
+        color: slot.color || 'green',
+        is_prerecorded: slot.is_prerecorded,
+        is_collection: slot.is_collection
+      };
+    });
+    
+    const jsonData = JSON.stringify({ shows: schedule }, null, 2);
+    
+    // Store in database if this is not a preview
+    if (previewOffset === undefined) {
+      await query(
+        'UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2',
+        [jsonData, 'schedule_json']
+      );
+      
+      // If schedule_json doesn't exist, insert it
+      const result = await query(
+        'SELECT COUNT(*) FROM system_settings WHERE key = $1',
+        ['schedule_json']
+      );
+      
+      if (result.data && parseInt(result.data[0].count) === 0) {
+        await query(
+          'INSERT INTO system_settings (key, value) VALUES ($1, $2)',
+          ['schedule_json', jsonData]
+        );
+      }
+    }
+    
+    res.json({ data: schedule });
+  } catch (error) {
+    console.error('Error generating schedule JSON:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate schedule JSON', 
+      details: error.message 
+    });
+  }
+});
+
+// Serve XML file
+router.get('/xml', async (req, res) => {
+  try {
+    // Get XML from the database
+    const result = await query(
+      "SELECT value FROM system_settings WHERE key = 'schedule_xml'"
+    );
+    
+    if (!result.data || result.data.length === 0) {
+      // Generate XML on the fly if it doesn't exist
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/schedule/generate-xml`, {
+        method: 'POST'
+      });
+      const xml = await response.text();
+      res.header('Content-Type', 'application/xml');
+      res.send(xml);
+      return;
+    }
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(result.data[0].value);
+  } catch (error) {
+    console.error('Error serving schedule.xml:', error);
+    res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><e>Failed to serve schedule XML</e>');
+  }
+});
+
+// Serve JSON file
+router.get('/json', async (req, res) => {
+  try {
+    // Get JSON from the database
+    const result = await query(
+      "SELECT value FROM system_settings WHERE key = 'schedule_json'"
+    );
+    
+    if (!result.data || result.data.length === 0) {
+      // Generate JSON on the fly if it doesn't exist
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/schedule/generate-json`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      res.json(data);
+      return;
+    }
+    
+    res.header('Content-Type', 'application/json');
+    res.send(result.data[0].value);
+  } catch (error) {
+    console.error('Error serving schedule.json:', error);
+    res.status(500).json({ error: 'Failed to serve schedule JSON' });
+  }
+});
+
+// Update XML refresh interval
+router.post('/xml-refresh', async (req, res) => {
+  try {
+    const { refreshInterval } = req.body || {};
+    
+    // Update the refresh interval if provided
+    if (refreshInterval) {
+      await query(
+        'UPDATE system_settings SET value = $1, updated_at = NOW() WHERE key = $2',
+        [refreshInterval.toString(), 'schedule_xml_refresh_interval']
+      );
+    }
+    
+    // Get current refresh interval
+    const intervalResult = await query(
+      "SELECT value FROM system_settings WHERE key = 'schedule_xml_refresh_interval'"
+    );
+    
+    let interval = 10; // Default to 10 minutes
+    if (intervalResult.data && intervalResult.data.length > 0) {
+      interval = parseInt(intervalResult.data[0].value) || 10;
+    }
+    
+    console.log(`Schedule XML refresh set to ${interval} minutes`);
+    
+    res.json({ 
+      success: true,
+      message: `Schedule XML refresh set to ${interval} minutes`
+    });
+  } catch (error) {
+    console.error('Error updating schedule XML refresh interval:', error);
+    res.status(500).json({ error: 'Failed to update schedule XML refresh interval' });
+  }
+});
+
+// Check for slot conflicts
+router.post('/slots/check-conflicts', async (req, res) => {
+  try {
+    const { slotDate, dayOfWeek, startTime, endTime, excludeSlotId } = req.body;
+    
+    console.log('Checking for slot conflicts:', {
+      slotDate, dayOfWeek, startTime, endTime, excludeSlotId
+    });
+    
+    if (!slotDate || dayOfWeek === undefined || !startTime || !endTime) {
+      return res.status(400).json({
+        error: 'Missing required parameters'
+      });
+    }
+    
+    // Build the query to check for conflicts
+    let queryStr = `
+      SELECT * FROM schedule_slots
+      WHERE is_deleted = false
+      AND day_of_week = $1
+      AND (
+        (start_time <= $2 AND end_time > $2) OR
+        (start_time < $3 AND end_time >= $3) OR
+        (start_time >= $2 AND end_time <= $3)
+      )
+    `;
+    
+    const params = [dayOfWeek, startTime, endTime];
+    
+    // If we're checking against a specific date, add that to the query
+    if (slotDate) {
+      queryStr += ` AND (
+        (is_master = true) OR
+        (is_master = false AND slot_date = $4::date)
+      )`;
+      params.push(slotDate);
+    }
+    
+    // If we're excluding a specific slot, add that to the query
+    if (excludeSlotId) {
+      queryStr += ` AND id != $${params.length + 1}`;
+      params.push(excludeSlotId);
+    }
+    
+    const result = await query(queryStr, params);
+    
+    if (result.error) {
+      console.error('Error checking for conflicts:', result.error);
+      throw result.error;
+    }
+    
+    const hasConflict = result.data && result.data.length > 0;
+    
+    res.json({
+      hasConflict,
+      conflictingSlot: hasConflict ? result.data[0] : null
+    });
+  } catch (error) {
+    console.error('Error checking for slot conflicts:', error);
+    res.status(500).json({
+      error: 'Failed to check for slot conflicts',
+      details: error.message
+    });
+  }
+});
+
+export default router;

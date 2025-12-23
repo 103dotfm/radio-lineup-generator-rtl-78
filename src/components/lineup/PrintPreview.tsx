@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShowItem, Interviewee } from '@/types/show';
 import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { sanitizeShowDetails, sanitizeNotes } from '@/utils/sanitize';
 
 interface PrintPreviewProps {
   showName: string;
@@ -54,7 +55,7 @@ const PrintPreview = ({
   return (
     <div className={containerClassName}>
       <div className="flex flex-col items-center mb-4">
-        <img src="/lovable-uploads/a330123d-e032-4391-99b3-87c3c7ce6253.png" alt="103FM" className="h-12" />
+        <img src="/storage/uploads/general/103fm-logo.png" alt="103FM" className="h-12" />
         <div className="text-center mt-2">
           <h1 className="text-2xl font-bold showName showNamePrint">{showName}</h1>
           <h2 className="text-lg text-gray-600 mt-1 showTimePrint">
@@ -115,7 +116,7 @@ const PrintPreview = ({
                     return (
                       <TableRow key={item.id} className="noteRow print-avoid-break">
                         <TableCell colSpan={breakNoteColspan} className="py-3 px-4 text-center border border-gray-200 text-black text-base">
-                          <div dangerouslySetInnerHTML={{ __html: item.details || '' }} />
+                          <div dangerouslySetInnerHTML={{ __html: sanitizeNotes(item.details || '') }} />
                         </TableCell>
                       </TableRow>
                     );
@@ -132,7 +133,7 @@ const PrintPreview = ({
                         <TableCell 
                           className="py-3 px-4 border border-gray-200 details-column prose prose-sm max-w-none col-print-details" 
                           rowSpan={intervieweeCount + 1}
-                          dangerouslySetInnerHTML={{ __html: item.details }} 
+                          dangerouslySetInnerHTML={{ __html: sanitizeShowDetails(item.details || '') }} 
                         />
                         {isAuthenticated && (
                           <TableCell className="py-3 px-4 border border-gray-200 text-base whitespace-nowrap col-print-phone">
@@ -184,7 +185,7 @@ const PrintPreview = ({
       {editorContent && (
         <div 
           className="credits mt-8 pt-4 border-t border-gray-200 text-base text-black text-center print-avoid-break"
-          dangerouslySetInnerHTML={{ __html: editorContent }}
+          dangerouslySetInnerHTML={{ __html: sanitizeNotes(editorContent || '') }}
         />
       )}
     </div>
