@@ -17,7 +17,7 @@ const MainLayout = () => {
     const toggleMobile = () => setMobileOpen(!mobileOpen);
 
     return (
-        <div className="min-h-screen modern-gradient flex flex-row-reverse" dir="rtl">
+        <div className="min-h-screen modern-gradient flex flex-row" dir="rtl">
             {/* Mobile Toggle Button */}
             <div className="md:hidden fixed top-4 right-4 z-[60]">
                 <Button
@@ -65,8 +65,8 @@ const MainLayout = () => {
                 <footer className="py-8 px-8 border-t border-slate-100/50 mt-auto bg-white/30 backdrop-blur-md">
                     <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="flex flex-col items-center md:items-start text-center md:text-right">
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">פלטפורמת ליינאפ חכמה</span>
-                            <span className="text-sm font-bold text-slate-800">© 2025 103FM - כל הזכויות שמורות</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">מערכת ניהול ועבודה משותפת - 103fm</span>
+                            <span className="text-sm font-bold text-slate-800">© 2026 103fm - בנייה וניהול: יניב מורוזובסקי</span>
                         </div>
                         <img src="/storage/uploads/general/103fm-logo.png" alt="103FM" className="h-8 opacity-50 hover:opacity-100 transition-opacity" />
                     </div>

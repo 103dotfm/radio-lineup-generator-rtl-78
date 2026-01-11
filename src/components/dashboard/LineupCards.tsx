@@ -23,7 +23,7 @@ const LineupCards = ({ shows, isAdmin, handleDelete, sortBy, setSortBy, isLoadin
   return (
     <div className="animate-in" style={{ animationDelay: '0.2s' }}>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-800">ליינאפים אחרונים</h2>
+        <h2 id="lineups" className="text-2xl font-bold tracking-tight text-slate-800">ליינאפים אחרונים</h2>
         <div className="flex items-center gap-2 bg-white/50 p-1 rounded-lg border border-slate-200">
           <Button
             variant={sortBy === 'recent' ? 'secondary' : 'ghost'}

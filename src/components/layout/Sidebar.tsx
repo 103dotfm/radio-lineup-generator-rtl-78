@@ -12,7 +12,8 @@ import {
     ChevronRight,
     LogOut,
     User,
-    Radio
+    Radio,
+    List
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -24,14 +25,59 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ collapsed, onToggle, className }: SidebarProps) => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { isAdmin, signOut, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAdmin, signOut, user } = useAuth();
+
+  // Check for unsaved changes before navigation
+  const handleNavigation = (path: string) => {
+    const event = new CustomEvent('checkUnsavedChanges', {
+      detail: { path, callback: (shouldNavigate: boolean) => {
+        if (shouldNavigate) {
+          navigate(path);
+        }
+      }}
+    });
+    window.dispatchEvent(event);
+    
+    // Default navigation if no handler is registered
+    const timeout = setTimeout(() => {
+      navigate(path);
+    }, 100);
+    
+    window.addEventListener('allowNavigation', () => {
+      clearTimeout(timeout);
+      navigate(path);
+    }, { once: true });
+  };
+
+  // Handle navigation to lineups section
+  const handleLineupsNavigation = () => {
+    if (location.pathname === '/') {
+      // Already on dashboard, scroll to section
+      setTimeout(() => {
+        const element = document.getElementById('lineups');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    } else {
+      // Navigate to dashboard first, then scroll
+      navigate('/');
+      setTimeout(() => {
+        const element = document.getElementById('lineups');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+    }
+  };
 
     const menuItems = [
-        { icon: LayoutDashboard, label: 'דאשבורד', path: '/' },
+        { icon: LayoutDashboard, label: 'לוח שבועי', path: '/' },
+        { icon: List, label: 'ליינאפים אחרונים', path: '#lineups', isAnchor: true },
         { icon: PlusCircle, label: 'ליינאפ חדש', path: '/new' },
-        { icon: Calendar, label: 'לוח שידורים', path: '/schedule' },
+        { icon: Calendar, label: 'סידורי עבודה', path: '/schedule' },
         { icon: Radio, label: 'לוח אולפנים', path: '/studio-schedule' },
         { icon: Trophy, label: 'פרסים', path: '/prizes' },
     ];
@@ -40,7 +86,11 @@ const Sidebar = ({ collapsed, onToggle, className }: SidebarProps) => {
         menuItems.push({ icon: Settings, label: 'ניהול מערכת', path: '/admin' });
     }
 
-    const isActive = (path: string) => {
+    const isActive = (path: string, isAnchor?: boolean) => {
+        if (isAnchor) {
+            // Anchor links are active when on dashboard
+            return location.pathname === '/';
+        }
         if (path === '/' && location.pathname !== '/') return false;
         return location.pathname.startsWith(path);
     };
@@ -57,10 +107,7 @@ const Sidebar = ({ collapsed, onToggle, className }: SidebarProps) => {
             <div className="flex items-center justify-between p-4 border-b border-white/10">
                 {!collapsed && (
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-lg">
-                            <Radio className="text-white h-5 w-5" />
-                        </div>
-                        <span className="font-bold text-lg tracking-tight">103FM</span>
+                        <img src="/storage/uploads/general/103fm-logo.png" alt="103FM" className="h-8 shadow-sm" />
                     </div>
                 )}
                 <Button
@@ -73,44 +120,54 @@ const Sidebar = ({ collapsed, onToggle, className }: SidebarProps) => {
                 </Button>
             </div>
 
-            <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
+            <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
                 {menuItems.map((item) => (
                     <button
                         key={item.path}
-                        onClick={() => navigate(item.path)}
+                        onClick={() => (item as any).isAnchor ? handleLineupsNavigation() : handleNavigation(item.path)}
                         className={cn(
-                            "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
-                            isActive(item.path)
-                                ? "bg-primary text-white shadow-lg premium-shadow scale-105"
-                                : "hover:bg-primary/5 text-slate-600 hover:text-primary"
+                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
+                            isActive(item.path, (item as any).isAnchor)
+                                ? "bg-primary text-white shadow-lg premium-shadow"
+                                : "hover:bg-white/40 text-slate-700 hover:text-primary backdrop-blur-sm"
                         )}
                     >
                         <item.icon className={cn(
                             "h-5 w-5 shrink-0",
-                            isActive(item.path) ? "text-white" : "group-hover:scale-110 transition-transform"
+                            isActive(item.path, (item as any).isAnchor) ? "text-white" : "group-hover:scale-110 transition-transform"
                         )} />
-                        {!collapsed && <span className="font-medium whitespace-nowrap">{item.label}</span>}
+                        {!collapsed && <span className="font-bold text-sm whitespace-nowrap">{item.label}</span>}
 
-                        {isActive(item.path) && !collapsed && (
+                        {isActive(item.path, (item as any).isAnchor) && !collapsed && (
                             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white rounded-r-full" />
                         )}
                     </button>
                 ))}
             </nav>
 
-            <div className="p-4 border-t border-white/10 space-y-2">
-                <button
-                    onClick={() => navigate('/profile')}
-                    className={cn(
-                        "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-primary/5 text-slate-600 hover:text-primary group",
+            <div className="mt-auto p-4 border-t border-white/10 space-y-2">
+                        <button
+                            onClick={() => handleNavigation('/profile')}
+                            className={cn(
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-white/40 text-slate-700 hover:text-primary group backdrop-blur-sm",
                         collapsed && "justify-center"
                     )}
                 >
-                    <User className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                    {user?.avatar_url ? (
+                        <img
+                            src={user.avatar_url.startsWith('http') ? user.avatar_url : `/storage-new/${user.avatar_url}`}
+                            alt={user.full_name}
+                            className="h-10 w-10 rounded-full border-2 border-white shadow-md object-cover"
+                        />
+                    ) : (
+                        <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center border-2 border-white shadow-sm">
+                            <User className="h-5 w-5 text-slate-500" />
+                        </div>
+                    )}
                     {!collapsed && (
-                        <div className="flex flex-col items-start overflow-hidden">
-                            <span className="font-medium text-sm truncate w-full">{user?.full_name || 'פרופיל'}</span>
-                            <span className="text-[10px] text-slate-400 truncate w-full">{user?.email}</span>
+                        <div className="flex flex-col items-start overflow-hidden text-right" dir="rtl">
+                            <span className="font-bold text-sm truncate w-full">{user?.full_name || 'פרופיל'}</span>
+                            <span className="text-[10px] text-slate-500 font-medium truncate w-full">{user?.title || user?.email}</span>
                         </div>
                     )}
                 </button>
@@ -118,12 +175,12 @@ const Sidebar = ({ collapsed, onToggle, className }: SidebarProps) => {
                 <button
                     onClick={signOut}
                     className={cn(
-                        "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-destructive/10 text-slate-600 hover:text-destructive group",
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all hover:bg-red-500/10 text-slate-600 hover:text-red-600 group",
                         collapsed && "justify-center"
                     )}
                 >
                     <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    {!collapsed && <span className="font-medium">התנתקות</span>}
+                    {!collapsed && <span className="font-bold text-sm">התנתקות מהמערכת</span>}
                 </button>
             </div>
         </aside>
