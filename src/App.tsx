@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,7 +6,6 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ScrollProvider } from "./contexts/ScrollContext";
 import AppRoutes from "./AppRoutes";
-import MovingAnnouncementPopup from "./components/MovingAnnouncementPopup";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +16,14 @@ const queryClient = new QueryClient({
   },
 });
 
+// Configure future flags for React Router
+const routerOptions = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true
+  }
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -25,8 +31,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <MovingAnnouncementPopup />
-          <BrowserRouter>
+          <BrowserRouter future={routerOptions.future}>
             <AppRoutes />
           </BrowserRouter>
         </TooltipProvider>
