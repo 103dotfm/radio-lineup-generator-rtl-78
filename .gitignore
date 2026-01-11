@@ -18,6 +18,14 @@ backup/*.sql.gz
 *.sql.gz
 *.sql
 
+# Credentials and secrets
+storage-new/*.json
+*.json
+!package.json
+!package-lock.json
+!tsconfig*.json
+!components.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
