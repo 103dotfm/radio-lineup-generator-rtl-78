@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Database backups (large files)
+backup/*.sql
+backup/*.sql.gz
+*.sql.gz
+*.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
